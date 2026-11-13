@@ -64,7 +64,7 @@ export const SelectionInspectorActionStrip = observer(function SelectionInspecto
 
   return (
     <section
-      aria-label={locale === "zh-CN" ? "选中操作" : "Selection Actions"}
+      aria-label={locale === "zh-CN" ? appHost.actions.translate("inspectorText.selectionActions") : "Selection Actions"}
       className={cm(styles, variant === "inline"
         ? "selection-inspector-action-group is-inline"
         : "selection-inspector-action-group")}

@@ -235,6 +235,7 @@ export function createAppHost(
     onFrameDemand: () => host.mainCanvas.wakeInput(),
     onCancel: () => host.mainCanvas.cancelInput(),
     onAcquireInput: () => host.mainCanvas.acquireInput(),
+    queryPenPreciseInput: () => internalState.settings.penPreciseInput,
   });
   host.mainCanvas.attachGestureAdapter(gestureAdapter);
   const gestureDiagnostics = createGestureDiagnosticsStore();

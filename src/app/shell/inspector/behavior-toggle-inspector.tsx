@@ -44,7 +44,7 @@ export function BehaviorToggleInspector({
           className={cm(styles, warehouseSubmitEnabled ? "toggle-on" : "toggle-off")}
           data-toggle-key="warehouse-submit-enabled"
           onClick={handleToggle}
-          title="无线提交"
+          title={appHost.actions.translate("inspectorText.wirelessSubmit")}
         >
           {/*
             AI-REMOVED 2026-06-04:

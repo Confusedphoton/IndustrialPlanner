@@ -129,8 +129,10 @@ describe("WorkbenchSettingsDialogController", () => {
       "game-show-device-icons",
     ]);
     expect(resolveGroupSettingIds("experimental")).toContain("game-show-region-annotations");
+    // AI-CORRECTION 2026-11-13：交互分组新增 game-pen-precise-input；主题用例改用 graphite-dark（Ayu Dark 已退出可选项）。
     expect(resolveGroupSettingIds("interaction-mode")).toEqual([
       "game-invert-wheel-zoom",
+      "game-pen-precise-input",
       "game-use-inspector-panel",
       "game-arknights-selection-right-dock-sync",
       "game-arknights-inspector-open-on-second-click",
@@ -175,7 +177,7 @@ describe("WorkbenchSettingsDialogController", () => {
     // AI-CORRECTION 2026-09-09: 设置页已恢复 shortcuts 入口分组并拆分原 game 分组；本持久化用例选择 display 分组。
     controller.selectGroup("display");
     controller.updateSelectValue("system-language", "en-US");
-    controller.updateSelectValue("system-theme", "ayu-dark");
+    controller.updateSelectValue("system-theme", "graphite-dark");
     controller.updateSwitchValue("game-use-blueprint-style-device-images", true);
     controller.updateSwitchValue("other-debug-mode", true);
     controller.updateSwitchValue("debug-simulation-worker-detailed-report", true);
@@ -187,7 +189,7 @@ describe("WorkbenchSettingsDialogController", () => {
       selectedGroupId: "display",
       values: {
         "system-language": "en-US",
-        "system-theme": "ayu-dark",
+        "system-theme": "graphite-dark",
         "game-arknights-immediate-move": true,
         "game-arknights-copy-while-moving": false,
         "game-arknights-immediate-marquee": false,
@@ -196,6 +198,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-arknights-auto-create-splitters-and-convergers": true,
         "game-quick-place": true,
         "game-invert-wheel-zoom": false,
+        "game-pen-precise-input": true,
         "game-arknights-selection-right-dock-sync": true,
         "game-arknights-inspector-open-on-second-click": false,
         // AI-REMOVED 2026-08-03:
@@ -243,7 +246,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-always-show-grid-lines": true,
         "game-always-show-power-range": false,
         "game-show-grass-background": false,
-        "game-use-inspector-panel": false,
+        "game-use-inspector-panel": true,
         "game-use-blueprint-style-device-images": true,
         "game-play-device-animations": false,
         "game-play-device-audio": false,
@@ -280,7 +283,7 @@ describe("WorkbenchSettingsDialogController", () => {
 
     expect(hydratedController.selectedGroupId).toBe("display");
     expect(hydratedController.values["system-language"]).toBe("en-US");
-    expect(hydratedController.values["system-theme"]).toBe("ayu-dark");
+    expect(hydratedController.values["system-theme"]).toBe("graphite-dark");
     expect(hydratedController.values["game-arknights-immediate-move"]).toBe(true);
     expect(hydratedController.values["game-arknights-copy-while-moving"]).toBe(false);
     expect(hydratedController.values["game-arknights-immediate-marquee"]).toBe(false);
@@ -695,7 +698,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "system-theme": {
           readValue: () => themeId,
           writeValue: (value) => {
-            if (value === "ayu-light" || value === "ayu-dark") {
+            if (value === "ayu-light" || value === "graphite-dark") {
               themeId = value;
             }
           },
@@ -705,13 +708,13 @@ describe("WorkbenchSettingsDialogController", () => {
 
     controller.selectGroup("system");
     controller.updateSelectValue("system-language", "en-US");
-    controller.updateSelectValue("system-theme", "ayu-dark");
+    controller.updateSelectValue("system-theme", "graphite-dark");
     controller.updateSwitchValue("other-debug-mode", true);
 
     expect(locale).toBe("en-US");
-    expect(themeId).toBe("ayu-dark");
+    expect(themeId).toBe("graphite-dark");
     expect(controller.getValue("system-language")).toBe("en-US");
-    expect(controller.getValue("system-theme")).toBe("ayu-dark");
+    expect(controller.getValue("system-theme")).toBe("graphite-dark");
     expect(JSON.parse(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY) ?? "null")).toEqual({
       selectedGroupId: "system",
       values: {
@@ -723,6 +726,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-arknights-auto-create-splitters-and-convergers": true,
         "game-quick-place": true,
         "game-invert-wheel-zoom": false,
+        "game-pen-precise-input": true,
         "game-arknights-selection-right-dock-sync": true,
         "game-arknights-inspector-open-on-second-click": false,
         // AI-REMOVED 2026-08-03:
@@ -770,7 +774,7 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-always-show-grid-lines": true,
         "game-always-show-power-range": false,
         "game-show-grass-background": false,
-        "game-use-inspector-panel": false,
+        "game-use-inspector-panel": true,
         "game-use-blueprint-style-device-images": false,
         "game-play-device-animations": false,
         "game-play-device-audio": false,

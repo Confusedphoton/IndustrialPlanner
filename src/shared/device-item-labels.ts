@@ -13,6 +13,23 @@ export function configuredDeviceItemIds(definition: EntityDefinition, entityId: 
     && groups.has(link.source.storageSlotGroupId) && outputGroups.has(link.source.storageSlotGroupId)).map(link => link.target.slotId))].filter(id => registry.queries.findItemDefinition(id) !== null);
 }
 
+/**
+ * 2026-11-13：设备已选（手动或计划）配方的主要产物，用于非运行状态下的画布标签。
+ * channelRecipes 由属性面板配方磁贴或自动规划写入；运输类“same-as-input”配方无固定产物，跳过。
+ */
+export function selectedRecipeDeviceItemIds(entity: Pick<WorldEntity, "config"> | null,
+  registry: RegistryContract): readonly string[] {
+  const channelRecipes = entity?.config?.channelRecipes;
+  if (typeof channelRecipes !== "object" || channelRecipes === null) return [];
+  const items = new Set<string>();
+  for (const recipeId of Object.values(channelRecipes as Record<string, unknown>)) {
+    if (typeof recipeId !== "string") continue;
+    const recipe = registry.queries.findRecipeDefinition(recipeId);
+    for (const id of recipe?.primaryOutputs ?? []) if (registry.queries.findItemDefinition(id)) items.add(id);
+  }
+  return [...items];
+}
+
 /** 运输配方的占位产物取实际输出槽物品，只有真实运行通道可以提供此标签。 */
 export function runningDeviceItemIds(definition: EntityDefinition, status: SimulationDeviceRuntimeStatusReadModel,
   registry: RegistryContract): readonly string[] {

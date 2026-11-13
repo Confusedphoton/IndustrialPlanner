@@ -484,14 +484,16 @@
   align-items: center;
   min-width: 0;
   min-height: 24px;
-  font-size: 1.125rem;
+  /* AI-CORRECTION 2026-11-13：标签统一为 0.92rem，长名称不再换行或缩小字号造成错落；原值 1.125rem。 */
+  font-size: 0.92rem;
   line-height: 1.2;
   white-space: normal;
   overflow-wrap: anywhere;
 }
 
 .placement-button-label.is-compact {
-  font-size: 1rem;
+  /* AI-CORRECTION 2026-11-13：与常规标签保持一致；原值 1rem。 */
+  font-size: 0.92rem;
 }
 
 .blueprint-operation-button-list.is-compact-import-actions .placement-button-label {
@@ -2424,4 +2426,21 @@
   font-size: 0.8rem;
   line-height: 1.42;
   opacity: 0.5;
+}
+
+/* 2026-11-13：放置面板设备搜索框。 */
+.placement-search-input {
+  width: 100%;
+  min-height: 34px;
+  margin-bottom: 8px;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-0);
+}
+
+.placement-search-input:focus {
+  outline: none;
+  border-color: var(--accent);
 }

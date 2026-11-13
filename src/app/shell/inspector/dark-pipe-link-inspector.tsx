@@ -69,6 +69,8 @@ export const DarkPipeLinkInspector = observer(function DarkPipeLinkInspector({
   // translate: (key: string) => string;
 }) {
   const editor = appHost.workspace.editor;
+  // 2026-11-13：界面文案改走 i18n，翻译函数取自 appHost（props.translate 仍按原契约不读取）。
+  const translate = appHost.actions.translate;
   const documentSnapshot = useEditorDocumentSnapshot(editor, snapshot => snapshot);
   const darkPipeToolState = appHost.mainCanvas.state.toolInfo;
   const role = resolveDarkPipeRole(definition.id);
@@ -118,12 +120,12 @@ export const DarkPipeLinkInspector = observer(function DarkPipeLinkInspector({
   const immediateRegionalLinkProblem = currentRegionalLink === null
     ? null
     : role !== currentRegionalEndpointRole
-      ? "当前端点角色与已保存关系不一致"
+      ? translate("inspectorText.endpointRoleNoLongerMatchesThe")
       : regionalCounterpart !== null
           && !appHost.workspace.registry.baseDefinitions.some(
             (base) => base.id === regionalCounterpart.baseId,
           )
-        ? "远端基地不存在"
+        ? translate("inspectorText.remoteBaseNoLongerExists")
         : null;
   const regionalValidationRequestKey = activeRegionalLink !== null
     && currentRegionalEndpointRole !== null
@@ -173,7 +175,7 @@ export const DarkPipeLinkInspector = observer(function DarkPipeLinkInspector({
           setRegionalValidationResult({
             requestKey: regionalValidationRequestKey,
             status: "invalid",
-            message: "远端暗管已不存在",
+            message: translate("inspectorText.remoteConduitNoLongerExists"),
           });
           return;
         }
@@ -181,7 +183,7 @@ export const DarkPipeLinkInspector = observer(function DarkPipeLinkInspector({
           setRegionalValidationResult({
             requestKey: regionalValidationRequestKey,
             status: "invalid",
-            message: "远端设备不再是匹配的暗管端点",
+            message: translate("inspectorText.remoteDeviceIsNoLongerA"),
           });
           return;
         }
@@ -196,7 +198,7 @@ export const DarkPipeLinkInspector = observer(function DarkPipeLinkInspector({
           setRegionalValidationResult({
             requestKey: regionalValidationRequestKey,
             status: "invalid",
-            message: "无法读取远端基地",
+            message: translate("inspectorText.cannotReadTheRemoteBase"),
           });
         }
       });
@@ -205,6 +207,7 @@ export const DarkPipeLinkInspector = observer(function DarkPipeLinkInspector({
       cancelled = true;
     };
   }, [
+    translate,
     currentRegionalEndpointRole,
     activeRegionalLink,
     editor,
@@ -290,24 +293,24 @@ export const DarkPipeLinkInspector = observer(function DarkPipeLinkInspector({
       );
   const hasActiveLink = currentLink !== null || activeRegionalLink !== null;
   const buttonLabel = hasActiveLink
-    ? "断开链接"
+    ? translate("inspectorText.unlink")
     : isSelectingThisEntity
-      ? "取消选择"
-      : "创建链接";
+      ? translate("inspectorText.cancelSelection")
+      : translate("inspectorText.createLink");
   const linkedLabel = currentLink !== null
-    ? `已连接 ${linkedEntityId ?? ""}`
+    ? `${translate("inspectorText.linkedTo")} ${linkedEntityId ?? ""}`
     : activeRegionalLink === null
-      ? "未连接"
+      ? translate("inspectorText.notLinked")
       : regionalLinkValidation?.status === "invalid"
-        ? `端点失效：${regionalLinkValidation.message ?? "未知原因"}`
+        ? `${translate("inspectorText.endpointInvalid")}${regionalLinkValidation.message ?? translate("inspectorText.unknownReason")}`
         : regionalLinkValidation?.status === "checking"
-          ? "正在校验远端端点…"
+          ? translate("inspectorText.checkingRemoteEndpoint")
           : `${regionalCounterpartBase?.name ?? regionalCounterpart?.baseId} · ${regionalCounterpart?.entityId}`;
   return (
     <InspectorCollapsiblePanel
       className="dark-pipe-link-inspector"
       dataInspectorKey="dark-pipe-link"
-      title="暗管链接"
+      title={translate("inspectorText.conduitLink")}
     >
       <div
         className={cm(styles, "dark-pipe-link-row")}

@@ -20,6 +20,10 @@ import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
 import { createInitialSimulationTimelineState } from "@/simulation/contracts";
 
 import { SIMULATION_RECIPE_STATUS_RUNTIME_INSPECTOR_KEY } from "@/app/shell/inspector/simulation-recipe-status-runtime-inspector";
+import { lookupText } from "@/shared/i18n";
+
+// 2026-11-13：界面文案改走 i18n，测试使用真实中文译文断言。
+const zhTranslate = (key: string): string => lookupText("zh-CN", key) ?? key;
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -330,7 +334,7 @@ describe("SelectionInspectorSlot", () => {
       root.render(
         <SelectionInspectorSlot
           appHost={currentAppHost}
-          translate={(key) => key === "registry.item.item_copper_ore.name" ? "测试铜矿" : key}
+          translate={(key) => key === "registry.item.item_copper_ore.name" ? "测试铜矿" : zhTranslate(key)}
         />,
       );
       vi.advanceTimersByTime(50);
@@ -558,7 +562,8 @@ describe("SelectionInspectorSlot", () => {
     expect(queryInspectorKeys(container)).toContain(
       SIMULATION_RECIPE_STATUS_RUNTIME_INSPECTOR_KEY,
     );
-    expect(container.textContent).toContain("productionPlanning.addRecipe");
+    // AI-CORRECTION 2026-11-13：未填写的手动频道直接内嵌配方磁贴，原断言为“添加配方”按钮文本。
+    expect(container.querySelector("[data-recipe-id]")).not.toBeNull();
     // AI-REMOVED 2026-06-01:
     // Reason: 添加配方按钮已按 UI 要求移除说明文案。
     // Trigger: 用户要求“把添加配方按钮下面的说明去掉”。

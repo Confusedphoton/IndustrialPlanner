@@ -70,6 +70,7 @@ import {
 import { regionalSimulationUiState } from "@/app/state/regional-simulation-ui-state";
 import { writeRegionalMultiBaseExperimentalEnabled } from "@/shared/storage/regional-simulation-settings";
 import { RightDock } from "@/app/shell/layout/right-dock";
+import { RecipeTreeOverlay } from "@/app/shell/recipe-tree/recipe-tree-overlay";
 import { SimulationControlButton, TimelineButton, TopBar } from "@/app/shell/layout/top-bar";
 import {
   readSelectedSyncProvider,
@@ -114,7 +115,8 @@ import {
 } from "@/shared/dark-pipe-link";
 import { DEFAULT_RIGHT_DOCK_WIDTH } from "@/app/state/state-impl";
 import { resolveLeftDockWidthForScreenProfile } from "@/app/state/state-impl";
-import type { AppThemeId } from "@/domain/app/types/theme";
+// AI-CORRECTION 2026-11-13: 本地 isAppThemeId 已移除，主题判断改从 @/app/theme 导入；原 import type { AppThemeId } 随之不再使用。
+import { isAppThemeId } from "@/app/theme";
 import {
   FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED,
   publishDebugModeEnabled,
@@ -176,9 +178,18 @@ interface ChangelogReadState {
   changelogKey: string;
 }
 
-function isAppThemeId(value: unknown): value is AppThemeId {
-  return value === "ayu-light" || value === "ayu-dark";
-}
+// AI-REMOVED 2026-11-13:
+// Reason: 主题 ID 判断与 src/app/theme 的 isAppThemeId 重复，新增主题时需多处同步。
+// Trigger: 新增 graphite-dark 主题。
+// Evidence: src/app/theme/index.ts 已导出同名查表判断。
+// Replacement: import { isAppThemeId } from "@/app/theme"
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// function isAppThemeId(value: unknown): value is AppThemeId {
+//   return value === "ayu-light" || value === "ayu-dark";
+// }
 
 function normalizeStoredChangelogVersion(version: string): string {
   return normalizeChangelogVersionText(version) ?? version;
@@ -313,6 +324,14 @@ export const WorkbenchApp = observer(function WorkbenchApp({
         writeValue: action((value) => {
           if (typeof value === "boolean") {
             appHost.internalState.settings.invertWheelZoom = value;
+          }
+        }),
+      },
+      "game-pen-precise-input": {
+        readValue: () => appHost.internalState.settings.penPreciseInput,
+        writeValue: action((value) => {
+          if (typeof value === "boolean") {
+            appHost.internalState.settings.penPreciseInput = value;
           }
         }),
       },
@@ -1494,6 +1513,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
             ) : null}
         */}
         {showRightDock ? <RightDock appHost={appHost} /> : null}
+        <RecipeTreeOverlay appHost={appHost} />
         {showToolboxBottomDock ? <ToolboxBottomDock appHost={appHost} /> : null}
         {showTimelineBottomDock ? <TimelineBottomDock appHost={appHost} /> : null}
         {showBottomStatusBar ? <BottomStatusBar appHost={appHost} /> : null}

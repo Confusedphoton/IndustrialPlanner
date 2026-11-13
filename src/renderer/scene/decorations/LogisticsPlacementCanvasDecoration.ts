@@ -30,6 +30,11 @@ const LOGISTICS_PLACEMENT_LABELS = {
   pipe: "//布设管道",
 } as const;
 
+const LOGISTICS_PLACEMENT_LABELS_EN: Record<keyof typeof LOGISTICS_PLACEMENT_LABELS, string> = {
+  belt: "//Draw belt",
+  pipe: "//Draw pipe",
+};
+
 interface AppWithLogisticsPlacementRuntime {
   internalState: {
     runtime: {
@@ -80,11 +85,13 @@ export function createLogisticsPlacementCanvasDecoration(): DecorationLayer {
         ? "logisticsPlacement.singlePlacementFrames"
         : "logisticsPlacement.logisticsPlacementFrames");
 
+      // AI-CORRECTION 2026-11-13：画布模式标签按界面语言显示，沿用 MarqueeRectDecoration 的 locale 判断方式。
+      const english = ctx.renderHost.input.presentation.getSnapshot()?.settings?.locale === "en-US";
       modeLabel.text = isSinglePlacement
-        ? "放置设备"
+        ? (english ? "//Place device" : "放置设备")
         : logisticsKind === null
           ? ""
-          : LOGISTICS_PLACEMENT_LABELS[logisticsKind];
+          : (english ? LOGISTICS_PLACEMENT_LABELS_EN : LOGISTICS_PLACEMENT_LABELS)[logisticsKind];
       modeLabel.x = 14;
       modeLabel.y = 8;
 

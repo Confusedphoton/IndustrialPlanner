@@ -61,6 +61,8 @@ interface CollectBaseConfigurationProblemsOptions {
   readonly multiBaseEnabled: boolean;
   readonly runtimeInfiniteStorageEntityIds?: ReadonlySet<string>;
   readonly registryQueries: RegistryQuery;
+  /** 2026-11-13：界面翻译函数；省略时保留中文原文（测试与无界面调用）。 */
+  readonly translate?: (key: string) => string;
 }
 
 interface CollectRuntimeInfiniteStorageEntityIdsOptions {
@@ -95,7 +97,7 @@ export function collectBaseConfigurationProblems(
   for (const entity of options.entities) {
     const definition = definitionById.get(entity.definitionId);
     if (definition?.uiGroup === "cheat") {
-      problems.push(createWarning(CHEAT_ITEM_PROBLEM, entity.id));
+      problems.push(createWarning(translateProblem(options, "baseProblem.cheatItem", CHEAT_ITEM_PROBLEM), entity.id));
     }
   }
 
@@ -111,7 +113,7 @@ export function collectBaseConfigurationProblems(
         warehouseItemIdBySourceSlot,
       })
     ) {
-      problems.push(createWarning(MISSING_INFINITE_RESOURCE_PROBLEM, entity.id));
+      problems.push(createWarning(translateProblem(options, "baseProblem.missingInfiniteResource", MISSING_INFINITE_RESOURCE_PROBLEM), entity.id));
     }
   }
 
@@ -126,7 +128,7 @@ export function collectBaseConfigurationProblems(
         || runtimeInfiniteStorageEntityIds.has(entity.id)
       )
     ) {
-      problems.push(createWarning(IMPOSSIBLE_INFINITE_RESOURCE_PROBLEM, entity.id));
+      problems.push(createWarning(translateProblem(options, "baseProblem.impossibleInfiniteResource", IMPOSSIBLE_INFINITE_RESOURCE_PROBLEM), entity.id));
     }
   }
 
@@ -138,7 +140,7 @@ export function collectBaseConfigurationProblems(
     const exceededRate = resolveExceededAdmissionRate(definition, entity);
     if (exceededRate === null) continue;
 
-    problems.push(createAdmissionRateProblem(exceededRate, entity.id));
+    problems.push(createAdmissionRateProblem(exceededRate, entity.id, options.translate));
   }
 
   return problems;
@@ -175,13 +177,35 @@ function resolveExceededAdmissionRate(
   return exceeded;
 }
 
-function createAdmissionRateProblem(rate: number, entityId: string): BaseConfigurationProblem {
+function createAdmissionRateProblem(
+  rate: number,
+  entityId: string,
+  translate?: (key: string) => string,
+): BaseConfigurationProblem {
+  // AI-CORRECTION 2026-11-13：提供 translate 时使用 i18n 模板（{rate}/{max} 占位），否则保留原中文文案。
+  const max = String(PIPE_ADMISSION_RATE_MAX_PER_MINUTE);
+  if (translate !== undefined) {
+    return {
+      message: translate("baseProblem.admissionRate").replace("{rate}", String(rate)).replace("{max}", max),
+      severity: "warning",
+      tooltip: translate("baseProblem.admissionRateTooltip").replaceAll("{max}", max),
+      entityId,
+    };
+  }
   return {
     message: `管道准入口限速 ${rate}/分钟 超过 ${PIPE_ADMISSION_RATE_MAX_PER_MINUTE}/分钟`,
     severity: "warning",
     tooltip: `游戏内管道准入口的每分钟准入上限为 ${PIPE_ADMISSION_RATE_MAX_PER_MINUTE}，超过该值的配置不会生效，请把限速下调到 ${PIPE_ADMISSION_RATE_MAX_PER_MINUTE} 或以下。`,
     entityId,
   };
+}
+
+function translateProblem(
+  options: Pick<CollectBaseConfigurationProblemsOptions, "translate">,
+  key: string,
+  fallback: string,
+): string {
+  return options.translate === undefined ? fallback : options.translate(key);
 }
 
 export function collectRuntimeInfiniteStorageEntityIds(

@@ -82,10 +82,10 @@ export const PortPriorityGroupInspector = observer(function PortPriorityGroupIns
             role="switch"
             type="checkbox"
           />
-          <span>自定义</span>
+          <span>{appHost.actions.translate("inspectorText.custom")}</span>
         </label>
       )}
-      title="端口优先级组"
+      title={appHost.actions.translate("inspectorText.portPriorityGroups")}
     >
       <div
         className={cm(styles, "port-priority-list")}
@@ -106,7 +106,7 @@ export const PortPriorityGroupInspector = observer(function PortPriorityGroupIns
               </span>
               <button
                 aria-expanded={pickerOpen}
-                aria-label={`${row.portLabel} 优先级组 ${row.priorityLabel}`}
+                aria-label={`${row.portLabel} ${appHost.actions.translate("inspectorText.priorityGroup")} ${row.priorityLabel}`}
                 className={cm(styles, "port-priority-number-button")}
                 data-port-priority-number={row.priorityLabel}
                 disabled={!customEnabled}
@@ -122,7 +122,7 @@ export const PortPriorityGroupInspector = observer(function PortPriorityGroupIns
               </button>
               {pickerOpen ? (
                 <div
-                  aria-label={`${row.portLabel} 优先级组选择`}
+                  aria-label={`${row.portLabel} ${appHost.actions.translate("inspectorText.priorityGroupSelect")}`}
                   className={cm(styles, "port-priority-picker")}
                   role="group"
                 >

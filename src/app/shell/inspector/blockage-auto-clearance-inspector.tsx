@@ -34,7 +34,7 @@ export function BlockageAutoClearanceInspector({
     <InspectorCollapsiblePanel
       className="blockage-auto-clearance-inspector"
       dataInspectorKey="blockage-auto-clearance"
-      title="自动处理复数配方阻塞"
+      title={appHost.actions.translate("inspectorText.autoClearMultiRecipeBlockage")}
     >
       <div
         className={cm(styles, "blockage-auto-clearance-panel-body")}
@@ -42,9 +42,9 @@ export function BlockageAutoClearanceInspector({
         data-render-mode={renderMode}
       >
         <label className={cm(styles, "blockage-auto-clearance-switch")}>
-          <span>启用</span>
+          <span>{appHost.actions.translate("inspectorText.enabled")}</span>
           <input
-            aria-label="自动处理复数配方阻塞"
+            aria-label={appHost.actions.translate("inspectorText.autoClearMultiRecipeBlockage")}
             checked={enabled}
             data-blockage-auto-clearance-switch
             onChange={(event) => {

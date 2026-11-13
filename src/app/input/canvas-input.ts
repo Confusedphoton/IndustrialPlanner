@@ -7,7 +7,8 @@ import { createGestureDiagnosticsStore } from "./gesture/diagnostics";
 export function attachCanvasInput(canvas: CanvasInteractionController, inputLayer?: () => ShortcutInputLayer): () => void {
   const diagnostics = createGestureDiagnosticsStore();
   const adapter = createGestureAdapter(canvas, { onFrameDemand: () => canvas.wakeInput(), onCancel: () => canvas.cancelInput(),
-    onAcquireInput: () => canvas.acquireInput() });
+    onAcquireInput: () => canvas.acquireInput(),
+    queryPenPreciseInput: () => canvas.workbench.internalState.settings.penPreciseInput });
   canvas.attachGestureAdapter(adapter);
   const router = createGestureActionRouter({ gestureAdapter: adapter, workspace: canvas.workbench.workspace,
     getAppHost: () => canvas.workbench, getCanvas: () => canvas,

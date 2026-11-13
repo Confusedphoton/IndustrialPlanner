@@ -56,6 +56,7 @@ import LucideLoaderCircle from "~icons/lucide/loader-circle";
 import LucideSave from "~icons/lucide/save";
 import LucideSaveOff from "~icons/lucide/save-off";
 import LucideSearch from "~icons/lucide/search";
+import LucideListTree from "~icons/lucide/list-tree";
 import LucideSettings from "~icons/lucide/settings";
 import LucideSmartphone from "~icons/lucide/smartphone";
 import LucideSquare from "~icons/lucide/square";
@@ -109,6 +110,7 @@ type WorkbenchIconKind =
   | "edit"
   | "toolbox"
   | "search"
+  | "recipe-tree"
   | "help"
   | "settings"
   | "theme-dark"
@@ -185,6 +187,7 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   edit: LucideEdit3,
   toolbox: LucidePackage2,
   search: LucideSearch,
+  "recipe-tree": LucideListTree,
   help: LucideHelpCircle,
   settings: LucideSettings,
   "theme-dark": LucideMoon,

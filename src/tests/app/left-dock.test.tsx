@@ -316,7 +316,8 @@ describe("Left dock panel switching", () => {
 
     expect(primaryButtons).toHaveLength(4);
     // 2026-10-14：EDA 转为正式功能，默认增加一个规划入口。
-    expect(utilityButtons).toHaveLength(5);
+    // AI-CORRECTION 2026-11-13：新增配方树浮层开关，工具组按钮由 5 个变为 6 个。
+    expect(utilityButtons).toHaveLength(6);
     expect(container.textContent).toContain("放置模式");
     expect(toolbarGroups[0]?.textContent).not.toContain("区域");
     expect(visiblePanel).not.toBeNull();
@@ -640,7 +641,8 @@ describe("Left dock panel switching", () => {
       utilityGroup?.querySelectorAll(".rail-button") ?? [],
     ).map((button) => button.getAttribute("title"));
 
-    expect(utilityTitlesBefore).toEqual(["蓝图规划任务", "工具箱", "帮助", "问题反馈", "设置"]);
+    // AI-CORRECTION 2026-11-13：配方树开关位于规划入口之后，原期望为 ["蓝图规划任务", "工具箱", "帮助", "问题反馈", "设置"]。
+    expect(utilityTitlesBefore).toEqual(["蓝图规划任务", "配方树", "工具箱", "帮助", "问题反馈", "设置"]);
 
     act(() => {
       runInAction(() => {
@@ -652,7 +654,8 @@ describe("Left dock panel switching", () => {
       utilityGroup?.querySelectorAll(".rail-button") ?? [],
     ).map((button) => button.getAttribute("title"));
 
-    expect(utilityTitlesAfter).toEqual(["蓝图规划任务", "调试日志", "工具箱", "帮助", "问题反馈", "设置"]);
+    // AI-CORRECTION 2026-11-13：配方树开关位于规划入口之后，原期望为 ["蓝图规划任务", "调试日志", "工具箱", "帮助", "问题反馈", "设置"]。
+    expect(utilityTitlesAfter).toEqual(["蓝图规划任务", "配方树", "调试日志", "工具箱", "帮助", "问题反馈", "设置"]);
   });
 
   it("frames the selected placement group and shows number shortcuts only inside it", async () => {

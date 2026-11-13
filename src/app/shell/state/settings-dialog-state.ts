@@ -213,7 +213,9 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         defaultValue: "ayu-light",
         options: [
           { value: "ayu-light", labelKey: "settingsOption.ayuLight" },
-          { value: "ayu-dark", labelKey: "settingsOption.ayuDark" },
+          // AI-CORRECTION 2026-11-13: Ayu Dark 由 Graphite Dark 取代，原选项为
+          // { value: "ayu-dark", labelKey: "settingsOption.ayuDark" }。
+          { value: "graphite-dark", labelKey: "settingsOption.graphiteDark" },
         ],
       },
     ],
@@ -486,11 +488,19 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         defaultValue: false,
       },
       {
+        id: "game-pen-precise-input",
+        kind: "switch",
+        labelKey: "settingsField.game-pen-precise-input",
+        descriptionKey: "settingsField.game-pen-precise-inputDescription",
+        defaultValue: true,
+      },
+      {
         id: "game-use-inspector-panel",
         kind: "switch",
         labelKey: "settingsField.game-use-inspector-panel",
         descriptionKey: "settingsField.game-use-inspector-panelDescription",
-        defaultValue: false,
+        // AI-CORRECTION 2026-11-13：属性面板默认停靠右侧，不再以模态对话框遮挡画布；原默认值为 false。
+        defaultValue: true,
       },
       {
         id: "game-arknights-selection-right-dock-sync",

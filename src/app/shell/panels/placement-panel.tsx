@@ -952,15 +952,44 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
   );
 });
 
-export const PlacementPanel = observer(function PlacementPanel({ appHost }: { appHost: AppHost }) {
+export const PlacementPanel = observer(function PlacementPanel({
+  appHost,
+  active = true,
+}: {
+  appHost: AppHost;
+  active?: boolean;
+}) {
   const t = appHost.actions.translate;
+  // 2026-11-13：设备搜索。输入即过滤，Enter 放置首个匹配，Esc 清空；画布上按 “/” 聚焦。
+  const [deviceQuery, setDeviceQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    if (!active) {
+      return;
+    }
+    const handleGlobalKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "/" || event.ctrlKey || event.metaKey || event.altKey || isEditableEventTarget(event.target)) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    };
+    window.addEventListener("keydown", handleGlobalKeyDown, true);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown, true);
+  }, [active]);
   const editor = appHost.workspace.editor;
   // 订阅 document 变化以在切换基地后重新过滤设备列表
   useEditorDocumentSnapshot(editor, selectDocumentBaseId, Object.is);
   const screenProfile = appHost.state.screenProfile;
   const isTouchLayout = isMobileOrTabletScreenProfile(screenProfile);
   const showShortcutHints = !isTouchLayout && appHost.state.settings.gameShowHotkeys;
-  const deviceSections = buildPlacementDeviceSections(appHost);
+  const normalizedDeviceQuery = deviceQuery.trim().toLowerCase();
+  const deviceSections = filterPlacementDeviceSections(buildPlacementDeviceSections(appHost), normalizedDeviceQuery, t);
+  const firstMatchedDeviceId = normalizedDeviceQuery.length === 0
+    ? null
+    : deviceSections[0]?.buttons[0]?.uiButtonId.replace("placement-", "") ?? null;
   const visibleOperationButtons = getVisiblePlacementOperationButtons(appHost);
 
   const handleButtonPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
@@ -1053,6 +1082,36 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
 
   return (
     <div className={cm(styles, "placement-panel")}>
+      <input
+        aria-label={t("placement.search")}
+        className={cm(styles, "placement-search-input")}
+        onChange={(event) => setDeviceQuery(event.currentTarget.value)}
+        onKeyDown={(event) => {
+          event.stopPropagation();
+          if (event.key === "Escape") {
+            setDeviceQuery("");
+            event.currentTarget.blur();
+            return;
+          }
+          if (event.key === "Enter" && firstMatchedDeviceId !== null) {
+            appHost.gestureAdapter.handleUiButtonMouseTap({
+              uiButtonId: `ui-left-dock-placement-mode-${firstMatchedDeviceId}-mouse-tap`,
+              button: 0,
+              altKey: event.altKey,
+              ctrlKey: event.ctrlKey,
+              metaKey: event.metaKey,
+              shiftKey: event.shiftKey,
+              sourceEvent: event.nativeEvent,
+            });
+            setDeviceQuery("");
+            event.currentTarget.blur();
+          }
+        }}
+        placeholder={t(isTouchLayout ? "placement.searchShort" : "placement.searchWithShortcut")}
+        ref={searchInputRef}
+        type="search"
+        value={deviceQuery}
+      />
       <section
         aria-label={isTouchLayout ? t("workbench.section.operation") : undefined}
         aria-labelledby={isTouchLayout ? undefined : "placement-operation-section"}
@@ -1164,3 +1223,38 @@ export const PlacementPanel = observer(function PlacementPanel({ appHost }: { ap
     </div>
   );
 });
+
+/** 2026-11-13：按设备名称（当前语言）与设备 ID 过滤放置面板分组，空分组隐藏。 */
+function filterPlacementDeviceSections(
+  sections: readonly PlacementSectionDefinition[],
+  normalizedQuery: string,
+  translate: (key: string) => string,
+): readonly PlacementSectionDefinition[] {
+  if (normalizedQuery.length === 0) {
+    return sections;
+  }
+
+  return sections
+    .map((section) => ({
+      ...section,
+      buttons: section.buttons.filter((button) => (
+        translate(button.labelKey).toLowerCase().includes(normalizedQuery)
+        || button.uiButtonId.toLowerCase().includes(normalizedQuery)
+        || (button.variantDefinitions ?? []).some((definition) => (
+          translate(definition.nameKey).toLowerCase().includes(normalizedQuery)
+        ))
+      )),
+    }))
+    .filter((section) => section.buttons.length > 0);
+}
+
+function isEditableEventTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return target.isContentEditable
+    || target.tagName === "INPUT"
+    || target.tagName === "TEXTAREA"
+    || target.tagName === "SELECT";
+}

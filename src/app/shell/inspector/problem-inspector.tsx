@@ -56,7 +56,7 @@ function collectPowerProblems(
     // 设备不在供电范围
     if (runtimeStatus.powerStatus === "out-of-power-range") {
       problems.push({
-        message: "该设备不在供电范围",
+        message: appHost.actions.translate("inspectorText.notInRangeOfAPower"),
         severity: "error",
       });
     }
@@ -74,7 +74,7 @@ function collectPowerProblems(
     const docStatus = runtimeSample?.documentStatus;
     if (docStatus?.isPowerOutage && runtimeStatus.powerStatus !== "no-power-needed") {
       problems.push({
-        message: "电力不足",
+        message: appHost.actions.translate("inspectorText.insufficientPower"),
         severity: "error",
       });
     }
@@ -86,7 +86,7 @@ function collectPowerProblems(
   if (editor !== null && definition.powerDemand > 0) {
     if (!editor.state.collections.powered.includes(entity.id)) {
       problems.push({
-        message: "该设备不在供电范围",
+        message: appHost.actions.translate("inspectorText.notInRangeOfAPower"),
         severity: "error",
       });
     }
@@ -96,6 +96,7 @@ function collectPowerProblems(
 }
 
 function collectRecipeProblems(
+  appHost: AppHost,
   runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null,
 ): DeviceProblem[] {
   if (runtimeStatus === null) return [];
@@ -112,7 +113,7 @@ function collectRecipeProblems(
       chStatus.progressSeconds >= chStatus.desiredSeconds
     ) {
       problems.push({
-        message: "产物堵塞",
+        message: appHost.actions.translate("inspectorText.outputBlocked"),
         severity: "error",
       });
     }
@@ -149,7 +150,7 @@ function collectManualActivityRecipeProblems(
       && !isRecipeAvailableByActivity(recipe, effectiveActivityIds)
     ) {
       return [{
-        message: "所选配方所属的活动不生效",
+        message: appHost.actions.translate("inspectorText.theSelectedRecipeSEventIs"),
         severity: "warning",
       }];
     }
@@ -173,7 +174,7 @@ export const ProblemInspector = observer(function ProblemInspector({
 }) {
   const placementProblems = collectPlacementProblems(appHost, entity);
   const powerProblems = collectPowerProblems(appHost, entity, definition, runtimeStatus, runtimeSample);
-  const recipeProblems = collectRecipeProblems(runtimeStatus);
+  const recipeProblems = collectRecipeProblems(appHost, runtimeStatus);
   const manualActivityRecipeProblems = collectManualActivityRecipeProblems(appHost, entity, definition);
   const defaultPriorityProblems: DeviceProblem[] = appHost.portPriorityDefaults.get(entity.id) === null ? [] : [{
     message: DEFAULT_PORT_PRIORITY_PROBLEM_TITLE,
@@ -199,7 +200,7 @@ export const ProblemInspector = observer(function ProblemInspector({
       bodyRole="list"
       className="problem-inspector"
       dataInspectorKey={PROBLEM_INSPECTOR_KEY}
-      title="设备问题"
+      title={appHost.actions.translate("inspectorText.problems")}
     >
       {/*
         AI-REMOVED 2026-06-04:
@@ -223,7 +224,7 @@ export const ProblemInspector = observer(function ProblemInspector({
       */}
       {allProblems.map((problem, index) => (
         <div
-          aria-label={`${problem.severity === "error" ? "错误" : problem.severity === "warning" ? "警告" : "提示"}：${problem.message}`}
+          aria-label={`${appHost.actions.translate(problem.severity === "error" ? "inspectorText.error" : problem.severity === "warning" ? "inspectorText.warning" : "inspectorText.notice")}${problem.message}`}
           className={cm(styles, "problem-row")}
           data-problem-row
           data-problem-severity={problem.severity}

@@ -92,6 +92,8 @@ export interface AppSettingsReadWrite extends Omit<AppSettings, "regionalMultiBa
   hypergryphAutoCreateSplittersAndConvergers: boolean;
   quickPlaceEnabled: boolean;
   invertWheelZoom: boolean;
+  /** 2026-11-13：手写笔按鼠标精确输入处理（悬停预览、笔尖拖动、侧键右键、橡皮擦删除）；关闭时沿用触控手势。 */
+  penPreciseInput: boolean;
   hypergryphSelectionRightDockSync: boolean;
   hypergryphInspectorOpenOnSecondClick: boolean;
   gameUseBlueprintStyleDeviceImages: boolean;
@@ -721,7 +723,8 @@ export function isTimelineBottomDockActive(
 class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
   leftDockOpen = true;
   leftDockSuppressed = false;
-  rightDockOpen = true;
+  // AI-CORRECTION 2026-11-13：属性面板默认停靠后，右侧栏初始收起，选中设备时由选择手势展开、取消选择时收起；原默认值 true。
+  rightDockOpen = false;
   leftDockWidth = DEFAULT_LEFT_DOCK_WIDTH;
   topBarCollapsed = false;
   rightDockActiveTab = DEFAULT_RIGHT_DOCK_TAB_ID;
@@ -975,6 +978,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     hypergryphAutoCreateSplittersAndConvergers: true,
     quickPlaceEnabled: true,
     invertWheelZoom: false,
+    penPreciseInput: true,
     hypergryphSelectionRightDockSync: true,
     hypergryphInspectorOpenOnSecondClick: false,
     gameUseBlueprintStyleDeviceImages: false,
@@ -982,7 +986,8 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     gamePlayDeviceAudio: false,
     gameShowDeviceNames: true,
     gameShowDeviceIcons: false,
-    gameUseInspectorPanel: false,
+    // AI-CORRECTION 2026-11-13：属性面板默认停靠右侧（非模态），原默认值为 false。
+    gameUseInspectorPanel: true,
     gameShowHotkeys: false,
     collapseDeviceModes: true,
     gamePipeWallReflection: false,

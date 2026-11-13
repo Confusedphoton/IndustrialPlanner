@@ -93,6 +93,7 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   hypergryphAutoCreateSplittersAndConvergers: true,
   quickPlaceEnabled: true,
   invertWheelZoom: false,
+  penPreciseInput: true,
   hypergryphSelectionRightDockSync: true,
   hypergryphInspectorOpenOnSecondClick: false,
   gameUseBlueprintStyleDeviceImages: false,
@@ -100,7 +101,8 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   gamePlayDeviceAudio: false,
   gameShowDeviceNames: true,
   gameShowDeviceIcons: false,
-  gameUseInspectorPanel: false,
+  // AI-CORRECTION 2026-11-13：属性面板默认改为右侧停靠。
+  gameUseInspectorPanel: true,
   gameShowHotkeys: false,
   collapseDeviceModes: true,
   gamePipeWallReflection: false,
@@ -2281,6 +2283,8 @@ describe("WorkbenchApp", () => {
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
     const appHost = createAppTestHost(workspace);
+    // 2026-11-13：属性面板默认停靠；本用例验证对话框模式，显式关闭停靠面板。
+    runInAction(() => { appHost.internalState.settings.gameUseInspectorPanel = false; });
 
     runInAction(() => {
       appHost.internalState.settings.hypergryphInspectorOpenOnSecondClick = true;
@@ -2305,6 +2309,8 @@ describe("WorkbenchApp", () => {
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
     const appHost = createAppTestHost(workspace);
+    // 2026-11-13：属性面板默认停靠；本用例验证对话框模式，显式关闭停靠面板。
+    runInAction(() => { appHost.internalState.settings.gameUseInspectorPanel = false; });
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -2324,6 +2330,8 @@ describe("WorkbenchApp", () => {
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
     const appHost = createAppTestHost(workspace);
+    // 2026-11-13：属性面板默认停靠；本用例验证对话框模式，显式关闭停靠面板。
+    runInAction(() => { appHost.internalState.settings.gameUseInspectorPanel = false; });
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -2361,6 +2369,8 @@ describe("WorkbenchApp", () => {
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
     const appHost = createAppTestHost(workspace);
+    // 2026-11-13：属性面板默认停靠；本用例验证对话框模式，显式关闭停靠面板。
+    runInAction(() => { appHost.internalState.settings.gameUseInspectorPanel = false; });
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -3033,7 +3043,8 @@ describe("WorkbenchApp", () => {
       "该选项将会详细在日志汇报仿真情况，将会严重拖慢性能，仅用于无法确认的仿真出错诊断。",
     );
     expect(languageOptionLabels).toEqual(["中文(简体)", "English (AI Translate)"]);
-    expect(themeOptionLabels).toEqual(["Ayu Light", "Ayu Dark"]);
+    // AI-CORRECTION 2026-11-13：Ayu Dark 由 Graphite Dark 取代，原期望为 ["Ayu Light", "Ayu Dark"]。
+    expect(themeOptionLabels).toEqual(["Ayu Light", "石墨深色"]);
     expect(languageSelect?.value).toBe("zh-CN");
     expect(themeSelect?.value).toBe("ayu-light");
     // 2026-05-26: game-arknights-operation-mode 已移除，不再校验 operationModeToggle。
@@ -4434,13 +4445,14 @@ describe("WorkbenchApp", () => {
         return;
       }
 
-      themeSelect.value = "ayu-dark";
+      // AI-CORRECTION 2026-11-13：深色选项改为 graphite-dark，原用例选择 ayu-dark。
+      themeSelect.value = "graphite-dark";
       themeSelect.dispatchEvent(new Event("change", { bubbles: true }));
     });
 
-    expect(appHost.state.settings.themeId).toBe("ayu-dark");
-    expect(themeSelect?.value).toBe("ayu-dark");
-    expect(document.documentElement.dataset.appTheme).toBe("ayu-dark");
+    expect(appHost.state.settings.themeId).toBe("graphite-dark");
+    expect(themeSelect?.value).toBe("graphite-dark");
+    expect(document.documentElement.dataset.appTheme).toBe("graphite-dark");
     expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBe(
       JSON.stringify(createWorkbenchStorageSnapshot({
         settingsDialog: createDialogStateSnapshot({ visible: true }),
@@ -4449,7 +4461,7 @@ describe("WorkbenchApp", () => {
     expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(
       JSON.stringify({
         ...DEFAULT_APP_SETTINGS_STORAGE,
-        themeId: "ayu-dark",
+        themeId: "graphite-dark",
       }),
     );
   });

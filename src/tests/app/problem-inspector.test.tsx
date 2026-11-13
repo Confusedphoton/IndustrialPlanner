@@ -12,6 +12,10 @@ import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation
 import type { SimulationDocumentRuntimeReadModel } from "@/domain/simulation/types/simulation-types";
 import { ProblemInspector, PROBLEM_INSPECTOR_KEY } from "@/app/shell/inspector/problem-inspector";
 import type { InspectorRuntimeSample } from "@/app/shell/inspector/selection-inspector-model";
+import { lookupText } from "@/shared/i18n";
+
+// 2026-11-13：界面文案改走 i18n，测试使用真实中文译文断言。
+const zhTranslate = (key: string): string => lookupText("zh-CN", key) ?? key;
 
 function createMockEntity(overrides: Partial<WorldEntity> = {}): WorldEntity {
   return {
@@ -60,6 +64,8 @@ function createMockAppHost(options: {
   const poweredEntityIds = options.poweredEntityIds ?? ["test-entity-1"];
 
   return {
+    // 2026-11-13：组件文案改走 i18n，mock 提供中文翻译。
+    actions: { translate: zhTranslate },
     portPriorityDefaults: new DefaultPortPriorityController(createRegistryContract()),
     workspace: {
       editor: {

@@ -152,7 +152,7 @@ export function resolvePortTone(portGroup: PortGroupDefinition): ItemDomainFlags
 
 function resolveOutputKindLabel(portGroup: PortGroupDefinition): string {
   if (!portGroup.isPipe) {
-    return "固体输出";
+    return "inspectorText.solidOutput";
   }
 
   const firstPortRule = portGroup.ports[0]?.acceptRule.base;
@@ -160,10 +160,10 @@ function resolveOutputKindLabel(portGroup: PortGroupDefinition): string {
     ? firstPortRule.flags
     : portGroup.kind;
   if (flags === ItemDomainFlag.Gas) {
-    return "气体输出";
+    return "inspectorText.gasOutput";
   }
   if (flags === FluidDomain) {
-    return "流体输出";
+    return "inspectorText.fluidOutput";
   }
-  return "液体输出";
+  return "inspectorText.liquidOutput";
 }

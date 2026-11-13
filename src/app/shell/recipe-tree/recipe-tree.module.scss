@@ -1,0 +1,398 @@
+// 2026-11-13：配方树浮层。固定定位于画布上方、低于对话框（DialogShell z-index 13）。
+
+.recipe-tree-overlay {
+  position: fixed;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  min-width: 280px;
+  max-width: calc(100vw - 16px);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface-1);
+  color: var(--text-0);
+  box-shadow: 0 10px 28px var(--shadow-floating-control);
+  font-size: 12px;
+  overflow: hidden;
+}
+
+.recipe-tree-overlay.is-minimized {
+  height: auto;
+}
+
+.recipe-tree-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 6px 6px 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.recipe-tree-overlay.is-minimized .recipe-tree-header {
+  border-bottom: 0;
+}
+
+.recipe-tree-header:active {
+  cursor: grabbing;
+}
+
+.recipe-tree-header h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.recipe-tree-header-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--accent);
+}
+
+.recipe-tree-header-count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--surface-4);
+  color: var(--text-1);
+  font-size: 11px;
+  text-align: center;
+}
+
+.recipe-tree-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-1);
+}
+
+.recipe-tree-icon-button:hover:not(:disabled) {
+  border-color: var(--line);
+  background: var(--surface-3);
+  color: var(--text-0);
+}
+
+.recipe-tree-icon-button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.recipe-tree-search {
+  position: relative;
+  padding: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.recipe-tree-search-input {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-0);
+}
+
+.recipe-tree-search-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.recipe-tree-search-results {
+  position: absolute;
+  z-index: 1;
+  top: calc(100% - 4px);
+  right: 8px;
+  left: 8px;
+  margin: 0;
+  padding: 4px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface-2);
+  box-shadow: 0 8px 20px var(--shadow-floating-control);
+  list-style: none;
+}
+
+.recipe-tree-search-result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 6px;
+  border-color: transparent;
+  background: transparent;
+  text-align: left;
+}
+
+.recipe-tree-search-result:hover {
+  background: var(--surface-4);
+}
+
+.recipe-tree-search-result img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.recipe-tree-search-result span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recipe-tree-search-result svg {
+  width: 12px;
+  height: 12px;
+  color: var(--accent);
+}
+
+.recipe-tree-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 4px 0 18px;
+}
+
+.recipe-tree-empty {
+  margin: 0;
+  padding: 12px;
+  color: var(--text-2);
+}
+
+.recipe-tree-pin {
+  border-bottom: 1px solid var(--line);
+}
+
+.recipe-tree-pin:last-child {
+  border-bottom: 0;
+}
+
+.recipe-tree-pin-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 6px 6px 4px;
+}
+
+.recipe-tree-pin-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recipe-tree-item-icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.recipe-tree-rate {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--text-2);
+}
+
+.recipe-tree-rate-input {
+  width: 56px;
+  padding: 2px 4px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface-2);
+  color: var(--text-0);
+  text-align: right;
+}
+
+.recipe-tree-nodes,
+.recipe-tree-nodes ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recipe-tree-node {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 26px;
+  padding-right: 8px;
+}
+
+.recipe-tree-node:hover {
+  background: var(--surface-2);
+}
+
+.recipe-tree-node-toggle,
+.recipe-tree-node-toggle-spacer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-left: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+}
+
+.recipe-tree-node-toggle:hover {
+  background: var(--surface-3);
+  color: var(--text-0);
+}
+
+.recipe-tree-node-toggle svg {
+  width: 12px;
+  height: 12px;
+}
+
+.recipe-tree-node-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recipe-tree-node-rate {
+  flex: none;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.recipe-tree-node-rate small {
+  margin-left: 1px;
+  color: var(--text-2);
+  font-size: 10px;
+}
+
+.recipe-tree-machine,
+.recipe-tree-chip,
+.recipe-tree-byproduct {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.recipe-tree-machine {
+  min-width: 52px;
+  justify-content: flex-end;
+  color: var(--text-0);
+  font-weight: 600;
+}
+
+.recipe-tree-machine img,
+.recipe-tree-chip img,
+.recipe-tree-byproduct img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.recipe-tree-tag {
+  flex: none;
+  padding: 0 5px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--text-2);
+  font-size: 10px;
+  line-height: 16px;
+}
+
+.recipe-tree-tag.is-raw {
+  min-width: 52px;
+  border-color: var(--pill-warn-border);
+  color: var(--warn);
+  text-align: center;
+}
+
+.recipe-tree-node-detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding-right: 8px;
+  padding-bottom: 4px;
+  color: var(--text-2);
+}
+
+.recipe-tree-recipe-select {
+  max-width: 100%;
+  padding: 1px 4px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface-2);
+  color: var(--text-1);
+  font-size: 11px;
+}
+
+.recipe-tree-byproduct {
+  color: var(--text-1);
+}
+
+.recipe-tree-totals {
+  display: grid;
+  gap: 4px;
+  margin: 4px 8px 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--surface-2);
+}
+
+.recipe-tree-totals-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.recipe-tree-totals-label {
+  min-width: 56px;
+  color: var(--text-2);
+  font-size: 11px;
+}
+
+.recipe-tree-chip {
+  color: var(--text-0);
+}
+
+.recipe-tree-resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 18px;
+  color: var(--text-2);
+  cursor: nwse-resize;
+  touch-action: none;
+}
+
+.recipe-tree-resize-handle svg {
+  width: 14px;
+  height: 14px;
+  transform: rotate(-45deg);
+}
+
+.recipe-tree-resize-handle:hover {
+  color: var(--accent);
+}

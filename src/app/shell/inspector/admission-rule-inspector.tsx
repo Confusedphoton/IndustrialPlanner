@@ -93,9 +93,9 @@ export function AdmissionRuleInspector({
       <InspectorCollapsiblePanel
         className="admission-rule-inspector"
         dataInspectorKey="admission-rule"
-        title="物品准入"
+        title={translate("inspectorText.itemAdmission")}
       >
-        <p>未找到可配置的准入口。</p>
+        <p>{translate("inspectorText.noConfigurableAdmissionPorts")}</p>
       </InspectorCollapsiblePanel>
     );
   }
@@ -107,7 +107,7 @@ export function AdmissionRuleInspector({
     ? null
     : itemById.get(row.selectedItemId) ?? null;
   const itemIconSrc = resolveItemIconSrc(itemDefinition);
-  const itemLabel = itemDefinition === null ? "未选择" : translate(itemDefinition.nameKey);
+  const itemLabel = itemDefinition === null ? translate("inspectorText.notSet") : translate(itemDefinition.nameKey);
   const limitValue = row.limit === null ? "" : String(row.limit);
   const limitEnabled = row.limit !== null;
   const rateEnabled = row.perMinuteLimit !== null;
@@ -252,7 +252,7 @@ export function AdmissionRuleInspector({
       data-device-class={deviceClass}
       dataInspectorKey="admission-rule"
       data-render-mode={mode}
-      title="物品准入"
+      title={translate("inspectorText.itemAdmission")}
     >
       <div
         className={cm(styles, "admission-rule-row")}
@@ -282,12 +282,12 @@ export function AdmissionRuleInspector({
           </button>
 
           <button
-            aria-label="清除"
+            aria-label={translate("inspectorText.clear")}
             className={cm(styles, "admission-rule-action-button admission-rule-clear-button")}
             data-admission-action="clear-item"
             disabled={row.selectedItemId === null}
             onClick={clearSelection}
-            title="清除"
+            title={translate("inspectorText.clear")}
             type="button"
           >
             <LucideTrash2 aria-hidden="true" />
@@ -301,9 +301,9 @@ export function AdmissionRuleInspector({
         >
           <div className={cm(styles, "admission-rule-limit")}>
             <label className={cm(styles, "admission-rule-limit-header")}>
-              <span>计数准入</span>
+              <span>{translate("inspectorText.countLimit")}</span>
               <input
-                aria-label="计数准入开关"
+                aria-label={translate("inspectorText.countLimitSwitch")}
                 checked={limitEnabled}
                 className={cm(styles, "admission-rule-switch")}
                 data-admission-limit-switch
@@ -316,7 +316,7 @@ export function AdmissionRuleInspector({
               />
             </label>
             <input
-              aria-label="计数准入上限"
+              aria-label={translate("inspectorText.countLimitCap")}
               className={cm(styles, "admission-rule-limit-value-input")}
               data-admission-limit-input
               disabled={row.selectedItemId === null || !limitEnabled}
@@ -332,7 +332,7 @@ export function AdmissionRuleInspector({
           </div>
 
           <div className={cm(styles, "admission-rule-count")} data-admission-current-count>
-            <span>总计</span>
+            <span>{translate("inspectorText.total")}</span>
             <strong>{row.runtimeCount}</strong>
           </div>
 
@@ -361,12 +361,12 @@ export function AdmissionRuleInspector({
                 </button>
             */}
             <button
-              aria-label="重置总计"
+              aria-label={translate("inspectorText.resetTotal")}
               className={cm(styles, "admission-rule-action-button")}
               data-admission-action="reset-total-count"
               disabled={!canReset}
               onClick={resetTotalCounter}
-              title="重置总计"
+              title={translate("inspectorText.resetTotal")}
               type="button"
             >
               <LucideRotateCcw aria-hidden="true" />
@@ -380,9 +380,9 @@ export function AdmissionRuleInspector({
         >
           <div className={cm(styles, "admission-rule-limit")}>
             <label className={cm(styles, "admission-rule-limit-header")}>
-              <span>速率准入</span>
+              <span>{translate("inspectorText.rateLimit")}</span>
               <input
-                aria-label="速率准入开关"
+                aria-label={translate("inspectorText.rateLimitSwitch")}
                 checked={rateEnabled}
                 className={cm(styles, "admission-rule-switch")}
                 data-admission-rate-switch
@@ -395,13 +395,13 @@ export function AdmissionRuleInspector({
               />
             </label>
             <div
-              aria-label="每分钟准入速率"
+              aria-label={translate("inspectorText.admissionsPerMinute")}
               className={cm(styles, "admission-rule-rate-stepper")}
               data-admission-per-minute-limit={row.perMinuteLimit ?? ""}
               role="group"
             >
               <button
-                aria-label="降低每分钟准入速率"
+                aria-label={translate("inspectorText.lowerRatePerMinute")}
                 className={cm(styles, "admission-rule-step-button")}
                 data-admission-rate-action="decrease"
                 disabled={
@@ -417,10 +417,10 @@ export function AdmissionRuleInspector({
                 <LucideMinus aria-hidden="true" />
               </button>
               <output data-admission-per-minute-limit-output>
-                {row.perMinuteLimit === null ? "不限" : `${row.perMinuteLimit}/min`}
+                {row.perMinuteLimit === null ? translate("inspectorText.unlimited") : `${row.perMinuteLimit}/min`}
               </output>
               <button
-                aria-label="提高每分钟准入速率"
+                aria-label={translate("inspectorText.raiseRatePerMinute")}
                 className={cm(styles, "admission-rule-step-button")}
                 data-admission-rate-action="increase"
                 disabled={
@@ -439,18 +439,18 @@ export function AdmissionRuleInspector({
           </div>
 
           <div className={cm(styles, "admission-rule-count")} data-admission-current-rate-window-count>
-            <span>过去一分钟</span>
+            <span>{translate("inspectorText.lastMinute")}</span>
             <strong>{row.runtimeOneMinuteCount}</strong>
           </div>
 
           <div className={cm(styles, "admission-rule-actions")}>
             <button
-              aria-label="重置本 10 秒"
+              aria-label={translate("inspectorText.resetThis10SWindow")}
               className={cm(styles, "admission-rule-action-button")}
               data-admission-action="reset-rate-window-count"
               disabled={!canReset}
               onClick={resetRateWindowCounter}
-              title="重置本 10 秒"
+              title={translate("inspectorText.resetThis10SWindow")}
               type="button"
             >
               <LucideRotateCcw aria-hidden="true" />

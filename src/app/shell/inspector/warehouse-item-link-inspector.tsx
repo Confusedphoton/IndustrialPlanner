@@ -90,7 +90,7 @@ export function WarehouseItemLinkInspector({
       <InspectorCollapsiblePanel
         className="warehouse-item-link-inspector"
         dataInspectorKey="warehouse-item-link"
-        title="仓库物品链接"
+        title={translate("inspectorText.depotItemLink")}
       >
         {/*
           AI-REMOVED 2026-05-26:
@@ -104,7 +104,7 @@ export function WarehouseItemLinkInspector({
           Original code:
           <h4>仓库物品链接</h4>
         */}
-        <p>未找到可链接的槽位。</p>
+        <p>{translate("inspectorText.noLinkableSlots")}</p>
       </InspectorCollapsiblePanel>
     );
   }
@@ -144,7 +144,7 @@ export function WarehouseItemLinkInspector({
       // 自然资源物品默认开启无限供应
       // AI-CORRECTION 2026-08-19: 自然资源是否无限现由“地区资源”统一决定；设备文档槽位必须清除旧 ignoreStock，避免有限 Profile 被绕过。
       const selectedItem = itemById.get(itemId);
-      if (selectedItem?.tags.includes("自然资源")) {
+      if (selectedItem?.tags.includes(translate("inspectorText.naturalResources"))) {
         patchEntityConfig({ [row.ignoreStockPath]: false });
       }
     } finally {
@@ -254,7 +254,7 @@ export function WarehouseItemLinkInspector({
       data-device-class={deviceClass}
       dataInspectorKey="warehouse-item-link"
       data-render-mode={mode}
-      title="仓库物品链接"
+      title={translate("inspectorText.depotItemLink")}
     >
       {/*
         AI-REMOVED 2026-05-26:
@@ -283,7 +283,7 @@ export function WarehouseItemLinkInspector({
             ? translate("inspector.warehouseItemLink.selectItem")
             : translate(itemDefinition.nameKey);
           const canClear = row.currentItemId !== null;
-          const slotLabel = row.boundOutputRow?.portLabel ?? `槽位 ${row.linkIndex + 1}`;
+          const slotLabel = row.boundOutputRow?.portLabel ?? `${translate("inspectorText.slot")} ${row.linkIndex + 1}`;
           const slotTitle = `${row.storageGroupId} / ${row.slotId}`;
           const ignoreStockLabel = translate("inspector.warehouseItemLink.ignoreStock");
 
@@ -307,7 +307,7 @@ export function WarehouseItemLinkInspector({
                   rows={outputRows}
                   rotation={locatorRotation}
                   targetPortGroupId={row.boundOutputRow.portGroup.id}
-                  title={`${row.boundOutputRow.portLabel} ${row.boundOutputRow.label} 位置`}
+                  title={`${row.boundOutputRow.portLabel} ${translate(row.boundOutputRow.label)} ${translate("inspectorText.location")}`}
                 />
               )}
               <button
@@ -360,7 +360,7 @@ export function WarehouseItemLinkInspector({
               */}
               {/* AI-CORRECTION 2026-08-19: 自然资源的无限状态只能在“地区资源”面板编辑，仓库链接行不再显示局部无限按钮。 */}
               {/* AI-CORRECTION 2026-08-20: 上述“隐藏按钮”会破坏仓库链接行的操作列一致性；现在保留锁定态按钮，并通过 Tooltip 说明地区资源控制来源。 */}
-              {itemDefinition?.tags.includes("自然资源") ? (
+              {itemDefinition?.tags.includes(translate("inspectorText.naturalResources")) ? (
                 <LockedNaturalResourceInfinityButton
                   ignoreStockLabel={ignoreStockLabel}
                   tooltip={translate("inspector.warehouseItemLink.naturalResourceControlled")}
@@ -385,14 +385,14 @@ export function WarehouseItemLinkInspector({
                 ) : null}
               </button>}
               <button
-                aria-label="清除"
+                aria-label={translate("inspectorText.clear")}
                 className={cm(styles, "warehouse-link-action-button warehouse-link-clear-button")}
                 data-slot-action="clear-item"
                 disabled={!canClear}
                 onClick={() => {
                   clearLink(row);
                 }}
-                title="清除"
+                title={translate("inspectorText.clear")}
                 type="button"
               >
                 <LucideTrash2 aria-hidden="true" />
@@ -408,7 +408,7 @@ export function WarehouseItemLinkInspector({
                   Original code:
                   <span>清除链接</span>
                 */}
-                <span className={cm(styles, "warehouse-link-action-label")}>清除</span>
+                <span className={cm(styles, "warehouse-link-action-label")}>{translate("inspectorText.clear")}</span>
               </button>
             </div>
           );

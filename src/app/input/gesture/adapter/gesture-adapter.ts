@@ -38,6 +38,13 @@ const TWO_FINGER_MOVE_THRESHOLD_PX = 2;
 const WHEEL_ACCUMULATE_THRESHOLD = 1;
 const DOUBLE_TAP_MS = 300;
 const DOUBLE_TAP_SLOP_PX = 12;
+/** 2026-11-13：手写笔精确输入的防误触窗口；笔接触或最近一次笔活动（含悬停）后该时长内的触摸视为手掌。 */
+const PEN_PALM_REJECTION_MS = 400;
+/** 2026-11-13：笔尖有轻微抖动，拖动判定阈值略大于鼠标。 */
+const PEN_DRAG_SLOP_PX = 10;
+/** Pointer Events 规范中手写笔橡皮擦端的 button / buttons 值。 */
+export const PEN_ERASER_BUTTON = 5;
+const PEN_ERASER_BUTTONS_MASK = 32;
 const WHEEL_LINE_HEIGHT_PX = 16;
 const WHEEL_PAGE_HEIGHT_PX = 800;
 
@@ -150,6 +157,8 @@ export interface GestureAdapterOptions {
   readonly onFrameDemand?: () => void;
   readonly onCancel?: () => void;
   readonly onAcquireInput?: () => void;
+  /** 2026-11-13：返回 true 时手写笔走鼠标会话（精确输入），否则沿用触控会话。未提供时视为 false。 */
+  readonly queryPenPreciseInput?: () => boolean;
 }
 
 // AI-REMOVED 2026-11-12:
@@ -193,6 +202,8 @@ interface MouseSession {
   readonly pressModifiers: GestureModifiers;
   readonly pressStartedAt: number;
   readonly startPosition: GesturePosition;
+  /** 2026-11-13：该会话来自精确输入的手写笔。 */
+  readonly isPen: boolean;
   lastPosition: GesturePosition;
   longPressIndicatorTimer: TimerHandle | null;
   longPressTimer: TimerHandle | null;
@@ -274,6 +285,10 @@ export class GestureAdapter {
   private lastMousePosition: GesturePosition | null = null;
   private touchSession: TouchSession | null = null;
   private readonly activeTouches = new Map<number, TouchPoint>();
+  /** 2026-11-13：手写笔防误触拒收的触摸指针；其后续 move/up/cancel 一并忽略。 */
+  private readonly rejectedTouchPointerIds = new Set<number>();
+  private penContactPointerId: number | null = null;
+  private lastPenActivityAt = Number.NEGATIVE_INFINITY;
   private multiTouchSnapshot: MultiTouchSnapshot | null = null;
   private lastGestureIndex = 0;
   private pendingMergedMove: {
@@ -432,10 +447,19 @@ export class GestureAdapter {
 
   public handlePointerDown(event: GesturePointerEventLike): void {
     if (this.canvas.isInputSuspended) return;
+    if (this.shouldRejectPalmTouch(event)) {
+      this.rejectedTouchPointerIds.add(event.pointerId);
+      return;
+    }
     this.adapterOptions.onAcquireInput?.();
-    const pointerKind = getPointerKind(event.pointerType);
+    const pointerKind = this.resolvePointerKind(event.pointerType);
     if (pointerKind === "unknown") {
       return;
+    }
+    if (this.isPrecisePenEvent(event)) {
+      this.penContactPointerId = event.pointerId;
+      this.lastPenActivityAt = this.now();
+      this.cancelActiveTouchesForPen();
     }
 
     event.currentTarget?.focus?.({ preventScroll: true });
@@ -452,7 +476,11 @@ export class GestureAdapter {
 
   public handlePointerMove(event: GesturePointerEventLike): void {
     if (this.canvas.isInputSuspended) return;
-    const pointerKind = getPointerKind(event.pointerType);
+    if (this.rejectedTouchPointerIds.has(event.pointerId)) return;
+    if (this.isPrecisePenEvent(event)) {
+      this.lastPenActivityAt = this.now();
+    }
+    const pointerKind = this.resolvePointerKind(event.pointerType);
     if (pointerKind === "unknown") {
       return;
     }
@@ -467,8 +495,10 @@ export class GestureAdapter {
 
   public handlePointerUp(event: GesturePointerEventLike): void {
     this.pointerCaptureTargets.delete(event.pointerId);
+    if (this.rejectedTouchPointerIds.delete(event.pointerId)) return;
+    this.releasePenContact(event);
     if (this.canvas.isInputSuspended) return;
-    const pointerKind = getPointerKind(event.pointerType);
+    const pointerKind = this.resolvePointerKind(event.pointerType);
     if (pointerKind === "unknown") {
       return;
     }
@@ -485,7 +515,9 @@ export class GestureAdapter {
 
   public handlePointerCancel(event: GesturePointerEventLike): void {
     this.pointerCaptureTargets.delete(event.pointerId);
-    const pointerKind = getPointerKind(event.pointerType);
+    if (this.rejectedTouchPointerIds.delete(event.pointerId)) return;
+    this.releasePenContact(event);
+    const pointerKind = this.resolvePointerKind(event.pointerType);
     if (pointerKind === "unknown") {
       return;
     }
@@ -502,7 +534,9 @@ export class GestureAdapter {
 
   public handleLostPointerCapture(event: GesturePointerEventLike): void {
     this.pointerCaptureTargets.delete(event.pointerId);
-    const pointerKind = getPointerKind(event.pointerType);
+    if (this.rejectedTouchPointerIds.delete(event.pointerId)) return;
+    this.releasePenContact(event);
+    const pointerKind = this.resolvePointerKind(event.pointerType);
     if (pointerKind === "mouse") {
       this.endMouseSession(event, "cancel");
       return;
@@ -601,6 +635,7 @@ export class GestureAdapter {
   public handleUiButtonPressStart(event: GestureUiButtonPressEventLike): void {
     if (this.canvas.isInputSuspended) return;
     this.adapterOptions.onAcquireInput?.();
+    // 2026-11-13：UI 按钮的按压会话保持手写笔按触控处理，按钮反馈与手指一致。
     const pointerKind = getPointerKind(event.pointerType);
     if (pointerKind === "unknown") {
       return;
@@ -752,14 +787,16 @@ export class GestureAdapter {
   private startMouseSession(event: GesturePointerEventLike): void {
     const position = getPosition(event);
     const pressStartedAt = this.now();
+    const isPen = this.isPrecisePenEvent(event);
     const session: MouseSession = {
       gestureId: this.nextGestureId("mouse"),
       pointerId: event.pointerId,
-      originButton: event.button,
+      originButton: resolvePenAwareButton(event),
       pressButtons: event.buttons,
       pressModifiers: getModifiers(event),
       pressStartedAt,
       startPosition: position,
+      isPen,
       lastPosition: position,
       longPressIndicatorTimer: null,
       longPressTimer: null,
@@ -805,7 +842,10 @@ export class GestureAdapter {
     }
 
     if (session.state === "pressed") {
-      if (distance(session.startPosition, position) < this.thresholds.mouseDragSlopPx) {
+      const dragSlopPx = session.isPen
+        ? Math.max(this.thresholds.mouseDragSlopPx, PEN_DRAG_SLOP_PX)
+        : this.thresholds.mouseDragSlopPx;
+      if (distance(session.startPosition, position) < dragSlopPx) {
         session.lastPosition = position;
         this.syncLongPressPosition(session);
         return;
@@ -880,7 +920,8 @@ export class GestureAdapter {
       const tapEvent: Extract<GestureEvent, { type: "mouse tap" }> = {
         type: "mouse tap",
         gestureId: session.gestureId,
-        button: event.button,
+        // 2026-11-13：手写笔抬起时 buttons 已清零，以按下时解析出的按钮为准（橡皮擦端为 5）。
+        button: session.isPen ? session.originButton : event.button,
         buttons: event.buttons,
         position,
         longPress: session.longPress,
@@ -1450,6 +1491,60 @@ export class GestureAdapter {
     });
   }
 
+  private isPrecisePenEnabled(): boolean {
+    return this.adapterOptions.queryPenPreciseInput?.() === true;
+  }
+
+  private isPrecisePenEvent(event: { readonly pointerType: string }): boolean {
+    return event.pointerType === "pen" && this.isPrecisePenEnabled();
+  }
+
+  /** 2026-11-13：精确输入开启时手写笔走鼠标会话；UI 按钮等其余入口仍使用 getPointerKind。 */
+  private resolvePointerKind(pointerType: string): "mouse" | "touch" | "unknown" {
+    if (pointerType === "pen" && this.isPrecisePenEnabled()) {
+      return "mouse";
+    }
+
+    return getPointerKind(pointerType);
+  }
+
+  private shouldRejectPalmTouch(event: GesturePointerEventLike): boolean {
+    if (event.pointerType !== "touch" || !this.isPrecisePenEnabled()) {
+      return false;
+    }
+
+    return this.penContactPointerId !== null
+      || this.now() - this.lastPenActivityAt < PEN_PALM_REJECTION_MS;
+  }
+
+  private releasePenContact(event: GesturePointerEventLike): void {
+    if (event.pointerType !== "pen" || this.penContactPointerId !== event.pointerId) {
+      return;
+    }
+
+    this.penContactPointerId = null;
+    this.lastPenActivityAt = this.now();
+  }
+
+  /** 笔落下前已接触屏幕的手掌：取消其触控会话，并拒收其后续事件。 */
+  private cancelActiveTouchesForPen(): void {
+    for (const touch of [...this.activeTouches.values()]) {
+      this.rejectedTouchPointerIds.add(touch.id);
+      this.endTouchPointer({
+        pointerId: touch.id,
+        pointerType: "touch",
+        clientX: touch.position.x,
+        clientY: touch.position.y,
+        button: 0,
+        buttons: 0,
+        altKey: false,
+        ctrlKey: false,
+        metaKey: false,
+        shiftKey: false,
+      }, "cancel");
+    }
+  }
+
   private resolvePointerEntityAt(position: GesturePosition): WorldEntity | null {
     return this.canvas.editor?.queries.findEntityAtClientPixelPoint(position, this.canvas.view.state) ?? null;
   }
@@ -1703,6 +1798,18 @@ function isConsumedGestureDispatchResult(value: unknown): value is { consumedBy:
 function getEventMergeKey(event: GestureEvent): string {
   const m = event.modifiers;
   return `${event.type}|alt:${m.alt}|ctrl:${m.ctrl}|meta:${m.meta}|shift:${m.shift}`;
+}
+
+/** 2026-11-13：手写笔橡皮擦端统一解析为 PEN_ERASER_BUTTON；部分驱动只在 buttons 中报告橡皮擦位。 */
+function resolvePenAwareButton(event: GesturePointerEventLike): number {
+  if (
+    event.pointerType === "pen"
+    && (event.button === PEN_ERASER_BUTTON || (event.buttons & PEN_ERASER_BUTTONS_MASK) !== 0)
+  ) {
+    return PEN_ERASER_BUTTON;
+  }
+
+  return event.button;
 }
 
 function getPointerKind(pointerType: string): "mouse" | "touch" | "unknown" {

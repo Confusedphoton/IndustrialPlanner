@@ -317,18 +317,24 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
     ]) {
       const prefix = problem.baseId === currentDocument.baseId
         ? ""
-        : `${problem.baseName}：`;
-      const message = `${prefix}存在无法识别的设备「${problem.issue.entityId}」，仿真时将忽略`;
+        : `${problem.baseName}${t("baseProblem.basePrefixSeparator")}`;
+      // AI-CORRECTION 2026-11-13：以下文案改走 i18n 模板（{占位符} 替换），中文译文与原硬编码一致。
+      const message = prefix + t("baseProblem.unknownEntity").replace("{entityId}", problem.issue.entityId);
       const relatedLinkText = problem.issue.relatedSlotLinkCount === 0
-        ? "没有关联链接"
-        : `关联的 ${problem.issue.relatedSlotLinkCount} 条链接也会在仿真时忽略`;
+        ? t("baseProblem.noRelatedLinks")
+        : t("baseProblem.relatedLinks").replace("{count}", String(problem.issue.relatedSlotLinkCount));
       const handlingText = problem.baseId === currentDocument.baseId
-        ? "可在此处确认删除这条失效数据。"
-        : `请先切换至「${problem.baseName}」处理。`;
+        ? t("baseProblem.deleteHere")
+        : t("baseProblem.switchBaseFirst").replace("{base}", problem.baseName);
       problems.push({
         message,
         severity: "error",
-        tooltip: `设备定义「${problem.issue.definitionId}」不存在；位置 (${problem.issue.position.x}, ${problem.issue.position.y})；${relatedLinkText}。${handlingText}`,
+        tooltip: t("baseProblem.unknownEntityTooltip")
+          .replace("{definitionId}", problem.issue.definitionId)
+          .replace("{x}", String(problem.issue.position.x))
+          .replace("{y}", String(problem.issue.position.y))
+          .replace("{related}", relatedLinkText)
+          .replace("{handling}", handlingText),
         unknownEntity: {
           baseId: problem.baseId,
           entityId: problem.issue.entityId,
@@ -341,7 +347,7 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
       const entity = entities.find((e) => e.id === entityId);
       if (entity === undefined) continue;
       const deviceName = resolveDeviceName(entity.definitionId);
-      const msg = `设备「${deviceName}」放置无效`;
+      const msg = t("baseProblem.invalidPlacement").replace("{device}", deviceName);
       problems.push({ message: msg, severity: "error", tooltip: msg, entityId: entity.id });
     }
 
@@ -351,7 +357,9 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
       ? resolveBaseMaxPipeLogistics(currentBase.tags)
       : null;
     if (maxPipe !== null && deviceStats.pipeLogisticsDevices > maxPipe) {
-      const msg = `管道物流设备数 (${deviceStats.pipeLogisticsDevices}) 超过基地上限 (${maxPipe})`;
+      const msg = t("baseProblem.pipeLogisticsLimit")
+        .replace("{count}", String(deviceStats.pipeLogisticsDevices))
+        .replace("{max}", String(maxPipe));
       problems.push({ message: msg, severity: "error", tooltip: msg });
     }
 
@@ -367,7 +375,7 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
       }
       if (isCustomPortPriorityGroupsEnabled(entity.config)) {
         const deviceName = resolveDeviceName(entity.definitionId);
-        const msg = `设备「${deviceName}」配置了端口优先级组`;
+        const msg = t("baseProblem.customPortPriority").replace("{device}", deviceName);
         problems.push({ message: msg, severity: "warning", tooltip: msg });
       }
     }
@@ -380,11 +388,13 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
       slotLinks: currentDocument.slotLinks,
       multiBaseEnabled,
       runtimeInfiniteStorageEntityIds,
+      translate: t,
       registryQueries: appHost.workspace.registry.queries,
     }));
 
     return problems;
   }, [
+    t,
     appHost.workspace.registry.entityDefinitions,
     appHost.workspace.registry.itemDefinitions,
     appHost.workspace.registry.queries,
@@ -760,7 +770,7 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
       </article>
       <article className={cm(styles, "inspector-card")}>
         <div className={cm(styles, "card-header")}>
-          <h3>问题</h3>
+          <h3>{t("baseProblem.title")}</h3>
         </div>
         <div className={cm(panelStyles, "base-problem-list")} role="list">
           {baseProblems.length > 0 ? (
@@ -808,7 +818,7 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
               </div>
             ))
           ) : (
-            <div className={cm(panelStyles, "base-problem-empty")}>无</div>
+            <div className={cm(panelStyles, "base-problem-empty")}>{t("baseProblem.none")}</div>
           )}
         </div>
         {activeProblemTooltip !== null && popoverRect !== null
@@ -846,8 +856,8 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
                 >
                   <LucideTrash2 aria-hidden="true" />
                   {pendingUnknownEntityDeleteId === activeUnknownEntityId
-                    ? "确认删除失效数据"
-                    : "从基地中删除"}
+                    ? t("baseProblem.confirmDeletingTheStaleData")
+                    : t("baseProblem.removeFromBase")}
                 </button>
               ) : null}
             </div>,
@@ -1016,8 +1026,8 @@ function RegionalMultiBaseHelp({
       <MarkdownTutorialOverlay
         compactLayout={compactLayout}
         dialogKey="regional-multi-base-guide"
-        dismissHint="(点击任意位置关闭)"
-        notice="请注意"
+        dismissHint={t("baseProblem.clickAnywhereToClose")}
+        notice={t("baseProblem.headsUp")}
         onClose={onCloseTutorial}
         path={REGIONAL_MULTI_BASE_HELP_PATH}
         title={title}

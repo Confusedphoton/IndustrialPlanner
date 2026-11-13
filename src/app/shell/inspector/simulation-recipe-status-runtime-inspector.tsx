@@ -12,6 +12,10 @@ import type { EntityDefinition, RecipeChannelDefinition } from "@/domain/registr
 import { InspectorCollapsiblePanel } from "@/app/shell/inspector/inspector-collapsible-panel";
 import { RecipeDisplay } from "@/app/shell/shared/recipe-display";
 import { isAutomaticRecipeChannelMode } from "@/shared/recipe-channel-behavior";
+import { isRecipeVisibleInToolbox } from "@/shared/registry/recipe-visibility";
+import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
+import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
+import { RecipeTileGrid } from "./recipe-tile-grid";
 import styles from "@/app/shell/inspector/inspector.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { resolvePresentedRecipeProgressSeconds } from "@/shared/simulation-recipe-progress";
@@ -135,9 +139,10 @@ export function SimulationRecipeStatusRuntimeInspector({
           isInGas ? "recipe-gas-env-tag--in-gas" : "recipe-gas-env-tag--no-gas",
         )}
       >
+        {/* AI-CORRECTION 2026-11-13：文案改走 i18n，原硬编码为“当前所处气体环境: …”/“未处于气体环境”。 */}
         {isInGas
-          ? `当前所处气体环境: ${gasNames.join(", ")}`
-          : "未处于气体环境"}
+          ? `${t("inspector.recipeStatus.inGas")}${gasNames.join(", ")}`
+          : t("inspector.recipeStatus.noGas")}
       </span>
     );
   })();
@@ -169,7 +174,38 @@ export function SimulationRecipeStatusRuntimeInspector({
   // 运行时 channel 配方状态
   const channelRecipeStatus = runtimeStatus?.channelRecipes ?? {};
 
-  if (runtimeStatus === null && !hasManual && !modeSwitchable) {
+  // 2026-11-13：设备可执行的生产配方，供单击磁贴选择。自动配方设备写入的 channelRecipes 与
+  // 自动规划（EDA）产出一致，仅作为计划配方与画布标签，不改变仿真的自动匹配。
+  const machineRecipes = definition === undefined
+    ? []
+    : resolveMachineRecipes(index, definition.id);
+  const firstAutoChannel = autoChannels[0];
+  const showPlannedPicker = runtimeStatus === null
+    && firstAutoChannel !== undefined
+    && machineRecipes.length > 0
+    && appHost !== undefined
+    && entity !== undefined;
+  const assignChannelRecipe = (channelId: string, recipeId: string | null, allowDuplicates: boolean) => {
+    const editor = appHost?.workspace.editor;
+    if (!editor || !entity) return;
+    const next = { ...storedRecipes };
+    if (recipeId === null) {
+      delete next[channelId];
+    } else {
+      if (!allowDuplicates) {
+        for (const [storedChannelId, storedRecipeId] of Object.entries(next)) {
+          if (storedChannelId !== channelId && storedRecipeId === recipeId) {
+            delete next[storedChannelId];
+          }
+        }
+      }
+      next[channelId] = recipeId;
+    }
+    editor.actions.patchEntityConfig(entity.id, { channelRecipes: next });
+  };
+
+  // AI-CORRECTION 2026-11-13：未运行仿真时，自动配方设备也显示计划配方磁贴，不再整体隐藏。
+  if (runtimeStatus === null && !hasManual && !modeSwitchable && !showPlannedPicker) {
     return null;
   }
 
@@ -204,7 +240,7 @@ export function SimulationRecipeStatusRuntimeInspector({
     <InspectorCollapsiblePanel
       className={cm(styles, "simulation-recipe-status-runtime-inspector")}
       dataInspectorKey={SIMULATION_RECIPE_STATUS_RUNTIME_INSPECTOR_KEY}
-      title="配方状态"
+      title={t("inspector.recipeStatus.title")}
       titleClassName={cm(styles, "recipe-status-panel-title")}
       headerActions={gasEnvTag === null && modeSwitch === null ? undefined : (
         <>
@@ -213,7 +249,20 @@ export function SimulationRecipeStatusRuntimeInspector({
         </>
       )}
     >
-      {hasAuto && (
+      {hasAuto && showPlannedPicker && firstAutoChannel !== undefined && (
+        <RecipeTileGrid
+          index={index}
+          onSelect={(recipeId) => assignChannelRecipe(
+            firstAutoChannel.id,
+            recipeId,
+            recipeChannelBehavior?.allowDuplicateRecipesAcrossChannels ?? false,
+          )}
+          recipes={machineRecipes}
+          selectedRecipeId={storedRecipes[firstAutoChannel.id] ?? null}
+          t={t}
+        />
+      )}
+      {hasAuto && !showPlannedPicker && (
         <AutoRecipeSection
           autoChannels={autoChannels}
           channelRecipeStatus={channelRecipeStatus}
@@ -239,6 +288,8 @@ export function SimulationRecipeStatusRuntimeInspector({
           allowDuplicateRecipesAcrossChannels={
             recipeChannelBehavior?.allowDuplicateRecipesAcrossChannels ?? false
           }
+          machineRecipes={machineRecipes}
+          onAssignRecipe={assignChannelRecipe}
         />
       )}
     </InspectorCollapsiblePanel>
@@ -332,6 +383,8 @@ interface ManualRecipeSectionProps {
   resolveProgressPercent: (
     status: SimulationDeviceRuntimeChannelRecipeStatus | null,
   ) => number | null;
+  machineRecipes: readonly RecipeDefinition[];
+  onAssignRecipe: (channelId: string, recipeId: string | null, allowDuplicates: boolean) => void;
 }
 
 function ManualRecipeSection({
@@ -345,6 +398,8 @@ function ManualRecipeSection({
   definition,
   allowDuplicateRecipesAcrossChannels,
   resolveProgressPercent,
+  machineRecipes,
+  onAssignRecipe,
 }: ManualRecipeSectionProps) {
   // 已填充的手动 channel（在 entity config 中有配方记录）
   const filledChannels = manualChannels.filter(
@@ -414,7 +469,22 @@ function ManualRecipeSection({
           </div>
         );
       })}
-      {unfilledChannels.length > 0 && (() => {
+      {/* 2026-11-13：未填写的频道直接内嵌配方磁贴，单击即写入；配方较多时磁贴网格自带筛选框。 */}
+      {unfilledChannels.length > 0 && machineRecipes.length > 0 && (() => {
+        const nextChannel = unfilledChannels[0]!;
+        return (
+          <RecipeTileGrid
+            key={`tiles-${nextChannel.id}`}
+            index={index}
+            onSelect={(recipeId) => onAssignRecipe(nextChannel.id, recipeId, allowDuplicateRecipesAcrossChannels)}
+            recipes={machineRecipes}
+            selectedRecipeId={null}
+            t={t}
+          />
+        );
+      })()}
+      {/* AI-CORRECTION 2026-11-13：“添加配方 → 配方选择对话框”入口仅在设备没有可平铺的配方时作为兜底保留。 */}
+      {unfilledChannels.length > 0 && machineRecipes.length === 0 && (() => {
         const nextChannel = unfilledChannels[0]!;
         return (
           <button
@@ -476,3 +546,18 @@ function ManualRecipeSection({
 //     </div>
 //   );
 // }
+
+/** 2026-11-13：设备可平铺选择的生产配方（排除工具箱隐藏配方与运行消耗配方）。 */
+function resolveMachineRecipes(index: ProductionPlanningIndex, machineId: string): RecipeDefinition[] {
+  const recipes: RecipeDefinition[] = [];
+  for (const recipe of index.recipeById.values()) {
+    if (
+      recipe.machineId === machineId
+      && isRecipeVisibleInToolbox(recipe)
+      && !recipe.tags.includes(CONSUMPTION_RECIPE_TAG)
+    ) {
+      recipes.push(recipe);
+    }
+  }
+  return recipes;
+}

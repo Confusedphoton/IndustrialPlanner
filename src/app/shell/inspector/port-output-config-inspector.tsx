@@ -205,9 +205,9 @@ export function PortOutputConfigInspector({
     return (
       <InspectorCollapsiblePanel
         dataInspectorKey="port-output-config"
-        title="输出端口"
+        title={translate("inspectorText.outputPorts")}
       >
-        <p>该设备无可用输出端口配置。</p>
+        <p>{translate("inspectorText.thisDeviceHasNoConfigurableOutput")}</p>
       </InspectorCollapsiblePanel>
     );
   }
@@ -220,7 +220,7 @@ export function PortOutputConfigInspector({
       dataInspectorKey="port-output-config"
       data-device-class={deviceClass}
       data-render-mode={mode}
-      title="输出端口"
+      title={translate("inspectorText.outputPorts")}
     >
       {/*
         AI-REMOVED 2026-06-04:
@@ -249,7 +249,7 @@ export function PortOutputConfigInspector({
           const itemIconSrc = resolveItemIconSrc(itemDefinition);
           const itemLabel =
             itemDefinition === null
-              ? "未选择"
+              ? translate("inspectorText.notSet")
               : translate(itemDefinition.nameKey);
           const configured = row.currentItemId !== null;
 
@@ -270,7 +270,7 @@ export function PortOutputConfigInspector({
               key={row.portGroup.id}
             >
               <div className={cm(styles, "slot-config-row-header")}>
-                <strong>{row.label}</strong>
+                <strong>{translate(row.label)}</strong>
               </div>
               <div className={cm(styles, "slot-config-row-main")}>
                 <button
@@ -315,7 +315,7 @@ export function PortOutputConfigInspector({
                 rows={rows}
                 rotation={locatorRotation}
                 targetPortGroupId={row.portGroup.id}
-                title={`${row.portLabel} ${row.label} 位置`}
+                title={`${row.portLabel} ${translate(row.label)} ${translate("inspectorText.location")}`}
               />
               {/*
                 AI-REMOVED 2026-06-04:
@@ -375,31 +375,31 @@ export function PortOutputConfigInspector({
               */}
               <button
                 className={cm(styles, "port-output-action-button port-output-change-button")}
-                aria-label="更换"
+                aria-label={translate("inspectorText.change")}
                 data-slot-action="pick-item"
                 disabled={pendingGroupId === row.portGroup.id}
                 onClick={() => {
                   void requestItemSelection(row);
                 }}
-                title="更换"
+                title={translate("inspectorText.change")}
                 type="button"
               >
                 <LucidePencil aria-hidden="true" />
-                <span className={cm(styles, "port-output-action-label")}>更换</span>
+                <span className={cm(styles, "port-output-action-label")}>{translate("inspectorText.change")}</span>
               </button>
               <button
                 className={cm(styles, "port-output-action-button port-output-clear-button")}
-                aria-label="清除"
+                aria-label={translate("inspectorText.clear")}
                 data-slot-action="clear-item"
                 disabled={!configured}
                 onClick={() => {
                   clearSelection(row);
                 }}
-                title="清除"
+                title={translate("inspectorText.clear")}
                 type="button"
               >
                 <LucideTrash2 aria-hidden="true" />
-                <span className={cm(styles, "port-output-action-label")}>清除</span>
+                <span className={cm(styles, "port-output-action-label")}>{translate("inspectorText.clear")}</span>
               </button>
             </div>
           );

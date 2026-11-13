@@ -40,6 +40,7 @@ import {
 //   type GesturePosition,
 
   type GestureWheelEventLike,
+  PEN_ERASER_BUTTON,
 } from "@/app/input/gesture/adapter";
 import type { ActiveTool } from "@/domain/app/types/app-types";
 // AI-REMOVED 2026-11-12:
@@ -883,6 +884,82 @@ describe("GestureAdapter", () => {
         to: "move",
       },
     ]);
+  });
+
+  // 2026-11-13：手写笔精确输入。
+  describe("precise pen input", () => {
+    function penEvent(overrides: Partial<GesturePointerEventLike> = {}): GesturePointerEventLike {
+      return pointerEvent({ pointerId: 31, pointerType: "pen", ...overrides });
+    }
+
+    it("routes pen through mouse gestures when precise pen input is enabled", () => {
+      const { adapter } = createAdapterHarness({ adapterOptions: { queryPenPreciseInput: () => true } });
+      const events: GestureEvent[] = [];
+      adapter.subscribe((event) => events.push(event));
+
+      adapter.handlePointerMove(penEvent({ clientX: 5, clientY: 5 }));
+      adapter.handlePointerDown(penEvent({ clientX: 10, clientY: 10, buttons: 1 }));
+      adapter.handlePointerUp(penEvent({ clientX: 11, clientY: 10 }));
+      adapter.handlePointerDown(penEvent({ clientX: 20, clientY: 20, buttons: 1 }));
+      adapter.handlePointerMove(penEvent({ clientX: 40, clientY: 20, buttons: 1 }));
+      adapter.handlePointerUp(penEvent({ clientX: 40, clientY: 20 }));
+
+      expect(events.map((event) => event.type)).toEqual([
+        "mouse move",
+        "mouse tap",
+        "mouse dragstart",
+        "mouse dragend",
+      ]);
+    });
+
+    it("keeps pen on touch gestures when precise pen input is disabled", () => {
+      const { adapter } = createAdapterHarness({ adapterOptions: { queryPenPreciseInput: () => false } });
+      const events: GestureEvent[] = [];
+      adapter.subscribe((event) => events.push(event));
+
+      adapter.handlePointerDown(penEvent({ clientX: 10, clientY: 10, buttons: 1 }));
+      adapter.handlePointerUp(penEvent({ clientX: 10, clientY: 10 }));
+
+      expect(events.map((event) => event.type)).toContain("touch tap");
+      expect(events.some((event) => event.type.startsWith("mouse"))).toBe(false);
+    });
+
+    it("resolves the eraser end as the eraser button for taps and drags", () => {
+      const { adapter } = createAdapterHarness({ adapterOptions: { queryPenPreciseInput: () => true } });
+      const events: GestureEvent[] = [];
+      adapter.subscribe((event) => events.push(event));
+
+      adapter.handlePointerDown(penEvent({ clientX: 10, clientY: 10, button: 5, buttons: 32 }));
+      adapter.handlePointerUp(penEvent({ clientX: 10, clientY: 10, button: 5, buttons: 0 }));
+      adapter.handlePointerDown(penEvent({ clientX: 20, clientY: 20, button: 0, buttons: 32 }));
+      adapter.handlePointerMove(penEvent({ clientX: 40, clientY: 20, buttons: 32 }));
+      adapter.handlePointerUp(penEvent({ clientX: 40, clientY: 20, button: 0, buttons: 0 }));
+
+      expect(events[0]).toMatchObject({ type: "mouse tap", button: PEN_ERASER_BUTTON });
+      expect(events[1]).toMatchObject({ type: "mouse dragstart", originButton: PEN_ERASER_BUTTON });
+      expect(events[2]).toMatchObject({ type: "mouse dragend", originButton: PEN_ERASER_BUTTON });
+    });
+
+    it("rejects palm touches while the pen is active and shortly after", () => {
+      const { adapter } = createAdapterHarness({ adapterOptions: { queryPenPreciseInput: () => true } });
+      const events: GestureEvent[] = [];
+      adapter.subscribe((event) => events.push(event));
+
+      adapter.handlePointerDown(penEvent({ clientX: 10, clientY: 10, buttons: 1 }));
+      adapter.handlePointerDown(touchEvent(41, 60, 60));
+      adapter.handlePointerUp(touchEvent(41, 60, 60));
+      adapter.handlePointerUp(penEvent({ clientX: 10, clientY: 10 }));
+      adapter.handlePointerDown(touchEvent(42, 70, 70));
+      adapter.handlePointerUp(touchEvent(42, 70, 70));
+
+      expect(events.some((event) => event.type.startsWith("touch"))).toBe(false);
+
+      vi.advanceTimersByTime(1_000);
+      adapter.handlePointerDown(touchEvent(43, 70, 70));
+      adapter.handlePointerUp(touchEvent(43, 70, 70));
+
+      expect(events.map((event) => event.type)).toContain("touch tap");
+    });
   });
 });
 

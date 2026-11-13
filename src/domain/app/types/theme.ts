@@ -1,4 +1,5 @@
-export type AppThemeId = "ayu-dark" | "ayu-light";
+// AI-CORRECTION 2026-11-13: 新增 graphite-dark（石墨深色）主题；ayu-dark 仅为兼容旧设置保留。
+export type AppThemeId = "ayu-dark" | "ayu-light" | "graphite-dark";
 
 export const APP_THEME_COLOR_KEYS = [
   "transparent",

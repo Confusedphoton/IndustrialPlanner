@@ -38,14 +38,14 @@ export function LogisticsItemInspector({
       bodyRole="list"
       className="logistics-item-inspector"
       dataInspectorKey="logistics-item"
-      title="物流物品"
+      title={translate("inspectorText.itemInTransit")}
     >
       {occupiedSlots.length === 0 ? (
         <div className={cm(styles, "logistics-item-row is-empty")} data-logistics-item-empty role="listitem">
           <span className={cm(styles, "logistics-item-icon")}>
             <LucideCircleDashed aria-hidden="true" />
           </span>
-          <span className={cm(styles, "logistics-item-name")}>暂无物品</span>
+          <span className={cm(styles, "logistics-item-name")}>{translate("inspectorText.noItems")}</span>
         </div>
       ) : occupiedSlots.map((slot) => {
         const itemId = slot.itemType;

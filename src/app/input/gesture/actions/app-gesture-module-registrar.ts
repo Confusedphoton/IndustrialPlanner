@@ -38,6 +38,7 @@ import {
 import {
   createHypergryphSinglePlacementGestureModule,
 } from "./hypergryph/hypergryph-single-placement-gesture-module";
+import { createHypergryphPenEraserGestureModule } from "./hypergryph/hypergryph-pen-eraser-gesture-module";
 import { createHypergryphSaveBlueprintGestureModule } from "./hypergryph/hypergryph-save-blueprint-gesture-module";
 import { createHypergryphMouseViewportPanModule } from "./hypergryph/hypergryph-mouse-viewport-pan-module";
 import { createHypergryphKeyboardViewportPanModule } from "./hypergryph/hypergryph-keyboard-viewport-pan-module";
@@ -127,6 +128,7 @@ export class AppGestureModuleRegistrar {
     register("save-blueprint", createHypergryphSaveBlueprintGestureModule());
     register("switch-device-variant", createHypergryphEntityVariantSwitchGestureModule());
     register("delete", createHypergryphDeleteSelectionGestureModule());
+    register("delete", createHypergryphPenEraserGestureModule());
     register("pan-viewport", createHypergryphMouseViewportPanModule());
     register("pan-viewport", createHypergryphKeyboardViewportPanModule());
     register("zoom-viewport", createHypergryphViewportZoomModule());

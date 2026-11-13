@@ -139,10 +139,10 @@ export function SlotConfigInspector({
   const scopeSwitch = (
     <label
       className={cm(styles, "slot-config-scope-switch", canUseRuntimeState ? "" : "is-disabled")}
-      title={canUseRuntimeState ? undefined : "当前状态仅在仿真运行时可用"}
+      title={canUseRuntimeState ? undefined : translate("inspectorText.liveStateIsOnlyAvailableWhile")}
     >
       <span className={cm(styles, "slot-config-scope-switch-copy")}>
-        <span>编辑模式</span>
+        <span>{translate("inspectorText.editMode")}</span>
         {/*
           AI-REMOVED 2026-06-04:
           Reason: 开关控件已经表达开启/关闭状态，旁边文字重复表达同一信息。
@@ -157,7 +157,7 @@ export function SlotConfigInspector({
         */}
       </span>
       <input
-        aria-label="编辑模式"
+        aria-label={translate("inspectorText.editMode")}
         checked={editModeEnabled}
         className={cm(styles, "slot-config-scope-switch-input")}
         data-inspector-scope-switch
@@ -176,7 +176,7 @@ export function SlotConfigInspector({
         className="slot-config-inspector"
         dataInspectorKey="slot-config"
         headerActions={scopeSwitch}
-        title="槽位配置"
+        title={translate("inspectorText.slots")}
         titleClassName="slot-config-panel-title"
       >
         {/*
@@ -191,7 +191,7 @@ export function SlotConfigInspector({
           Original code:
           <h4>槽位配置</h4>
         */}
-        <div className={cm(styles, "slot-config-empty")}>未找到可编辑的槽位组。</div>
+        <div className={cm(styles, "slot-config-empty")}>{translate("inspectorText.noEditableSlots")}</div>
       </InspectorCollapsiblePanel>
     );
   }
@@ -247,6 +247,50 @@ export function SlotConfigInspector({
     }
   };
 
+  // 2026-11-13：空槽位单击直接打开物品选择，选中后按槽位容量填满并立即写入，跳过槽位配置器。
+  const quickFillEmptySlot = async (
+    row: EffectiveSlotRow,
+    rows: readonly EffectiveSlotRow[],
+  ) => {
+    setPendingSlotId(row.slotId);
+    try {
+      const itemId = await appHost.encyclopediaPicker.pickItem({
+        title: translate("encyclopediaPicker.title.item"),
+        customFilters: slotCustomFilters,
+        filterItem: (item) => canSelectItemForRow(
+          item,
+          row,
+          rows,
+          appHost.workspace.registry.queries.resolveItemDomain,
+        ),
+      });
+      if (itemId === null) {
+        return;
+      }
+
+      const count = clampCount(row.capacity, row.capacity);
+      if (row.source === "runtime-state") {
+        await appHost.workspace.simulation?.actions.patchRuntimeSlot({
+          entityId: entity.id,
+          storageGroupId: row.storageGroupId,
+          slotId: row.slotId,
+          itemType: itemId,
+          count,
+          ignoreStock: false,
+        });
+        return;
+      }
+
+      patchEntityConfig({
+        [row.itemPath]: itemId,
+        [row.countPath]: count,
+        [row.ignoreStockPath]: false,
+      });
+    } finally {
+      setPendingSlotId((current) => current === row.slotId ? null : current);
+    }
+  };
+
   const applySlotDraft = async () => {
     if (editingSlot === null) {
       return;
@@ -295,7 +339,7 @@ export function SlotConfigInspector({
     : groupViews.find((groupView) => groupView.storageGroup.id === editingSlot.storageGroupId)?.rows ?? [editingSlot];
   const editingItemDefinition = draftItemId === null ? null : itemById.get(draftItemId) ?? null;
   const editingItemLabel = editingItemDefinition === null
-    ? "未选择物品"
+    ? translate("inspectorText.noItemSelected")
     : translate(editingItemDefinition.nameKey);
   const roleGroupViews = resolveSlotConfigRoleGroupViews(definition, groupViews);
   const inputGroupViews = roleGroupViews.filter((groupView) => groupView.role === "input");
@@ -322,8 +366,17 @@ export function SlotConfigInspector({
     const roleIndexBySlotKey = new Map(
       rows.map((row, rowIndex) => [createRuntimeSlotKey(row.storageGroupId, row.slotId), rowIndex + 1]),
     );
-    const roleLabel = role === "input" ? "输入" : "输出";
-    const roleTitle = role === "input" ? "原料输入" : "产物输出";
+    // AI-REMOVED 2026-11-13:
+    // Reason: 空槽位名称改用 inspectorText.inputSlot/outputSlot 完整文案，角色简称不再使用。
+    // Trigger: 槽位配置界面国际化。
+    // Evidence: ESLint no-unused-vars。
+    // Replacement: 下方 emptySlotLabel 的 translate 调用。
+    // Risk: Low
+    // Human Review: Required
+    //
+    // Original code:
+    // const roleLabel = role === "input" ? "输入" : "输出";
+    const roleTitle = role === "input" ? translate("inspectorText.inputs") : translate("inspectorText.outputs");
     /*
       AI-REMOVED 2026-06-04:
       Reason: 输入/输出角色图标与标题“原料输入 / 产物输出”重复表达角色。
@@ -373,7 +426,7 @@ export function SlotConfigInspector({
         </div>
         <div className={cm(styles, "slot-config-flow-slot-list")}>
           {roleGroupViews.length === 0 ? (
-            <div className={cm(styles, "slot-config-flow-empty")}>{`暂无${roleLabel}槽位`}</div>
+            <div className={cm(styles, "slot-config-flow-empty")}>{translate(role === "input" ? "inspectorText.noInputSlots" : "inspectorText.noOutputSlots")}</div>
           ) : roleGroupViews.map((groupView) => (
             <section
               className={cm(styles, "slot-config-group")}
@@ -384,7 +437,7 @@ export function SlotConfigInspector({
             >
               {groupView.rows.map((row) => {
                 const roleIndex = roleIndexBySlotKey.get(createRuntimeSlotKey(row.storageGroupId, row.slotId)) ?? row.displayIndex;
-                const emptySlotLabel = `${roleLabel}槽位 ${roleIndex}`;
+                const emptySlotLabel = `${translate(role === "input" ? "inspectorText.inputSlot" : "inspectorText.outputSlot")} ${roleIndex}`;
                 const itemDefinition = row.displayItemId === null
                   ? null
                   : itemById.get(row.displayItemId) ?? null;
@@ -399,6 +452,11 @@ export function SlotConfigInspector({
                     data-slot-number={row.displayIndex}
                     key={row.slotId}
                     onClick={() => {
+                      // AI-CORRECTION 2026-11-13：空且未锁定物品的槽位直接快速填充；其余仍打开槽位配置器。
+                      if (row.displayItemId === null && row.lockItemId === null) {
+                        void quickFillEmptySlot(row, groupView.rows);
+                        return;
+                      }
                       openSlotEditor(row);
                     }}
                     title={itemLabel}
@@ -480,7 +538,7 @@ export function SlotConfigInspector({
             <LucideArrowLeftRight aria-hidden="true" />
           */}
           <div>
-            <strong>混合缓冲</strong>
+            <strong>{translate("inspectorText.mixedBuffer")}</strong>
             {/*
               AI-REMOVED 2026-06-04:
               Reason: “输入/输出共享槽位 (filled/total)”重复标题与下方槽位列表。
@@ -497,7 +555,7 @@ export function SlotConfigInspector({
         </div>
         <div className={cm(styles, "slot-config-flow-slot-list")}>
           {roleGroupViews.length === 0 ? (
-            <div className={cm(styles, "slot-config-flow-empty")}>暂无共享槽位</div>
+            <div className={cm(styles, "slot-config-flow-empty")}>{translate("inspectorText.noSharedSlots")}</div>
           ) : roleGroupViews.map((groupView) => (
             <section
               className={cm(styles, "slot-config-group")}
@@ -508,7 +566,7 @@ export function SlotConfigInspector({
             >
               {groupView.rows.map((row) => {
                 const roleIndex = roleIndexBySlotKey.get(createRuntimeSlotKey(row.storageGroupId, row.slotId)) ?? row.displayIndex;
-                const emptySlotLabel = `槽位 ${roleIndex}`;
+                const emptySlotLabel = `${translate("inspectorText.slot")} ${roleIndex}`;
                 const itemDefinition = row.displayItemId === null
                   ? null
                   : itemById.get(row.displayItemId) ?? null;
@@ -523,6 +581,11 @@ export function SlotConfigInspector({
                     data-slot-number={row.displayIndex}
                     key={row.slotId}
                     onClick={() => {
+                      // AI-CORRECTION 2026-11-13：空且未锁定物品的槽位直接快速填充；其余仍打开槽位配置器。
+                      if (row.displayItemId === null && row.lockItemId === null) {
+                        void quickFillEmptySlot(row, groupView.rows);
+                        return;
+                      }
                       openSlotEditor(row);
                     }}
                     title={itemLabel}
@@ -573,7 +636,7 @@ export function SlotConfigInspector({
       dataInspectorKey="slot-config"
       data-render-mode={mode}
       headerActions={scopeSwitch}
-      title="槽位配置"
+      title={translate("inspectorText.slots")}
       titleClassName="slot-config-panel-title"
     >
       {/*
@@ -643,7 +706,7 @@ export function SlotConfigInspector({
         <>
           <div className={cm(styles, "slot-config-flow-layout")}>
             {renderSlotColumn("input", inputGroupViews)}
-            <div className={cm(styles, "slot-config-flow-direction")} aria-label="加工流向">
+            <div className={cm(styles, "slot-config-flow-direction")} aria-label={translate("inspectorText.processingFlow")}>
               {/*
                 AI-REMOVED 2026-06-04:
                 Reason: 流向文字与箭头图标重复表达加工流向。
@@ -683,18 +746,18 @@ export function SlotConfigInspector({
               style={{ zIndex }}
             >
               <div
-                aria-label="槽位配置器"
+                aria-label={translate("inspectorText.slotEditor")}
                 aria-modal="true"
                 className={cm(styles, "slot-config-dialog")}
                 role="dialog"
               >
             <div className={cm(styles, "slot-config-dialog-header")}>
-              <h3>槽位配置器</h3>
+              <h3>{translate("inspectorText.slotEditor")}</h3>
               <button
-                aria-label="关闭"
+                aria-label={translate("inspectorText.close")}
                 className={cm(styles, "slot-config-dialog-icon-button")}
                 onClick={() => setEditingSlot(null)}
-                title="关闭"
+                title={translate("inspectorText.close")}
                 type="button"
               >
                 <LucideX aria-hidden="true" />
@@ -786,7 +849,7 @@ export function SlotConfigInspector({
                 </div>
               */}
               <div className={cm(styles, "slot-config-dialog-count-row")}>
-                <span>数量</span>
+                <span>{translate("inspectorText.quantity")}</span>
                 <NumberInput
                   className={cm(styles, "slot-config-count-input")}
                   data-slot-dialog-input="count"
@@ -807,17 +870,17 @@ export function SlotConfigInspector({
               </div>
               <div className={cm(styles, "slot-config-dialog-slider-row")}>
                 <button
-                  aria-label="减少数量"
+                  aria-label={translate("inspectorText.decreaseQuantity")}
                   className={cm(styles, "slot-config-step-button")}
                   disabled={draftItemId === null || draftCount <= 0}
                   onClick={() => setDraftCount(clampCount(draftCount - 1, editingSlot.capacity))}
-                  title="减少数量"
+                  title={translate("inspectorText.decreaseQuantity")}
                   type="button"
                 >
                   <LucideMinus aria-hidden="true" />
                 </button>
                 <input
-                  aria-label="数量滑条"
+                  aria-label={translate("inspectorText.quantitySlider")}
                   className={cm(styles, "slot-config-dialog-range")}
                   disabled={draftItemId === null}
                   max={editingSlot.capacity}
@@ -829,11 +892,11 @@ export function SlotConfigInspector({
                   value={draftCount}
                 />
                 <button
-                  aria-label="增加数量"
+                  aria-label={translate("inspectorText.increaseQuantity")}
                   className={cm(styles, "slot-config-step-button")}
                   disabled={draftItemId === null || draftCount >= editingSlot.capacity}
                   onClick={() => setDraftCount(clampCount(draftCount + 1, editingSlot.capacity))}
-                  title="增加数量"
+                  title={translate("inspectorText.increaseQuantity")}
                   type="button"
                 >
                   <LucidePlus aria-hidden="true" />
@@ -850,7 +913,7 @@ export function SlotConfigInspector({
                 type="checkbox"
               />
               <span className={cm(styles, "slot-config-dialog-switch-track")} aria-hidden="true" />
-              <span>无穷</span>
+              <span>{translate("inspectorText.infinite")}</span>
             </label>
             <button
               className={cm(styles, "slot-config-dialog-clear")}

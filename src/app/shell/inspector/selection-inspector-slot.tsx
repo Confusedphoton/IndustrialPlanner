@@ -23,6 +23,7 @@ import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation
 // import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 import {
   buildProductionPlanningIndex,
+  type ProductionPlanningIndex,
 } from "@/app/shell/production-planning/production-planning-model";
 import {
   InspectorDataScopeContext,
@@ -81,38 +82,40 @@ interface InspectorSlotState {
 }
 
 const INSPECTOR_LABELS: Partial<Record<EntityInspectorType, string>> = {
-  [INSPECTOR_TYPE.genericDevice]: "设备概览",
-  [INSPECTOR_TYPE.runtimeStatistics]: "运行统计",
-  [INSPECTOR_TYPE.meteredConsumption]: "运行消耗",
-  [INSPECTOR_TYPE.logisticsItem]: "物流物品",
-  [INSPECTOR_TYPE.storageManagement]: "缓存管理",
-  [INSPECTOR_TYPE.storageTypeFilter]: "缓存类型过滤",
-  [INSPECTOR_TYPE.portFilter]: "端口过滤器",
-  [INSPECTOR_TYPE.admissionRule]: "物品准入",
-  [INSPECTOR_TYPE.submitToWarehouse]: "定时提交到仓库",
-  [INSPECTOR_TYPE.slotConfig]: "槽位配置",
-  [INSPECTOR_TYPE.linkConfig]: "链接配置",
-  [INSPECTOR_TYPE.routing]: "分流/优先级",
-  [INSPECTOR_TYPE.structure]: "结构配置",
-  [INSPECTOR_TYPE.behaviorToggle]: "行为开关",
-  [INSPECTOR_TYPE.warehouseItemLink]: "仓库物品链接",
-  [INSPECTOR_TYPE.infiniteStorage]: "无限存储",
-  [INSPECTOR_TYPE.portOutputConfig]: "输出端口配置",
-  [INSPECTOR_TYPE.darkPipeLink]: "暗管链接",
-  [INSPECTOR_TYPE.waterPurifierNode]: "净水节点",
-  [INSPECTOR_TYPE.blockageAutoClearance]: "自动处理复数配方阻塞",
+  [INSPECTOR_TYPE.genericDevice]: "inspectorText.deviceOverview",
+  [INSPECTOR_TYPE.runtimeStatistics]: "inspectorText.runtimeStatistics",
+  [INSPECTOR_TYPE.meteredConsumption]: "inspectorText.runningConsumption",
+  [INSPECTOR_TYPE.logisticsItem]: "inspectorText.itemInTransit",
+  [INSPECTOR_TYPE.storageManagement]: "inspectorText.bufferManagement",
+  [INSPECTOR_TYPE.storageTypeFilter]: "inspectorText.bufferTypeFilter",
+  [INSPECTOR_TYPE.portFilter]: "inspectorText.portFilter",
+  [INSPECTOR_TYPE.admissionRule]: "inspectorText.itemAdmission",
+  [INSPECTOR_TYPE.submitToWarehouse]: "inspectorText.timedSubmitToDepot",
+  [INSPECTOR_TYPE.slotConfig]: "inspectorText.slots",
+  [INSPECTOR_TYPE.linkConfig]: "inspectorText.linkSettings",
+  [INSPECTOR_TYPE.routing]: "inspectorText.splittingPriority",
+  [INSPECTOR_TYPE.structure]: "inspectorText.structure",
+  [INSPECTOR_TYPE.behaviorToggle]: "inspectorText.behaviorToggles",
+  [INSPECTOR_TYPE.warehouseItemLink]: "inspectorText.depotItemLink",
+  [INSPECTOR_TYPE.infiniteStorage]: "inspectorText.infiniteStorage",
+  [INSPECTOR_TYPE.portOutputConfig]: "inspectorText.outputPortSettings",
+  [INSPECTOR_TYPE.darkPipeLink]: "inspectorText.conduitLink",
+  [INSPECTOR_TYPE.waterPurifierNode]: "inspectorText.purificationNode",
+  [INSPECTOR_TYPE.blockageAutoClearance]: "inspectorText.autoClearMultiRecipeBlockage",
 };
 
 function EmptyInspector({
   declaration,
+  translate,
 }: {
   declaration: EntityInspectorDeclaration;
+  translate: Translate;
 }) {
   return (
     <InspectorCollapsiblePanel
-      data-inspector-label={INSPECTOR_LABELS[declaration.type] ?? declaration.type}
+      data-inspector-label={translate(INSPECTOR_LABELS[declaration.type] ?? declaration.type)}
       dataInspectorKey={declaration.type}
-      title={INSPECTOR_LABELS[declaration.type] ?? declaration.type}
+      title={translate(INSPECTOR_LABELS[declaration.type] ?? declaration.type)}
     >
       {/*
         AI-REMOVED 2026-05-26:
@@ -126,9 +129,37 @@ function EmptyInspector({
         Original code:
         <h4>{INSPECTOR_LABELS[declaration.type] ?? declaration.type}</h4>
       */}
-      <p>该配置当前不可用。</p>
+      <p>{translate("inspectorText.thisSettingIsNotAvailableYet")}</p>
     </InspectorCollapsiblePanel>
   );
+}
+
+const recipeStatusIndexCache = new WeakMap<AppHost["workspace"]["registry"], Map<boolean, ProductionPlanningIndex>>();
+
+function resolveCachedRecipeStatusIndex(
+  registry: AppHost["workspace"]["registry"],
+  debugMode: boolean,
+): ProductionPlanningIndex {
+  let byMode = recipeStatusIndexCache.get(registry);
+  if (byMode === undefined) {
+    byMode = new Map();
+    recipeStatusIndexCache.set(registry, byMode);
+  }
+  const cached = byMode.get(debugMode);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const index = buildProductionPlanningIndex(registry);
+  if (debugMode) {
+    for (const recipe of registry.recipeDefinitions) {
+      if (recipe.tags.includes(CONSUMPTION_RECIPE_TAG)) {
+        index.recipeById.set(recipe.id, recipe);
+      }
+    }
+  }
+  byMode.set(debugMode, index);
+  return index;
 }
 
 function renderRecipeStatusInspector(options: {
@@ -141,21 +172,15 @@ function renderRecipeStatusInspector(options: {
   translate: Translate;
 }) {
   const registry = options.appHost.workspace.registry;
-  const index = buildProductionPlanningIndex(registry);
   const debugMode = options.appHost.state.settings.debugMode === true;
+  // AI-CORRECTION 2026-11-13：索引按 registry 与调试模式缓存；原实现在 50ms 刷新周期内每次重建整库索引。
+  const index = resolveCachedRecipeStatusIndex(registry, debugMode);
   const channelIds = debugMode
     ? options.definition.recipeChannels.map((channel) => channel.id)
     : options.declaration.channelIds.filter((channelId) =>
         options.definition.recipeChannels.find((channel) => channel.id === channelId)?.type
           !== "consumption-channel",
       );
-  if (debugMode) {
-    for (const recipe of registry.recipeDefinitions) {
-      if (recipe.tags.includes(CONSUMPTION_RECIPE_TAG)) {
-        index.recipeById.set(recipe.id, recipe);
-      }
-    }
-  }
 
   return (
     <SimulationRecipeStatusRuntimeInspector
@@ -341,7 +366,7 @@ function renderInspector(options: {
         />
       );
     default:
-      return <EmptyInspector declaration={options.declaration} />;
+      return <EmptyInspector declaration={options.declaration} translate={options.translate} />;
   }
 }
 

@@ -191,7 +191,8 @@ function createWorkbenchStorageSnapshot(options: {
   return {
     leftDockOpen: options.leftDockOpen ?? true,
     leftDockSuppressed: false,
-    rightDockOpen: options.rightDockOpen ?? true,
+    // AI-CORRECTION 2026-11-13：右侧栏初始收起；原默认值 true。
+    rightDockOpen: options.rightDockOpen ?? false,
     leftDockWidth: options.leftDockWidth ?? 375,
     topBarCollapsed: options.topBarCollapsed ?? false,
     rightDockActiveTab: options.rightDockActiveTab ?? DEFAULT_RIGHT_DOCK_TAB_ID,
@@ -600,7 +601,8 @@ describe("createAppTestHost", () => {
     expect(appHost.state.screenProfile.deviceClass).toBe("desktop");
     expect(workspace.app?.state.screenProfile.deviceClass).toBe("desktop");
     expect(appHost.state.workbench.leftDockOpen).toBe(true);
-    expect(appHost.state.workbench.rightDockOpen).toBe(true);
+    // AI-CORRECTION 2026-11-13：右侧栏初始收起，选中设备时展开；原期望为 true。
+    expect(appHost.state.workbench.rightDockOpen).toBe(false);
     expect(appHost.state.workbench.leftDockWidth).toBe(375);
     expect(appHost.internalState.workbench.dialogState.toolbox.visible).toBe(false);
     expect(appHost.internalState.workbench.dialogState.toolbox.maximized).toBe(false);
@@ -1108,6 +1110,8 @@ describe("createAppTestHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
     const appHost = createAppTestHost(workspace);
+    // 2026-11-13：右侧栏初始收起；本用例验证关闭行为，先显式展开。
+    appHost.internalActions.setRightDockOpen(true, { preserveSingleSelection: true });
 
     getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 460,
@@ -1137,6 +1141,8 @@ describe("createAppTestHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
     const appHost = createAppTestHost(workspace);
+    // 2026-11-13：右侧栏初始收起；本用例验证关闭行为，先显式展开。
+    appHost.internalActions.setRightDockOpen(true, { preserveSingleSelection: true });
 
     editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
 
@@ -1150,6 +1156,8 @@ describe("createAppTestHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
     const appHost = createAppTestHost(workspace);
+    // 2026-11-13：右侧栏初始收起；本用例验证关闭行为，先显式展开。
+    appHost.internalActions.setRightDockOpen(true, { preserveSingleSelection: true });
 
     runInAction(() => {
       appHost.internalState.settings.hypergryphSelectionRightDockSync = false;

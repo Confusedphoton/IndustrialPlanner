@@ -30,6 +30,7 @@ export function InspectorCollapsiblePanel({
 }: InspectorCollapsiblePanelProps) {
   const bodyId = useId();
   const [expanded, setExpanded] = useState(defaultExpanded);
+  // 2026-11-13：该名称仅用于辅助技术（不可见），组件无翻译上下文，保留原中文前缀以维持既有选择器契约。
   const actionLabel = `${expanded ? "收起" : "展开"}${title}`;
 
   return (

@@ -16,6 +16,10 @@ import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
 import { createRegistryContract } from "@/registry";
+import { lookupText } from "@/shared/i18n";
+
+// 2026-11-13：界面文案改走 i18n，测试使用真实中文译文断言。
+const zhTranslate = (key: string): string => lookupText("zh-CN", key) ?? key;
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -127,7 +131,7 @@ describe("SlotConfigInspector", () => {
       },
       encyclopediaPicker: picker,
       actions: {
-        translate: (key: string) => key,
+        translate: zhTranslate,
       },
     } as unknown as AppHost;
     appHost = currentAppHost;
@@ -167,15 +171,7 @@ describe("SlotConfigInspector", () => {
       firstTileButton.click();
     });
 
-    const firstPickButton = container.querySelector<HTMLButtonElement>("[data-slot-dialog-action='pick-item']");
-
-    if (firstPickButton === null) {
-      throw new Error("Expected the first slot dialog pick button to be rendered.");
-    }
-
-    act(() => {
-      firstPickButton.click();
-    });
+    // AI-CORRECTION 2026-11-13：空槽位单击直接打开物品选择，不再经过槽位配置器的“选择物品”按钮。
 
     expect(currentAppHost.encyclopediaPicker.matchesItem(ore)).toBe(true);
     expect(currentAppHost.encyclopediaPicker.matchesItem(liquid)).toBe(false);
@@ -206,15 +202,7 @@ describe("SlotConfigInspector", () => {
       secondTileButton.click();
     });
 
-    const secondPickButton = container.querySelector<HTMLButtonElement>("[data-slot-dialog-action='pick-item']");
-
-    if (secondPickButton === null) {
-      throw new Error("Expected the second slot dialog pick button to be rendered.");
-    }
-
-    act(() => {
-      secondPickButton.click();
-    });
+    // AI-CORRECTION 2026-11-13：空槽位单击直接打开物品选择，不再经过槽位配置器的“选择物品”按钮。
 
     // AI-CORRECTION 2026-05-18: 协议存储箱使用 6 个单槽储存组，
     //   跨组不互斥，第二组可再次选择 ore。
@@ -283,7 +271,7 @@ describe("SlotConfigInspector", () => {
       workspace,
       encyclopediaPicker: picker,
       actions: {
-        translate: (key: string) => key,
+        translate: zhTranslate,
       },
     } as unknown as AppHost;
     appHost = currentAppHost;
@@ -313,14 +301,7 @@ describe("SlotConfigInspector", () => {
       firstTileButton.click();
     });
 
-    const firstPickButton = container.querySelector<HTMLButtonElement>("[data-slot-dialog-action='pick-item']");
-    if (firstPickButton === null) {
-      throw new Error("Expected the any-filter slot dialog pick button to be rendered.");
-    }
-
-    act(() => {
-      firstPickButton.click();
-    });
+    // AI-CORRECTION 2026-11-13：空槽位单击直接打开物品选择，不再经过槽位配置器的“选择物品”按钮。
 
     expect(currentAppHost.encyclopediaPicker.matchesItem(requireItem(workspace, "item_copper_ore"))).toBe(true);
     expect(currentAppHost.encyclopediaPicker.matchesItem(requireItem(workspace, "item_liquid_water"))).toBe(true);
@@ -349,7 +330,7 @@ describe("SlotConfigInspector", () => {
       workspace,
       encyclopediaPicker: picker,
       actions: {
-        translate: (key: string) => key,
+        translate: zhTranslate,
       },
     } as unknown as AppHost;
     appHost = currentAppHost;
@@ -435,7 +416,7 @@ describe("SlotConfigInspector", () => {
       workspace,
       encyclopediaPicker: picker,
       actions: {
-        translate: (key: string) => key,
+        translate: zhTranslate,
       },
     } as unknown as AppHost;
     appHost = currentAppHost;
@@ -521,7 +502,7 @@ describe("SlotConfigInspector", () => {
       workspace,
       encyclopediaPicker: picker,
       actions: {
-        translate: (key: string) => key,
+        translate: zhTranslate,
       },
     } as unknown as AppHost;
     appHost = currentAppHost;
@@ -573,7 +554,7 @@ describe("SlotConfigInspector", () => {
       workspace,
       encyclopediaPicker: picker,
       actions: {
-        translate: (key: string) => key,
+        translate: zhTranslate,
       },
     } as unknown as AppHost;
     appHost = currentAppHost;
@@ -658,7 +639,7 @@ describe("SlotConfigInspector", () => {
       workspace,
       encyclopediaPicker: picker,
       actions: {
-        translate: (key: string) => key,
+        translate: zhTranslate,
       },
     } as unknown as AppHost;
     appHost = currentAppHost;
@@ -732,7 +713,7 @@ describe("SlotConfigInspector", () => {
       workspace,
       encyclopediaPicker: picker,
       actions: {
-        translate: (key: string) => key,
+        translate: zhTranslate,
       },
     } as unknown as AppHost;
     appHost = currentAppHost;

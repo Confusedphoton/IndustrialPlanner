@@ -58,6 +58,7 @@ export const HelpDialog = observer(function HelpDialog({ appHost }: { appHost: A
             deviceClass={appHost.state.screenProfile.deviceClass}
             getShortcut={(key) => appHost.internalActions.getKeyboardShortcutFor(key)}
             settings={appHost.state.settings}
+            translate={appHost.actions.translate}
           />
         </div>
       );

@@ -69,7 +69,7 @@ export function MeteredConsumptionInspector({
       bodyClassName={cm(styles, "metered-consumption-body")}
       className={cm(styles, "metered-consumption-inspector")}
       dataInspectorKey="metered-consumption"
-      title="运行消耗"
+      title={appHost.actions.translate("inspectorText.runningConsumption")}
     >
       <div className={cm(styles, "metered-consumption-content")}>
         <span
@@ -83,7 +83,7 @@ export function MeteredConsumptionInspector({
           )}
         </span>
         <div
-          aria-label="当前消耗状态"
+          aria-label={appHost.actions.translate("inspectorText.consumptionStatus")}
           aria-valuemax={maximum}
           aria-valuemin={minimum}
           aria-valuenow={displayedCount}
@@ -114,7 +114,7 @@ export function MeteredConsumptionInspector({
           </div>
         </div>
         <button
-          aria-label="启动消耗"
+          aria-label={appHost.actions.translate("inspectorText.startupConsumption")}
           className={cm(styles, "metered-consumption-fire-button")}
           onClick={() => {
             if (displayedItemId === null) return;
@@ -130,7 +130,7 @@ export function MeteredConsumptionInspector({
           type="button"
         >
           <LucidePlay aria-hidden="true" />
-          <span>启动</span>
+          <span>{appHost.actions.translate("inspectorText.start")}</span>
         </button>
       </div>
       {/* AI-REMOVED 2026-07-16:

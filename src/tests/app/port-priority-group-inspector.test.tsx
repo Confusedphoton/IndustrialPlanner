@@ -13,6 +13,10 @@ import type { WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
+import { lookupText } from "@/shared/i18n";
+
+// 2026-11-13：界面文案改走 i18n，测试使用真实中文译文断言。
+const zhTranslate = (key: string): string => lookupText("zh-CN", key) ?? key;
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -182,7 +186,7 @@ function buildAppHost(
     },
     encyclopediaPicker: picker,
     portPriorityDefaults: new DefaultPortPriorityController(workspace.registry),
-    actions: { translate: (key: string) => key },
+    actions: { translate: zhTranslate },
   } as unknown as AppHost;
 }
 

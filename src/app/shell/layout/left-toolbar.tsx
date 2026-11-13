@@ -5,6 +5,7 @@ import {
 } from "@/app/shell/shared/ui-shell-null-handlers";
 import type { AppHost } from "@/app/host/app-host";
 import type { ActivePanel } from "@/app/state/state-impl";
+import { recipeTreeOverlayState } from "@/app/shell/recipe-tree/recipe-tree-state";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -187,6 +188,20 @@ export const LeftToolbar = observer(function LeftToolbar({
           onClick={() => appHost.blueprintPlannerDialog.open()}>
           <span className={cm(styles, `rail-button-short${plannerBusy ? " eda-task-running" : ""}`)}><WorkbenchIcon kind="search" /></span>
           <span className={cm(styles, "rail-button-label")}>{t("eda.toolbar")}</span>
+        </button>
+        {/* 2026-11-13：配方树浮层开关；浮层常驻画布上方，不占用左侧面板。 */}
+        <button
+          type="button"
+          aria-label={t("workbench.utility.recipeTree")}
+          aria-pressed={recipeTreeOverlayState.visible}
+          className={cm(styles, recipeTreeOverlayState.visible
+            ? "rail-button rail-button-utility is-active"
+            : "rail-button rail-button-utility")}
+          onClick={recipeTreeOverlayState.toggleVisible}
+          title={t("recipeTree.title")}
+        >
+          <span className={cm(styles, "rail-button-short")}><WorkbenchIcon kind="recipe-tree" /></span>
+          <span className={cm(styles, "rail-button-label")}>{t("workbench.utility.recipeTree")}</span>
         </button>
         {utilityToolbarItems.map((item) => {
           const label = t(item.labelKey);

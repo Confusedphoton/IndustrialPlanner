@@ -23,6 +23,7 @@ import {
 } from "@/shared/logging/debug-mode-runtime";
 import { normalizeSelectedActivityIds } from "@/shared/registry/activity-availability";
 import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
+import { isAppThemeId } from "@/app/theme";
 import {
   loadModuleBalancingState,
   saveModuleBalancingState,
@@ -291,9 +292,14 @@ export function normalizePersistedAppSettings(
     locale: persistedAppSettings.locale === "zh-CN" || persistedAppSettings.locale === "en-US"
       ? persistedAppSettings.locale
       : fallback.locale,
-    themeId: persistedAppSettings.themeId === "ayu-light" || persistedAppSettings.themeId === "ayu-dark"
-      ? persistedAppSettings.themeId
-      : fallback.themeId,
+    // AI-CORRECTION 2026-11-13: 改用 src/app/theme 的 isAppThemeId，原硬编码判断为
+    // persistedAppSettings.themeId === "ayu-light" || persistedAppSettings.themeId === "ayu-dark"。
+    // Ayu Dark 已退出可选主题，旧设置迁移到 Graphite Dark。
+    themeId: persistedAppSettings.themeId === "ayu-dark"
+      ? "graphite-dark"
+      : isAppThemeId(persistedAppSettings.themeId)
+        ? persistedAppSettings.themeId
+        : fallback.themeId,
     // AI-REMOVED 2026-09-10:
     // Reason: 操作模式总开关已废弃，不再保留关闭分支
     // Trigger: 用户要求彻底移除 hypergryphOperationMode。
@@ -334,6 +340,9 @@ export function normalizePersistedAppSettings(
     invertWheelZoom: typeof persistedAppSettings.invertWheelZoom === "boolean"
       ? persistedAppSettings.invertWheelZoom
       : fallback.invertWheelZoom,
+    penPreciseInput: typeof persistedAppSettings.penPreciseInput === "boolean"
+      ? persistedAppSettings.penPreciseInput
+      : fallback.penPreciseInput,
     hypergryphSelectionRightDockSync:
       typeof persistedAppSettings.hypergryphSelectionRightDockSync === "boolean"
         ? persistedAppSettings.hypergryphSelectionRightDockSync

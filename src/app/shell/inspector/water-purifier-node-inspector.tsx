@@ -41,7 +41,7 @@ export function WaterPurifierNodeInspector({
     <InspectorCollapsiblePanel
       className="water-purifier-node-inspector"
       dataInspectorKey="water-purifier-node"
-      title="净水节点"
+      title={appHost.actions.translate("inspectorText.purificationNode")}
     >
       <div
         className={cm(styles, "water-purifier-node-panel-body")}
@@ -51,7 +51,7 @@ export function WaterPurifierNodeInspector({
         <div
           className={cm(styles, "water-purifier-mode-row")}
           role="group"
-          aria-label="净水节点模式"
+          aria-label={appHost.actions.translate("inspectorText.purificationNodeMode")}
         >
           <button
             type="button"
@@ -86,7 +86,7 @@ export function WaterPurifierNodeInspector({
           className={cm(styles, "water-purifier-rate-row")}
           data-enabled={outputMode === "manual-rate" ? "true" : "false"}
         >
-          <span>每分钟产出 壤晶废液</span>
+          <span>{appHost.actions.translate("inspectorText.xirangSludgeOutputPerMinute")}</span>
           <NumberInput
             className={cm(styles, "water-purifier-rate-input")}
             data-water-purifier-rate-input

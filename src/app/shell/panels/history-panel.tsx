@@ -204,7 +204,7 @@ function HistoryRecordButton({
     >
       <span className={cm(styles, "history-record-main")}>
         <span className={cm(styles, "history-record-sequence")}>{`#${record.sequence}`}</span>
-        <span className={cm(styles, "history-record-title")}>{record.action.label}</span>
+        <span className={cm(styles, "history-record-title")}>{translateHistoryLabel(record.action.label, _translate)}</span>
       </span>
       {/*
         AI-REMOVED 2026-05-10:
@@ -258,4 +258,31 @@ function _formatHistoryTime(createdAt: string): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+/**
+ * 2026-11-13：历史记录标签由编辑器以中文写入并随历史持久化，显示时按已知标签翻译；
+ * 未登记的标签原样显示。
+ */
+const HISTORY_LABEL_KEYS: Readonly<Record<string, string>> = {
+  "修改设备配置": "historyLabel.editConfig",
+  "切换设备模式": "historyLabel.switchMode",
+  "创建仓库物品链接": "historyLabel.createDepotLink",
+  "创建暗管链接": "historyLabel.createConduitLink",
+  "删除区域": "historyLabel.deleteRegion",
+  "删除设备": "historyLabel.deleteDevice",
+  "删除设备配置键": "historyLabel.clearConfig",
+  "放置蓝图": "historyLabel.placeBlueprint",
+  "放置设备": "historyLabel.placeDevice",
+  "断开暗管链接": "historyLabel.unlinkConduit",
+  "旋转设备": "historyLabel.rotateDevice",
+  "移动设备": "historyLabel.moveDevice",
+  "移除仓库物品链接": "historyLabel.removeDepotLink",
+  "铺设物流": "historyLabel.layLogistics",
+  "清理已重新配置的暗管链接": "historyLabel.cleanConduitLinks",
+};
+
+function translateHistoryLabel(label: string, translate: (key: string) => string): string {
+  const key = HISTORY_LABEL_KEYS[label];
+  return key === undefined ? label : translate(key);
 }

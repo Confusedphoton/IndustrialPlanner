@@ -172,7 +172,7 @@ export function SubmitToWarehouseInspector({
         <span className={cm(styles, "submit-to-warehouse-icon")} aria-hidden="true">
           <LucideUpload />
         </span>
-        <span className={cm(styles, "submit-to-warehouse-label")}>自动提交</span>
+        <span className={cm(styles, "submit-to-warehouse-label")}>{translate("inspectorText.autoSubmit")}</span>
         {remainingSeconds === null ? null : (
           <span
             className={cm(styles, "submit-to-warehouse-countdown")}

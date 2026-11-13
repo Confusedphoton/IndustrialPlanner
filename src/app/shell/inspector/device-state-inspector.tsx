@@ -33,13 +33,13 @@ export function DeviceStateInspector({ definition, runtimeStatus, runtimeSample,
   const percent = duration > 0 ? progress / duration * 100 : 0;
   const remaining = Math.max(0, Math.ceil(duration - progress));
   const waiting = !timed && channel?.isProgressing !== true;
-  const status = runtime === undefined ? "未开始"
-    : channel?.state === "waiting-output" ? "等待输出"
+  const status = runtime === undefined ? translate("inspectorText.notStarted")
+    : channel?.state === "waiting-output" ? translate("inspectorText.waitingForOutputSpace")
     : waiting && (runtimeStatus?.powerStatus === "out-of-power-range"
-      || (definition.requiresPower && clock.documentStatus?.isPowerOutage)) ? "等待供电"
-    : waiting && recipe?.requiredEnvironmentAnyOf?.length ? "等待环境"
-    : clock.simulationState?.runningState === "pause" ? "已暂停"
-    : waiting ? "等待启动" : "进行中";
+      || (definition.requiresPower && clock.documentStatus?.isPowerOutage)) ? translate("inspectorText.waitingForPower")
+    : waiting && recipe?.requiredEnvironmentAnyOf?.length ? translate("inspectorText.waitingForEnvironment")
+    : clock.simulationState?.runningState === "pause" ? translate("inspectorText.paused")
+    : waiting ? translate("inspectorText.waitingToStart") : translate("inspectorText.running");
 
   const cultivation = definition.cultivation;
   const cultivationState = runtimeStatus?.cultivation;
@@ -49,11 +49,11 @@ export function DeviceStateInspector({ definition, runtimeStatus, runtimeSample,
   const cultivationChannel = channel?.recipeId === cultivationRecipeId ? channel : null;
   const cultivationProgress = refined ? cultivationRecipe?.durationSeconds ?? 0
     : cultivationChannel ? resolvePresentedRecipeProgressSeconds({ channelStatus: cultivationChannel, ...clock }) ?? 0 : 0;
-  const cultivationStatus = refined ? "已完成" : !cultivation?.growingStateIds.includes(state.id) ? "等待生长"
-    : clock.simulationState?.runningState === "pause" ? "已暂停" : cultivationChannel?.isProgressing ? "进行中" : "等待息壤环境";
+  const cultivationStatus = refined ? translate("inspectorText.done") : !cultivation?.growingStateIds.includes(state.id) ? translate("inspectorText.waitingToGrow")
+    : clock.simulationState?.runningState === "pause" ? translate("inspectorText.paused") : cultivationChannel?.isProgressing ? translate("inspectorText.running") : translate("inspectorText.waitingForXirangSoil");
 
   return (
-    <InspectorCollapsiblePanel title="设备状态" dataInspectorKey="device-state" bodyClassName={styles["device-state-body"]}>
+    <InspectorCollapsiblePanel title={translate("inspectorText.deviceState")} dataInspectorKey="device-state" bodyClassName={styles["device-state-body"]}>
       <div className={styles["device-state-heading"]}>
         <span className={styles["device-state-name"]}>
           <strong>{translate(state.nameKey)}</strong>
@@ -69,7 +69,7 @@ export function DeviceStateInspector({ definition, runtimeStatus, runtimeSample,
           Original code: <span>阶段 {stateIndex + 1} / {machine.states.length}</span>
         */}
       </div>
-      <div className={styles["progress-bar"]} role="progressbar" aria-label="当前阶段进度"
+      <div className={styles["progress-bar"]} role="progressbar" aria-label={translate("inspectorText.stageProgress")}
         aria-valuemin={0} aria-valuemax={duration} aria-valuenow={progress}>
         <div className={styles["progress-track"]}>
           <div className={styles["progress-fill"]} style={{ width: `${percent}%` }} />
@@ -82,7 +82,7 @@ export function DeviceStateInspector({ definition, runtimeStatus, runtimeSample,
       </div>
       {cultivation && cultivationRecipe && <>
         <div className={styles["device-state-detail"]}><strong>{translate(cultivationRecipe.nameKey)}</strong><span>{cultivationStatus}</span></div>
-        <div className={styles["progress-bar"]} role="progressbar" aria-label="优质培育进度"
+        <div className={styles["progress-bar"]} role="progressbar" aria-label={translate("inspectorText.premiumCultivationProgress")}
           aria-valuemin={0} aria-valuemax={cultivationRecipe.durationSeconds} aria-valuenow={cultivationProgress}>
           <div className={styles["progress-track"]}><div className={styles["progress-fill"]}
             style={{ width: `${Math.min(100, cultivationProgress / cultivationRecipe.durationSeconds * 100)}%` }} /></div>
@@ -91,8 +91,8 @@ export function DeviceStateInspector({ definition, runtimeStatus, runtimeSample,
         <div className={styles["device-state-detail"]}><strong>相接增产 +{Math.round((cultivationState?.yieldBonusRatio ?? 0) * 100)}%</strong>
           <span>相接 {cultivationState?.adjacentPlotCount ?? 0} 块 · 有效 {cultivationState?.effectiveNeighborCount ?? 0} 块</span></div>
         <div className={styles["device-state-detail"]}><span>相接培育 {Math.floor(cultivationState?.neighborProgressSeconds ?? 0)} / {cultivation.neighborDurationSeconds} 秒</span>
-          <span>{(cultivationState?.neighborProgressSeconds ?? 0) >= cultivation.neighborDurationSeconds ? "已完成"
-            : clock.simulationState?.runningState === "pause" ? "已暂停" : cultivationState?.isNeighborProgressing ? "进行中" : "等待有效邻田"}</span></div>
+          <span>{(cultivationState?.neighborProgressSeconds ?? 0) >= cultivation.neighborDurationSeconds ? translate("inspectorText.done")
+            : clock.simulationState?.runningState === "pause" ? translate("inspectorText.paused") : cultivationState?.isNeighborProgressing ? translate("inspectorText.running") : translate("inspectorText.waitingForValidAdjacentField")}</span></div>
       </>}
     </InspectorCollapsiblePanel>
   );

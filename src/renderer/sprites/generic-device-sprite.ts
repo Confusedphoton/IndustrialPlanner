@@ -1,4 +1,4 @@
-import { configuredDeviceItemIds, runningDeviceItemIds, deviceLabelEntityId } from "@/shared/device-item-labels";
+import { configuredDeviceItemIds, runningDeviceItemIds, deviceLabelEntityId, selectedRecipeDeviceItemIds } from "@/shared/device-item-labels";
 import type { ScenePresentation } from "@/domain/document/scene-view-input";
 import { lookupText } from "@/shared/i18n";
 // AI-REMOVED 2026-11-12:
@@ -1910,9 +1910,14 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   // AI-CORRECTION 2026-11-13: 供料配置在停止时也可显示；运输物品只读真实运行输出槽。
   private resolvePrimaryOutputItemIds(): readonly string[] | null {
     const { source, simulation } = this.renderHost.input;
-    const entityId = deviceLabelEntityId(source.queries.getEntityById(this.entityId), this.entityId);
+    const entity = source.queries.getEntityById(this.entityId);
+    const entityId = deviceLabelEntityId(entity, this.entityId);
     if (!simulation) return this.renderHost.input.overlay.getSnapshot()?.deviceItemIds[entityId] ?? null;
-    const configured = configuredDeviceItemIds(this.definition, entityId, source.snapshot.getSnapshot().document, source.registry);
+    // AI-CORRECTION 2026-11-13：非运行状态下优先显示设备已选配方的产物，其次为仓库链接物品。
+    const selected = selectedRecipeDeviceItemIds(entity, source.registry);
+    const configured = selected.length > 0
+      ? selected
+      : configuredDeviceItemIds(this.definition, entityId, source.snapshot.getSnapshot().document, source.registry);
     if (simulation.state.runningState !== "stop") {
       const status = simulation.queries.getDeviceRuntimeStatus(entityId);
       const running = status ? runningDeviceItemIds(this.definition, status, source.registry) : [];

@@ -13,6 +13,10 @@ import type { AdmissionRuleInspectorDeclaration } from "@/domain/registry/types/
 import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation/types/simulation-types";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
+import { lookupText } from "@/shared/i18n";
+
+// 2026-11-13：界面文案改走 i18n，测试使用真实中文译文断言。
+const zhTranslate = (key: string): string => lookupText("zh-CN", key) ?? key;
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -309,7 +313,7 @@ function renderInspector(
         definition={definition}
         entity={entity}
         runtimeStatus={runtimeStatus}
-        translate={(key) => key}
+        translate={zhTranslate}
       />,
     );
   });
