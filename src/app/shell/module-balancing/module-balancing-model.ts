@@ -14,16 +14,6 @@ import type {
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
-// AI-REMOVED 2026-09-01:
-// Reason: 模块图标已收敛为 1～4 个物品 ID，不再接受设备 ID。
-// Trigger: 用户要求模块图标只能由所选物品按数量组合渲染。
-// Evidence: ModuleBalancingCustomModule.iconItemIds 已成为唯一图标字段。
-// Replacement: resolveModuleIconSrcs
-// Risk: Low；历史设备图标在存储迁移时改用模块输出或输入物品。
-// Human Review: Required
-//
-// Original code:
-// import { migrateBlueprintDeviceReference } from "@/shared/blueprint-device-id-migration";
 import { createEntityIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 import { collectDefaultModuleIconItemIds } from "@/app/module-icon";
 import {
@@ -77,16 +67,6 @@ export interface ModuleBalancingComputation {
   stageBalances: ModuleBalancingStageBalance[];
   summaryBalances: ModuleBalancingItemBalance[];
   warehouseForecasts: ModuleBalancingWarehouseForecast[];
-  // AI-REMOVED 2026-08-29:
-  // Reason: 调度券结果必须按地区持有明细与合计，平铺列表无法阻止跨地区聚合。
-  // Trigger: ST2-RQ-018 要求武陵与四号谷地独立分组、独立合计。
-  // Evidence: 旧 UI 对 dispatchTicketSummaries 直接 reduce，补录四号谷地后会合并两种调度券。
-  // Replacement: dispatchTicketGroups
-  // Risk: Low - 该结果是运行时派生值，不涉及持久化迁移。
-  // Human Review: Required
-  //
-  // Original code:
-  // dispatchTicketSummaries: ModuleBalancingDispatchTicketSummary[];
   dispatchTicketGroups: ModuleBalancingDispatchTicketGroup[];
 }
 
@@ -199,16 +179,6 @@ export function computeModuleBalancing(
     stageBalances,
     summaryBalances: finalizedSummary,
     warehouseForecasts: computeWarehouseForecasts(finalizedSummary, canvas.warehouseCapacity),
-    // AI-REMOVED 2026-08-29:
-    // Reason: 计算入口改为直接生成地区分组，避免 UI 再次推导地区与合计。
-    // Trigger: ST2-RQ-018 要求地区计算只有一个模型层真相。
-    // Evidence: computeDispatchTicketGroups 同时完成正净产出过滤、地区隔离与地区合计。
-    // Replacement: 下方 dispatchTicketGroups
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // dispatchTicketSummaries: computeDispatchTicketSummaries(finalizedSummary, index),
     dispatchTicketGroups: computeDispatchTicketGroups(finalizedSummary, index),
   };
 }
@@ -538,45 +508,9 @@ export function resolveModuleIconSrcs(
     return [createEntityIconAssetUrl(undefined)];
   }
 
-  // 优先用第 1 个主要产物图标，其次用第 1 个产出图标，最后 fallback 到设备图标
-  // AI-CORRECTION 2026-07-27: 上述规则已不再适用于系统配方卡；本次需求统一以生产设备图标作为系统配方头图。
-  // AI-REMOVED 2026-07-27:
-  // Reason: 系统配方卡必须显示生产设备图标，产物图标不再代表卡片头图。
-  // Trigger: 用户要求系统配方模块头部改为设备图标。
-  // Evidence: recipe.machineId 可稳定解析实际生产设备，且与新标题末尾设备名称一致。
-  // Replacement: 下方 resolveEntityIconSrc(recipe.machineId, index)
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // const primaryId = recipe.primaryOutputs?.[0] ?? recipe.outputs[0]?.itemId;
-  // if (primaryId !== undefined) {
-  //   return resolveItemIconSrc(primaryId, index);
-  // }
   return [resolveEntityIconSrc(recipe.machineId, index)];
 }
 
-// AI-REMOVED 2026-09-01:
-// Reason: 单值物品/设备混合解析会绕过新的物品数组模型。
-// Trigger: 用户要求模块图标只允许选择 1～4 个物品。
-// Evidence: resolveModuleIconSrcs 已按正式数组解析全部模块图标。
-// Replacement: resolveModuleIconSrcs
-// Risk: Low；非模块设备图标继续走 resolveEntityIconSrc。
-// Human Review: Required
-//
-// Original code:
-// export function resolveAnyIconSrc(iconId: string, index: ModuleBalancingIndex): string {
-//   if (index.itemById.has(iconId)) {
-//     return resolveItemIconSrc(iconId, index);
-//   }
-//
-//   const migratedDeviceId = migrateBlueprintDeviceReference(iconId)?.deviceId ?? iconId;
-//   if (index.entityById.has(migratedDeviceId)) {
-//     return resolveEntityIconSrc(migratedDeviceId, index);
-//   }
-//
-//   return createItemIconAssetUrl(iconId);
-// }
 
 export function formatFlow(value: number): string {
   if (Math.abs(value) < 0.005) {
@@ -869,39 +803,6 @@ export function resolveDispatchTicketRegion(
   return DISPATCH_TICKET_REGIONS.find((candidate) => candidate === region) ?? null;
 }
 
-// AI-REMOVED 2026-08-29:
-// Reason: 平铺结果既保留零值/负值，又允许调用方跨地区求和，不符合地区独立的正净产出语义。
-// Trigger: ST2-RQ-018 要求只展示正净产出，并按武陵、四号谷地分别生成明细与合计。
-// Evidence: 旧函数对所有有价值 Tag 的 balance 直接 push，且返回值没有地区分组边界。
-// Replacement: computeDispatchTicketGroups
-// Risk: Low - 调度券结果只在模块配平最终汇总消费。
-// Human Review: Required
-//
-// Original code:
-// export function computeDispatchTicketSummaries(
-//   balances: readonly ModuleBalancingItemBalance[],
-//   index: ModuleBalancingIndex,
-// ): ModuleBalancingDispatchTicketSummary[] {
-//   const summaries: ModuleBalancingDispatchTicketSummary[] = [];
-//
-//   for (const balance of balances) {
-//     const item = index.itemById.get(balance.itemId);
-//     if (item === undefined) continue;
-//
-//     const value = resolveDispatchTicketValue(item.tags);
-//     if (value <= 0) continue;
-//
-//     summaries.push({
-//       itemId: balance.itemId,
-//       value,
-//       region: resolveDispatchTicketRegion(item.tags),
-//       netDelta: balance.netDelta,
-//       dispatchPerMin: roundFlow(balance.netDelta * value),
-//     });
-//   }
-//
-//   return summaries;
-// }
 export function computeDispatchTicketGroups(
   balances: readonly ModuleBalancingItemBalance[],
   index: ModuleBalancingIndex,

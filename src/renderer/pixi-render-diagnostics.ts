@@ -479,7 +479,6 @@ export function createPixiRenderDiagnostics(options: {
         return callback()
       } finally {
         // 仅读取标志；不改写 Pixi 属性、不扫描场景、不抓堆栈。
-        // AI-CORRECTION 2026-09-13: 按初始化时固定的粗图层列表读取，每个组单独处理嵌套归因。
         for (const { root, group, wasDirty, previousSerial } of groups) {
           if (wasDirty === false && group?.structureDidChange === true
             && previousSerial === (sceneGroupInvalidations.get(root) ?? 0)) {

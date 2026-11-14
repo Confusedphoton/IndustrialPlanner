@@ -32,7 +32,6 @@ function createWorkspace(): WorkspaceContract {
     simulation: null,
     sync: null,
     audio: null,
-    blueprintPlanner: null,
   };
 }
 
@@ -157,15 +156,6 @@ describe("region annotation editor integration", () => {
     } as const;
 
     editor = createEditorTestHost(workspace);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections-extra/editor/region-annotation-editor/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [contained, boundary]
     editor.internalDocument.setSnapshot(createDocument({
       entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/editor/region-annotation-editor/scene-01-variant-1.schema7.json")),
       regions: [region],
@@ -174,18 +164,6 @@ describe("region annotation editor integration", () => {
     expect(editor.queries.findRegionEntityIds(region.id, "contained")).toEqual([contained.id]);
     expect(editor.queries.findRegionEntityIds(region.id, "boundary")).toEqual([boundary.id]);
 
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections-extra/editor/region-annotation-editor/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [{
-    //         ...contained,
-    //         position: { x: 1, y: 0 },
-    //       }]
     const feedback = createRegionMoveFeedback({
       phase: "preview",
       document: editor.document.getSnapshot(),
@@ -231,22 +209,6 @@ describe("region annotation editor integration", () => {
       color: "#F59E0B",
       rects: [{ x: -1, y: -2, width: 3, height: 2 }],
     } as const;
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/region-annotation-editor/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // {
-    //         belt: createEntity({
-    //           id: "belt",
-    //           definitionId: "belt_straight_1x1",
-    //           x: 0,
-    //           y: 0,
-    //         }),
-    //       }
     const blueprint = createBlueprintDocument({
       name: "含区域蓝图",
       baseId: "wuling_protocol_core",
@@ -280,28 +242,6 @@ describe("region annotation editor integration", () => {
     expect(editor.actions.redoDocumentHistory()).toBe(true);
     expect(editor.document.getSnapshot().regions[0]?.id).toBe(placedRegion?.id);
 
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/region-annotation-editor/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // {
-    //         inside: createEntity({
-    //           id: "inside",
-    //           definitionId: "belt_straight_1x1",
-    //           x: 0,
-    //           y: 0,
-    //         }),
-    //         outside: createEntity({
-    //           id: "outside",
-    //           definitionId: "belt_straight_1x1",
-    //           x: 100,
-    //           y: 0,
-    //         }),
-    //       }
     const partialBlueprint = createBlueprintDocument({
       name: "部分成功区域蓝图",
       baseId: "wuling_protocol_core",
@@ -322,22 +262,6 @@ describe("region annotation editor integration", () => {
       { x: 0, y: 0, width: 101, height: 1 },
     ]);
 
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/region-annotation-editor/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // {
-    //         outside: createEntity({
-    //           id: "outside",
-    //           definitionId: "belt_straight_1x1",
-    //           x: 1_000,
-    //           y: 1_000,
-    //         }),
-    //       }
     const rejectedBlueprint = createBlueprintDocument({
       name: "全部失败区域蓝图",
       baseId: "wuling_protocol_core",

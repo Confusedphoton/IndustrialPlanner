@@ -10,17 +10,7 @@ import type {
 import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 import { collectPoweredEntityIds } from "@/shared/geometry/power-range";
 import type { BlueprintExecutionEngine, BlueprintExecutionEngineOptions, CompiledSimulationTopology } from "../contracts";
-import { DENSE_STANDARD_TICK_RATE_PER_SECOND, STANDARD_TICK_RATE_PER_SECOND } from "../contracts";
-// AI-REMOVED 2026-09-16:
-// Reason: 独立执行器不应通过引擎公共出口引入 Host 与浏览器客户端。
-// Trigger: Build 的 Worker 打包路径发现 simulation-worker → execute → Host → client → simulation-worker 循环。
-// Evidence: 原导入经过 dense/index、legacy/index，二者同时导出 Host。
-// Replacement: 调用方显式注入 createEngine；Worker 组合根直接引用引擎适配器。
-// Risk: Low
-// Human Review: Required
-// Original code:
-// import { createDenseBlueprintEngine } from "../dense";
-// import { createLegacyBlueprintEngine } from "../legacy";
+import { STANDARD_TICK_RATE_PER_SECOND } from "../contracts";
 import { resolveDeviceOperatingStatus } from "../projection";
 import { compileSimulationTopology } from "../topology";
 import { BlueprintAnalysisCollector } from "./analysis";
@@ -32,10 +22,8 @@ export async function executeBlueprint(
   request: SimulationBlueprintRunRequest,
   createEngine: (options: BlueprintExecutionEngineOptions) => BlueprintExecutionEngine,
   signal?: AbortSignal,
-  denseTickRate?: 2 | 4,
 ): Promise<SimulationBlueprintRunReport> {
   validateBlueprintRequest(registry, request);
-  if (denseTickRate !== undefined && denseTickRate !== 2 && denseTickRate !== 4) throw new Error("Dense blueprint tick rate must be 2 or 4.");
   const startedAt = performance.now();
   const deadline = startedAt + request.maxWallTimeMs;
   const document = createWorldDocument({ baseId: request.blueprint.baseId });
@@ -47,8 +35,7 @@ export async function executeBlueprint(
   document.entityOrder = entities.map((entity) => entity.id);
   document.slotLinks = structuredClone([...request.blueprint.slotLinks, ...request.scene.externalSlotLinks]);
   document.documentSettings = { ...document.documentSettings, powerMode: request.scene.powerMode };
-  const standardTickRate = engineKind === "dense-v2"
-    ? denseTickRate ?? DENSE_STANDARD_TICK_RATE_PER_SECOND : STANDARD_TICK_RATE_PER_SECOND;
+  const standardTickRate = STANDARD_TICK_RATE_PER_SECOND;
   let engine: BlueprintExecutionEngine | null = null;
   let topology: CompiledSimulationTopology | null = null;
   let analysis: BlueprintAnalysisCollector | undefined;
@@ -80,17 +67,6 @@ export async function executeBlueprint(
         status = "failed";
       } else if (!interrupted()) {
         const options = { topology, powerMode: request.scene.powerMode, initialSlots: request.scene.initialSlots };
-// AI-REMOVED 2026-09-16:
-// Reason: 独立执行器不应通过引擎公共出口引入 Host 与浏览器客户端。
-// Trigger: Build 的 Worker 打包路径发现 simulation-worker → execute → Host → client → simulation-worker 循环。
-// Evidence: 原导入经过 dense/index、legacy/index，二者同时导出 Host。
-// Replacement: 调用方显式注入 createEngine；Worker 组合根直接引用引擎适配器。
-// Risk: Low
-// Human Review: Required
-// Original code:
-//         engine = engineKind === "dense-v2"
-//           ? createDenseBlueprintEngine(registry, options)
-//           : createLegacyBlueprintEngine(registry, options);
         engine = createEngine(options);
         const entityBySlot = resolveSlotEntities(topology);
         const inventorySlotIds = resolveInventorySlots(topology, new Set(request.blueprint.entityOrder), entityBySlot);
@@ -122,18 +98,9 @@ export async function executeBlueprint(
           if (observationStartTick === null && engine.tickNumber >= warmupEndTick) {
             observationStartTick = engine.tickNumber;
             sampleInventory();
-            // 2026-10-08：首个观察 tick 内结算的旧批次也属于观察期，不能只读取结算后的新配方。
+            // 首个观察 tick 内结算的旧批次也属于观察期，不能只读取结算后的新配方。
             analysis?.observeRecipes(engine, 0);
           }
-          // AI-REMOVED 2026-10-05:
-          // Reason: 结束边界必须在定时补料之前判定，避免结束后补料改变最终库存。
-          // Trigger: 独立执行新增一次性定时补料。
-          // Evidence: 原结束判定位于采样后，无法保护先于采样的调度。
-          // Replacement: 本循环起始处相同的结束判定。
-          // Risk: Low
-          // Human Review: Required
-          // Original code:
-          // if (observedSeconds >= request.observationSeconds) break;
           engine.advance();
           analysis?.sample(engine, observationStartTick === null ? null
             : (engine.tickNumber - observationStartTick) / standardTickRate / request.observationSeconds);
@@ -209,9 +176,6 @@ export async function executeBlueprint(
 }
 
 export function validateBlueprintRequest(registry: RegistryContract, request: SimulationBlueprintRunRequest): void {
-  if (request.engine && (request.engine.kind !== "dense-v2" || ![2, 4].includes(request.engine.ticksPerSecond))) {
-    throw new Error("Invalid blueprint execution engine.");
-  }
   if (!Number.isFinite(request.warmupSeconds) || request.warmupSeconds < 0
     || !Number.isFinite(request.observationSeconds) || request.observationSeconds <= 0
     || !Number.isFinite(request.maxWallTimeMs) || request.maxWallTimeMs <= 0

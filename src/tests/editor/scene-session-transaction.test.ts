@@ -52,14 +52,6 @@ describe("会话原子事务与稳定身份", () => {
     control.reject = false;
     expect(editor.actions.applyMoveOerationDraft()).toBe(true);
     expect(editor.state.collections.preview).toHaveLength(0);
-    // AI-REMOVED 2026-11-12:
-    // Reason: 单设备移动成功后沿用既有清空选择语义，原位确认只新增“不记录空历史”的要求。
-    // Trigger: REQ-048 原位确认测试新增时误将批量移动选择保留规则套用于单设备。
-    // Evidence: applyMoveOerationDraft 的 ghostEntityIds.size === 1 分支。
-    // Replacement: 下方检查既有清理语义；原子快照与历史断言保持。
-    // Risk: Low；Human Review: Required
-    // Original code:
-    // expect([...editor.state.collections.selection]).toEqual(["stable-node"]);
     expect([...editor.state.collections.selection]).toEqual([]);
     expect(editor.state.history.cursorSequence).toBe(sequence);
     expect(editor.internalSessionSnapshot.getSnapshot()).toBe(before);

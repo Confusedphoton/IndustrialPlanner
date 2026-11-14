@@ -11,28 +11,6 @@ export async function readMigrationRecords(location: IndexedDbStoreLocation, opt
     const transaction = database.transaction(location.storeName, "readonly");
     const done = waitForTransaction(transaction);
     void done.catch(() => undefined);
-    // AI-REMOVED 2026-10-08:
-    // Reason: 全库迁移逐记录等待游标往返，放大 IndexedDB 扫描延迟。
-    // Trigger: REQ-041 全库预检与移动端开发验证。
-    // Evidence: 40 条蓝图库记录的预检约耗时 8 秒；该循环每项单独等待 onsuccess。
-    // Replacement: 下方同一只读事务的 getAll/getAllKeys 批量快照。
-    // Risk: 一次保留全库快照，与原函数返回全部记录的内存规模一致。
-    // Human Review: Required
-    //
-    // Original code:
-    // const records = await new Promise<MigrationRecord[]>((resolve, reject) => {
-    //   const result: MigrationRecord[] = [];
-    //   const request = transaction.objectStore(location.storeName).openCursor();
-    //   request.onerror = () => reject(request.error);
-    //   request.onsuccess = () => {
-    //     const cursor = request.result;
-    //     if (cursor === null) { resolve(result); return; }
-    //     try {
-    //       result.push({ key: cursor.key, value: !options.raw && typeof cursor.value === "string" ? JSON.parse(cursor.value) : cursor.value });
-    //       cursor.continue();
-    //     } catch (error) { reject(error); }
-    //   };
-    // });
     const objectStore = transaction.objectStore(location.storeName);
     const keysRequest = objectStore.getAllKeys();
     const valuesRequest = objectStore.getAll();
@@ -54,20 +32,6 @@ export async function readMigrationRecords(location: IndexedDbStoreLocation, opt
   } finally { database.close(); }
 }
 
-// AI-REMOVED 2026-10-09:
-// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
-// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
-// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
-// Replacement: prepareStoredJsonMigration 统一正常写回和失败原件保护
-// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
-// Human Review: Required
-// Original code:
-// /** 返回需要显式提交的工作项；转换规则由资源 owner 提供。 */
-// export function migratedRecordJob(location: IndexedDbStoreLocation, record: MigrationRecord, value: unknown, label: string) {
-//   if (value === null) throw new Error(`${label} 无法升级，原始内容已保留。`);
-//   if (createStableJsonHash(record.value) === createStableJsonHash(value)) return [];
-//   return [{ label, run: async () => { await saveToIndexedDb({ ...location, key: record.key }, value); } }];
-// }
 export const MIGRATION_QUARANTINE_STORE = "data-migration-originals";
 interface MigrationOriginal {
   readonly storeName: string;

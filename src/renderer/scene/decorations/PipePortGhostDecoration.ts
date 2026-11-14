@@ -148,26 +148,6 @@ export function createPipePortGhostDecoration(): DecorationLayer {
       }
 
       const entities = source.queries.listEntities();
-      // AI-REMOVED 2026-09-16:
-      // Reason: 端口合法性仅随内容变化重算，视口变化复用世界坐标结果。
-      // Trigger: 用户要求优化视口拖动与虚影移动。
-      // Evidence: Trace 与调用链确认重复布局、全量候选扫描和缓存驱逐。
-      // Replacement: 下方 entries 缓存
-      // Risk: 需验证平移、缩放、旋转与编辑后的正确性。
-      // Human Review: Required
-      // Original code:
-      //       const entityDefinitionMap = new Map(
-      //         ctx.renderHost.workspace.registry.entityDefinitions.map((definition) => [
-      //           definition.id,
-      //           definition,
-      //         ]),
-      //       );
-      //       const entries = resolveProductionPipePortGhostEntries({
-      //         entities,
-      //         entityDefinitionMap,
-      //         queries: ctx.renderHost.workspace.registry.queries,
-      //         hiddenEntityIds: strongOverlayEntityIds,
-      //       });
       const definitions = ctx.renderHost.input.source.registry.entityDefinitions;
       const hiddenKey = [...strongOverlayEntityIds].sort().join(",");
       if (cachedEntities !== entities || cachedDefinitions !== definitions || cachedHiddenKey !== hiddenKey

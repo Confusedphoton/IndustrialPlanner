@@ -2,33 +2,7 @@ import { loadBlueprintFromFile } from "./blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
-// AI-REMOVED 2026-09-08:
-// Reason: 观察窗口改为仿真秒数，测试不再绑定 Legacy 20 TPS。
-// Trigger: cheat infinite device 纳入全引擎矩阵。
-// Evidence: 用例只关心首次运行和三秒后的稳定槽位状态。
-// Replacement: maxDurationSeconds、findFirstTick 与 getLastTick。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
 import { runBlueprintSimulation } from "./blueprint-runner";
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/cheat-infinite-device/index.json
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// import {
-//   createBlueprint,
-//   createEntity,
-//   findFirstTick,
-//   findSlot,
-//   getDevice,
-//   getLastTick,
-// } from "./blueprint-test-helpers";
 import { findFirstTick, findSlot, getDevice, getLastTick } from "./blueprint-test-helpers";
 import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 
@@ -62,39 +36,6 @@ const DESTROY_BUFFER_IDS = [
 
 describe.each(SIMULATION_ENGINE_MATRIX)("cheat infinite device simulation [%s]", (engineKind) => {
   it("destroys four isolated strict-domain inputs in parallel while retaining a 50-item infinite output slot", async () => {
-    // AI-REMOVED 2026-09-08:
-    // Reason: finalTick 的 45 只表示约两秒后的观察点，无法跨引擎复用。
-    // Trigger: cheat infinite device 纳入全引擎矩阵。
-    // Evidence: 断言目标是业务状态，不依赖精确 tick 相位。
-    // Replacement: maxDurationSeconds: 3 与报告最后一帧。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // const finalTick = (2 * STANDARD_TICK_RATE_PER_SECOND) + 5;
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/cheat-infinite-device/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // createBlueprint(
-    //         "cheat-infinite-device",
-    //         DEVICE_CASES.map((deviceCase, index) => createEntity(
-    //           deviceCase.entityId,
-    //           deviceCase.definitionId,
-    //           index * 3,
-    //           0,
-    //           0,
-    //           {
-    //             "storageSlotGroups[0].slots[0].initialItemType": deviceCase.itemId,
-    //             "storageSlotGroups[0].slots[0].initialCount": 8,
-    //             "storageSlotGroups[1].slots[0].initialItemType": deviceCase.itemId,
-    //           },
-    //         )),
-    //       )
     const report = await runBlueprintSimulation({
       blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/cheat-infinite-device/scene-01-cheat-infinite-device-34fe6490.schema7.json"),
       maxDurationSeconds: 3,

@@ -63,42 +63,14 @@ export const DIRECT_BLUEPRINT_SPRITE_MAPPINGS = [
     assetFileName: 'bg_machine_unloader.png',
     spriteId: 'item_port_unloader_1',
   },
-  // AI-REMOVED 2026-06-17:
-  // Reason: 暗管蓝图精灵改为标准计算（端口+边框），不再使用直接素材映射
-  // Trigger: 用户要求暗管蓝图精灵走标准计算流程，使用方形结果
-  // Replacement: draw-device-blueprint-sprite.mjs 的 createDeviceBlueprintSprite 标准流程
-  // Risk: Low — 标准流程按 3×3 footprint 生成 384×384 方形精灵，与原有直接素材一致
-  // Human Review: Required
-  //
-  // Original code:
-  // {
-  //   assetFileName: 'bg_machine_underground_pipe_2.png',
-  //   spriteId: 'item_port_udpipe_loader_2',
-  // },
-  // {
-  //   assetFileName: 'bg_machine_underground_pipe_2.png',
-  //   spriteId: 'item_port_udpipe_unloader_2',
-  // },
-  // {
-  //   assetFileName: 'bg_machine_underground_pipe_1.png',
-  //   spriteId: 'item_port_udpipe_loader_1',
-  // },
-  // {
-  //   assetFileName: 'bg_machine_underground_pipe_1.png',
-  //   spriteId: 'item_port_udpipe_unloader_1',
-  // },
   {
     assetFileName: 'bg_machine_udpipe_loader_1.png',
     spriteId: 'item_port_udpipe_loader_1',
-    // AI-CORRECTION 2026-08-20: 蓝图素材随解包默认朝向旋转 180°。
-    // AI-CORRECTION 2026-09-11: AKEData 端口校准已统一 registry 默认朝向，蓝图直接素材回到原始 0°。
     rotationDegrees: 0,
   },
   {
     assetFileName: 'bg_machine_udpipe_unloader_1.png',
     spriteId: 'item_port_udpipe_unloader_1',
-    // AI-CORRECTION 2026-08-20: 蓝图素材随解包默认朝向旋转 180°。
-    // AI-CORRECTION 2026-09-11: AKEData 端口校准已统一 registry 默认朝向，蓝图直接素材回到原始 0°。
     rotationDegrees: 0,
   },
   {
@@ -106,22 +78,8 @@ export const DIRECT_BLUEPRINT_SPRITE_MAPPINGS = [
     spriteId: 'item_port_water_pump_1',
     repositoryAssetPath: 'resources/blueprint-direct-sprites/item_port_water_pump_1-schema4.png',
     trimPx: 0,
-    // AI-CORRECTION 2026-08-20: 保留既有抽水泵专用蓝图素材，仅订正其默认朝向。
-    // AI-CORRECTION 2026-09-11: AKEData 端口校准已统一 registry 默认朝向，蓝图直接素材回到原始 0°。
     rotationDegrees: 0,
   },
-  // AI-REMOVED 2026-07-12:
-  // Reason: 废水处理机改为标准计算生成蓝图精灵，不再使用直接素材映射
-  // Trigger: 用户要求废水处理机和储液罐改为标准生成
-  // Replacement: draw-device-blueprint-sprite.mjs 的 createDeviceBlueprintSprite 标准流程
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // {
-  //   assetFileName: 'bg_machine_squirter_1.png',
-  //   spriteId: 'item_liquid_cleaner_1',
-  // },
   {
     assetFileName: 'bg_machine_power.png',
     spriteId: 'item_port_power_diffuser_1',
@@ -138,18 +96,6 @@ export const DIRECT_BLUEPRINT_SPRITE_MAPPINGS = [
     assetFileName: 'bg_machine_loader.png',
     spriteId: 'item_port_loader_1',
   },
-  // AI-REMOVED 2026-07-12:
-  // Reason: 储液罐改为标准计算生成蓝图精灵，不再使用直接素材映射
-  // Trigger: 用户要求废水处理机和储液罐改为标准生成
-  // Replacement: draw-device-blueprint-sprite.mjs 的 createDeviceBlueprintSprite 标准流程
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // {
-  //   assetFileName: 'bg_machine_liquid_storager_1.png',
-  //   spriteId: 'item_port_liquid_storager_1',
-  // },
   {
     assetFileName: 'bg_logistic_log_conditioner.png',
     spriteId: 'item_log_admission',

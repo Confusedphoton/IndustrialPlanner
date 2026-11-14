@@ -51,13 +51,11 @@ export function createHoverCornersDecoration(): DecorationLayer {
       // 空地且非物流布设模式 → 不绘制四角特效，仅物流 idle 保留。
       // 物流手势 idle 阶段设 hoverTarget，非 idle 清空 hoverTarget，
       // 故此处只要 activeTool === "logistics-placement" 即为 idle。
-      // AI-CORRECTION 2026-09-13: 可见性已在上方与绘制输入一起判断；不可见时只清理一次。
       if (footprintGridRect === null) {
         return;
       }
 
       // 计算足印旋转后的网格矩形（仅旋转 footprint，不含 spriteOffset）
-      // AI-CORRECTION 2026-09-13: 足印计算已前移，使用其值快照判断静止悬停是否需要重绘。
 
       // 网格坐标 → viewport 像素坐标
       const viewportRect = resolveViewportRectFromWorldGridRect({

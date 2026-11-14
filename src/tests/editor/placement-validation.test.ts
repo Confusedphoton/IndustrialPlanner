@@ -16,19 +16,8 @@ import {
 } from "@/domain/registry/types/base-definition";
 import { PLACEMENT_BEHAVIOR_TYPE } from "@/domain/registry/types/entity-placement-behavior";
 import { createRegistryContract } from "@/registry";
-// AI-REMOVED 2026-10-12:
-// Reason: 标签资格测试迁为结构化白名单测试。
-// Trigger: 用户确认地图/区域白名单与 UI 过滤方案。
-// Evidence: EntityDefinition.placementWhitelist 已成为唯一资格来源。
-// Replacement: 设备 placementWhitelist 声明
-// Risk: 原有草稿箱、外围和完整占地断言需要继续覆盖。
-// Human Review: Required
-//
-// Original code:
-// import { BASE_AREA_ONLY_TAG_PREFIX } from "@/shared/base-tags";
 
 
-// AI-CORRECTION 2026-10-12: 几何布景保留真实地图身份，避免绕过设备白名单；面积与内置设施仍按原断言配置。
 const TEST_BUILTIN_BASE_ID = "wuling_protocol_core";
 const TEST_OUTER_RING_BASE_ID = "wuling_protocol_core";
 
@@ -42,7 +31,6 @@ function createWorkspace(): WorkspaceContract {
     simulation: null,
     sync: null,
     audio: null,
-    blueprintPlanner: null,
   };
 }
 
@@ -83,31 +71,11 @@ function registerBuiltinBase(
     {
       id: TEST_BUILTIN_BASE_ID,
       name: "测试内置设备基地",
-      // AI-REMOVED 2026-11-12:
-      // Reason: 主区域和分区统一使用世界坐标 SceneAreaDefinition。
-      // Trigger: REQ-048 已授权 D1 数据模型迁移。
-      // Evidence: areas 保留原 ID、尺寸、名牌和外圈。
-      // Replacement: 本对象的 areas。
-      // Risk: Low；仅表达形式变更，有限空间范围不变。
-      // Human Review: Required
-      //
-      // Original code:
-      // placeableArea: { width: 40, height: 40 },
       areas: [{
         id: TEST_BUILTIN_BASE_ID,
         bounds: { minX: 0, maxX: 40, minY: 0, maxY: 40 },
         outerRing: { top: 0, right: 0, bottom: 0, left: 0 },
       }],
-      // AI-REMOVED 2026-11-12:
-      // Reason: 主区域和分区统一使用世界坐标 SceneAreaDefinition。
-      // Trigger: REQ-048 已授权 D1 数据模型迁移。
-      // Evidence: areas 保留原 ID、尺寸、名牌和外圈。
-      // Replacement: 本对象的 areas。
-      // Risk: Low；仅表达形式变更，有限空间范围不变。
-      // Human Review: Required
-      //
-      // Original code:
-      // outerRing: { top: 0, right: 0, bottom: 0, left: 0 },
       tag: "测试",
       tags: [],
       builtinEntities,
@@ -121,31 +89,11 @@ function registerOuterRingBase(workspace: WorkspaceContract): void {
     {
       id: TEST_OUTER_RING_BASE_ID,
       name: "测试扩展范围基地",
-      // AI-REMOVED 2026-11-12:
-      // Reason: 主区域和分区统一使用世界坐标 SceneAreaDefinition。
-      // Trigger: REQ-048 已授权 D1 数据模型迁移。
-      // Evidence: areas 保留原 ID、尺寸、名牌和外圈。
-      // Replacement: 本对象的 areas。
-      // Risk: Low；仅表达形式变更，有限空间范围不变。
-      // Human Review: Required
-      //
-      // Original code:
-      // placeableArea: { width: 10, height: 10 },
       areas: [{
         id: TEST_OUTER_RING_BASE_ID,
         bounds: { minX: 0, maxX: 10, minY: 0, maxY: 10 },
         outerRing: { top: 5, right: 5, bottom: 5, left: 5 },
       }],
-      // AI-REMOVED 2026-11-12:
-      // Reason: 主区域和分区统一使用世界坐标 SceneAreaDefinition。
-      // Trigger: REQ-048 已授权 D1 数据模型迁移。
-      // Evidence: areas 保留原 ID、尺寸、名牌和外圈。
-      // Replacement: 本对象的 areas。
-      // Risk: Low；仅表达形式变更，有限空间范围不变。
-      // Human Review: Required
-      //
-      // Original code:
-      // outerRing: { top: 5, right: 5, bottom: 5, left: 5 },
       tag: "测试",
       tags: [],
     },
@@ -166,8 +114,6 @@ describe("placement validation", () => {
       createEntity("west-gate", "belt_straight_1x1", -1, 35),
       createEntity("south-gate", "belt_straight_1x1", 20, 44),
     ], "wuling_agricultural_land"));
-    // AI-CORRECTION 2026-10-17: 3 个用户实体加两地 74 件只读围栏；持久化实体数仍保持原要求。
-    // AI-CORRECTION 2026-10-28: 两台内置自动农植机使只读实体增至 76；3 个用户实体合计 79。
     expect(editor.queries.listEntities()).toHaveLength(79);
     expect(Object.keys(editor.document.getSnapshot().entities)).toHaveLength(3);
     expect(editor.queries.getEntityPlacementValidation("on-fence").reasons.map((reason) => reason.code))
@@ -380,20 +326,6 @@ describe("placement validation", () => {
       definition.id === "draft_box"
         ? {
           ...definition,
-          // AI-REMOVED 2026-11-12:
-          // Reason: 旧基地字段由统一 areas 空间模型取代。
-          // Trigger: REQ-048 已确认 D1 接口变化。
-          // Evidence: 原区域身份和有限边界按世界坐标迁移。
-          // Replacement: areas 中保留主区域并新增有限负坐标区域
-          // Risk: Low；原断言行为继续覆盖。
-          // Human Review: Required
-          // Original code:
-          //           subAreas: [{
-          //             id: "test_upper_left",
-          //             position: { x: -60, y: -60 },
-          //             placeableArea: { width: 0, height: 0 },
-          //             outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
-          //           }],
           areas: [...definition.areas, {
             id: "test_upper_left",
             bounds: { minX: -80, maxX: -40, minY: -80, maxY: -40 },
@@ -406,16 +338,6 @@ describe("placement validation", () => {
       definition.id === "pipe_straight_1x1"
         ? {
           ...definition,
-// AI-REMOVED 2026-10-12:
-// Reason: 标签资格测试迁为结构化白名单测试。
-// Trigger: 用户确认地图/区域白名单与 UI 过滤方案。
-// Evidence: EntityDefinition.placementWhitelist 已成为唯一资格来源。
-// Replacement: 下方 placementWhitelist 属性
-// Risk: 原有草稿箱、外围和完整占地断言需要继续覆盖。
-// Human Review: Required
-//
-// Original code:
-//           tags: [...definition.tags, `${BASE_AREA_ONLY_TAG_PREFIX}test_upper_left`],
           placementWhitelist: [{ baseId: "draft_box", areaIds: ["test_upper_left"] }],
         }
         : definition
@@ -501,8 +423,6 @@ describe("placement validation", () => {
     const editorHost = createEditorTestHost(workspace);
     const document = createDocumentWithEntities([
       createEntity("segment", "log_hongs_bus", 4, 1),
-      // AI-CORRECTION 2026-06-06: 仓库存货口旋转 180°（已撤销），rot 恢复为 0。
-      // AI-CORRECTION 2026-06-13: 存货口改用 mustConnectToHubViaOppositePortEdge，
       // rotation=0 端口朝N→对边S，需将 loader 放在 segment 上方使其 S 边贴段。
       createEntity("loader", "loader_1", 4, 0),
       createEntity("isolated-unloader", "unloader_1", 20, 20),
@@ -592,8 +512,6 @@ describe("placement validation", () => {
     const document = createDocumentWithEntities([
       createEntity("source", "log_hongs_bus_source", 0, 0),
       createEntity("segment", "log_hongs_bus", 4, 1),
-      // AI-CORRECTION 2026-06-06: 仓库存货口旋转 180°（已撤销），rot 恢复为 0。
-      // AI-CORRECTION 2026-06-13: 存货口改用 mustConnectToHubViaOppositePortEdge，
       // rotation=0 端口朝N→对边S，需将 loader 放在 segment 上方使其 S 边贴段。
       createEntity("loader", "loader_1", 4, 0),
       createEntity("isolated-unloader", "unloader_1", 20, 20),

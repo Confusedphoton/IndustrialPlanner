@@ -1,5 +1,3 @@
-// AI-REMOVED 2026-11-12: Reason: 资格由会话注入；Trigger: REQ-048；Evidence: EDA 空间与来源基地不同；Replacement: allowedAreaIds；Risk: Low；Human Review: Required
-// import type { BaseDefinition } from "@/domain/registry/types/base-definition";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { PLACEMENT_BEHAVIOR_TYPE } from "@/domain/registry/types/entity-placement-behavior";
 import type { GridEdge, GridPoint, GridRectSize, GridRotation } from "@/domain/shared/grid";
@@ -7,8 +5,6 @@ import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 import type { SceneBounds, SceneSpace } from "@/domain/shared/scene-space";
 import { isRectInSceneBounds, resolveSceneBoundarySegments, type SceneBoundarySegment } from "@/shared/geometry/scene-space";
 import { resolveBaseAreas } from "@/shared/geometry/base-areas";
-// AI-REMOVED 2026-11-12: Reason: 资格由会话注入；Trigger: REQ-048；Evidence: EDA 空间与来源基地不同；Replacement: allowedAreaIds；Risk: Low；Human Review: Required
-// import { resolveEntityPlacementAreas } from "@/shared/entity-placement-whitelist";
 import { rotateGridEdge } from "@/shared/geometry/port";
 
 export type OuterRingEdgeSnapEdge = "top" | "right" | "bottom" | "left";
@@ -227,34 +223,6 @@ function snapRectToOuterRingEdge(options: {
   }
 }
 
-// AI-REMOVED 2026-09-26:
-// Reason: 单一吸附矩形无法处理分离分区的外边界。
-// Trigger: 草稿箱新增左上角分区。
-// Evidence: resolveBaseAreas 提供每块区域的独立 outerRect 与外扩深度。
-// Replacement: resolveOuterRingEdgeSnap 与 rotateOuterRingEdgeSnappedPlacement 内的逐区域计算。
-// Risk: 多区域间吸附按距离选最近候选；需检查边界交叠的未来配置。
-// Human Review: Required
-// Original code:
-// function resolveOuterRingSnapGeometry(
-//   baseDefinition: BaseDefinition,
-// ): OuterRingSnapGeometry {
-//   const outerRing = baseDefinition.outerRing;
-//
-//   return {
-//     outerRect: {
-//       x: -outerRing.left,
-//       y: -outerRing.top,
-//       width: baseDefinition.placeableArea.width + outerRing.left + outerRing.right,
-//       height: baseDefinition.placeableArea.height + outerRing.top + outerRing.bottom,
-//     },
-//     edgeDepths: {
-//       top: outerRing.top,
-//       right: outerRing.right,
-//       bottom: outerRing.bottom,
-//       left: outerRing.left,
-//     },
-//   };
-// }
 
 function resolveOuterRingEdgeSnapCandidate(options: {
   readonly definition: EntityDefinition;
@@ -392,22 +360,6 @@ function resolveRectCenter(options: {
   };
 }
 
-// AI-REMOVED 2026-11-12:
-// Reason: 有限矩形包含判断由统一空间函数替代。
-// Trigger: REQ-048 分方向无界。
-// Evidence: 外圈现在使用 SceneBounds。
-// Replacement: isRectInSceneBounds。
-// Risk: Low。
-// Human Review: Required
-// Original code:
-// function isGridRectContainedBy(container: GridRect, target: GridRect): boolean {
-//   return (
-//     target.x >= container.x
-//     && target.y >= container.y
-//     && target.x + target.width <= container.x + container.width
-//     && target.y + target.height <= container.y + container.height
-//   );
-// }
 
 function clamp(value: number, min: number | null, max: number | null): number {
   const lowerClamped = min === null ? value : Math.max(min, value);

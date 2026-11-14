@@ -2,10 +2,6 @@ import type { DeviceStateMachineDefinition } from "@/domain/registry/types/entit
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 
 /** AKEData 1.5.3@10731330-8：PlantingDataTable、RewardSoilTable；基础奖励，不含施肥增产。 */
-// AI-CORRECTION 2026-10-15: 四种旧田块收获量与十二种食材田块按 1.6.3@11010254-4 对齐；新增田块独立运行，不模拟变异率。
-// AI-CORRECTION 2026-10-15: 状态使用有序 transitions，计时时长归属状态，可在分支迁移中继承。
-// AI-CORRECTION 2026-10-15: 三种普通食材田块已接入育种；按用户确认假定累计 30 秒完成，每轮重置，完成后不退化。
-// AI-CORRECTION 2026-10-16: 育种后生长与收获使用独立外观键；计时、配方与迁移规则保持原义。
 export const CROP_STATE_MACHINES: Readonly<Record<string, DeviceStateMachineDefinition>> = {
   "soil_grass_1": {
     "initialStateId": "seedling",

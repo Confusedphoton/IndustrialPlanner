@@ -2,7 +2,7 @@ import { resolve } from "node:path";
 import { expect, SCREEN_PROFILES, test } from "./harness/fixture";
 import fixture from "../fixtures/blueprints/collections/req048/orchestrator-device.schema7.json" with { type: "json" };
 
-// 2026-11-12：独立于开发脚本，覆盖模态窗口中的原生命令、嵌套焦点与只读 Canvas。
+// 独立于开发脚本，覆盖模态窗口中的原生命令、嵌套焦点与只读 Canvas。
 for (const profile of SCREEN_PROFILES) {
   test(`Inspector 静态邻域与模态命令隔离 [${profile.name}]`, async ({ browserSession, baseURL }) => {
     test.setTimeout(120_000);
@@ -19,18 +19,6 @@ for (const profile of SCREEN_PROFILES) {
       await page.goto(${JSON.stringify(baseURL)});
       await page.waitForFunction(() => window.__test__?.readiness().viewportValid);
       await page.evaluate(async document => {
-        // AI-REMOVED 2026-11-12:
-        // Reason: 布景通过正式持久化设置入口，避免依赖 Vite 预打包路径。
-        // Trigger: REQ-048 正式浏览器回归需要可重复的设置准备。
-        // Evidence: settings-dialog-state 已读取 v3-user-settings-dialog。
-        // Replacement: 上方 addInitScript；Risk: Low；Human Review: Required
-        // Original code:
-        // const app = window.__industrialPlannerAppHost;
-        // const { runInAction } = await import('/node_modules/.vite/deps/mobx.js');
-        // runInAction(() => {
-        //   app.internalState.settings.gameUseInspectorPanel = false;
-        //   app.internalState.settings.hypergryphInspectorOpenOnSecondClick = false;
-        // });
         await window.__test__.loadBlueprint(document);
         await window.__test__.focusEntity('entity-a');
       }, ${JSON.stringify(fixture)});
@@ -44,11 +32,11 @@ for (const profile of SCREEN_PROFILES) {
       await select();
       const canvas = inspector.locator('canvas');
       await canvas.waitFor();
-      // 2026-11-12：截取合成后的画布，WebGL toDataURL 可能只得到已清空的后缓冲。
+      // 截取合成后的画布，WebGL toDataURL 可能只得到已清空的后缓冲。
       await page.mouse.move(1,1); await page.evaluate(() => document.activeElement?.blur());
       const before = await canvas.screenshot({scale:'css'});
       const cameraBefore = await page.evaluate(() => window.__test__.getAppState().viewport);
-      // 2026-11-12：只读 Canvas 按契约 pointer-events:none；原生输入送到其实际可命中的预览框。
+      // 只读 Canvas 按契约 pointer-events:none；原生输入送到其实际可命中的预览框。
       await inspector.locator('[class*="inspector-neighborhood-preview-frame"]').hover();
       await page.mouse.wheel(0, -100); await page.keyboard.press('ArrowRight');
       await page.waitForTimeout(200);
@@ -78,7 +66,7 @@ for (const profile of SCREEN_PROFILES) {
   });
 }
 
-// 2026-11-12：真实 Pixi 生命周期回归；独立编写于三屏预览与双视图开发验证之后。
+// 真实 Pixi 生命周期回归；独立编写于三屏预览与双视图开发验证之后。
 test("双视图独立时间、WebGL 恢复与资源释放", async ({ browserSession, baseURL }) => {
   test.setTimeout(120_000);
   const cli = await browserSession.openCli(SCREEN_PROFILES.find(profile => profile.name === "desktop")!);

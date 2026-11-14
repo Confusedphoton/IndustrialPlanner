@@ -5,79 +5,16 @@ afterEach(() => { for (const dispose of cleanups.splice(0).reverse()) dispose();
 import { loadBlueprintFromFile, getBlueprintEntityArray, createWorldDocumentFromBlueprint } from "@/tests/simulation/blueprint-test-helpers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-// AI-REMOVED 2026-11-12:
-// Reason: 旧假 App、Editor、视口及集合已不适用于独立 Canvas。
-// Trigger: REQ-048 场景接口迁移。
-// Evidence: 移动草稿、坐标换算和选择来自真实会话动作。
-// Replacement: createCanvasTestSession 与版本化场景；原行为覆盖保留。
-// Risk: 实际鼠标触控布局另由浏览器验收。
-// Human Review: Required
-// Original code:
-// import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 
-// AI-REMOVED 2026-11-12:
-// Reason: 旧假 App、Editor、视口及集合已不适用于独立 Canvas。
-// Trigger: REQ-048 场景接口迁移。
-// Evidence: 移动草稿、坐标换算和选择来自真实会话动作。
-// Replacement: createCanvasTestSession 与版本化场景；原行为覆盖保留。
-// Risk: 实际鼠标触控布局另由浏览器验收。
-// Human Review: Required
-// Original code:
-// import type { AppHost } from "@/app/host/app-host";
 
-// AI-REMOVED 2026-11-12:
-// Reason: 旧假 App、Editor、视口及集合已不适用于独立 Canvas。
-// Trigger: REQ-048 场景接口迁移。
-// Evidence: 移动草稿、坐标换算和选择来自真实会话动作。
-// Replacement: createCanvasTestSession 与版本化场景；原行为覆盖保留。
-// Risk: 实际鼠标触控布局另由浏览器验收。
-// Human Review: Required
-// Original code:
-// import type { KeyboardSnapshot } from "@/app/input/gesture/adapter";
 
-// AI-REMOVED 2026-11-12:
-// Reason: 旧假 App、Editor、视口及集合已不适用于独立 Canvas。
-// Trigger: REQ-048 场景接口迁移。
-// Evidence: 移动草稿、坐标换算和选择来自真实会话动作。
-// Replacement: createCanvasTestSession 与版本化场景；原行为覆盖保留。
-// Risk: 实际鼠标触控布局另由浏览器验收。
-// Human Review: Required
-// Original code:
-// import type { CanvasRightDockToolbarItemRequest } from "@/app/state/state-impl";
 
 import {
   createHypergryphMoveGestureModule,
 
 } from "@/app/input/gesture/actions";
-// AI-REMOVED 2026-11-12:
-// Reason: 旧假 App、Editor、视口及集合已不适用于独立 Canvas。
-// Trigger: REQ-048 场景接口迁移。
-// Evidence: 移动草稿、坐标换算和选择来自真实会话动作。
-// Replacement: createCanvasTestSession 与版本化场景；原行为覆盖保留。
-// Risk: 实际鼠标触控布局另由浏览器验收。
-// Human Review: Required
-// Original code:
-// import { WorkbenchOverlapEntityMenuController } from "@/app/shell/state/overlap-entity-menu-state";
 
-// AI-REMOVED 2026-11-12:
-// Reason: 旧假 App、Editor、视口及集合已不适用于独立 Canvas。
-// Trigger: REQ-048 场景接口迁移。
-// Evidence: 移动草稿、坐标换算和选择来自真实会话动作。
-// Replacement: createCanvasTestSession 与版本化场景；原行为覆盖保留。
-// Risk: 实际鼠标触控布局另由浏览器验收。
-// Human Review: Required
-// Original code:
-// import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 
-// AI-REMOVED 2026-11-12:
-// Reason: 旧假 App、Editor、视口及集合已不适用于独立 Canvas。
-// Trigger: REQ-048 场景接口迁移。
-// Evidence: 移动草稿、坐标换算和选择来自真实会话动作。
-// Replacement: createCanvasTestSession 与版本化场景；原行为覆盖保留。
-// Risk: 实际鼠标触控布局另由浏览器验收。
-// Human Review: Required
-// Original code:
-// import type { EditorContract } from "@/domain/editor/editor-contract";
 
 import { createWorldDocument, type WorldEntity } from "@/domain/document/world-document";
 import {
@@ -86,52 +23,13 @@ import {
 } from "@/domain/editor/types/editor-types";
 import type { ActiveTool } from "@/domain/app/types/app-types";
 import type { GridPoint, GridRect } from "@/domain/shared/grid";
-// AI-REMOVED 2026-11-12:
-// Reason: 旧假 App、Editor、视口及集合已不适用于独立 Canvas。
-// Trigger: REQ-048 场景接口迁移。
-// Evidence: 移动草稿、坐标换算和选择来自真实会话动作。
-// Replacement: createCanvasTestSession 与版本化场景；原行为覆盖保留。
-// Risk: 实际鼠标触控布局另由浏览器验收。
-// Human Review: Required
-// Original code:
-// import { createRegistryContract } from "@/registry";
 
 import { handleKeyboardShortcutThroughRouter } from "./shortcut-route-test-helper";
 
 describe("createHypergryphMoveGestureModule", () => {
   it("opens the overlap entity menu before entering move from a stacked long-press cell", () => {
-    // AI-REMOVED 2026-11-12:
-// Reason: 重叠菜单的所有者已是 Canvas。
-// Trigger: REQ-048 场景接口迁移。
-// Evidence: 移动草稿、坐标换算和选择来自真实会话动作。
-// Replacement: createCanvasTestSession 与版本化场景；原行为覆盖保留。
-// Risk: 实际鼠标触控布局另由浏览器验收。
-// Human Review: Required
-// Original code:
-// const overlapEntityMenu = new WorkbenchOverlapEntityMenuController();
 
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/move-gesture-module/index.json
-    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/app/input/move-gesture-module/index.json。
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // const bottomEntity = entity("bottom-overlap-entity", { x: 2, y: 2 });
     const topEntity = entity("top-overlap-entity", { x: 2, y: 2 }, "pipe_straight_1x1");
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections-extra/app/input/move-gesture-module/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [bottomEntity, topEntity]
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, editor, appHost } = createContext({
     const { context, editor } = createContext({
 
       listedEntities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/move-gesture-module/scene-01-variant-1.schema7.json")),
@@ -167,45 +65,7 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("resolves immediate-drag overlap candidates from the drag start position", () => {
-    // AI-REMOVED 2026-11-12:
-// Reason: 重叠菜单的所有者已是 Canvas。
-// Trigger: REQ-048 场景接口迁移。
-// Evidence: 移动草稿、坐标换算和选择来自真实会话动作。
-// Replacement: createCanvasTestSession 与版本化场景；原行为覆盖保留。
-// Risk: 实际鼠标触控布局另由浏览器验收。
-// Human Review: Required
-// Original code:
-// const overlapEntityMenu = new WorkbenchOverlapEntityMenuController();
 
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/move-gesture-module/index.json
-    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/app/input/move-gesture-module/index.json。
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // const bottomEntity = entity("bottom-overlap-entity", { x: 2, y: 2 });
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/move-gesture-module/index.json
-    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/app/input/move-gesture-module/index.json。
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // const topEntity = entity("top-overlap-entity", { x: 2, y: 2 }, "pipe_straight_1x1");
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections-extra/app/input/move-gesture-module/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [bottomEntity, topEntity]
     const { context, editor } = createContext({
 
       listedEntities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/move-gesture-module/scene-02-variant-1.schema7.json")),
@@ -233,8 +93,6 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("enters mouse move from select by selecting the pointer entity first", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, editor, appHost } = createContext();
     const { context, editor } = createContext();
     const module = createHypergryphMoveGestureModule();
 
@@ -356,8 +214,6 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("enters move from the marquee right dock button and initializes the touch move ui", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, editor, appHost } = createContext({
     const { context, editor } = createContext({
       activeTool: "marquee",
     });
@@ -385,8 +241,6 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("enters move from marquee via M key shortcut when selection is non-empty", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, editor, appHost } = createContext({
     const { context, editor } = createContext({
       activeTool: "marquee",
     });
@@ -406,8 +260,6 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("enters move from select via M key shortcut when selection is non-empty", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, editor, appHost } = createContext();
     const { context, editor } = createContext();
     const module = createHypergryphMoveGestureModule();
 
@@ -425,14 +277,9 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("ignores M key shortcut when selection is empty", () => {
-    // AI-REMOVED 2026-11-12: Reason: 集合清理由动作执行；Trigger: REQ-048；Evidence: ESLint；Replacement: EditorAction；Risk: Low；Human Review: Required
-    // Original code: const { context, editor, selection } = createContext();
     const { context, editor } = createContext();
     const module = createHypergryphMoveGestureModule();
 
-    // Clear selection
-    // AI-REMOVED 2026-11-12: Reason: EntityCollection 已为只读投影；Trigger: REQ-048；Evidence: TS；Replacement: EditorAction；Risk: Low；Human Review: Required
-    // Original code: selection.replace([]);
     editor.actions.clearCollection(EntityCollectionType.selection);
 
     const result = handleKeyboardShortcutThroughRouter({
@@ -446,8 +293,6 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("moves mouse-entered preview by collection center point", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, editor, appHost } = createContext({
     const { context, editor } = createContext({
       previewRect: {
         x: 9,
@@ -458,21 +303,6 @@ describe("createHypergryphMoveGestureModule", () => {
     });
     const module = createHypergryphMoveGestureModule();
 
-    // AI-REMOVED 2026-11-12:
-// Reason: 动作需调用真实实现，拒绝由会话策略产生、吸附由场景几何产生。
-// Trigger: REQ-048 场景接口迁移。
-// Evidence: 移动草稿、坐标换算和选择来自真实会话动作。
-// Replacement: createCanvasTestSession 与版本化场景；原行为覆盖保留。
-// Risk: 实际鼠标触控布局另由浏览器验收。
-// Human Review: Required
-// Original code:
-// vi.mocked(editor.actions.moveCollectionCenterPointTo).mockImplementation((_, point) => {
-//       previewRectRef.current = {
-//         ...previewRectRef.current,
-//         x: point.x,
-//         y: point.y,
-//       };
-//     });
 
 
     expect(
@@ -502,8 +332,6 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("enters move from the select floating button with touch and initializes the touch move ui", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, editor, appHost } = createContext();
     const { context, editor } = createContext();
     const module = createHypergryphMoveGestureModule();
 
@@ -529,8 +357,6 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("moves the mouse preview center from drag start after entering move from the right dock button", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, editor, appHost } = createContext({
     const { context, editor } = createContext({
       activeTool: "marquee",
     });
@@ -562,23 +388,9 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("rolls back draft state and restores selection when entering move cannot create a preview", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, editor, appHost, selection, preview } = createContext({ invalidSelection: "selected" });
     const { context, editor, selection } = createContext({ invalidSelection: "selected" });
     const module = createHypergryphMoveGestureModule();
 
-    // AI-REMOVED 2026-11-12:
-// Reason: 动作需调用真实实现，拒绝由会话策略产生、吸附由场景几何产生。
-// Trigger: REQ-048 场景接口迁移。
-// Evidence: 移动草稿、坐标换算和选择来自真实会话动作。
-// Replacement: createCanvasTestSession 与版本化场景；原行为覆盖保留。
-// Risk: 实际鼠标触控布局另由浏览器验收。
-// Human Review: Required
-// Original code:
-// vi.mocked(editor.actions.createMoveOperationDraft).mockImplementation(() => {
-//       selection.replace([]);
-//       preview.replace([]);
-//     });
 
 
     const result = module.handle(
@@ -597,23 +409,9 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("restores the original selection when touch move enter fails after retargeting selection", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, editor, selection, preview } = createContext({ invalidSelection: "unselected" });
     const { context, editor, selection } = createContext({ invalidSelection: "unselected" });
     const module = createHypergryphMoveGestureModule();
 
-    // AI-REMOVED 2026-11-12:
-// Reason: 动作需调用真实实现，拒绝由会话策略产生、吸附由场景几何产生。
-// Trigger: REQ-048 场景接口迁移。
-// Evidence: 移动草稿、坐标换算和选择来自真实会话动作。
-// Replacement: createCanvasTestSession 与版本化场景；原行为覆盖保留。
-// Risk: 实际鼠标触控布局另由浏览器验收。
-// Human Review: Required
-// Original code:
-// vi.mocked(editor.actions.createMoveOperationDraft).mockImplementation(() => {
-//       selection.replace([]);
-//       preview.replace([]);
-//     });
 
 
     const result = module.handle(
@@ -630,8 +428,6 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("uses preview bounding box hit testing for touch drag start while already moving", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, appHost } = createContext({
     const { context } = createContext({
       activeTool: "move", pixelScale: 16,
       moveAnchor: { x: 5, y: 5 },
@@ -662,8 +458,6 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("starts touch moving from an empty cell inside the preview bounding box", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, appHost } = createContext({
     const { context } = createContext({
       activeTool: "move", hollowPreview: true,
       moveAnchor: { x: 5, y: 5 },
@@ -684,8 +478,6 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("starts touch moving from within the preview hit slop", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, appHost } = createContext({
     const { context } = createContext({
       activeTool: "move", pixelScale: 16,
       moveAnchor: { x: 5, y: 5 },
@@ -701,21 +493,10 @@ describe("createHypergryphMoveGestureModule", () => {
     );
 
     expect(result).toEqual({ status: "handled" });
-// AI-REMOVED 2026-11-12:
-// Reason: 真实相机下 70,80 像素位于预览左侧 10px 容差内，锚点为 4,5 格。
-// Trigger: REQ-048 场景接口迁移。
-// Evidence: 移动草稿、坐标换算和选择来自真实会话动作。
-// Replacement: createCanvasTestSession 与版本化场景；原行为覆盖保留。
-// Risk: 实际鼠标触控布局另由浏览器验收。
-// Human Review: Required
-// Original code:
-//     expect(context.canvas.state.runtime.moveAnchor).toEqual({ x: 54, y: 55 });
     expect(context.canvas.state.runtime.moveAnchor).toEqual({ x: 4, y: 5 });
   });
 
   it("moves the preview by incremental grid vectors and follows it with the toolbar", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, editor, appHost } = createContext({
     const { context, editor } = createContext({
       activeTool: "move",
       moveAnchor: { x: 5, y: 5 },
@@ -723,24 +504,6 @@ describe("createHypergryphMoveGestureModule", () => {
     });
     const module = createHypergryphMoveGestureModule();
 
-    // AI-REMOVED 2026-11-12:
-// Reason: 动作需调用真实实现，拒绝由会话策略产生、吸附由场景几何产生。
-// Trigger: REQ-048 场景接口迁移。
-// Evidence: 移动草稿、坐标换算和选择来自真实会话动作。
-// Replacement: createCanvasTestSession 与版本化场景；原行为覆盖保留。
-// Risk: 实际鼠标触控布局另由浏览器验收。
-// Human Review: Required
-// Original code:
-// vi.mocked(editor.actions.moveCollectionTo).mockImplementation(({
-//       startGridPoint,
-//       endGridPoint,
-//     }) => {
-//       previewRectRef.current = {
-//         ...previewRectRef.current,
-//         x: previewRectRef.current.x + endGridPoint.x - startGridPoint.x,
-//         y: previewRectRef.current.y + endGridPoint.y - startGridPoint.y,
-//       };
-//     });
 
 
     const result = module.handle(
@@ -767,8 +530,6 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("updates touch move anchor per axis when snapping constrains one axis", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, editor, appHost } = createContext({
     const { context } = createContext({
       activeTool: "move",
       moveAnchor: { x: 20, y: -9 },
@@ -779,24 +540,6 @@ describe("createHypergryphMoveGestureModule", () => {
     });
     const module = createHypergryphMoveGestureModule();
 
-    // AI-REMOVED 2026-11-12:
-// Reason: 动作需调用真实实现，拒绝由会话策略产生、吸附由场景几何产生。
-// Trigger: REQ-048 场景接口迁移。
-// Evidence: 移动草稿、坐标换算和选择来自真实会话动作。
-// Replacement: createCanvasTestSession 与版本化场景；原行为覆盖保留。
-// Risk: 实际鼠标触控布局另由浏览器验收。
-// Human Review: Required
-// Original code:
-// vi.mocked(editor.actions.moveCollectionTo).mockImplementation(({
-//       startGridPoint,
-//       endGridPoint,
-//     }) => {
-//       previewRectRef.current = {
-//         ...previewRectRef.current,
-//         x: previewRectRef.current.x + endGridPoint.x - startGridPoint.x,
-//         y: previewRectRef.current.y,
-//       };
-//     });
 
 
     const result = module.handle(touchDragMoveEvent({ position: { x: 21, y: -8 } }), context);
@@ -821,7 +564,6 @@ describe("createHypergryphMoveGestureModule", () => {
     });
 
     expect(result).toEqual({ status: "handled" });
-    // AI-CORRECTION 2026-08-30: 快捷键匹配已由 GestureActionRouter 执行。
     expect(appHost.internalActions.isShortcutFor).not.toHaveBeenCalled();
     expect(editor.actions.rotateCollectionAroundPivotCell).toHaveBeenCalledWith(
       EntityCollectionType.preview,
@@ -831,8 +573,6 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("rotates the mouse move preview around center and snaps it back to the current mouse", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, editor, appHost } = createContext({
     const { context, editor } = createContext({
       activeTool: "move",
       movePointerMode: "mouse",
@@ -865,8 +605,6 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("rotates the preview from the rotate toolbar button while moving", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, editor, appHost } = createContext({
     const { context, editor } = createContext({
       activeTool: "move",
       moveAnchor: { x: 5, y: 5 },
@@ -891,15 +629,6 @@ describe("createHypergryphMoveGestureModule", () => {
       movePointerMode: "touch",
     });
     const module = createHypergryphMoveGestureModule();
-    // AI-REMOVED 2026-11-12:
-// Reason: 动作需调用真实实现，拒绝由会话策略产生、吸附由场景几何产生。
-// Trigger: REQ-048 场景接口迁移。
-// Evidence: 移动草稿、坐标换算和选择来自真实会话动作。
-// Replacement: createCanvasTestSession 与版本化场景；原行为覆盖保留。
-// Risk: 实际鼠标触控布局另由浏览器验收。
-// Human Review: Required
-// Original code:
-// vi.mocked(editor.actions.rotateCollectionToSnapOnBuilding).mockReturnValue(true);
 
 
     expect(handleKeyboardShortcutThroughRouter({
@@ -918,8 +647,6 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("switches the move preview variant, keeps the anchor, then continues moving and applies", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, editor, appHost } = createContext({
     const { context, editor } = createContext({
       activeTool: "move",
       moveAnchor: { x: 12, y: 11 },
@@ -929,24 +656,6 @@ describe("createHypergryphMoveGestureModule", () => {
     });
     const module = createHypergryphMoveGestureModule();
 
-    // AI-REMOVED 2026-11-12:
-// Reason: 动作需调用真实实现，拒绝由会话策略产生、吸附由场景几何产生。
-// Trigger: REQ-048 场景接口迁移。
-// Evidence: 移动草稿、坐标换算和选择来自真实会话动作。
-// Replacement: createCanvasTestSession 与版本化场景；原行为覆盖保留。
-// Risk: 实际鼠标触控布局另由浏览器验收。
-// Human Review: Required
-// Original code:
-// vi.mocked(editor.actions.moveCollectionTo).mockImplementation(({
-//       startGridPoint,
-//       endGridPoint,
-//     }) => {
-//       previewRectRef.current = {
-//         ...previewRectRef.current,
-//         x: previewRectRef.current.x + endGridPoint.x - startGridPoint.x,
-//         y: previewRectRef.current.y + endGridPoint.y - startGridPoint.y,
-//       };
-//     });
 
 
     expect(handleKeyboardShortcutThroughRouter({
@@ -1017,8 +726,6 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("hides and rejects variant switching during a single-device batch touch move", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, editor, appHost } = createContext({
     const { context, editor } = createContext({
       activeTool: "move",
       moveEnterFrom: "marquee",
@@ -1043,8 +750,6 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("cancels a switched move preview without applying it", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, editor, appHost } = createContext({
     const { context, editor } = createContext({
       activeTool: "move",
       moveAnchor: { x: 12, y: 11 },
@@ -1094,8 +799,6 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("treats Ctrl+left-click as ordinary move apply when copy while moving is disabled", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, editor, appHost } = createContext({
     const { context, editor } = createContext({
       activeTool: "move",
       moveAnchor: { x: 5, y: 5 },
@@ -1117,8 +820,6 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("hides the touch copy button when copy while moving is disabled", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, appHost } = createContext({
     const { context } = createContext({
       activeTool: "move",
       movePointerMode: "touch",
@@ -1140,23 +841,12 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("keeps mouse move active when applying is rejected", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, editor, appHost } = createContext({
     const { context, editor } = createContext({
       activeTool: "move", rejectApply: true,
       moveAnchor: { x: 5, y: 5 },
     });
     const module = createHypergryphMoveGestureModule();
 
-    // AI-REMOVED 2026-11-12:
-// Reason: 动作需调用真实实现，拒绝由会话策略产生、吸附由场景几何产生。
-// Trigger: REQ-048 场景接口迁移。
-// Evidence: 移动草稿、坐标换算和选择来自真实会话动作。
-// Replacement: createCanvasTestSession 与版本化场景；原行为覆盖保留。
-// Risk: 实际鼠标触控布局另由浏览器验收。
-// Human Review: Required
-// Original code:
-// vi.mocked(editor.actions.applyMoveOerationDraft).mockReturnValue(false);
 
 
     expect(
@@ -1170,23 +860,12 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("keeps touch move active when applying is rejected", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, editor, appHost } = createContext({
     const { context, editor } = createContext({
       activeTool: "move", rejectApply: true,
       moveAnchor: { x: 5, y: 5 },
     });
     const module = createHypergryphMoveGestureModule();
 
-    // AI-REMOVED 2026-11-12:
-// Reason: 动作需调用真实实现，拒绝由会话策略产生、吸附由场景几何产生。
-// Trigger: REQ-048 场景接口迁移。
-// Evidence: 移动草稿、坐标换算和选择来自真实会话动作。
-// Replacement: createCanvasTestSession 与版本化场景；原行为覆盖保留。
-// Risk: 实际鼠标触控布局另由浏览器验收。
-// Human Review: Required
-// Original code:
-// vi.mocked(editor.actions.applyMoveOerationDraft).mockReturnValue(false);
 
 
     expect(
@@ -1200,8 +879,6 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("returns to marquee through a mouse tool tap when mouse applying a marquee-entered move", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, editor, appHost } = createContext({
     const { context, editor } = createContext({
       activeTool: "move",
       moveAnchor: { x: 5, y: 5 },
@@ -1228,8 +905,6 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("returns to marquee through a touch tool tap when touch cancelling a marquee-entered move", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, editor, appHost } = createContext({
     const { context, editor } = createContext({
       activeTool: "move",
       moveAnchor: { x: 5, y: 5 },
@@ -1255,8 +930,6 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("does not return to marquee after active exits from a select-entered move", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, appHost } = createContext({
     const { context } = createContext({
       activeTool: "move",
       moveAnchor: { x: 5, y: 5 },
@@ -1273,33 +946,13 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 
   it("preserves selection through the marquee → move → marquee round-trip", () => {
-    // AI-REMOVED 2026-11-12: Reason: Canvas 迁移后旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
-    // Original code: const { context, editor, appHost, selection, preview } = createContext({
     const { context, editor, selection } = createContext({
       activeTool: "marquee",
     });
     const module = createHypergryphMoveGestureModule();
 
-    // The real createMoveOperationDraft reads from selection but does NOT clear it.
-    // Override the mock to match the real implementation.
-    // AI-REMOVED 2026-11-12:
-// Reason: 动作需调用真实实现，拒绝由会话策略产生、吸附由场景几何产生。
-// Trigger: REQ-048 场景接口迁移。
-// Evidence: 移动草稿、坐标换算和选择来自真实会话动作。
-// Replacement: createCanvasTestSession 与版本化场景；原行为覆盖保留。
-// Risk: 实际鼠标触控布局另由浏览器验收。
-// Human Review: Required
-// Original code:
-// vi.mocked(editor.actions.createMoveOperationDraft).mockImplementation(() => {
-//       const sourceEntityIds = [...selection];
-//       preview.replace(["preview-entity"]);
-//       (editor.state.collections[EntityCollectionType.ghost] as MockCollection).replace(sourceEntityIds);
-//     });
 
 
-    // Push a second entity into selection so the round-trip preserves multiple entities.
-    // AI-REMOVED 2026-11-12: Reason: EntityCollection 已为只读投影；Trigger: REQ-048；Evidence: TS；Replacement: EditorAction；Risk: Low；Human Review: Required
-    // Original code: selection.push("another-selected");
     editor.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId: "another-selected" });
 
     // Enter move from marquee via mouse long-press.
@@ -1341,294 +994,6 @@ describe("createHypergryphMoveGestureModule", () => {
   });
 });
 
-// AI-REMOVED 2026-11-12:
-// Reason: 旧假 App、Editor、视口及集合已不适用于独立 Canvas。
-// Trigger: REQ-048 场景接口迁移。
-// Evidence: 移动草稿、坐标换算和选择来自真实会话动作。
-// Replacement: createCanvasTestSession 与版本化场景；原行为覆盖保留。
-// Risk: 实际鼠标触控布局另由浏览器验收。
-// Human Review: Required
-// Original code:
-// function createContext(options: {
-//   activeTool?: ActiveTool;
-//   moveAnchor?: GridPoint | null;
-//   moveEnterFrom?: ActiveTool | null;
-//   movePointerMode?: "mouse" | "touch" | null;
-//   toolbarVisible?: boolean;
-//   previewRect?: GridRect;
-//   previewDefinitionId?: string;
-//   copyWhileMoving?: boolean;
-//   overlapEntityMenu?: WorkbenchOverlapEntityMenuController;
-//   listedEntities?: readonly WorldEntity[];
-// } = {}): {
-//   context: GestureActionContext<AppHost>;
-//   editor: MockEditor;
-//   appHost: AppHost;
-//   selection: MockCollection;
-//   preview: MockCollection;
-//   previewRectRef: { current: GridRect };
-// } {
-//   const selection = createCollection(["selected-entity"]);
-//   const marquee = createCollection([]);
-//   const reverseMarquee = createCollection([]);
-//   const preview = createCollection(["preview-entity"]);
-//   const ghost = createCollection([]);
-//   const previewRectRef = {
-//     current: options.previewRect ?? {
-//       x: 5,
-//       y: 5,
-//       width: 1,
-//       height: 1,
-//     },
-//   };
-//   const previewEntity = entity(
-//     "preview-entity",
-//     { x: previewRectRef.current.x, y: previewRectRef.current.y },
-//     options.previewDefinitionId,
-//   );
-//   const selectedEntity = entity("selected-entity", { x: 2, y: 2 });
-//   const unselectedEntity = entity("unselected-entity", { x: 4, y: 4 });
-//   const listedEntityMap = new Map(
-//     (options.listedEntities ?? []).map((listedEntity) => [listedEntity.id, listedEntity]),
-//   );
-//   const shortcuts: Record<string, string> = {
-//     [SHORTCUT_KEY.ROTATE]: "R",
-//     [SHORTCUT_KEY.SWITCH_DEVICE_MODE]: "Tab",
-//     [SHORTCUT_KEY.MOVE_SELECTION]: "M",
-//   };
-//   const editor: MockEditor = {
-//     // AI-CORRECTION 2026-10-12: 地图资格不再允许未知文档；旧路由布景显式提供已加载地图的完整快照。
-//     document: { getSnapshot: () => createWorldDocument({ baseId: "wuling_protocol_core" }) },
-//     state: {
-//       viewport: {
-//         center: { x: 0, y: 0 },
-//         clientRect: { left: 0, top: 0, width: 100, height: 100 },
-//         gridSize: 1,
-//         gridCellPixelSize: 1,
-//         displayRotation: 0,
-//       },
-//       collections: {
-//         [EntityCollectionType.selection]: selection,
-//         [EntityCollectionType.marquee]: marquee,
-//         [EntityCollectionType.reverseMarquee]: reverseMarquee,
-//         [EntityCollectionType.preview]: preview,
-//         [EntityCollectionType.ghost]: ghost,
-//         [EntityCollectionType.logisticsHead]: createCollection([]),
-//         [EntityCollectionType.powered]: createCollection([]),
-//         [EntityCollectionType.invalidPlacement]: createCollection([]),
-//       },
-//     },
-//     queries: {
-//       getEntityById: vi.fn((entityId: string) => {
-//         const listedEntity = listedEntityMap.get(entityId);
-//         if (listedEntity !== undefined) {
-//           return listedEntity;
-//         }
-//
-//         if (entityId === "preview-entity") {
-//           return previewEntity;
-//         }
-//
-//         if (entityId === "selected-entity") {
-//           return selectedEntity;
-//         }
-//
-//         if (entityId === "unselected-entity") {
-//           return unselectedEntity;
-//         }
-//
-//         return null;
-//       }),
-//       findEntityCollectionGridRect: vi.fn((collectionType) =>
-//         collectionType === EntityCollectionType.preview && preview.length > 0
-//           ? previewRectRef.current
-//           : null,
-//       ),
-//       findGridCellForClientPixelPoint: vi.fn((point) => ({
-//         x: Math.floor(point.x),
-//         y: Math.floor(point.y),
-//       })),
-//       findClientRectForGridCell: vi.fn((cell) => ({
-//         left: cell.x * 16,
-//         top: cell.y * 16,
-//         width: 16,
-//         height: 16,
-//       })),
-//       ...(options.listedEntities !== undefined
-//         ? { listEntities: vi.fn(() => options.listedEntities ?? []) }
-//         : {}),
-//     },
-//     actions: {
-//       createMoveOperationDraft: vi.fn(() => {
-//         const sourceEntityIds = [...selection];
-//         selection.replace([]);
-//         preview.replace(["preview-entity"]);
-//         ghost.replace(sourceEntityIds);
-//       }),
-//       cancelMoveOperationDraft: vi.fn(() => {
-//         preview.replace([]);
-//         ghost.replace([]);
-//       }),
-//       applyMoveOerationDraft: vi.fn(() => true),
-//       moveCollectionTo: vi.fn(),
-//       moveCollectionCenterPointTo: vi.fn(),
-//       rotateCollection: vi.fn(),
-//       rotateCollectionAroundCenterPoint: vi.fn(),
-//       rotateCollectionAroundPivotCell: vi.fn(),
-//       rotateCollectionToSnapOnBuilding: vi.fn(() => false),
-//       replaceEntityDefinition: vi.fn((entityId: string, nextDefinitionId: string) => {
-//         if (entityId !== previewEntity.id) {
-//           return false;
-//         }
-//
-//         previewEntity.definitionId = nextDefinitionId;
-//         previewEntity.config = {};
-//         return true;
-//       }),
-//       clearCollection: vi.fn((collectionType: EntityCollectionTypeValue) => {
-//         (editor.state.collections[collectionType] as MockCollection).replace([]);
-//       }),
-//       addToCollection: vi.fn(({
-//         collectionType,
-//         entityId,
-//       }: {
-//         collectionType: EntityCollectionTypeValue;
-//         entityId: string;
-//       }) => {
-//         const collection = editor.state.collections[collectionType] as MockCollection;
-//         if (!collection.contains(entityId)) {
-//           collection.push(entityId);
-//         }
-//       }),
-//     },
-//   };
-//   const appHost = {
-//     state: {
-//       settings: {
-//         // AI-REMOVED 2026-09-10:
-//         // Reason: 操作模式总开关已废弃，不再保留关闭分支
-//         // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-//         // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-//         // Replacement: 测试状态不再需要模式字段
-//         // Risk: 历史 false 设置统一使用当前操作行为。
-//         // Human Review: Required
-//         //
-//         // Original code:
-//         // hypergryphOperationMode: true,
-//         hypergryphImmediateMove: true,
-//         hypergryphCopyWhileMoving: options.copyWhileMoving ?? false,
-//       },
-//       get moveKind(): "ordinary" | "batch" | null {
-//         if (appHost.internalState.activeTool !== "move") {
-//           return null;
-//         }
-//
-//         return appHost.internalState.runtime.moveEnterFrom === "marquee"
-//           ? "batch"
-//           : "ordinary";
-//       },
-//     },
-//     internalState: {
-//       activeTool: options.activeTool ?? "select",
-//       runtime: {
-//         moveAnchor: options.moveAnchor ?? null,
-//         moveEnterFrom: options.moveEnterFrom ?? null,
-//         movePointerMode: options.movePointerMode ?? null,
-//         canvasFloatingToolbar: {
-//           visible: options.toolbarVisible ?? false,
-//           buttonIds: [],
-//           anchor: null,
-//           attachedCollection: null,
-//           measuredSize: null,
-//         },
-//         canvasRightDockToolbar: {
-//           visible: false,
-//           items: [] as CanvasRightDockToolbarItemRequest[],
-//         },
-//       },
-//     },
-//     gestureAdapter: {
-//       handleUiButtonMouseTap: vi.fn(),
-//       handleUiButtonTouchTap: vi.fn(),
-//     },
-//     internalActions: {
-//       setActiveTool: vi.fn((activeTool) => {
-//         appHost.internalState.activeTool = activeTool;
-//       }),
-//       showCanvasFloatingToolbarForCollection: vi.fn((buttonIds, collectionType) => {
-//         if (editor.queries.findEntityCollectionGridRect(collectionType) === null) {
-//           return false;
-//         }
-//
-//         appHost.internalState.runtime.canvasFloatingToolbar.visible = true;
-//         appHost.internalState.runtime.canvasFloatingToolbar.buttonIds = [...buttonIds];
-//         appHost.internalState.runtime.canvasFloatingToolbar.anchor = { x: 80, y: 72 };
-//         appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection = collectionType;
-//         return true;
-//       }),
-//       alignCanvasFloatingToolbar: vi.fn(() => true),
-//       setCanvasFloatingToolbarSize: vi.fn(),
-//       hideCanvasFloatingToolbar: vi.fn(() => {
-//         appHost.internalState.runtime.canvasFloatingToolbar.visible = false;
-//         appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection = null;
-//       }),
-//       showCanvasRightDockToolbar: vi.fn((items: readonly CanvasRightDockToolbarItemRequest[]) => {
-//         appHost.internalState.runtime.canvasRightDockToolbar.visible = true;
-//         appHost.internalState.runtime.canvasRightDockToolbar.items = [...items];
-//       }),
-//       hideCanvasRightDockToolbar: vi.fn(() => {
-//         appHost.internalState.runtime.canvasRightDockToolbar.visible = false;
-//         appHost.internalState.runtime.canvasRightDockToolbar.items = [];
-//       }),
-//       getKeyboardShortcutFor: vi.fn((key: string) => shortcuts[key] ?? ""),
-//       isShortcutFor: vi.fn((key: string, code: string | null, eventKey?: string | null) => {
-//         const shortcut = (shortcuts[key] ?? "")
-//           .trim()
-//           .toLowerCase();
-//         if (shortcut === "") {
-//           return false;
-//         }
-//
-//         if ((eventKey ?? "").trim().toLowerCase() === shortcut) {
-//           return true;
-//         }
-//
-//         if (shortcut.length === 1 && shortcut >= "a" && shortcut <= "z") {
-//           return code === `Key${shortcut.toUpperCase()}`;
-//         }
-//
-//         if (shortcut.length === 1 && shortcut >= "0" && shortcut <= "9") {
-//           return code === `Digit${shortcut}` || code === `Numpad${shortcut}`;
-//         }
-//
-//         return (code ?? "").trim().toLowerCase() === shortcut;
-//       }),
-//     },
-//     workspace: {
-//       editor,
-//       registry: createRegistryContract(),
-//     },
-//     ...(options.overlapEntityMenu !== undefined
-//       ? { overlapEntityMenu: options.overlapEntityMenu }
-//       : {}),
-//   } as unknown as AppHost;
-//
-//   return {
-//     context: {
-//       workspace: {
-//         registry: appHost.workspace.registry,
-//         editor,
-//       } as unknown as WorkspaceContract,
-//       appHost,
-//       keyboard: emptyKeyboardSnapshot(),
-//     },
-//     editor,
-//     appHost,
-//     selection,
-//     preview,
-//     previewRectRef,
-//   };
-// }
 function createContext(options: {
   activeTool?: ActiveTool;
   moveAnchor?: GridPoint | null;
@@ -1694,74 +1059,10 @@ function createContext(options: {
 }
 
 
-// AI-REMOVED 2026-11-12:
-// Reason: 旧假 App、Editor、视口及集合已不适用于独立 Canvas。
-// Trigger: REQ-048 场景接口迁移。
-// Evidence: 移动草稿、坐标换算和选择来自真实会话动作。
-// Replacement: createCanvasTestSession 与版本化场景；原行为覆盖保留。
-// Risk: 实际鼠标触控布局另由浏览器验收。
-// Human Review: Required
-// Original code:
-// type MockCollection = string[] & {
-//   contains(entityId: string): boolean;
-//   replace(entityIds: readonly string[]): void;
-// };
 
 
-// AI-REMOVED 2026-11-12:
-// Reason: 旧假 App、Editor、视口及集合已不适用于独立 Canvas。
-// Trigger: REQ-048 场景接口迁移。
-// Evidence: 移动草稿、坐标换算和选择来自真实会话动作。
-// Replacement: createCanvasTestSession 与版本化场景；原行为覆盖保留。
-// Risk: 实际鼠标触控布局另由浏览器验收。
-// Human Review: Required
-// Original code:
-// type MockEditor = {
-//   document: Pick<EditorContract["document"], "getSnapshot">;
-//   state: Pick<EditorContract["state"], "collections" | "viewport">;
-//   actions: Pick<
-//     EditorContract["actions"],
-//     | "addToCollection"
-//     | "applyMoveOerationDraft"
-//     | "cancelMoveOperationDraft"
-//     | "clearCollection"
-//     | "createMoveOperationDraft"
-//     | "moveCollectionCenterPointTo"
-//     | "moveCollectionTo"
-//     | "replaceEntityDefinition"
-//     | "rotateCollection"
-//     | "rotateCollectionAroundCenterPoint"
-//     | "rotateCollectionAroundPivotCell"
-//     | "rotateCollectionToSnapOnBuilding"
-//   >;
-//   queries: Pick<
-//     EditorContract["queries"],
-//     | "findClientRectForGridCell"
-//     | "findEntityCollectionGridRect"
-//     | "findGridCellForClientPixelPoint"
-//     | "getEntityById"
-//   > & {
-//     listEntities?: () => readonly WorldEntity[];
-//   };
-// };
 
 
-// AI-REMOVED 2026-11-12:
-// Reason: 旧假 App、Editor、视口及集合已不适用于独立 Canvas。
-// Trigger: REQ-048 场景接口迁移。
-// Evidence: 移动草稿、坐标换算和选择来自真实会话动作。
-// Replacement: createCanvasTestSession 与版本化场景；原行为覆盖保留。
-// Risk: 实际鼠标触控布局另由浏览器验收。
-// Human Review: Required
-// Original code:
-// function createCollection(entityIds: readonly string[]): MockCollection {
-//   const collection = [...entityIds] as MockCollection;
-//   collection.contains = (entityId: string) => collection.includes(entityId);
-//   collection.replace = (nextEntityIds: readonly string[]) => {
-//     collection.splice(0, collection.length, ...nextEntityIds);
-//   };
-//   return collection;
-// }
 
 
 function entity(
@@ -1972,23 +1273,6 @@ function mouseDragStartEvent(options: {
   };
 }
 
-// AI-REMOVED 2026-11-12:
-// Reason: 旧假 App、Editor、视口及集合已不适用于独立 Canvas。
-// Trigger: REQ-048 场景接口迁移。
-// Evidence: 移动草稿、坐标换算和选择来自真实会话动作。
-// Replacement: createCanvasTestSession 与版本化场景；原行为覆盖保留。
-// Risk: 实际鼠标触控布局另由浏览器验收。
-// Human Review: Required
-// Original code:
-// function emptyKeyboardSnapshot(): KeyboardSnapshot {
-//   return {
-//     pressedKeys: new Set(),
-//     lastCode: null,
-//     lastKey: null,
-//     lastKeyCode: null,
-//     modifiers: emptyModifiers(),
-//   };
-// }
 
 
 function emptyModifiers() {

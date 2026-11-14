@@ -32,7 +32,6 @@ finalColor=texture(uColorTexture,clamp(vUV,uColorBounds.xy,uColorBounds.zw))*uCo
 }`;
 
 /** 同一资源页、区域和阶段共用一次绘制；实例高度作为顶点属性传入。 */
-// AI-CORRECTION 2026-10-05: 同资源、区域的实例共用稳定批次；动画阶段及颜色页切换仅更新 UV、uniform 和纹理绑定，避免逐帧销毁重建。
 export class BuildingEffectBatch {
   public readonly mesh: Mesh<Geometry, Shader>;
   private readonly uniforms: UniformGroup;

@@ -65,22 +65,6 @@ function createTimelineReadinessWorkspace(
       runningState: "pause",
       simulationMode: "single-base",
         simulationSpeed: 1,
-        // AI-REMOVED 2026-09-12:
-        // Reason: timeline 测试状态同步移除已退役的 diagnostics 字段。
-        // Trigger: 用户确认性能统计改由统一 Query 提供。
-        // Evidence: SimulationState contract 已不再声明 statistics / bufferSize。
-        // Replacement: SimulationQuery.getPerformanceDiagnostics。
-        // Risk: Low。
-        // Human Review: Required
-        //
-        // Original code:
-        // statistics: {
-        //   tickPerSecond: 0,
-        //   targetTickPerSecond: 0,
-        //   baseBatteryJoules: 0,
-        //   baseBatteryCapacity: 0,
-        // },
-        // bufferSize: 1,
         timeline: {
           enabled: true,
           readiness,
@@ -97,16 +81,6 @@ function createTimelineReadinessWorkspace(
       queries: {} as NonNullable<WorkspaceContract["simulation"]>["queries"],
       actions: {
         start: vi.fn(async () => {}),
-        // AI-REMOVED 2026-09-20:
-        // Reason: Simulation 公共 Action 不再允许外部写入会话模式。
-        // Trigger: ST2-RQ-035 改为 start 从 AppSettings 固化模式。
-        // Evidence: SimulationAction Contract 已移除该方法。
-        // Replacement: AppSettings.regionalMultiBaseEnabled。
-        // Risk: Low；本 mock 不调用该动作。
-        // Human Review: Required
-        //
-        // Original code:
-        // setRegionalMultiBaseEnabled: vi.fn(),
         pause: vi.fn(),
         resume: vi.fn(),
         stop: vi.fn(),
@@ -122,7 +96,6 @@ function createTimelineReadinessWorkspace(
     },
     sync: null,
     audio: null,
-    blueprintPlanner: null,
   };
 }
 
@@ -167,22 +140,6 @@ describe("TimelineDialog", () => {
         runningState: "pause",
         simulationMode: "single-base",
           simulationSpeed: 1,
-          // AI-REMOVED 2026-09-12:
-          // Reason: timeline 测试状态同步移除已退役的 diagnostics 字段。
-          // Trigger: 用户确认性能统计改由统一 Query 提供。
-          // Evidence: SimulationState contract 已不再声明 statistics / bufferSize。
-          // Replacement: SimulationQuery.getPerformanceDiagnostics。
-          // Risk: Low。
-          // Human Review: Required
-          //
-          // Original code:
-          // statistics: {
-          //   tickPerSecond: 0,
-          //   targetTickPerSecond: 0,
-          //   baseBatteryJoules: 0,
-          //   baseBatteryCapacity: 0,
-          // },
-          // bufferSize: 501,
           timeline: {
             enabled: true,
             readiness: "ready",
@@ -199,16 +156,6 @@ describe("TimelineDialog", () => {
         queries: {} as NonNullable<WorkspaceContract["simulation"]>["queries"],
         actions: {
           start: vi.fn(async () => {}),
-          // AI-REMOVED 2026-09-20:
-          // Reason: Simulation 公共 Action 不再允许外部写入会话模式。
-          // Trigger: ST2-RQ-035 改为 start 从 AppSettings 固化模式。
-          // Evidence: SimulationAction Contract 已移除该方法。
-          // Replacement: AppSettings.regionalMultiBaseEnabled。
-          // Risk: Low；本 mock 不调用该动作。
-          // Human Review: Required
-          //
-          // Original code:
-          // setRegionalMultiBaseEnabled: vi.fn(),
           pause: vi.fn(),
           resume: vi.fn(),
           stop: vi.fn(),
@@ -224,7 +171,6 @@ describe("TimelineDialog", () => {
       },
       sync: null,
       audio: null,
-      blueprintPlanner: null,
     };
     appHost = createAppTestHost(workspace);
 

@@ -1,15 +1,5 @@
 import { loadBlueprintFromFile, getBlueprintEntityArray } from "@/tests/simulation/blueprint-test-helpers";
 import { afterEach, expect, it, vi } from "vitest";
-// AI-REMOVED 2026-09-08:
-// Reason: describe 已由统一仿真引擎矩阵入口封装，保留本地导入会触发 ESLint unused-vars。
-// Trigger: invalid-placement-compile 接入 describeSimulationEngineMatrix。
-// Evidence: ESLint 报告 describe is defined but never used。
-// Replacement: src/tests/simulation/simulation-engine-matrix.ts
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
@@ -41,34 +31,9 @@ function createWorkspace(): WorkspaceContract {
     simulation: null,
     sync: null,
     audio: null,
-    blueprintPlanner: null,
   };
 }
 
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/invalid-placement-compile/index.json
-// AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections/simulation/invalid-placement-compile/index.json。
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// function createEntity(
-//   id: string,
-//   definitionId: string,
-//   x: number,
-//   y: number,
-// ): WorldEntity {
-//   return {
-//     id,
-//     definitionId,
-//     position: { x, y },
-//     rotation: 0,
-//     config: {},
-//     tags: [],
-//   };
-// }
 
 function createDocumentWithEntities(
   entities: readonly WorldEntity[],
@@ -90,31 +55,11 @@ function registerBuiltinBase(
     {
       id: TEST_BUILTIN_BASE_ID,
       name: "测试仿真内置设备基地",
-      // AI-REMOVED 2026-11-12:
-      // Reason: 主区域和分区统一使用世界坐标 SceneAreaDefinition。
-      // Trigger: REQ-048 已授权 D1 数据模型迁移。
-      // Evidence: areas 保留原 ID、尺寸、名牌和外圈。
-      // Replacement: 本对象的 areas。
-      // Risk: Low；仅表达形式变更，有限空间范围不变。
-      // Human Review: Required
-      //
-      // Original code:
-      // placeableArea: { width: 40, height: 40 },
       areas: [{
         id: TEST_BUILTIN_BASE_ID,
         bounds: { minX: 0, maxX: 40, minY: 0, maxY: 40 },
         outerRing: { top: 0, right: 0, bottom: 0, left: 0 },
       }],
-      // AI-REMOVED 2026-11-12:
-      // Reason: 主区域和分区统一使用世界坐标 SceneAreaDefinition。
-      // Trigger: REQ-048 已授权 D1 数据模型迁移。
-      // Evidence: areas 保留原 ID、尺寸、名牌和外圈。
-      // Replacement: 本对象的 areas。
-      // Risk: Low；仅表达形式变更，有限空间范围不变。
-      // Human Review: Required
-      //
-      // Original code:
-      // outerRing: { top: 0, right: 0, bottom: 0, left: 0 },
       tag: "测试",
       tags: [],
       builtinEntities,
@@ -131,18 +76,6 @@ describeSimulationEngineMatrix("invalid placement simulation compile", (engineKi
   it("treats invalid placement entities as absent when compiling topology", async () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/simulation/invalid-placement-compile/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       createEntity("outside-belt", "belt_straight_1x1", -1, 0),
-    //       createEntity("valid-pipe", "pipe_straight_1x1", 4, 0),
-    //     ]
     const document = createDocumentWithEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/simulation/invalid-placement-compile/scene-01-variant-1.schema7.json")));
 
     editorHost.internalDocument.setSnapshot(document);
@@ -183,17 +116,6 @@ describeSimulationEngineMatrix("invalid placement simulation compile", (engineKi
       },
     ]);
     const editorHost = createEditorTestHost(workspace);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/simulation/invalid-placement-compile/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //         createEntity("document-storage", "storager_1", 10, 0),
-    //       ]
     const document = {
       ...createDocumentWithEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/simulation/invalid-placement-compile/scene-02-variant-1.schema7.json")), TEST_BUILTIN_BASE_ID),
       slotLinks: [
@@ -239,17 +161,6 @@ describeSimulationEngineMatrix("invalid placement simulation compile", (engineKi
   it("keeps warehouse ports connected to valley4 non-core builtin bus seeds in simulation topology", async () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/simulation/invalid-placement-compile/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //         createEntity("unloader", "unloader_1", 2, 0),
-    //       ]
     const document = {
       ...createDocumentWithEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/simulation/invalid-placement-compile/scene-03-variant-1.schema7.json")), "valley4_infra_outpost"),
       slotLinks: [

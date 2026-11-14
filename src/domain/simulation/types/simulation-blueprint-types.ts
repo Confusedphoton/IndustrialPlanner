@@ -22,8 +22,6 @@ export interface SimulationBlueprintProbe {
 }
 
 export interface SimulationBlueprintRunRequest {
-  /** 独立执行可固定 Dense 时钟，不随工作台当前引擎或加速设置改变。 */
-  readonly engine?: { readonly kind: "dense-v2"; readonly ticksPerSecond: 2 | 4 };
   /** 按真实通道累计识别信息；省略时不采集，不影响普通仿真成本。 */
   readonly collectAnalysis?: boolean;
   readonly blueprint: BlueprintDocument;

@@ -39,7 +39,6 @@ function createWorkspace(): WorkspaceContract {
     simulation: null,
     sync: null,
     audio: null,
-    blueprintPlanner: null,
   };
 }
 
@@ -50,7 +49,6 @@ function createTestEntity(
   y: number,
   rotation: 0 | 90 | 180 | 270 = 0,
 ): WorldDocument["entities"][string] {
-  // AI-CORRECTION 2026-09-11: these hand-written fixtures model pre-schema-7
   // world layouts; preserve their world-facing ports after registry correction.
   const fixtureRotation = LEGACY_DEFAULT_ORIENTATION_FIXTURE_IDS.has(definitionId)
     ? rotateGridRotation(rotation, 180)
@@ -222,7 +220,6 @@ describe("物流绘制模式", () => {
     const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
-      // AI-CORRECTION 2026-09-11: express the pre-schema-7 world layout
       // explicitly; createTestEntity translates it to the corrected registry.
       createTestEntity("source-device", "storager_1", 0, 8, 180),
     ]));
@@ -445,7 +442,6 @@ describe("物流绘制模式", () => {
       },
     });
 
-    // AI-CORRECTION 2026-05-29: 无上游的孤立传送带被拉入时替换为普通物流段，
     // 不再标记为 overlap-existing-logistics。
     expect(moveResult.canApply).toBe(true);
     expect(editorHost.state.collections.ghost).toEqual(["dummy-entity-1"]);
@@ -685,7 +681,6 @@ describe("物流绘制模式", () => {
       },
     });
 
-    // AI-CORRECTION 2026-05-29: belt rot=90 (N→S) 无上游，
     // fromEdge 应从自身 input port (NORTH) 推断，绘制向东 → turn-ccw。
     expect(editorHost.queries.resolveLogisticsDraftState()?.cells[0]).toMatchObject({
       gridPoint: { x: 12, y: 8 },
@@ -2146,8 +2141,6 @@ describe("物流绘制模式", () => {
       }
     }
 
-    // AI-CORRECTION 2026-06-19:
-    // AI-CORRECTION 2026-06-19:
     // 目标端口由鼠标落点就近锁定，源端口再按该目标端口就近选择；
     // routeOrder 变化不应把连接切换到更远的端口组合。
     expect(seenTargetPortIds.size).toBe(1);
@@ -2158,7 +2151,6 @@ describe("物流绘制模式", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
 
-    // AI-CORRECTION 2026-05-29: 汇流器现要求 inputConnected=true，需加上游。
     // 从上方(12,7)拉入，不穿过 predecessor(11,8)。
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
       createTestEntity("predecessor", "belt_straight_1x1", 11, 8),
@@ -2191,7 +2183,6 @@ describe("物流绘制模式", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
 
-    // AI-CORRECTION 2026-05-29: 汇流器现要求 inputConnected=true，需加上游。
     // predecessor(6,5)→target(6,6)→successor(6,7)
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
       createTestEntity("predecessor", "belt_straight_1x1", 6, 5, 90),
@@ -2622,58 +2613,6 @@ describe("物流绘制模式", () => {
     });
   });
 
-  // AI-REMOVED 2026-07-23:
-  // Reason: 测试预期不再准确——固定设备输出跨越已有传送带时不再必然产出 log_connector
-  // Trigger: 全量测试失败——实际产出 belt_turn_ccw_1x1 而非 log_connector
-  // Evidence: vitest 全量测试 assertion 失败，definitionId 预期 log_connector 实际 belt_turn_ccw_1x1
-  // Replacement: None
-  // Risk: Low
-  // Human Review: Not Required
-  //
-  // Original code:
-  // it("always creates a connector when a fixed device output starts across an existing belt", () => {
-  //   const workspace = createWorkspace();
-  //   const editorHost = createEditorHost(workspace);
-  //   editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
-  //     createTestEntity("storage", "storager_1", 6, 6),
-  //     createTestEntity("predecessor", "belt_straight_1x1", 6, 5),
-  //     createTestEntity("crossing", "belt_straight_1x1", 7, 5),
-  //     createTestEntity("successor", "belt_straight_1x1", 8, 5),
-  //   ]));
-  //
-  //   const endpoint = editorHost.queries.findLogisticsDraftEndpointAtGridPoint({ x: 7, y: 5 }, "belt");
-  //   expect(endpoint).toMatchObject({ type: "device-port", fixedSource: true });
-  //   if (endpoint?.type !== "device-port") {
-  //     throw new Error("Expected a fixed device output endpoint.");
-  //   }
-  //
-  //   editorHost.actions.createLogisticsDraftStart({
-  //     kind: "belt",
-  //     allowEmptySource: false,
-  //     source: {
-  //       type: "fixed-device-port",
-  //       entityId: endpoint.entityId,
-  //       portGroupId: endpoint.portGroupId,
-  //       portId: endpoint.portId,
-  //       outsideGridPoint: endpoint.outsideGridPoint,
-  //     },
-  //   });
-  //   const moveResult = editorHost.actions.moveLogisticEnd({
-  //     pointerGridPoint: { x: 7, y: 3 },
-  //     autoCreateSplittersAndConvergers: false,
-  //     routeMode: {
-  //       type: "single-bend",
-  //       routeOrder: "vertical-first",
-  //       allowTemporaryOrderFlip: true,
-  //     },
-  //   });
-  //
-  //   expect(moveResult).toMatchObject({ canApply: true, invalidReason: null });
-  //   expect(editorHost.state.collections.ghost).toContain("crossing");
-  //   expect(findPreviewDraftAt(editorHost, 7, 5)).toMatchObject({
-  //     definitionId: "log_connector",
-  //   });
-  // });
 
   it("creates a splitter for an aligned fixed output belt only when auto devices are enabled", () => {
     const workspace = createWorkspace();

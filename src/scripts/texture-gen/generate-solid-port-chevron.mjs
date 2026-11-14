@@ -143,7 +143,6 @@ const TEXTURES = [
   { fileName: 'solid-port-chevron-input.webp',  polygons: SOLID_DOWN_POLYGONS },
   { fileName: 'solid-port-chevron-output.webp', polygons: SOLID_UP_POLYGONS },
   // Mobile 版本
-  // AI-CORRECTION 2026-06-18: 移动端参考游戏实机效果增加圆角轮廓与柔光，避免纯硬边多边形显得像临时占位图。
   { fileName: 'solid-port-chevron-input-mobile.webp',  polygons: SOLID_DOWN_MOBILE_POLYGONS, appearance: { glow: true, cornerStrokeWidth: 0.75 } },
   { fileName: 'solid-port-chevron-output-mobile.webp', polygons: SOLID_UP_MOBILE_POLYGONS, appearance: { glow: true, cornerStrokeWidth: 0.75 } },
 ];

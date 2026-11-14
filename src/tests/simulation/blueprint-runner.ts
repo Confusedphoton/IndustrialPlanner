@@ -14,16 +14,6 @@ import {
   SUPPORTED_SIMULATION_ENGINE_KINDS,
   type SimulationEngineKind,
 } from "@/simulation/simulation-host";
-// AI-REMOVED 2026-09-04:
-// Reason: duration 模式不再预先把总时长换成固定 tick 预算，而是累计真实 tick 区间。
-// Trigger: 用户要求未来强制动态 tickRate 时，预热结束不得依赖预设真实帧数或切换位置。
-// Evidence: RuntimeTickSnapshot.tickRate 描述当前真实 tick 到下一真实 tick 的频率。
-// Replacement: runBlueprintSimulation 的 elapsedSimulationSeconds 累计循环。
-// Risk: Low；maxTickNumber 精确坐标模式仍保留原行为。
-// Human Review: Required
-//
-// Original code:
-// import { convertSimulationSecondsToTicksExact } from "@/simulation/tick-rate";
 import type {
   CompiledSimulationTopology,
   RegionalResourceSupplySetting,
@@ -180,16 +170,6 @@ export async function runBlueprintSimulation(
     let tickReportTotal = 0;
     let tickNumber = 0;
     let elapsedSimulationSeconds = 0;
-    // AI-REMOVED 2026-09-08:
-    // Reason: 逐区间累加浮点秒数会在整秒边界产生精度漂移。
-    // Trigger: 60 秒吞吐窗口在 Legacy 下错误包含边界 tick，结果多计一次传输。
-    // Evidence: tick 200 到 tick 1400 的理论窗口为 10..70 秒，累计值使 tick 200 小于理论 10 秒。
-    // Replacement: 每个快照直接以 tickNumber / standardTickRate 计算标准时间坐标。
-    // Risk: Low；standardTickRate 是本次编译拓扑固定的标准 tick 坐标基准。
-    // Human Review: Required
-    //
-    // Original code:
-    // let previousDurationSnapshot: RuntimeTickSnapshot | null = null;
     while (true) {
       const tTickStart = performance.now();
       const tickStatus = await host.internalActions.syncToTick(tickNumber);
@@ -210,26 +190,6 @@ export async function runBlueprintSimulation(
           `Simulation tick ${snapshot.tickNumber} exposes invalid standardTickRate=${snapshot.standardTickRate}.`,
         );
       }
-      // AI-REMOVED 2026-09-08:
-      // Reason: 逐区间累加浮点秒数会放大舍入误差，不能作为时间窗口的精确边界。
-      // Trigger: Legacy 的暗管吞吐测试在 60 秒窗口中多计一个边界 tick。
-      // Evidence: 累计得到的窗口起点略小于 10 秒，导致理论上应排除的 tick 200 被纳入。
-      // Replacement: 上方以 snapshot.tickNumber / snapshot.standardTickRate 直接计算。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // if (previousDurationSnapshot !== null) {
-      //   const intervalSeconds = (
-      //     snapshot.tickNumber - previousDurationSnapshot.tickNumber
-      //   ) / previousDurationSnapshot.standardTickRate;
-      //   if (!Number.isFinite(intervalSeconds) || intervalSeconds <= 0) {
-      //     throw new Error(
-      //       `Simulation produced invalid interval ${previousDurationSnapshot.tickNumber}..${snapshot.tickNumber}.`,
-      //     );
-      //   }
-      //   elapsedSimulationSeconds += intervalSeconds;
-      // }
 
       const tReportStart = performance.now();
       ticks.push(createTickReport({
@@ -248,16 +208,6 @@ export async function runBlueprintSimulation(
         if (tickNumber >= options.maxTickNumber) {
           break;
         }
-        // AI-REMOVED 2026-09-08:
-        // Reason: 时间坐标不再依赖相邻快照。
-        // Trigger: 修复累计秒数的浮点边界漂移。
-        // Evidence: 当前快照的标准 tick 坐标已能独立确定 elapsedSimulationSeconds。
-        // Replacement: snapshot.tickNumber / snapshot.standardTickRate。
-        // Risk: Low
-        // Human Review: Required
-        //
-        // Original code:
-        // previousDurationSnapshot = snapshot;
         tickNumber += 1;
         continue;
       }
@@ -273,16 +223,6 @@ export async function runBlueprintSimulation(
           `Simulation tick ${snapshot.tickNumber} exposes incompatible standardTickRate=${snapshot.standardTickRate} and tickRate=${snapshot.tickRate}.`,
         );
       }
-      // AI-REMOVED 2026-09-08:
-      // Reason: 时间坐标不再依赖相邻快照。
-      // Trigger: 修复累计秒数的浮点边界漂移。
-      // Evidence: 当前快照的标准 tick 坐标已能独立确定 elapsedSimulationSeconds。
-      // Replacement: snapshot.tickNumber / snapshot.standardTickRate。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // previousDurationSnapshot = snapshot;
       tickNumber = snapshot.tickNumber + standardStepTicks;
     }
 
@@ -358,7 +298,6 @@ export function createHeadlessWorkspace(documentSnapshot: WorldDocument, registr
     simulation: null,
     sync: null,
     audio: null,
-    blueprintPlanner: null,
   };
 }
 
@@ -400,18 +339,6 @@ function createTickReport(options: {
           { ...counter },
         ]),
       ),
-      // AI-REMOVED 2026-07-23:
-      // Reason: 蓝图报告不再复制已删除的固定窗口计量快照。
-      // Trigger: 消耗状态迁移到 slotItems 与 channelRecipes。
-      // Evidence: 上方两项已经完整复制新机制持久状态的只读投影。
-      // Replacement: slotItems + channelRecipes。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // meteredConsumption: clone(status.meteredConsumption),
-      // AI-CORRECTION 2026-05-30: recipeId/progressSeconds/desiredSeconds 已从 readmodel 删除，
-      //   改为从 channelRecipes 获取。此处仅做浅拷贝传递给测试断言。
       powerStatus: status.powerStatus,
     };
   }

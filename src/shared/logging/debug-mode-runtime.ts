@@ -2,9 +2,6 @@ type DebugModeListener = (enabled: boolean) => void;
 
 /**
  * 临时数据抢救入口。保持实现可复用，但默认不向 App 开放且不允许持久化值生效。
- * AI-CORRECTION 2026-09-12: 远端仍有后台基地保留未来 schema，临时重新向 App 开放以完成全量抢救。
- * AI-CORRECTION 2026-09-12: 全部后台基地已通过严格同步复核，重新关闭入口并强制归零。
- * AI-CORRECTION 2026-09-12: 订正上一行：复核发生在抢救开关开启期间；本次关闭用于恢复严格版本校验。
  */
 export const FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED: boolean = false;
 

@@ -136,22 +136,6 @@ public readonly alignCanvasFloatingToolbar: CanvasInternalAction["alignCanvasFlo
       return false;
     }
 
-    // AI-REMOVED 2026-08-25:
-    // Reason: 单独投影世界左上单元格无法代表旋转视角下的集合屏幕包围盒。
-    // Trigger: 基地视角旋转后，悬浮工具条锚点沿错误的屏幕方向计算。
-    // Evidence: 90°/180°/270° 下世界左上单元格不再是屏幕左上角，且世界 width 不再恒定映射到屏幕 X 轴。
-    // Replacement: 下方 collectionClientRect 使用完整 collectionRect 的四角投影结果。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // const topLeftCellRect = editor.queries.findClientRectForGridCell({
-    //   x: collectionRect.x,
-    //   y: collectionRect.y,
-    // });
-    // if (topLeftCellRect === null) {
-    //   return false;
-    // }
     const viewportState = this.canvas.view.state;
     const collectionClientRect = resolveViewportRectFromWorldGridRect({
       gridRect: collectionRect,
@@ -168,16 +152,6 @@ public readonly alignCanvasFloatingToolbar: CanvasInternalAction["alignCanvasFlo
     const toolbarWidth = toolbar.measuredSize?.width ?? 0;
     const viewport = viewportState.clientRect;
 
-    // AI-REMOVED 2026-08-25:
-    // Reason: 完整集合屏幕包围盒已经包含旋转后的实际宽度，不应再用单格宽度乘世界 width 重建。
-    // Trigger: 90°/270° 视角下集合的屏幕宽度对应世界 height。
-    // Evidence: resolveViewportRectFromWorldGridRect 会基于四角投影计算旋转后的 width。
-    // Replacement: aboveAnchor 直接使用 collectionClientRect.width。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // const cellWidth = topLeftCellRect.width;
 
     const halfToolbarHeight = toolbarHeight / 2;
 
@@ -202,45 +176,6 @@ public readonly alignCanvasFloatingToolbar: CanvasInternalAction["alignCanvasFlo
         + halfToolbarHeight
         + FLOATING_TOOLBAR_DEVICE_GAP_PX;
 
-      // AI-REMOVED 2026-08-25:
-      // Reason: 世界底边单元格在旋转视角下不一定处于屏幕底边，不能用于计算工具条下方锚点。
-      // Trigger: 集合靠近屏幕顶部时，90°/180°/270° 视角的下方回退位置仍会错乱。
-      // Evidence: 完整集合投影的 bottom 恒为 collectionClientRect.top + collectionClientRect.height。
-      // Replacement: 上方 belowY 基于 collectionClientRect 的屏幕底边计算。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // const bottomCellY = collectionRect.y + collectionRect.height - 1;
-      // const bottomCellRect = editor.queries.findClientRectForGridCell({
-      //   x: collectionRect.x,
-      //   y: bottomCellY,
-      // });
-      //
-      // if (bottomCellRect !== null) {
-      //   const belowY =
-      //     bottomCellRect.top
-      //     + bottomCellRect.height
-      //     + halfToolbarHeight
-      //     + FLOATING_TOOLBAR_DEVICE_GAP_PX;
-      //
-      //   if (belowY <= viewportBottomFiveSixths) {
-      //     anchor = {
-      //       x: aboveAnchor.x,
-      //       y: belowY,
-      //     };
-      //   } else {
-      //     anchor = {
-      //       x: aboveAnchor.x,
-      //       y: viewport.top + toolbarHeight * 1.5,
-      //     };
-      //   }
-      // } else {
-      //   anchor = {
-      //     x: aboveAnchor.x,
-      //     y: viewport.top + toolbarHeight * 1.5,
-      //   };
-      // }
       if (belowY <= viewportBottomFiveSixths) {
         anchor = {
           x: aboveAnchor.x,
@@ -319,17 +254,6 @@ public readonly showCanvasRightDockToolbar: CanvasInternalAction["showCanvasRigh
 
     this.state.runtime.canvasRightDockToolbar.visible = true;
     this.state.runtime.canvasRightDockToolbar.items = nextItems;
-    // AI-REMOVED 2026-08-22:
-    // Reason: 右侧工具列不再保存按钮数组和全局 mode。
-    // Trigger: 每个功能请求独立声明 button/shortcut/both。
-    // Evidence: nextItems 已包含归一化后的 operationId 与 presentation。
-    // Replacement: canvasRightDockToolbar.items = nextItems。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // this.state.runtime.canvasRightDockToolbar.buttonIds = nextButtonIds;
-    // this.state.runtime.canvasRightDockToolbar.mode = mode;
   });
 
 public readonly hideCanvasRightDockToolbar: CanvasInternalAction["hideCanvasRightDockToolbar"] = action(() => {
@@ -342,16 +266,6 @@ public readonly hideCanvasRightDockToolbar: CanvasInternalAction["hideCanvasRigh
 
     this.state.runtime.canvasRightDockToolbar.visible = false;
     this.state.runtime.canvasRightDockToolbar.items = [];
-    // AI-REMOVED 2026-08-22:
-    // Reason: 隐藏动作清理新的逐项请求状态。
-    // Trigger: canvasRightDockToolbar.buttonIds 已被 items 替代。
-    // Evidence: WorkbenchApp 从 items 渲染右侧工具列。
-    // Replacement: canvasRightDockToolbar.items = []。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // this.state.runtime.canvasRightDockToolbar.buttonIds = [];
   });
 
 public readonly showCanvasTopLeftCornerToolbar: CanvasInternalAction["showCanvasTopLeftCornerToolbar"] = action((
@@ -406,15 +320,6 @@ function normalizeCanvasRightDockToolbarItems(
   items: readonly CanvasRightDockToolbarItemRequest[],
 ): CanvasRightDockToolbarItemRequest[] {
   const knownOperationIds = new Set<CanvasOperationId>(
-    // AI-REMOVED 2026-11-12:
-    // Reason: 场景共享契约迁入 Domain Shared，避免 Editor/App 各有一份语义。
-    // Trigger: REQ-048 已确认 D2 契约。
-    // Evidence: 会话、只读源与交互画布均需要相同标识和只读快照。
-    // Replacement: Domain Shared CANVAS_OPERATION_IDS
-    // Risk: 所有引用需同步迁移。
-    // Human Review: Required
-    // Original code:
-    // CANVAS_RIGHT_DOCK_TOOLBAR_OPERATION_IDS,
     CANVAS_OPERATION_IDS,
   );
   const knownPresentations = new Set<CanvasRightDockToolbarPresentation>([

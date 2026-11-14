@@ -3,19 +3,6 @@ import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "./blueprint-runner";
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/belt-phase-sync/index.json
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// import {
-//   createBlueprint,
-//   createEntity,
-//   resolveSimulationMillisecondsAtFirstTick,
-// } from "./blueprint-test-helpers";
 import { resolveSimulationMillisecondsAtFirstTick } from "./blueprint-test-helpers";
 import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 
@@ -58,67 +45,9 @@ const GROUP_B = [
 const ALL_BELT_IDS_FOR_PHASE = [...BELT_IDS, START_BELT_ID];
 
 /** 传送带在蓝图中的坐标（y 从北向南递增） */
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/belt-phase-sync/index.json
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// const BELT_POSITIONS: Record<string, { x: number; y: number }> = {
-//   "logistics-draft:belt:3:0": { x: 52, y: 24 },
-//   "logistics-draft:belt:17:0": { x: 51, y: 20 },
-//   "logistics-draft:belt:18:1": { x: 51, y: 19 },
-//   "logistics-draft:belt:22:0:1": { x: 52, y: 20 },
-//   "logistics-draft:belt:24:0": { x: 52, y: 19 },
-//   "logistics-draft:belt:28:0": { x: 53, y: 20 },
-//   "logistics-draft:belt:29:1": { x: 53, y: 19 },
-// };
 
-// AI-REMOVED 2026-09-08:
-// Reason: 传送带同步和部分死路恢复是生产求解器共同的 Host 行为。
-// Trigger: 用户确认下一类测试接入 Host 行为矩阵。
-// Evidence: 两个用例均只通过 runBlueprintSimulation 公共入口观察运行结果。
-// Replacement: 下方 SIMULATION_ENGINE_MATRIX 参数化 describe。
-// Risk: Dense 可能暴露同步相位或死路恢复差异。
-// Human Review: Required
-//
-// Original code:
-// describe("传送带同步相位", () => {
 describe.each(SIMULATION_ENGINE_MATRIX)("传送带同步相位 [%s]", (engineKind) => {
   it("分组内传送带状态一致，所有有货传送带相位一致（含起点 belt:3:0）", async () => {
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/belt-phase-sync/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // createBlueprint("belt-phase-sync", [
-    //       // 取货口 — 作为物品源（warehouse link 在 headless 模式无效，改由 initialItem + ignoreStock 驱动）
-    //       createEntity("item_port_unloader_1:5", "unloader_1", 51, 25, 180, {
-    //         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_3",
-    //         "storageSlotGroups[0].slots[0].initialCount": 100,
-    //         "storageSlotGroups[0].slots[0].ignoreStock": true
-    //       }),
-    //       // 存取线源桩（空壳，仅保持拓扑完整）
-    //       createEntity("item_port_log_hongs_bus_source:2", "log_hongs_bus_source", 51, 26, 0),
-    //       // 粉碎机
-    //       createEntity("item_port_grinder_1:6", "grinder_1", 51, 21, 0),
-    //       // 仓储（末端接收）
-    //       createEntity("item_port_storager_1:7", "storager_1", 51, 16, 0),
-    //       // 供电扩散器
-    //       createEntity("item_port_power_diffuser_1:8", "power_diffuser_1", 54, 23, 0),
-    //       // 分组测试的六条传送带
-    //       ...BELT_IDS.map((id) => {
-    //         const pos = BELT_POSITIONS[id]!;
-    //         return createEntity(id, "belt_straight_1x1", pos.x, pos.y, 270);
-    //       }),
-    //       // 起点传送带（取货口→设备），不参与分组，仅参与相位校验
-    //       createEntity(START_BELT_ID, "belt_straight_1x1", BELT_POSITIONS[START_BELT_ID]!.x, BELT_POSITIONS[START_BELT_ID]!.y, 270),
-    //     ])
     const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/belt-phase-sync/scene-01-belt-phase-sync-1567dd17.schema7.json");
 
     const report = await runBlueprintSimulation({
@@ -126,16 +55,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)("传送带同步相位 [%s]", (engineKin
       registry: createRegistryContract(),
       engineKind,
       maxDurationSeconds: 20,
-      // AI-REMOVED 2026-09-08:
-      // Reason: 观察窗口按业务时间表达，不绑定 Legacy tick 400。
-      // Trigger: belt-phase-sync 接入求解器矩阵。
-      // Evidence: Legacy 的 400 tick 运行窗口等价于 20 秒标准时间。
-      // Replacement: maxDurationSeconds: 20。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // maxTickNumber: 400,
     });
 
     // 确认拓扑编译成功
@@ -186,7 +105,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)("传送带同步相位 [%s]", (engineKin
         );
 
         if (beltsWithItems.length >= 2) {
-          // AI-CORRECTION 2026-05-30: progressSeconds 已迁移到 channelRecipes["default"]。
           const phases = beltsWithItems.map((s) => s.channelRecipes["default"]?.progressSeconds);
           const allSamePhase = phases.every((p) => p === phases[0]);
           expect(
@@ -210,32 +128,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)("传送带同步相位 [%s]", (engineKin
    *   粉碎机 → belt:28:0(53,20) → 断头 [死路]
    */
   it("粉碎机部分下游断头时仍能向存活下游稳定出货", async () => {
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/belt-phase-sync/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // createBlueprint("belt-partial-dead-end", [
-    //       createEntity("item_port_unloader_1:5", "unloader_1", 51, 25, 180, {
-    //         "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_3",
-    //         "storageSlotGroups[0].slots[0].initialCount": 100,
-    //         "storageSlotGroups[0].slots[0].ignoreStock": true
-    //       }),
-    //       createEntity("item_port_log_hongs_bus_source:2", "log_hongs_bus_source", 51, 26, 0),
-    //       createEntity("item_port_grinder_1:6", "grinder_1", 51, 21, 0),
-    //       // 仓储偏移到左侧，只有 belt:17:0(51,20) 的出口能对其南侧输入端口 x=51
-    //       createEntity("item_port_storager_1:7", "storager_1", 49, 17, 0),
-    //       createEntity("item_port_power_diffuser_1:8", "power_diffuser_1", 55, 22, 0),
-    //       // 起点传送带
-    //       createEntity("logistics-draft:belt:3:0", "belt_straight_1x1", 52, 24, 270),
-    //       // 三条平行传送带（y=20）：只有 belt:17:0 连接 storager
-    //       createEntity("logistics-draft:belt:17:0", "belt_straight_1x1", 51, 20, 270),
-    //       createEntity("logistics-draft:belt:22:0:1", "belt_straight_1x1", 52, 20, 270),
-    //       createEntity("logistics-draft:belt:28:0", "belt_straight_1x1", 53, 20, 270),
-    //     ])
     const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/belt-phase-sync/scene-02-belt-partial-dead-end-da2af98d.schema7.json");
 
     const report = await runBlueprintSimulation({
@@ -243,16 +135,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)("传送带同步相位 [%s]", (engineKin
       registry: createRegistryContract(),
       engineKind,
       maxDurationSeconds: 20,
-      // AI-REMOVED 2026-09-08:
-      // Reason: 观察窗口按业务时间表达，不绑定 Legacy tick 400。
-      // Trigger: belt-phase-sync 接入求解器矩阵。
-      // Evidence: Legacy 的 400 tick 运行窗口等价于 20 秒标准时间。
-      // Replacement: maxDurationSeconds: 20。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // maxTickNumber: 400,
     });
 
     expect(report.topology.topologyId.length).toBeGreaterThan(0);
@@ -265,7 +147,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)("传送带同步相位 [%s]", (engineKin
     }> = [];
     for (const tick of report.ticks) {
       if (tick.tickNumber === 0) continue;
-      // AI-CORRECTION 2026-09-08: tick 0 是执行前初始快照，不属于“第一执行 tick”毫秒相位序列。
       const storager = tick.devices["item_port_storager_1:7"];
       if (storager === undefined) continue;
       const totalCount = storager.slotItems.reduce((sum, s) => sum + s.count, 0);
@@ -277,20 +158,9 @@ describe.each(SIMULATION_ENGINE_MATRIX)("传送带同步相位 [%s]", (engineKin
         ),
         count: totalCount,
       });
-      // AI-REMOVED 2026-09-08:
-      // Reason: 收货节奏需要以跨引擎一致的毫秒相位表达。
-      // Trigger: belt-phase-sync 接入求解器矩阵。
-      // Evidence: tickNumber 在 Legacy 与 Dense 下代表不同采样密度。
-      // Replacement: 同时记录 resolveSimulationMillisecondsAtFirstTick 结果。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // storagerSlotItemCounts.push({ tick: tick.tickNumber, count: totalCount });
     }
 
     // 首个物品最迟在 200 tick 到达
-    // AI-CORRECTION 2026-09-08: 跨引擎断言改为等价的 10000ms 上限。
     const firstReceipt = storagerSlotItemCounts.find((entry) => entry.count >= 1) ?? null;
     expect(firstReceipt, "仓储应在 10000ms 内收到首个物品").not.toBeNull();
     expect(
@@ -300,7 +170,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)("传送带同步相位 [%s]", (engineKin
 
     // 从首个物品到达后，每隔 ~40 tick 收到一个新物品
     // 到 400 tick 时至少应收到 floor((400 - first) / 40) + 1 件
-    // AI-CORRECTION 2026-09-08: 40 tick/400 tick 分别按 2000ms 周期和实际末帧毫秒相位计算。
     const finalCount = storagerSlotItemCounts[storagerSlotItemCounts.length - 1]?.count ?? 0;
     const finalElapsedMilliseconds = storagerSlotItemCounts.at(-1)?.elapsedMilliseconds ?? 0;
     const expectedMinCount = Math.floor(
@@ -310,23 +179,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)("传送带同步相位 [%s]", (engineKin
       finalCount,
       `从 ${firstReceipt!.elapsedMilliseconds}ms 开始应每 2000ms 收到一个物品，${finalElapsedMilliseconds}ms 时至少应有 ${expectedMinCount} 件`,
     ).toBeGreaterThanOrEqual(expectedMinCount);
-    // AI-REMOVED 2026-09-08:
-    // Reason: 首次到货和最小数量公式绑定 Legacy tick 坐标。
-    // Trigger: belt-phase-sync 接入求解器矩阵。
-    // Evidence: Dense 只采样门禁相位，不能用 400/40 等物理 tick 常量比较。
-    // Replacement: firstReceipt.elapsedMilliseconds、finalElapsedMilliseconds 与 2000ms 周期。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // const firstReceiptTick = storagerSlotItemCounts.find((e) => e.count >= 1)?.tick ?? null;
-    // expect(firstReceiptTick, "仓储应在 200 tick 内收到首个物品").not.toBeNull();
-    // expect(firstReceiptTick!, "首个物品到达不应晚于 200 tick").toBeLessThanOrEqual(200);
-    // const expectedMinCount = Math.floor((400 - firstReceiptTick!) / 40) + 1;
-    // expect(
-    //   finalCount,
-    //   `从 tick ${firstReceiptTick} 开始应每 40 tick 收到一个物品，400 tick 时至少应有 ${expectedMinCount} 件`,
-    // ).toBeGreaterThanOrEqual(expectedMinCount);
 
     // 进一步验证：检查收货间隔是否稳定（第一个物品后每 40 tick 一件）
     const receiptMilliseconds: number[] = [];
@@ -339,7 +191,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)("传送带同步相位 [%s]", (engineKin
     }
 
     // 从第二次收货开始，相邻两次收货间隔应为 40 tick（允许 ±2 tick 误差）
-    // AI-CORRECTION 2026-09-08: 等价断言为 2000ms 周期，允许原 ±2 Legacy tick 对应的 ±100ms。
     for (let i = 2; i < receiptMilliseconds.length; i++) {
       const interval = receiptMilliseconds[i]! - receiptMilliseconds[i - 1]!;
       expect(
@@ -348,30 +199,5 @@ describe.each(SIMULATION_ENGINE_MATRIX)("传送带同步相位 [%s]", (engineKin
       ).toBeGreaterThanOrEqual(1_900);
       expect(interval).toBeLessThanOrEqual(2_100);
     }
-    // AI-REMOVED 2026-09-08:
-    // Reason: 收货间隔数组和阈值绑定 Legacy tick 坐标。
-    // Trigger: belt-phase-sync 接入求解器矩阵。
-    // Evidence: 原 40±2 tick 在 20 TPS 下等价于 2000±100ms。
-    // Replacement: receiptMilliseconds 与 1900..2100ms。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // const receiptTicks: number[] = [];
-    // let prevCount = 0;
-    // for (const entry of storagerSlotItemCounts) {
-    //   if (entry.count > prevCount) {
-    //     receiptTicks.push(entry.tick);
-    //     prevCount = entry.count;
-    //   }
-    // }
-    // for (let i = 2; i < receiptTicks.length; i++) {
-    //   const interval = receiptTicks[i]! - receiptTicks[i - 1]!;
-    //   expect(
-    //     interval,
-    //     `收货间隔 ${interval} 应接近 40 tick（第 ${i} 次收货 @ tick ${receiptTicks[i]})`,
-    //   ).toBeGreaterThanOrEqual(38);
-    //   expect(interval).toBeLessThanOrEqual(42);
-    // }
   });
 });

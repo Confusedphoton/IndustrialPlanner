@@ -49,16 +49,6 @@ import {
   isItemAvailableByActivity,
   isRecipeAvailableByActivity,
 } from "@/shared/registry/activity-availability";
-// AI-REMOVED 2026-07-30:
-// Reason: LOGISTICS_KIND 导入后未被使用，ESLint @typescript-eslint/no-unused-vars 报错
-// Trigger: ESLint 规则检查
-// Evidence: 全文件搜索 LOGISTICS_KIND 仅在 import 行出现，无任何引用
-// Replacement: None
-// Risk: Low
-// Human Review: Not Required
-//
-// Original code:
-// import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 
 const WAREHOUSE_SINK_TAG = "WarehouseSink";
 
@@ -77,33 +67,7 @@ const documentLinkedStorageGroupsByTopology = new WeakMap<
   ReadonlySet<string>
 >();
 
-// AI-REMOVED 2026-08-02:
-// Reason: RegistryQuery 已按 machine 建立配方索引，runtime 不再需要 topology 局部二次分组类型。
-// Trigger: resolveRecipesForDeviceChannel 改为直接查询 registry。
-// Evidence: RegistryQuery.findRecipeDefinitionsByMachine 返回当前 registry 实例的配方定义。
-// Replacement: None
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// interface RecipesByChannelType {
-//   readonly normal: readonly RecipeDefinition[];
-//   readonly consumption: readonly RecipeDefinition[];
-// }
 
-// AI-REMOVED 2026-08-02:
-// Reason: machine recipe 索引由 Worker 内唯一 RegistryQuery 统一持有，不再按 topology 扫描 recipeCatalog。
-// Trigger: 删除 topology.recipeCatalog。
-// Evidence: RegistryQuery.findRecipeDefinitionsByMachine 已提供稳定索引。
-// Replacement: resolveRecipesForDeviceChannel 直接查询 registry。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// const recipesByMachineAndChannelTypeByTopology = new WeakMap<
-//   CompiledSimulationTopology,
-//   ReadonlyMap<string, RecipesByChannelType>
-// >();
 
 export interface IngredientSlotContent {
   readonly slotId: string;
@@ -139,7 +103,6 @@ export function resolveStorageSlotId(
  * 对应《仿真运行原理》§7.2 share-all 写入代理模型 ——
  *   source 端读写全部代理到 target 端存储，ignoreStock 作为 slot 属性应沿链继承。
  * 订正（2026-05-15）：ignoreStock 不再仅是编译槽位局部属性，支持跨链 OR 语义。
- * AI-CORRECTION 2026-07-16: 无限库存同时适用于物流供给和配方原料，配方匹配、预定与消耗均不得受实际数量限制。
  */
 export function resolveEffectiveIgnoreStock(
   topology: CompiledSimulationTopology,
@@ -532,18 +495,6 @@ export function moveOneItem(options: {
     return true;
   }
 
-  // AI-REMOVED 2026-07-23:
-  // Reason: 销毁型虚拟计量入口已经由真实缓存和 reserved-item 配方取代。
-  // Trigger: 用户要求物品先进入容量 5 槽位，十秒后才消耗。
-  // Evidence: 所有 moveOneItem 调用现在都必须写入目标库存。
-  // Replacement: recipe completion 消费 reservations。
-  // Risk: Medium
-  // Human Review: Required
-  //
-  // Original code:
-  // if (options.consumeAtTarget === true) {
-  //   return true;
-  // }
 
   targetState.itemType = targetState.itemType ?? options.itemType;
   targetState.count += 1;
@@ -560,56 +511,6 @@ function isWarehouseStorageSlotId(
     && topology.devices[node.deviceId]?.definitionId === "warehouse";
 }
 
-// AI-REMOVED 2026-11-02:
-// Reason: 候选检查与实际启动分离，统一 Stage7 启动入口，避免筛选阶段分配 runId。
-// Trigger: ST2-RQ-046 Legacy 概率配方。
-// Evidence: 原函数选择首个可执行计划，Stage7 存在重复实现。
-// Replacement: 下方 createStartableRecipeForChannel。
-// Risk: Medium；需保持原料、状态、环境、排他准入及原优先顺序。
-// Human Review: Required
-// Original code:
-// export function createStartableRecipeForChannel(options: {
-//   registry: RegistryContract;
-//   topology: CompiledSimulationTopology;
-//   state: SimulationMutableRuntimeState;
-//   device: CompiledSimulationDevice;
-//   channel: CompiledSimulationRecipeChannel;
-// }): RuntimeDeviceRecipeState | null {
-//   for (const plan of resolveDeviceRecipePlans({
-//     registry: options.registry,
-//     topology: options.topology,
-//     state: options.state,
-//     device: options.device,
-//     channel: options.channel,
-//   })) {
-//     const reservations = selectRecipeInputs({
-//       registry: options.registry,
-//       topology: options.topology,
-//       state: options.state,
-//       plan,
-//     });
-//     if (reservations === null) {
-//       continue;
-//     }
-//
-//     const runId = `recipe-run:${options.state.persistent.nextRecipeRunIndex}`;
-//     options.state.persistent.nextRecipeRunIndex += 1;
-//     return {
-//       runId,
-//       recipeId: plan.recipeId,
-//       recipeType: plan.recipeType,
-//       progressTicks: 0,
-//       durationTicks: plan.durationTicks,
-//       state: "running",
-//       plan,
-//       reservations,
-//       inputItems: aggregateInputItems(reservations),
-//     };
-//   }
-//
-//   return null;
-// }
-//
 
 export function createStartableRecipeForChannel(options: {
   registry: RegistryContract;
@@ -654,9 +555,7 @@ export function createStartableRecipeForChannel(options: {
   };
 }
 
-// AI-CORRECTION 2026-05-13: resolveDeviceRecipePlans 现在接受 channel 级参数。
 // ingredientNodeIds / productNodeIds 从 channel 获取而非从 device 全局获取。
-// AI-CORRECTION 2026-05-14: 签名重构为 device + channel 对象，消除字段散落导致的传参遗漏 bug。
 export function resolveDeviceRecipePlans(options: {
   registry: RegistryContract;
   topology: CompiledSimulationTopology;
@@ -791,13 +690,11 @@ function createSlotOverlayState(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
 ): SimulationMutableRuntimeState {
-  // AI-CORRECTION 2026-07-30: 旧实现 {...state} 共享整个 transient 对象。
   // transient.nodes[nodeId].excludedItemTypes 包含上一 tick 的 buildSolveGraph 残留，
   // 当 advanceDevices 在粗步长模式下通过本 overlay 调用 findInputSlotForItem 时，
   // 会读到 stale 的排除列表，错误地将空槽视为"已被同组其他槽占用"而跳过，
   // 导致 strict-pipe 等设备的 dynamic-pipe-transfer 配方输出放置失败。
   //
-  // AI-CORRECTION 2026-07-31: excludedItemTypes 现在由 rebuildExcludedItemTypesForTick
   // 在每 tick 开头统一重建并写入 transient.nodes。overlay 恢复浅拷贝即可安全读取。
   // 其他 transient 字段（edges、transfers、blockedInputNodeIds 等）属于 Stage 3 求解数据，
   // 在 overlay 配方完成路径中不会被读取，无需重建。
@@ -902,28 +799,6 @@ export function aggregateInputItems(selections: readonly RuntimeReservedItem[]):
   return [...amountByItemType.entries()].map(([itemType, amount]) => ({ itemType, amount }));
 }
 
-// AI-REMOVED 2026-08-02:
-// Reason: 未知物品不得再根据 ID 中的 gas/liquid 字符串猜测物品域。
-// Trigger: Worker runtime 持有完整 RegistryContract。
-// Evidence: RegistryQuery.resolveItemDomain 现在对未注册物品返回 null。
-// Replacement: requireActiveItemDomain。
-// Risk: Medium - 旧测试中伪造但未注册的 itemType 将显式失败。
-// Human Review: Required
-//
-// Original code:
-// export function getItemDomain(
-//   topology: CompiledSimulationTopology,
-//   itemType: string,
-// ): SimulationItemDomain {
-//   return topology.itemCatalog[itemType]?.domain
-//     ?? (
-//       itemType.includes("_gas") || itemType.startsWith("gas_")
-//         ? ItemDomainFlag.Gas
-//         : itemType.includes("_liquid") || itemType.startsWith("liquid_")
-//           ? ItemDomainFlag.Liquid
-//           : ItemDomainFlag.Solid
-//     );
-// }
 
 export function requireActiveItemDomain(
   registry: RegistryContract,
@@ -998,7 +873,6 @@ export function finishRecipeIfPossible(
   }
 
   // 只统计生产设备的配方（编译期 isProducer 缓存，零开销判断）
-  // AI-CORRECTION 2026-08-02: isProducer 不再编译进 topology，改为查询 Worker 持有的 registry definition tags。
   const producerDevice = resolveRecipeProducerDevice(topology, recipe.plan);
   if (
     producerDevice !== undefined
@@ -1033,7 +907,6 @@ function resolveRecipeProducerDevice(
   return topology.devices[node.deviceId];
 }
 
-// AI-CORRECTION 2026-05-14: definitionId/tags 已从签名中移除。
 // 函数体内本身就从 options.device 读取 definitionId 和 tags，签名中的冗余参数从未被使用。
 function resolveRecipes(options: {
   registry: RegistryContract;
@@ -1043,26 +916,6 @@ function resolveRecipes(options: {
   channel: CompiledSimulationRecipeChannel;
   ingredientSlotContents: readonly IngredientSlotContent[];
 }): readonly CompiledSimulationRecipePlan[] {
-  // AI-REMOVED 2026-11-03:
-  // Reason: 动态运输不能提前排除 Registry 自动候选。
-  // Trigger: ST2-RQ-046-BUG-001 双引擎传送带变异回归失败。
-  // Evidence: 真实环境正常且20个输入全部仍为原矿，候选仅含动态运输。
-  // Replacement: 同函数下方统一组合动态运输与 Registry 候选。
-  // Risk: Medium；需回归相位、手选、活动和物流域锁。
-  // Human Review: Required
-  // Original code:
-  //   if (options.device.transportClass === "strict-belt" || options.device.transportClass === "strict-pipe") {
-  //     if (options.ingredientSlotContents.length === 0) {
-  //       return [];
-  //     }
-  //
-  //     const timing = resolveTransportRecipeTiming(options.registry, options.topology, options.device);
-  //     if (timing === null) {
-  //       return [];
-  //     }
-  //
-  //     return resolveTransportRecipePlans(options, timing);
-  //   }
 
   if (options.device.definitionId === WATER_PURIFIER_NODE_ENTITY_ID) {
     const allowedRecipeId = resolveWaterPurifierAllowedRecipeId(options.channel.id);
@@ -1117,53 +970,12 @@ function resolveRecipes(options: {
     return [getOrCreateRegistryRecipePlan(options, selectedRecipe)];
   }
 
-  // AI-REMOVED 2026-11-03:
-  // Reason: 动态运输不能提前排除 Registry 自动候选。
-  // Trigger: ST2-RQ-046-BUG-001 双引擎传送带变异回归失败。
-  // Evidence: 真实环境正常且20个输入全部仍为原矿，候选仅含动态运输。
-  // Replacement: 同函数下方统一组合动态运输与 Registry 候选。
-  // Risk: Medium；需回归相位、手选、活动和物流域锁。
-  // Human Review: Required
-  // Original code:
-  //   // AI-CORRECTION 2026-05-13:
-  //   // General logistics devices (splitter, converger, admission — anchor transportClass)
-  //   // also use reserved-item transport recipes, matching §6.1.2–§6.1.5 of 仿真运行原理.
-  //   // Detect via BeltFamily/PipeFamily tags to cover all logistics devices uniformly.
-  //   // AI-CORRECTION 2026-07-27: 当前使用编译期 logisticsKind 覆盖完整物流族，不再读取 family tag。
-  //   // AI-CORRECTION 2026-08-02: logisticsKind 已移除，改为直接查询 Worker RegistryQuery 的完整物流族分类。
-  //   // Strict devices are already handled above and won't re-enter here.
-  //   if (
-  //     (
-  //       options.registry.queries.isBeltFamily(options.device.definitionId)
-  //       || options.registry.queries.isPipeFamily(options.device.definitionId)
-  //     )
-  //     && options.ingredientSlotContents.length > 0
-  //   ) {
-  //     const timing = resolveTransportRecipeTiming(options.registry, options.topology, options.device);
-  //     if (timing === null) {
-  //       return [];
-  //     }
-  //
-  //     return resolveTransportRecipePlans(options, timing);
-  //   }
-  //
-  // AI-CORRECTION 2026-11-03: strict 与 anchor 物流族统一组合候选，手选频道已在上方按原限制返回。
   const timing = options.channel.type !== CONSUMPTION_RECIPE_CHANNEL_TYPE
     ? resolveTransportRecipeTiming(options.registry, options.topology, options.device)
     : null;
   const transportPlans = timing !== null && options.ingredientSlotContents.length > 0
     ? resolveTransportRecipePlans(options, timing) : [];
 
-  // AI-REMOVED 2026-07-23:
-  // Reason: recipeId 字典序不再是自动配方的首要顺序，只允许在产物总量和原料总量都相同时兜底。
-  // Trigger: 用户要求所有设备统一按“产物总量降序、原料总量升序、recipeId 升序”选择。
-  // Evidence: .docs/common/模拟器/仿真运行原理.md v5 §10.3。
-  // Replacement: resolveDeviceRecipePlans 中的 sortRecipePlansByEfficiency。
-  // Risk: Low - 手选配方仍只有一个候选，不受排序影响。
-  // Human Review: Required
-  //
-  // Original code:
-  // .sort((left, right) => left.id.localeCompare(right.id))
   const registryPlans = resolveRecipesForDeviceChannel(
     options.registry,
     options.topology,
@@ -1241,7 +1053,6 @@ function resolveTransportRecipePlans(
     readonly recipeIdSuffix: string;
   },
 ): readonly CompiledSimulationRecipePlan[] {
-  // AI-CORRECTION 2026-07-30: 管道容量已统一改为 1，0.5s 单件配方；
   // 不再生成 amount=2 的双件变体。
   const transferAmounts: readonly number[] = [1];
 
@@ -1261,27 +1072,6 @@ function resolveTransportRecipePlans(
   });
 }
 
-// AI-REMOVED 2026-07-23:
-// Reason: 管道需要同时暴露 2 件与 1 件运输配方，并让统一效率排序优先尝试 2 件配方。
-// Trigger: 用户要求管道最高 2/s，但只有 1 件时仍可运输。
-// Evidence: .docs/common/模拟器/仿真运行原理.md v5 §6.2、§10.3。
-// Replacement: resolveTransportRecipePlans。
-// Risk: Medium - 管道输入和输出槽位必须同步扩容到 2。
-// Human Review: Required
-//
-// Original code:
-// const recipeId = `${options.device.definitionId}:${timing.recipeIdSuffix}`;
-// return [getOrCreateRecipePlan(options, recipeId, () => ({
-//   recipeId,
-//   recipeType: "reserved-item",
-//   durationTicks: timing.durationTicks,
-//   inputs: [{ itemId: "any", amount: 1 }],
-//   outputs: [{ itemId: "same-as-input", amount: 1 }],
-//   ingredientNodeIds: options.channel.ingredientNodeIds,
-//   productNodeIds: options.channel.productNodeIds,
-//   requiredGasDiffusion: null,
-//   gasDiffusionOutput: null,
-// }))];
 
 function getOrCreateRecipePlan(
   options: {
@@ -1367,28 +1157,6 @@ function normalizeRecipeGasItemId(itemIds: readonly string[] | undefined): reado
   return itemIds?.length ? itemIds : null;
 }
 
-// AI-REMOVED 2026-10-13:
-// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
-// Trigger: 洒水机和定向离体区域支持。
-// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
-// Replacement: rangeId 引用经 Registry 校验的几何。
-// Risk: 保持既有供电与气体规则，需范围回归验证。
-// Human Review: Required
-// Original code:
-// function normalizeRecipeGasDiffusionOutput(
-//   output: RecipeDefinition["gasDiffusionOutput"],
-// ): CompiledSimulationRecipePlan["gasDiffusionOutput"] {
-//   if (
-//     output === undefined
-//     || typeof output.gasItemId !== "string"
-//     || output.gasItemId.length === 0
-//     || !Number.isFinite(output.range)
-//     || output.range <= 0
-//   ) {
-//     return null;
-//   }
-//   return { gasItemId: output.gasItemId, range: output.range };
-// }
 function normalizeRecipeGasDiffusionOutput(
   output: RecipeDefinition["environmentOutput"],
 ): CompiledSimulationRecipePlan["environmentOutput"] {
@@ -1465,9 +1233,7 @@ function recipeCanMatchContents(
       continue;
     }
 
-    // AI-CORRECTION 2026-07-18: 支持域占位符 "fluid"/"liquid"/"gas"/"solid" 作为配方输入。
     // 原逻辑仅处理 "any" 和精确物品 ID，无法匹配使用域占位符的隐藏销毁配方（如暗管 fluid void）。
-    // AI-CORRECTION 2026-07-28: 域占位符改为内部 ID，并统一解析为位标志。
     const inputDomainFlags = resolveRecipeItemDomainFlags(input.itemId);
     if (inputDomainFlags !== null) {
       const matchingDomains = [
@@ -1634,9 +1400,7 @@ function findRecipeInputSelection(
   return null;
 }
 
-// AI-CORRECTION 2026-07-18: 支持域占位符 "fluid"/"liquid"/"gas"/"solid" 作为配方输入匹配。
 // 原逻辑仅处理 "any" 和精确物品 ID，无法匹配暗管等使用域占位符的隐藏配方。
-// AI-CORRECTION 2026-07-28: 域占位符改为内部 ID，并通过共享解析器映射为位标志。
 function recipeInputMatches(
   registry: RegistryContract,
   topology: CompiledSimulationTopology,
@@ -1651,18 +1415,6 @@ function recipeInputMatches(
     && (inputDomainFlags & requireActiveItemDomain(registry, topology, itemType)) !== 0;
 }
 
-// AI-REMOVED 2026-06-20:
-// Reason: 配方完成只涉及少量输入/输出槽位，全量复制所有运行时槽位造成主要仿真瓶颈。
-// Trigger: 用户要求优化 advanceDevices 的全槽位双重克隆。
-// Evidence: finishRecipeIfPossible 与 placeRecipeOutputs 原先连续调用该函数；性能日志显示 advanceDevices 平均 26.12ms。
-// Replacement: createSlotOverlayState + cloneSlotIntoOverlay + commitSlotOverlay。
-// Risk: Medium - 局部事务必须保持失败时零写入，已由 dynamic-tick-rate.test.ts 回归覆盖。
-// Human Review: Required
-//
-// Original code:
-// function cloneSlotStates(slots: Record<string, RuntimeSlotState>): Record<string, RuntimeSlotState> {
-//   return Object.fromEntries(Object.entries(slots).map(([slotId, slot]) => [slotId, { ...slot }]));
-// }
 
 /**
  * 在每个 tick 结束后维护运输组件的域锁：

@@ -4,8 +4,6 @@
  * 这些类型原本定义在 domain/app/types/app-types.ts，但它们本质是 App UI 层概念，
  * 不涉及 domain 层 contract，故搬迁至此。
  *
- * AI-CORRECTION 2026-05-28: 从 domain/app/types/app-types.ts 搬迁到 src/app/toolbox-types.ts，
- *   以消除 domain/app → domain/registry 的跨子模块引用违规。
  */
 
 import type { UiGroup } from "@/domain/registry/types/entity-definition";

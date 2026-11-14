@@ -1,4 +1,6 @@
 import {
+  createContext,
+  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -15,6 +17,14 @@ import LucideMinus from "~icons/lucide/minus";
 import LucidePin from "~icons/lucide/pin";
 import LucidePinOff from "~icons/lucide/pin-off";
 import LucideX from "~icons/lucide/x";
+import LucideWorkflow from "~icons/lucide/workflow";
+import LucidePanelRight from "~icons/lucide/panel-right";
+import LucidePictureInPicture from "~icons/lucide/picture-in-picture-2";
+import LucideHammer from "~icons/lucide/hammer";
+import LucideMousePointerClick from "~icons/lucide/mouse-pointer-click";
+import LucideFilter from "~icons/lucide/filter";
+import LucideWand from "~icons/lucide/wand";
+import { ProductionFlowGraph } from "@/app/shell/production-planning/flow";
 
 import type { AppHost } from "@/app/host/app-host";
 import { NumberInput } from "@/app/shell/shared/number-input";
@@ -44,6 +54,23 @@ import {
   type RecipeTreeOverlayRect,
   type RecipeTreePin,
 } from "./recipe-tree-state";
+import {
+  applyItemToSelectedAdmissions,
+  applyRecipeToSelection,
+  countSelectedAdmissions,
+  countSelectedMachines,
+  selectAdmissionsForItem,
+  selectFacilitiesForRecipe,
+  startPlacementWithRecipe,
+} from "./recipe-quick-actions";
+
+/** 节点快捷操作菜单的打开入口（树行与流程图节点共用）。 */
+interface RecipeActionTarget {
+  readonly itemId: string | null;
+  readonly recipeId: string | null;
+  readonly anchor: DOMRect;
+}
+const RecipeActionMenuContext = createContext<(target: RecipeActionTarget) => void>(() => {});
 
 type Translate = (key: string) => string;
 
@@ -134,7 +161,7 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
   };
 
   const handleHeaderPointerDown = (event: ReactPointerEvent<HTMLElement>) => {
-    if ((event.target as HTMLElement).closest("button") !== null) {
+    if (state.docked || (event.target as HTMLElement).closest("button") !== null) {
       return;
     }
     beginPointerTracking(event, (dx, dy, start) => clampRectToViewport({ ...start, x: start.x + dx, y: start.y + dy }));
@@ -148,32 +175,103 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
     }));
   };
 
+  // 停靠栏左缘拖动调整宽度（向左拖动变宽）。
+  const handleDockResizePointerDown = (event: ReactPointerEvent<HTMLElement>) => {
+    if (event.button !== 0) {
+      return;
+    }
+    event.preventDefault();
+    const target = event.currentTarget;
+    const pointerId = event.pointerId;
+    const startX = event.clientX;
+    const startWidth = state.dockWidth;
+    target.setPointerCapture(pointerId);
+    const handleMove = (moveEvent: PointerEvent) => {
+      if (moveEvent.pointerId === pointerId) {
+        state.setDockWidth(startWidth + (startX - moveEvent.clientX));
+      }
+    };
+    const stop = (endEvent: PointerEvent) => {
+      if (endEvent.pointerId !== pointerId) {
+        return;
+      }
+      target.removeEventListener("pointermove", handleMove);
+      target.removeEventListener("pointerup", stop);
+      target.removeEventListener("pointercancel", stop);
+    };
+    target.addEventListener("pointermove", handleMove);
+    target.addEventListener("pointerup", stop);
+    target.addEventListener("pointercancel", stop);
+  };
+
   const title = t("recipeTree.title");
+  const [actionTarget, setActionTarget] = useState<RecipeActionTarget | null>(null);
+  const docked = state.docked;
+  const minimized = state.minimized && !docked;
 
   return (
     <section
       aria-label={title}
-      className={cm(styles, `recipe-tree-overlay${state.minimized ? " is-minimized" : ""}`)}
-      style={{
+      className={cm(styles, `recipe-tree-overlay${minimized ? " is-minimized" : ""}${docked ? " is-docked" : ""}`)}
+      style={docked ? undefined : {
         left: rect.x,
         top: rect.y,
         width: rect.width,
-        height: state.minimized ? undefined : rect.height,
+        height: minimized ? undefined : rect.height,
       }}
     >
+      {docked ? (
+        <div
+          aria-hidden
+          className={cm(styles, "recipe-tree-dock-resize")}
+          onPointerDown={handleDockResizePointerDown}
+        />
+      ) : null}
       <header className={cm(styles, "recipe-tree-header")} onPointerDown={handleHeaderPointerDown}>
         <LucideListTree aria-hidden className={cm(styles, "recipe-tree-header-icon")} />
         <h2>{title}</h2>
         <span className={cm(styles, "recipe-tree-header-count")}>{state.pins.length}</span>
+        <div aria-label={t("recipeTree.view")} className={cm(styles, "recipe-tree-view-toggle")} role="group">
+          <button
+            aria-pressed={state.viewMode === "tree"}
+            className={cm(styles, "recipe-tree-icon-button")}
+            onClick={() => state.setViewMode("tree")}
+            title={t("recipeTree.viewTree")}
+            type="button"
+          >
+            <LucideListTree />
+          </button>
+          <button
+            aria-pressed={state.viewMode === "graph"}
+            className={cm(styles, "recipe-tree-icon-button")}
+            onClick={() => state.setViewMode("graph")}
+            title={t("recipeTree.viewGraph")}
+            type="button"
+          >
+            <LucideWorkflow />
+          </button>
+        </div>
         <button
-          aria-label={t(state.minimized ? "action.expand" : "action.collapse")}
+          aria-label={t(docked ? "recipeTree.float" : "recipeTree.dock")}
+          aria-pressed={docked}
           className={cm(styles, "recipe-tree-icon-button")}
-          onClick={state.toggleMinimized}
-          title={t(state.minimized ? "action.expand" : "action.collapse")}
+          onClick={state.toggleDocked}
+          title={t(docked ? "recipeTree.float" : "recipeTree.dock")}
           type="button"
         >
-          {state.minimized ? <LucideChevronDown /> : <LucideMinus />}
+          {docked ? <LucidePictureInPicture /> : <LucidePanelRight />}
         </button>
+        {docked ? null : (
+          <button
+            aria-label={t(minimized ? "action.expand" : "action.collapse")}
+            className={cm(styles, "recipe-tree-icon-button")}
+            onClick={state.toggleMinimized}
+            title={t(minimized ? "action.expand" : "action.collapse")}
+            type="button"
+          >
+            {minimized ? <LucideChevronDown /> : <LucideMinus />}
+          </button>
+        )}
         <button
           aria-label={t("action.close")}
           className={cm(styles, "recipe-tree-icon-button")}
@@ -184,29 +282,48 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
           <LucideX />
         </button>
       </header>
-      {state.minimized ? null : (
+      {minimized ? null : (
         <>
           <RecipeTreeSearch index={index} t={t} />
-          <div className={cm(styles, "recipe-tree-body")}>
+          <RecipeActionMenuContext.Provider value={setActionTarget}>
             {state.pins.length === 0 ? (
-              <p className={cm(styles, "recipe-tree-empty")}>{t("recipeTree.empty")}</p>
-            ) : state.pins.map((pin, pinIndex) => (
-              <RecipeTreePinSection
-                index={index}
-                isFirst={pinIndex === 0}
-                key={pin.id}
-                pin={pin}
-                t={t}
-              />
-            ))}
-          </div>
-          <div
-            aria-hidden
-            className={cm(styles, "recipe-tree-resize-handle")}
-            onPointerDown={handleResizePointerDown}
-          >
-            <LucideGripHorizontal />
-          </div>
+              <div className={cm(styles, "recipe-tree-body")}>
+                <p className={cm(styles, "recipe-tree-empty")}>{t("recipeTree.empty")}</p>
+              </div>
+            ) : state.viewMode === "graph" ? (
+              <RecipeTreeGraph appHost={appHost} index={index} t={t} />
+            ) : (
+              <div className={cm(styles, "recipe-tree-body")}>
+                {state.pins.map((pin, pinIndex) => (
+                  <RecipeTreePinSection
+                    index={index}
+                    isFirst={pinIndex === 0}
+                    key={pin.id}
+                    pin={pin}
+                    t={t}
+                  />
+                ))}
+              </div>
+            )}
+          </RecipeActionMenuContext.Provider>
+          {actionTarget === null ? null : (
+            <RecipeActionMenu
+              appHost={appHost}
+              index={index}
+              onClose={() => setActionTarget(null)}
+              t={t}
+              target={actionTarget}
+            />
+          )}
+          {docked ? null : (
+            <div
+              aria-hidden
+              className={cm(styles, "recipe-tree-resize-handle")}
+              onPointerDown={handleResizePointerDown}
+            >
+              <LucideGripHorizontal />
+            </div>
+          )}
         </>
       )}
     </section>
@@ -398,6 +515,7 @@ const RecipeTreeNode = observer(function RecipeTreeNode({
   isUpkeep?: boolean;
 }) {
   const state = recipeTreeOverlayState;
+  const openActionMenu = useContext(RecipeActionMenuContext);
   const recipeNode = node.recipeNode;
   const recipe = recipeNode?.recipeId == null ? undefined : index.recipeById.get(recipeNode.recipeId);
   const machineId = recipe?.machineId ?? null;
@@ -417,7 +535,20 @@ const RecipeTreeNode = observer(function RecipeTreeNode({
 
   return (
     <li aria-expanded={children.length > 0 ? !collapsed : undefined} role="treeitem">
-      <div className={cm(styles, "recipe-tree-node")} style={{ paddingLeft: depth * 14 }}>
+      <div
+        className={cm(styles, "recipe-tree-node")}
+        onClick={(event) => {
+          if ((event.target as HTMLElement).closest("button, select") !== null) {
+            return;
+          }
+          openActionMenu({
+            itemId: node.itemId,
+            recipeId: recipeNode?.recipeId ?? null,
+            anchor: event.currentTarget.getBoundingClientRect(),
+          });
+        }}
+        style={{ paddingLeft: depth * 14 }}
+      >
         {children.length > 0 ? (
           <button
             aria-label={itemName}
@@ -522,7 +653,8 @@ function RecipeTreeTotals({
   const rawTotals = useMemo(() => {
     const totals = new Map<string, number>();
     const visit = (node: ProductionPlanningItemNode) => {
-      if (node.recipeNode === null) {
+      // 无配方的外部原料，以及无输入配方（矿机、水泵等采集）的产物，都计为原料投入。
+      if (node.recipeNode === null || node.recipeNode.inputItems.length === 0) {
         if (!node.isCycleSource) {
           totals.set(node.itemId, (totals.get(node.itemId) ?? 0) + node.demandPerMinute);
         }
@@ -597,4 +729,203 @@ function clampRectToViewport(rect: RecipeTreeOverlayRect): RecipeTreeOverlayRect
     // 整个卡片保持在视口内；矮屏下高度已被收窄，再把顶边上移。
     y: Math.max(VIEWPORT_MARGIN_PX, Math.min(rect.y, viewportHeight - height - VIEWPORT_MARGIN_PX)),
   };
+}
+
+// ─── 2026-11-13：流程图视图 ───
+
+/** 合并全部钉住目标求解，共用的中间产物在流程图中只出现一次；下方显示合计设备与原料。 */
+const RecipeTreeGraph = observer(function RecipeTreeGraph({
+  appHost,
+  index,
+  t,
+}: {
+  appHost: AppHost;
+  index: ProductionPlanningIndex;
+  t: Translate;
+}) {
+  const state = recipeTreeOverlayState;
+  const openActionMenu = useContext(RecipeActionMenuContext);
+  const pinsSignature = JSON.stringify(state.pins.map((pin) => [pin.itemId, pin.perMinute, pin.recipeChoices]));
+  const plan = useMemo<ProductionPlanningResult>(() => {
+    const recipeChoices = new Map<string, string>();
+    for (const pin of state.pins) {
+      for (const [itemId, candidateId] of Object.entries(pin.recipeChoices)) {
+        if (!recipeChoices.has(itemId)) {
+          recipeChoices.set(itemId, candidateId);
+        }
+      }
+    }
+    return computeProductionPlan({
+      targets: state.pins.map((pin) => ({ id: pin.id, itemId: pin.itemId, perMinute: pin.perMinute })),
+      supplies: [],
+      infiniteItemIds: RECIPE_TREE_INFINITE_ITEM_IDS,
+      recipeChoices,
+      sourceConfig: RECIPE_TREE_SOURCE_CONFIG,
+      useModules: false,
+    }, index);
+    // pinsSignature 覆盖 pins 的全部求解输入。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index, pinsSignature]);
+
+  return (
+    <div className={cm(styles, "recipe-tree-graph-body")}>
+      <div className={cm(styles, "recipe-tree-graph")}>
+        <ProductionFlowGraph
+          displayMode="item"
+          fitToView
+          minFitScale={0.8}
+          index={index}
+          invertWheelZoom={appHost.internalState.settings.invertWheelZoom}
+          key={pinsSignature}
+          onNodeActivate={(node, anchor) => openActionMenu({
+            itemId: node.itemId ?? null,
+            recipeId: node.recipeId ?? node.recipeNode?.recipeId ?? null,
+            anchor,
+          })}
+          plan={plan}
+          t={t}
+        />
+      </div>
+      <RecipeTreeTotals index={index} plan={plan} t={t} />
+    </div>
+  );
+});
+
+// ─── 2026-11-13：节点快捷操作菜单 ───
+
+function RecipeActionMenu({
+  appHost,
+  index,
+  target,
+  onClose,
+  t,
+}: {
+  appHost: AppHost;
+  index: ProductionPlanningIndex;
+  target: RecipeActionTarget;
+  onClose: () => void;
+  t: Translate;
+}) {
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!(event.target instanceof Node) || menuRef.current?.contains(event.target)) {
+        return;
+      }
+      onClose();
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+
+  const recipe = target.recipeId === null ? undefined : index.recipeById.get(target.recipeId);
+  const itemId = target.itemId ?? recipe?.primaryOutputs?.[0] ?? recipe?.outputs[0]?.itemId ?? null;
+  const machineName = recipe === undefined
+    ? null
+    : t(index.entityById.get(recipe.machineId)?.nameKey ?? recipe.machineId);
+  const selectedMachines = recipe === undefined ? 0 : countSelectedMachines(appHost, recipe.machineId);
+  const selectedAdmissions = itemId === null ? 0 : countSelectedAdmissions(appHost);
+  const itemName = itemId === null ? null : resolveProductionPlanningItemName(itemId, index, t);
+  const run = (action: () => void) => {
+    action();
+    onClose();
+  };
+
+  const viewportWidth = typeof window === "undefined" ? 1280 : window.innerWidth;
+  const viewportHeight = typeof window === "undefined" ? 800 : window.innerHeight;
+  const left = Math.min(Math.max(8, target.anchor.left), viewportWidth - 288);
+  const openAbove = target.anchor.bottom + 260 > viewportHeight;
+
+  return (
+    <div
+      className={cm(styles, "recipe-action-menu")}
+      ref={menuRef}
+      role="menu"
+      style={{
+        left,
+        top: openAbove ? undefined : target.anchor.bottom + 4,
+        bottom: openAbove ? viewportHeight - target.anchor.top + 4 : undefined,
+      }}
+    >
+      {itemName !== null ? (
+        <div className={cm(styles, "recipe-action-menu-title")}>
+          <img alt="" src={resolveProductionPlanningItemIconSrc(itemId as string, index)} />
+          <span>{itemName}</span>
+        </div>
+      ) : null}
+      {recipe !== undefined && machineName !== null ? (
+        <>
+          <button
+            className={cm(styles, "recipe-action-menu-item")}
+            onClick={() => run(() => startPlacementWithRecipe(appHost, recipe))}
+            role="menuitem"
+            type="button"
+          >
+            <LucideHammer aria-hidden />
+            <span>{t("recipeTree.action.place").replace("{machine}", machineName)}</span>
+          </button>
+          <button
+            className={cm(styles, "recipe-action-menu-item")}
+            onClick={() => run(() => selectFacilitiesForRecipe(appHost, recipe))}
+            role="menuitem"
+            type="button"
+          >
+            <LucideMousePointerClick aria-hidden />
+            <span>{t("recipeTree.action.selectFacilities").replace("{machine}", machineName)}</span>
+          </button>
+          <button
+            className={cm(styles, "recipe-action-menu-item")}
+            disabled={selectedMachines === 0}
+            onClick={() => run(() => applyRecipeToSelection(appHost, recipe))}
+            role="menuitem"
+            type="button"
+          >
+            <LucideWand aria-hidden />
+            <span>{t("recipeTree.action.applyRecipe").replace("{count}", String(selectedMachines))}</span>
+          </button>
+        </>
+      ) : null}
+      {itemId !== null ? (
+        <>
+          <button
+            className={cm(styles, "recipe-action-menu-item")}
+            disabled={selectedAdmissions === 0}
+            onClick={() => run(() => applyItemToSelectedAdmissions(appHost, itemId))}
+            role="menuitem"
+            type="button"
+          >
+            <LucideFilter aria-hidden />
+            <span>{t("recipeTree.action.applyFilter").replace("{count}", String(selectedAdmissions))}</span>
+          </button>
+          <button
+            className={cm(styles, "recipe-action-menu-item")}
+            onClick={() => run(() => selectAdmissionsForItem(appHost, itemId))}
+            role="menuitem"
+            type="button"
+          >
+            <LucideMousePointerClick aria-hidden />
+            <span>{t("recipeTree.action.selectAdmissions")}</span>
+          </button>
+          <button
+            className={cm(styles, "recipe-action-menu-item")}
+            onClick={() => run(() => recipeTreeOverlayState.addPin(itemId))}
+            role="menuitem"
+            type="button"
+          >
+            <LucidePin aria-hidden />
+            <span>{t("recipeTree.action.pin")}</span>
+          </button>
+        </>
+      ) : null}
+    </div>
+  );
 }

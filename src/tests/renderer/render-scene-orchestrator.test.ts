@@ -4,15 +4,6 @@ import { Text } from "pixi.js"
 
 import { createDummyWorldDocument } from "@/tests/helpers/dummy-document"
 import { AYU_DARK_THEME, AYU_LIGHT_THEME } from "@/app/theme"
-// AI-REMOVED 2026-11-12:
-// Reason: PreviewRect 读取真实会话的包围盒与显示投影。
-// Trigger: REQ-048 SceneSource/ScenePresentation 迁移。
-// Evidence: 旧假 Workspace 只返回写死的集合几何。
-// Replacement: 版本化 power_sta_1 场景与真实集合查询。
-// Risk: 保留像素矩形断言；真实 Canvas 另由浏览器验证。
-// Human Review: Required
-// Original code:
-// import { EntityCollectionType } from "@/domain/editor/types/editor-types"
 
 import { createRegistryContract } from "@/registry"
 import {
@@ -57,14 +48,6 @@ import type { WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { ViewportProjectionLike } from "@/shared/geometry/viewport-transform";
 import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
-// AI-REMOVED 2026-11-12:
-// Reason: 无效放置装饰改读 SceneSource，旧 Workspace 桩已经退出。
-// Trigger: REQ-048 D5 场景查询迁移。
-// Evidence: 水节点边缘规则可以由真实无界会话产生相同错误。
-// Replacement: createRenderTestScene 与真实放置动作；绘制断言保持。
-// Risk: Low；Human Review: Required
-// Original code:
-// import type { RenderHost } from "@/renderer/renderer-host"
 import type { RenderSurfaceContext } from "@/renderer/render-surface-context"
 import { createRenderTestScene } from "@/tests/helpers/render-test-scene"
 const cleanups: Array<() => void> = []
@@ -441,17 +424,6 @@ describe("resolveInvalidPlacementToastReasonText", () => {
 describe("createInvalidPlacementDecoration", () => {
   it("renders preview invalid placement reason text", () => {
     const decoration = createInvalidPlacementDecoration()
-// AI-REMOVED 2026-11-12:
-// Reason: 无效放置装饰改读 SceneSource，旧 Workspace 桩已经退出。
-// Trigger: REQ-048 D5 场景查询迁移。
-// Evidence: 水节点边缘规则可以由真实无界会话产生相同错误。
-// Replacement: createRenderTestScene 与真实放置动作；绘制断言保持。
-// Risk: Low；Human Review: Required
-// Original code:
-//     const preview = createCollection(["preview-water-node"])
-//     const invalidPlacement = createCollection(["preview-water-node"])
-//     const registry = createRegistryContract()
-    // 2026-11-12：完全无界空间没有可吸附边；使用有限边界内部的真实非法草稿验证原因文本。
     const scene = createRenderTestScene({ space: { areas: [{ id: "test-space",
       bounds: { minX: -1000, maxX: 1000, minY: -1000, maxY: 1000 },
       outerRing: { top: 10, right: 10, bottom: 10, left: 10 } }] } }); cleanups.push(scene.dispose)
@@ -473,47 +445,6 @@ describe("createInvalidPlacementDecoration", () => {
         width: 320,
         height: 240,
       },
-      // AI-REMOVED 2026-11-12:
-// Reason: 无效放置装饰改读 SceneSource，旧 Workspace 桩已经退出。
-// Trigger: REQ-048 D5 场景查询迁移。
-// Evidence: 水节点边缘规则可以由真实无界会话产生相同错误。
-// Replacement: createRenderTestScene 与真实放置动作；绘制断言保持。
-// Risk: Low；Human Review: Required
-// Original code:
-// renderHost: {
-//         workspace: {
-//           app: null,
-//           registry,
-//           editor: {
-//             state: {
-//               collections: {
-//                 [EntityCollectionType.preview]: preview,
-//                 [EntityCollectionType.invalidPlacement]: invalidPlacement,
-//               },
-//             },
-//             queries: {
-//               getEntityById: (entityId: string) =>
-//                 entityId === "preview-water-node"
-//                   ? {
-//                     id: entityId,
-//                     definitionId: "water_purifier_node_1",
-//                     position: { x: 0, y: 0 },
-//                     rotation: 0,
-//                     config: {},
-//                     tags: [],
-//                   }
-//                   : null,
-//               getEntityPlacementValidation: () => ({
-//                 canPlace: false,
-//                 reasons: [{
-//                   code: "outside-base",
-//                   message: "必须靠近地图边缘放置",
-//                 }],
-//               }),
-//             },
-//           },
-//         },
-//       } as unknown as RenderHost
 renderHost: { input: scene.input } as RenderSurfaceContext,
       theme: AYU_DARK_THEME,
       nowMs: 0,
@@ -530,20 +461,6 @@ renderHost: { input: scene.input } as RenderSurfaceContext,
   })
 })
 
-// AI-REMOVED 2026-11-12:
-// Reason: 无效放置装饰改读 SceneSource，旧 Workspace 桩已经退出。
-// Trigger: REQ-048 D5 场景查询迁移。
-// Evidence: 水节点边缘规则可以由真实无界会话产生相同错误。
-// Replacement: createRenderTestScene 与真实放置动作；绘制断言保持。
-// Risk: Low；Human Review: Required
-// Original code:
-// function createCollection(entityIds: readonly string[]) {
-//   const collection = [...entityIds] as string[] & {
-//     contains(entityId: string): boolean;
-//   }
-//   collection.contains = (entityId: string) => collection.includes(entityId)
-//   return collection
-// }
 
 
 describe("resolveWorldEntitySelectionOverlayLayouts", () => {
@@ -553,32 +470,6 @@ describe("resolveWorldEntitySelectionOverlayLayouts", () => {
       registry.entityDefinitions.map((definition) => [definition.id, definition]),
     )
 
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/renderer/render-scene-orchestrator/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //         {
-    //           id: "selected",
-    //           definitionId: "unloader_1",
-    //           position: { x: 4, y: 6 },
-    //           rotation: 90,
-    //           config: {},
-    //           tags: [],
-    //         },
-    //         {
-    //           id: "unselected",
-    //           definitionId: "unloader_1",
-    //           position: { x: 8, y: 10 },
-    //           rotation: 0,
-    //           config: {},
-    //           tags: [],
-    //         },
-    //       ]
     const layouts = resolveWorldEntitySelectionOverlayLayouts({
       entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/render-scene-orchestrator/scene-01-variant-1.schema7.json")),
       entityDefinitionMap,
@@ -610,24 +501,6 @@ describe("resolveWorldEntitySelectionOverlayLayouts", () => {
       registry.entityDefinitions.map((definition) => [definition.id, definition]),
     )
 
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/renderer/render-scene-orchestrator/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //         {
-    //           id: "draft-only",
-    //           definitionId: "belt_straight_1x1",
-    //           position: { x: 2, y: 3 },
-    //           rotation: 0,
-    //           config: {},
-    //           tags: [],
-    //         },
-    //       ]
     const layouts = resolveWorldEntitySelectionOverlayLayouts({
       entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/render-scene-orchestrator/scene-02-variant-1.schema7.json")),
       entityDefinitionMap,
@@ -759,32 +632,6 @@ describe("resolvePowerRangeOutlineLayouts", () => {
     const entityDefinitionMap = new Map(
       registry.entityDefinitions.map((definition) => [definition.id, definition]),
     )
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/renderer/render-scene-orchestrator/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       {
-    //         id: "selected-pole",
-    //         definitionId: "power_diffuser_1",
-    //         position: { x: 0, y: 0 },
-    //         rotation: 0 as const,
-    //         config: {},
-    //         tags: [],
-    //       },
-    //       {
-    //         id: "unselected-pole",
-    //         definitionId: "power_diffuser_1",
-    //         position: { x: 20, y: 0 },
-    //         rotation: 0 as const,
-    //         config: {},
-    //         tags: [],
-    //       },
-    //     ]
     const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/render-scene-orchestrator/scene-03-variant-1.schema7.json"))
     const layoutOptions = {
       entities,
@@ -825,22 +672,6 @@ describe("resolvePowerRangeOutlineLayouts", () => {
       registry.entityDefinitions.map((definition) => [definition.id, definition]),
     )
 
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/renderer/render-scene-orchestrator/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [{
-    //         id: "pole",
-    //         definitionId: "power_diffuser_1",
-    //         position: { x: 0, y: 0 },
-    //         rotation: 0,
-    //         config: {},
-    //         tags: [],
-    //       }]
     const layouts = resolvePowerRangeOutlineLayouts({
       entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/render-scene-orchestrator/scene-04-variant-1.schema7.json")),
       entityDefinitionMap,

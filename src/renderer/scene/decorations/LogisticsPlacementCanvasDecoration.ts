@@ -85,7 +85,6 @@ export function createLogisticsPlacementCanvasDecoration(): DecorationLayer {
         ? "logisticsPlacement.singlePlacementFrames"
         : "logisticsPlacement.logisticsPlacementFrames");
 
-      // AI-CORRECTION 2026-11-13：画布模式标签按界面语言显示，沿用 MarqueeRectDecoration 的 locale 判断方式。
       const english = ctx.renderHost.input.presentation.getSnapshot()?.settings?.locale === "en-US";
       modeLabel.text = isSinglePlacement
         ? (english ? "//Place device" : "放置设备")

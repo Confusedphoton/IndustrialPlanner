@@ -10,17 +10,6 @@ const DURATION: Record<RenderDiagnosticPhase, number> = {
 };
 const PAN_CYCLE_MS = 20_000 / 3;
 const TAIL_WINDOW_MS = 2_000;
-// AI-REMOVED 2026-09-16:
-// Reason: 自动流程移除建筑端口特效对照，缩短 Performance 录制。
-// Trigger: 用户要求总时长少于 100 秒，去掉端口 on/off 特效测试。
-// Evidence: 原自动序列包含 without-building-effects 独立组。
-// Replacement: 下方四组 CONDITIONS；手动条件仍可单独采集。
-// Risk: 自动报告不再比较建筑端口特效绘制成本。
-// Human Review: Required
-// Original code:
-// const CONDITIONS: readonly RenderDiagnosticCondition[] = [
-//   "full", "without-belt-cargo", "without-pipe-fluid", "without-building-effects", "full",
-// ];
 const CONDITIONS: readonly RenderDiagnosticCondition[] = [
   "full", "without-belt-cargo", "without-pipe-fluid", "full",
 ];
@@ -129,7 +118,6 @@ export function createRenderDiagnosticRun(mode: RenderDiagnosticMode, condition:
       const progress = (elapsed % PAN_CYCLE_MS) / PAN_CYCLE_MS;
       // 匀速往返两侧，起终点一致；每组路径只由时间决定，不随帧率改变速度。
       // 2026-09-16 补充：20 秒内完成两次 10 秒往返；幅度翻倍后速度同步翻倍，不随采集时长被稀释。
-      // AI-CORRECTION 2026-09-16：短流程改为 5 秒移动；幅度再翻倍、周期改为 20/3 秒，速度为上一版 3 倍。
       // 5 秒结束时接近另一侧极值，不再完成整周期；Session 在随后静止阶段恢复初始视口。
       return amplitude * (progress < .25 ? progress * 4 : progress < .75 ? 2 - progress * 4 : progress * 4 - 4);
     },

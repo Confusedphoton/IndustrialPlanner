@@ -1,6 +1,5 @@
 import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
 import { getTestView } from "@/tests/helpers/app-test-workspace";
-// AI-CORRECTION 2026-10-08: REQ-041 普通夹具空升级为 schema 7；归档注释中的 .schema6.json 路径现对应 .schema7.json，专用迁移输入保留原版。
 import { loadBlueprintVariantFromFile } from "@/tests/simulation/blueprint-test-helpers";
 import { loadBlueprintFromFile, getBlueprintEntityArray } from "@/tests/simulation/blueprint-test-helpers";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -49,51 +48,11 @@ function createWorkspace(): WorkspaceContract {
     simulation: null,
     sync: null,
     audio: null,
-    blueprintPlanner: null,
   };
 }
 
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/editor-host/index.json
-// AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections/editor/editor-host/index.json、src/tests/fixtures/blueprints/collections-extra/editor/editor-host/index.json。
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// function createTestEntity(
-//   id: string,
-//   definitionId: string,
-//   x: number,
-//   y: number,
-//   rotation: 0 | 90 | 180 | 270 = 0,
-// ): WorldDocument["entities"][string] {
-//   return {
-//     id,
-//     definitionId,
-//     position: { x, y },
-//     rotation,
-//     config: {},
-//     tags: [],
-//   };
-// }
 
 function createOuterRingPumpBlueprint() {
-  // AI-REMOVED 2026-09-14:
-  // Reason: 场景构造已批量固化为带版本的蓝图文件。
-  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-  // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-  // Risk: Low；断言与被测动作不变。
-  // Human Review: Required
-  // Original code:
-  // {
-  //       pump: createTestEntity("pump", "water_pump_1", -10, 20, 180),
-  //       // AI-CORRECTION 2026-09-11: preserve the pre-schema-7 world-facing
-  //       // storage port in this historical placement fixture.
-  //       storage: createTestEntity("storage", "storager_1", 0, 20, 180),
-  //     }
   return createBlueprintDocument({
     name: "抽水泵边缘蓝图",
     baseId: DEFAULT_WORLD_BASE_ID,
@@ -142,51 +101,9 @@ interface CollectionRelativeLayout {
 }
 
 function createComplexRotationDrafts(): DraftEntity[] {
-  // AI-REMOVED 2026-09-14:
-  // Reason: 场景构造已批量固化为带版本的蓝图文件。
-  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-  // Replacement: src/tests/fixtures/blueprints/collections-extra/editor/editor-host/index.json
-  // Risk: Low；断言与被测动作不变。
-  // Human Review: Required
-  // Original code:
-  // [
-  //     createRotationDraft("preview-mix-pool", "mix_pool_1", 20, 20, 0),
-  //     createRotationDraft("preview-furnace", "furnance_1", 30, 21, 180),
-  //     createRotationDraft("preview-belt", "belt_straight_1x1", 27, 27, 270),
-  //     createRotationDraft("preview-hydro", "planter_1_liquid", 36, 25, 90),
-  //     createRotationDraft("preview-large-pool", "mix_pool_2", 42, 18, 270),
-  //     createRotationDraft("preview-planter", "planter_1", 20, 30, 0),
-  //   ]
   return getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-01-variant-1.schema7.json"));
 }
 
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/editor-host/index.json
-// AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections/editor/editor-host/index.json、src/tests/fixtures/blueprints/collections-extra/editor/editor-host/index.json。
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// function createRotationDraft(
-//   id: string,
-//   definitionId: string,
-//   x: number,
-//   y: number,
-//   rotation: GridRotation,
-// ): DraftEntity {
-//   return {
-//     id,
-//     originalEntityId: id,
-//     definitionId,
-//     position: { x, y },
-//     rotation,
-//     config: {},
-//     tags: [],
-//   };
-// }
 
 function collectRelativeLayout(
   editorHost: EditorHostForTest,
@@ -444,135 +361,6 @@ describe("createEditorTestHost", () => {
     expect(getTestView(workspace).state.center.y).toBeCloseTo(2);
   });
 
-// AI-REMOVED 2026-09-25:
-// Reason: 这两个同步暗管动作测试由真实持久化与原生交互测试替代。
-// Trigger: REQ-038 将关系权威迁入出口文档，Editor Action 改为异步持久化。
-// Evidence: 旧测试直接调用同步 Action / App 资产，不能覆盖 IndexedDB 与后台文档。
-// Replacement: src/tests/e2e/editor-regional-dark-pipe.test.ts
-// Risk: 需以真实浏览器回归确认交互、互斥与关闭模式覆盖。
-// Human Review: Required
-// Original code:
-//   it("creates and removes one-to-one dark pipe slot links", () => {
-//     const workspace = createWorkspace();
-//     const editorHost = createEditorHost(workspace);
-//     // AI-REMOVED 2026-09-14:
-//     // Reason: 场景构造已批量固化为带版本的蓝图文件。
-//     // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-//     // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-//     // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-//     // Risk: Low；断言与被测动作不变。
-//     // Human Review: Required
-//     // Original code:
-//     // [
-//     //       {
-//     //         ...createTestEntity("inlet", "udpipe_loader_2", 0, 0),
-//     //         config: {
-//     //           "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
-//     //           "storageSlotGroups[0].slots[0].initialCount": 8,
-//     //         },
-//     //       },
-//     //       {
-//     //         ...createTestEntity("outlet", "udpipe_unloader_1", 8, 0),
-//     //         config: {
-//     //           "links[0].id": "",
-//     //           "links[0].linkType": "share-all",
-//     //           "links[0].source.entityId": "outlet",
-//     //           "links[0].source.storageSlotGroupId": "unloader_buffer",
-//     //           "links[0].source.slotId": "slot_1",
-//     //           "links[0].target.entityId": "warehouse",
-//     //           "links[0].target.storageSlotGroupId": "warehouse",
-//     //           "links[0].target.slotId": "item_liquid_water",
-//     //           "storageSlotGroups[0].slots[0].ignoreStock": true,
-//     //         },
-//     //       },
-//     //     ]
-//     const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-02-variant-1.schema6.json")));
-//     editorHost.internalDocument.setSnapshot(document);
-//
-//     expect(editorHost.actions.createDarkPipeLink({
-//       sourceEntityId: "inlet",
-//       targetEntityId: "outlet",
-//     })).toBe(true);
-//
-//     const linked = editorHost.document.getSnapshot();
-//     expect(linked.slotLinks).toEqual([{
-//       id: "dark-pipe-link:outlet:inlet",
-//       linkType: "share-all",
-//       source: {
-//         entityId: "outlet",
-//         storageSlotGroupId: "transport_input",
-//         slotId: "slot_1",
-//       },
-//       target: {
-//         entityId: "inlet",
-//         storageSlotGroupId: "loader_buffer",
-//         slotId: "slot_1",
-//       },
-//     }]);
-//     expect(linked.entities.outlet?.config).toEqual({});
-//     expect(linked.entities.inlet?.config).toEqual({});
-//     expect(editorHost.actions.createDarkPipeLink({
-//       sourceEntityId: "inlet",
-//       targetEntityId: "outlet",
-//     })).toBe(false);
-//
-//     expect(editorHost.actions.removeDarkPipeLink("outlet")).toBe(true);
-//     const unlinked = editorHost.document.getSnapshot();
-//     expect(unlinked.slotLinks).toEqual([]);
-//     expect(unlinked.entities.inlet?.config).toEqual({});
-//     expect(unlinked.entities.outlet?.config).toEqual({});
-//   });
-//
-//   it("removes only the selected outlet warehouse link when creating a dark pipe link", () => {
-//     const workspace = createWorkspace();
-//     const editorHost = createEditorHost(workspace);
-//     // AI-REMOVED 2026-09-14:
-//     // Reason: 场景构造已批量固化为带版本的蓝图文件。
-//     // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-//     // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-//     // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-//     // Risk: Low；断言与被测动作不变。
-//     // Human Review: Required
-//     // Original code:
-//     // [
-//     //       createTestEntity("inlet", "udpipe_loader_1", 0, 0),
-//     //       createTestEntity("outlet", "udpipe_unloader_1", 8, 0),
-//     //       createTestEntity("other-outlet", "udpipe_unloader_1", 16, 0),
-//     //     ]
-//     const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-03-variant-1.schema6.json")));
-//     document.slotLinks = ["outlet", "other-outlet"].map((entityId) => ({
-//       id: `warehouse-link:${entityId}:unloader_buffer:slot_1`,
-//       linkType: "share-all" as const,
-//       source: {
-//         entityId,
-//         storageSlotGroupId: "unloader_buffer",
-//         slotId: "slot_1",
-//       },
-//       target: {
-//         entityId: "warehouse",
-//         storageSlotGroupId: "warehouse",
-//         slotId: "item_liquid_water",
-//       },
-//     }));
-//     editorHost.internalDocument.setSnapshot(document);
-//
-//     expect(editorHost.actions.createDarkPipeLink({
-//       sourceEntityId: "outlet",
-//       targetEntityId: "inlet",
-//     })).toBe(true);
-//
-//     const linked = editorHost.document.getSnapshot();
-//     expect(linked.slotLinks.map((slotLink) => slotLink.id)).toEqual([
-//       "warehouse-link:other-outlet:unloader_buffer:slot_1",
-//       "dark-pipe-link:outlet:inlet",
-//     ]);
-//     expect(linked.slotLinks.filter((slotLink) =>
-//       slotLink.source.entityId === "outlet"
-//       && slotLink.source.storageSlotGroupId === "transport_input"
-//       && slotLink.source.slotId === "slot_1",
-//     )).toHaveLength(1);
-//   });
-//
 
   it("clamps viewport center to the current base warning bounds while panning", () => {
     const workspace = createWorkspace();
@@ -657,49 +445,6 @@ describe("createEditorTestHost", () => {
     expect(getTestView(editorHost.workspace).state.gridCellPixelSize).toBe(EDITOR_GRID_CELL_PIXEL_SIZE * 0.5);
   });
 
-  // AI-REMOVED 2026-11-12:
-  // Reason: 相机聚焦迁至 Canvas/View，时间必须由调用方显式推进。
-  // Trigger: REQ-048 D4 相机所有权与调度变更。
-  // Evidence: EditorAction 已退出 focusOnEntity，View 不注册 RAF。
-  // Replacement: 下方真实 Canvas 聚焦及显式 advance 测试。
-  // Risk: 浏览器动画流畅度另由 E2E 验证。
-  // Human Review: Required
-  // Original code:
-  // it("聚焦设备时把视口推进到 252% 档位", () => {
-  // vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
-  // const rafCallbacks = new Map<number, (now: number) => void>();
-  // let rafIdCounter = 0;
-  // vi.stubGlobal("requestAnimationFrame", (callback: (now: number) => void) => {
-  // rafCallbacks.set(++rafIdCounter, callback);
-  // return rafIdCounter;
-  // });
-  // vi.stubGlobal("cancelAnimationFrame", (id: number) => {
-  // rafCallbacks.delete(id);
-  // });
-  //
-  // const workspace = createWorkspace();
-  // const editorHost = createEditorTestHost(workspace);
-  // const document = createDocumentWithTestEntities(
-  // getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-01-variant-1.schema7.json")),
-  // );
-  // editorHost.internalDocument.setSnapshot(document);
-  // const entityId = document.entityOrder[0]!;
-  //
-  // const startedAt = performance.now();
-  // editorHost.actions.focusOnEntity(entityId);
-  //
-  // // 推进到动画结束：首帧 progress 即为 1，且不得再排队后续帧。
-  // let frame = 0;
-  // while (rafCallbacks.size > 0 && frame < 10) {
-  // const callbacks = [...rafCallbacks.values()];
-  // rafCallbacks.clear();
-  // for (const callback of callbacks) callback(startedAt + 1000 + frame);
-  // frame += 1;
-  // }
-  //
-  // expect(frame).toBe(1);
-  // expect(getTestView(editorHost.workspace).state.gridSize).toBeCloseTo(2 ** (4 / 3));
-  // });
   it("聚焦设备时显式推进所属 View 到 252% 档位，不创建隐式 RAF", () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
     const raf = vi.fn(() => { throw new Error("View 不得自行创建 RAF"); });
@@ -770,22 +515,6 @@ describe("createEditorTestHost", () => {
     editor.dispose();
     await flushMicrotasks(100);
     expect((await readStoredWorldDocument(next.documentKey))?.documentSettings.viewport.displayRotation).toBe(270);
-    // AI-REMOVED 2026-09-15:
-    // Reason: 一次性定时器归属诊断已完成。
-    // Trigger: 清理断言发现 2 个额外的定时器。
-    // Evidence: 两个 delay=0 均由 jsdom StorageImpl.setItem 派发 storage 事件产生。
-    // Replacement: 下方仅推进 0ms 事件，然后继续断言无剩余定时器。
-    // Risk: Low；1000ms 视口定时器若泄漏仍会被断言发现。
-    // Human Review: Required
-    // Original code:
-    // const timeout = globalThis.setTimeout;
-    // const timeoutStacks: unknown[] = [];
-    // const timeoutSpy = vi.spyOn(globalThis, "setTimeout").mockImplementation(((...args: Parameters<typeof setTimeout>) => {
-    // timeoutStacks.push({ delay: args[1], stack: new Error().stack });
-    // return timeout(...args);
-    // }) as typeof setTimeout);
-    // console.info("REQ032 timer diagnosis", JSON.stringify(timeoutStacks));
-    // timeoutSpy.mockRestore();
     await vi.advanceTimersByTimeAsync(0);
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -978,18 +707,6 @@ describe("createEditorTestHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
 
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       createTestEntity("pipe", "pipe_straight_1x1", 5, 5),
-    //       createTestEntity("belt", "belt_straight_1x1", 5, 5),
-    //     ]
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-04-variant-1.schema7.json"))));
     getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
@@ -1013,18 +730,6 @@ describe("createEditorTestHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
 
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       createTestEntity("belt", "belt_straight_1x1", 5, 5),
-    //       createTestEntity("pipe-admission", "pipe_admission", 5, 5),
-    //     ]
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-05-variant-1.schema7.json"))));
     getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
@@ -1050,34 +755,6 @@ describe("createEditorTestHost", () => {
     const document = createDummyWorldDocument();
 
     editorHost.internalDocument.setSnapshot(document);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       {
-    //         id: "draft-only",
-    //         originalEntityId: "draft-only",
-    //         definitionId: "belt_straight_1x1",
-    //         position: { x: 0, y: 0 },
-    //         rotation: 0,
-    //         config: {},
-    //         tags: [],
-    //       },
-    //       {
-    //         id: "preview-storager",
-    //         originalEntityId: "dummy-entity-2",
-    //         definitionId: "storager_1",
-    //         position: { x: 4, y: 4 },
-    //         rotation: 0,
-    //         config: {},
-    //         tags: ["preview"],
-    //       },
-    //     ]
     editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-06-variant-1.schema7.json"));
     getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
@@ -1103,34 +780,6 @@ describe("createEditorTestHost", () => {
     const document = createDummyWorldDocument();
 
     editorHost.internalDocument.setSnapshot(document);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       {
-    //         id: "draft-only",
-    //         originalEntityId: "draft-only",
-    //         definitionId: "belt_straight_1x1",
-    //         position: { x: 9, y: 9 },
-    //         rotation: 0,
-    //         config: {},
-    //         tags: [],
-    //       },
-    //       {
-    //         id: "dummy-entity-1",
-    //         originalEntityId: "dummy-entity-1",
-    //         definitionId: "belt_straight_1x1",
-    //         position: { x: 11, y: 11 },
-    //         rotation: 0,
-    //         config: {},
-    //         tags: ["draft-shadow"],
-    //       },
-    //     ]
     editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-07-variant-1.schema7.json"));
 
     expect(editorHost.queries.getEntityById("dummy-entity-1")).toBe(
@@ -1173,34 +822,6 @@ describe("createEditorTestHost", () => {
     const document = createDummyWorldDocument();
 
     editorHost.internalDocument.setSnapshot(document);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       {
-    //         id: "draft-only",
-    //         originalEntityId: "draft-only",
-    //         definitionId: "belt_straight_1x1",
-    //         position: { x: 9, y: 9 },
-    //         rotation: 0,
-    //         config: {},
-    //         tags: [],
-    //       },
-    //       {
-    //         id: "dummy-entity-2",
-    //         originalEntityId: "dummy-entity-2",
-    //         definitionId: "belt_straight_1x1",
-    //         position: { x: 11, y: 11 },
-    //         rotation: 0,
-    //         config: {},
-    //         tags: ["draft-shadow"],
-    //       },
-    //     ]
     editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-08-variant-1.schema7.json"));
 
     const entityIds = editorHost.queries.listEntities().map((entity) => entity.id);
@@ -1217,35 +838,8 @@ describe("createEditorTestHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/editor-host/index.json
-    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections/editor/editor-host/index.json、src/tests/fixtures/blueprints/collections-extra/editor/editor-host/index.json。
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // const draftEntity: DraftEntity = {
-    //       id: "draft-only",
-    //       originalEntityId: "draft-only",
-    //       definitionId: "belt_straight_1x1",
-    //       position: { x: 9, y: 9 },
-    //       rotation: 0,
-    //       config: {},
-    //       tags: [],
-    //     };
 
     editorHost.internalDocument.setSnapshot(document);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections-extra/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [draftEntity]
     editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-02-variant-1.schema7.json"));
 
     editorHost.actions.addToCollection({
@@ -1338,25 +932,6 @@ describe("createEditorTestHost", () => {
     const document = createDummyWorldDocument();
 
     editorHost.internalDocument.setSnapshot(document);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       {
-    //         id: "draft-only",
-    //         originalEntityId: "draft-only",
-    //         definitionId: "belt_straight_1x1",
-    //         position: { x: 9, y: 9 },
-    //         rotation: 0,
-    //         config: {},
-    //         tags: [],
-    //       },
-    //     ]
     editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-09-variant-1.schema7.json"));
 
     editorHost.actions.addToCollection({
@@ -1424,19 +999,6 @@ describe("createEditorTestHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
 
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       createTestEntity("belt", "belt_straight_1x1", 1, 1),
-    //       createTestEntity("pipe", "pipe_straight_1x1", 2, 1),
-    //       createTestEntity("machine", "storager_1", 3, 1),
-    //     ]
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-10-variant-1.schema7.json"))));
 
     editorHost.actions.setLogisticsSuppression("belt", true);
@@ -1486,19 +1048,6 @@ describe("createEditorTestHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
 
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       createTestEntity("belt-admission", "log_admission", 1, 1),
-    //       createTestEntity("pipe-admission", "pipe_admission", 2, 1),
-    //       createTestEntity("machine", "storager_1", 3, 1),
-    //     ]
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-11-variant-1.schema7.json"))));
 
     editorHost.actions.setLogisticsSuppression("pipe", true);
@@ -1519,35 +1068,8 @@ describe("createEditorTestHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/editor-host/index.json
-    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections/editor/editor-host/index.json、src/tests/fixtures/blueprints/collections-extra/editor/editor-host/index.json。
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // const draftEntity: DraftEntity = {
-    //       id: "draft-only",
-    //       originalEntityId: "draft-only",
-    //       definitionId: "belt_straight_1x1",
-    //       position: { x: 9, y: 9 },
-    //       rotation: 0,
-    //       config: {},
-    //       tags: [],
-    //     };
 
     editorHost.internalDocument.setSnapshot(document);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections-extra/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [draftEntity]
     editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-03-variant-1.schema7.json"));
 
     editorHost.actions.addToCollection({
@@ -1783,17 +1305,6 @@ describe("createEditorTestHost", () => {
   it("uses repeated real rotation steps to align a warehouse port with a building boundary", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       createTestEntity("warehouse-source", "log_hongs_bus_source", 0, 0),
-    //     ]
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-12-variant-1.schema7.json"))));
     editorHost.actions.createSinglePlacementDraft({ definitionId: "loader_1", centerGridPoint: { x: 4, y: 1 } });
     const draftId = editorHost.state.collections.preview[0];
@@ -1829,24 +1340,6 @@ describe("createEditorTestHost", () => {
   it("rotates a warehouse port onto the inner wall of a sealed building hole", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       createTestEntity("top-left", "log_hongs_bus_source", 20, 20),
-    //       createTestEntity("top-middle", "log_hongs_bus_source", 24, 20),
-    //       createTestEntity("top-right", "log_hongs_bus_source", 28, 20),
-    //       createTestEntity("middle-left", "log_hongs_bus_source", 20, 24),
-    //       createTestEntity("middle-right", "log_hongs_bus_source", 28, 24),
-    //       createTestEntity("bottom-left", "log_hongs_bus_source", 20, 28),
-    //       createTestEntity("bottom-middle", "log_hongs_bus_source", 24, 28),
-    //       createTestEntity("bottom-right", "log_hongs_bus_source", 28, 28),
-    //     ]
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-13-variant-1.schema7.json"))));
     editorHost.actions.createSinglePlacementDraft({ definitionId: "loader_1", centerGridPoint: { x: 25, y: 24 } });
     const draftId = editorHost.state.collections.preview[0];
@@ -1880,32 +1373,6 @@ describe("createEditorTestHost", () => {
   it("creates and applies blueprint placement drafts with remapped slot links", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // {
-    //         source: {
-    //           id: "source",
-    //           definitionId: "storager_1",
-    //           position: { x: 9, y: 9 },
-    //           rotation: 0,
-    //           config: {},
-    //           tags: [],
-    //         },
-    //         target: {
-    //           id: "target",
-    //           definitionId: "storager_1",
-    //           position: { x: 12, y: 9 },
-    //           rotation: 90,
-    //           config: {},
-    //           tags: ["test"],
-    //         },
-    //       }
     const blueprint = createBlueprintDocument({
       name: "双设备蓝图",
       baseId: DEFAULT_WORLD_BASE_ID,
@@ -2066,25 +1533,6 @@ describe("createEditorTestHost", () => {
     const document = createDummyWorldDocument();
 
     editorHost.internalDocument.setSnapshot(document);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       {
-    //         id: "persisted-draft",
-    //         originalEntityId: "persisted-origin",
-    //         definitionId: "belt_straight_1x1",
-    //         position: { x: 30, y: 30 },
-    //         rotation: 0,
-    //         config: {},
-    //         tags: ["persisted"],
-    //       },
-    //     ]
     editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-15-variant-1.schema7.json"));
     editorHost.internalState.collections.selection.replace([
       "dummy-entity-1",
@@ -2138,25 +1586,6 @@ describe("createEditorTestHost", () => {
     const document = createDummyWorldDocument();
 
     editorHost.internalDocument.setSnapshot(document);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       {
-    //         id: "persisted-draft",
-    //         originalEntityId: "persisted-origin",
-    //         definitionId: "belt_straight_1x1",
-    //         position: { x: 30, y: 30 },
-    //         rotation: 0,
-    //         config: {},
-    //         tags: ["persisted"],
-    //       },
-    //     ]
     editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-16-variant-1.schema7.json"));
     editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
 
@@ -2189,18 +1618,6 @@ describe("createEditorTestHost", () => {
   it("moves only the legal subset when a constrained multi-selection enters free state", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       createTestEntity("pump", "water_pump_1", -10, 20, 180),
-    //       createTestEntity("storage", "storager_1", 0, 20),
-    //     ]
     const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-17-variant-1.schema7.json")));
 
     editorHost.internalDocument.setSnapshot(document);
@@ -2238,21 +1655,6 @@ describe("createEditorTestHost", () => {
   it("switches a document entity definition, clears config, and removes stale slot links", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       {
-    //         ...createTestEntity("factory", "filling_pd_mc_1", 10, 10),
-    //         config: { recipe: "old" },
-    //       },
-    //       createTestEntity("storage", "storager_1", 4, 10),
-    //     ]
     const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-18-variant-1.schema7.json")));
     document.slotLinks = [createStorageToFactorySlotLink()];
 
@@ -2277,21 +1679,6 @@ describe("createEditorTestHost", () => {
   it("applies a switched move draft, while cancel restores the original entity", () => {
     const applyWorkspace = createWorkspace();
     const applyEditorHost = createEditorTestHost(applyWorkspace);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       {
-    //         ...createTestEntity("factory", "filling_pd_mc_1", 10, 10),
-    //         config: { recipe: "old" },
-    //       },
-    //       createTestEntity("storage", "storager_1", 4, 10),
-    //     ]
     const applyDocument = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-19-variant-1.schema7.json")));
     applyDocument.slotLinks = [createStorageToFactorySlotLink()];
     applyEditorHost.internalDocument.setSnapshot(applyDocument);
@@ -2315,20 +1702,6 @@ describe("createEditorTestHost", () => {
 
     const cancelWorkspace = createWorkspace();
     const cancelEditorHost = createEditorTestHost(cancelWorkspace);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       {
-    //         ...createTestEntity("factory", "filling_pd_mc_1", 10, 10),
-    //         config: { recipe: "old" },
-    //       },
-    //     ]
     const cancelDocument = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-20-variant-1.schema7.json")));
     cancelEditorHost.internalDocument.setSnapshot(cancelDocument);
     cancelEditorHost.internalState.collections.selection.replace(["factory"]);
@@ -2400,25 +1773,6 @@ describe("createEditorTestHost", () => {
     const document = createDummyWorldDocument();
 
     editorHost.internalDocument.setSnapshot(document);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       {
-    //         id: "persisted-draft",
-    //         originalEntityId: "persisted-origin",
-    //         definitionId: "belt_straight_1x1",
-    //         position: { x: 30, y: 30 },
-    //         rotation: 0,
-    //         config: {},
-    //         tags: ["persisted"],
-    //       },
-    //     ]
     editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-21-variant-1.schema7.json"));
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
 
@@ -2438,53 +1792,8 @@ describe("createEditorTestHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/editor-host/index.json
-    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections/editor/editor-host/index.json、src/tests/fixtures/blueprints/collections-extra/editor/editor-host/index.json。
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // const draftOnlyEntity: DraftEntity = {
-    //       id: "draft-only",
-    //       originalEntityId: "draft-only",
-    //       definitionId: "belt_straight_1x1",
-    //       position: { x: 9, y: 9 },
-    //       rotation: 0,
-    //       config: {},
-    //       tags: [],
-    //     };
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/editor-host/index.json
-    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections/editor/editor-host/index.json、src/tests/fixtures/blueprints/collections-extra/editor/editor-host/index.json。
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // const documentShadowDraft: DraftEntity = {
-    //       id: "dummy-entity-1",
-    //       originalEntityId: "dummy-entity-1",
-    //       definitionId: "belt_straight_1x1",
-    //       position: { x: 30, y: 30 },
-    //       rotation: 0,
-    //       config: {},
-    //       tags: ["draft-shadow"],
-    //     };
 
     editorHost.internalDocument.setSnapshot(document);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections-extra/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [draftOnlyEntity, documentShadowDraft]
     editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-04-variant-1.schema7.json"));
     editorHost.internalState.collections.selection.replace([
       "dummy-entity-1",
@@ -2522,17 +1831,6 @@ describe("createEditorTestHost", () => {
   it("blocks direct collection moves outside the base outer ring", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       createTestEntity("pipe", "pipe_straight_1x1", -4, 5),
-    //     ]
     const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-22-variant-1.schema7.json")));
 
     editorHost.internalDocument.setSnapshot(document);
@@ -2551,71 +1849,8 @@ describe("createEditorTestHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/editor-host/index.json
-    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections/editor/editor-host/index.json、src/tests/fixtures/blueprints/collections-extra/editor/editor-host/index.json。
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // const draftOnlyEntity: DraftEntity = {
-    //       id: "draft-only",
-    //       originalEntityId: "draft-only",
-    //       definitionId: "belt_straight_1x1",
-    //       position: { x: 9, y: 9 },
-    //       rotation: 0,
-    //       config: {},
-    //       tags: [],
-    //     };
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/editor-host/index.json
-    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections/editor/editor-host/index.json、src/tests/fixtures/blueprints/collections-extra/editor/editor-host/index.json。
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // const movePreviewDraft: DraftEntity = {
-    //       id: "move-draft:dummy-entity-1",
-    //       originalEntityId: "dummy-entity-1",
-    //       definitionId: "belt_straight_1x1",
-    //       position: { x: 30, y: 30 },
-    //       rotation: 0,
-    //       config: {},
-    //       tags: ["draft-shadow"],
-    //     };
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/editor-host/index.json
-    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections/editor/editor-host/index.json、src/tests/fixtures/blueprints/collections-extra/editor/editor-host/index.json。
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // const unrelatedDraft: DraftEntity = {
-    //       id: "persisted-draft",
-    //       originalEntityId: "persisted-draft",
-    //       definitionId: "belt_straight_1x1",
-    //       position: { x: 18, y: 11 },
-    //       rotation: 0,
-    //       config: {},
-    //       tags: [],
-    //     };
 
     editorHost.internalDocument.setSnapshot(document);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections-extra/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [draftOnlyEntity, movePreviewDraft, unrelatedDraft]
     editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-05-variant-1.schema7.json"));
     editorHost.internalState.collections.selection.replace([
       "dummy-entity-1",
@@ -2663,18 +1898,6 @@ describe("createEditorTestHost", () => {
   it("computes collection geometry center and pivot from document order", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       createTestEntity("ordered-first", "belt_straight_1x1", 0, 0, 90),
-    //       createTestEntity("ordered-second", "belt_straight_1x1", 2, 0, 270),
-    //     ]
     const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-23-variant-1.schema7.json")));
 
     editorHost.internalDocument.setSnapshot(document);
@@ -2704,18 +1927,6 @@ describe("createEditorTestHost", () => {
   it("falls back to collection order for pivot phase when any entity is outside document order", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       createTestEntity("ordered-first", "belt_straight_1x1", 0, 0, 90),
-    //       createTestEntity("fallback-first", "belt_straight_1x1", 2, 0, 270),
-    //     ]
     const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-24-variant-1.schema7.json")));
 
     document.entityOrder = ["ordered-first"];
@@ -2759,15 +1970,6 @@ describe("createEditorTestHost", () => {
       width: 400,
       height: 400,
     });
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections-extra/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [firstDraft, secondDraft]
     editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-06-variant-1.schema7.json"));
     editorHost.internalState.collections.preview.replace([
       firstDraft.id,
@@ -2797,18 +1999,6 @@ describe("createEditorTestHost", () => {
   it("rotates entity collections around the collection center point through editor actions", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       createTestEntity("left", "belt_straight_1x1", 10, 10),
-    //       createTestEntity("right", "belt_straight_1x1", 11, 10),
-    //     ]
     const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-25-variant-1.schema7.json")));
 
     editorHost.internalDocument.setSnapshot(document);
@@ -2911,18 +2101,6 @@ describe("createEditorTestHost", () => {
   it("blocks direct collection rotations outside the base outer ring", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       createTestEntity("pipe-top", "pipe_straight_1x1", -15, 0),
-    //       createTestEntity("pipe-bottom", "pipe_straight_1x1", -15, 8),
-    //     ]
     const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-26-variant-1.schema7.json")));
 
     editorHost.internalDocument.setSnapshot(document);
@@ -2942,28 +2120,6 @@ describe("createEditorTestHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
 
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       {
-    //         id: "preview-belt",
-    //         originalEntityId: "preview-belt",
-    //         definitionId: "belt_straight_1x1",
-    //         position: {
-    //           x: -2,
-    //           y: 3,
-    //         },
-    //         rotation: 0,
-    //         config: {},
-    //         tags: [],
-    //       },
-    //     ]
     editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-27-variant-1.schema7.json"));
     editorHost.internalState.collections.preview.replace(["preview-belt"]);
 
@@ -2982,34 +2138,6 @@ describe("createEditorTestHost", () => {
   it("keeps pivot-cell collection rotation closed after four turns", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       {
-    //         id: "preview-left",
-    //         originalEntityId: "preview-left",
-    //         definitionId: "belt_straight_1x1",
-    //         position: { x: -2, y: 3 },
-    //         rotation: 0,
-    //         config: {},
-    //         tags: [],
-    //       },
-    //       {
-    //         id: "preview-right",
-    //         originalEntityId: "preview-right",
-    //         definitionId: "belt_straight_1x1",
-    //         position: { x: -1, y: 3 },
-    //         rotation: 0,
-    //         config: {},
-    //         tags: [],
-    //       },
-    //     ]
     const drafts: DraftEntity[] = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-28-variant-1.schema7.json"));
 
     editorHost.internalState.drafts = drafts;
@@ -3044,15 +2172,6 @@ describe("createEditorTestHost", () => {
       tags: [],
     };
 
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections-extra/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [initialDraft]
     editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/scene-07-variant-1.schema7.json"));
     editorHost.internalState.collections.preview.replace([initialDraft.id]);
 
@@ -3086,18 +2205,7 @@ describe("createEditorTestHost", () => {
         tags: [],
       };
 
-      // AI-REMOVED 2026-09-14:
-      // Reason: 场景构造已批量固化为带版本的蓝图文件。
-      // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-      // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-      // Replacement: src/tests/fixtures/blueprints/collections-extra/editor/editor-host/index.json
-      // Risk: Low；断言与被测动作不变。
-      // Human Review: Required
-      // Original code:
-      // [initialDraft]
-      // AI-CORRECTION 2026-10-12: 固定旋转场景按稳定设备 ID 匹配，避免 Registry 新字段改变夹具身份。
       const blueprint = loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/index.json", "scene-08", { definitionId: definition.id });
-      // AI-CORRECTION 2026-10-12: 新增田块有地图限制，旋转场景使用各自夹具声明的地图。
       editorHost.internalDocument.setSnapshot({ ...editorHost.document.getSnapshot(), baseId: blueprint.baseId });
       editorHost.internalState.drafts = getBlueprintDraftArray(blueprint);
       editorHost.internalState.collections.preview.replace([initialDraft.id]);
@@ -3112,7 +2220,6 @@ describe("createEditorTestHost", () => {
         rotation: editorHost.internalState.drafts[0]?.rotation,
       }).toEqual({
         definitionId: definition.id,
-        // AI-CORRECTION 2026-10-15: 缘缘庄田块的场景起点位于子区域，四次旋转必须返回各自场景的原位。
         position: blueprint.entities[initialDraft.id]!.position,
         rotation: 0,
       });
@@ -3131,40 +2238,6 @@ describe("createEditorTestHost", () => {
     }
 
     editorHost.internalDocument.setSnapshot(document);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       {
-    //         id: "preview-unloader",
-    //         originalEntityId: "preview-unloader",
-    //         definitionId: "unloader_1",
-    //         position: {
-    //           x: -2,
-    //           y: 3,
-    //         },
-    //         rotation: 90,
-    //         config: {},
-    //         tags: [],
-    //       },
-    //       {
-    //         id: "preview-belt",
-    //         originalEntityId: "preview-belt",
-    //         definitionId: "belt_straight_1x1",
-    //         position: {
-    //           x: 4,
-    //           y: 8,
-    //         },
-    //         rotation: 0,
-    //         config: {},
-    //         tags: [],
-    //       },
-    //     ]
     editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-29-variant-1.schema7.json"));
     editorHost.internalState.collections.selection.replace([
       selectedStorager.id,
@@ -3195,28 +2268,6 @@ describe("createEditorTestHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
 
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/editor/editor-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       {
-    //         id: "draft-only",
-    //         originalEntityId: "draft-only",
-    //         definitionId: "storager_1",
-    //         position: {
-    //           x: 40,
-    //           y: 40,
-    //         },
-    //         rotation: 0,
-    //         config: {},
-    //         tags: [],
-    //       },
-    //     ]
     editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-30-variant-1.schema7.json"));
 
     expect(Object.values(EntityCollectionType)).toEqual([

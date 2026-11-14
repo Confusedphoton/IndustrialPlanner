@@ -1,16 +1,6 @@
 import { CROP_RECIPES } from "./crop-definitions";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import {
-  // AI-REMOVED 2026-08-19:
-  // Reason: 暗管入口隐藏销毁配方已退出，Registry 不再需要任意流体配方占位 ID。
-  // Trigger: 用户明确要求暗管入口在所有模式下提交仓库并抛弃销毁机制。
-  // Evidence: 本文件其余配方均未使用 FLUID_DOMAIN_RECIPE_ITEM_ID。
-  // Replacement: None
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // FLUID_DOMAIN_RECIPE_ITEM_ID,
   RecipeItemDomainId,
 } from "@/domain/shared/item-domain-flags";
 import {
@@ -26,7 +16,6 @@ import {
   WATER_PURIFIER_OUTPUT_ITEM_ID,
 } from "@/shared/water-purifier-node";
 
-// AI-CORRECTION 2026-07-19: 历史注释中的 item_/item_port_ 设备 ID 保留作来源审计；
 // 当前 RecipeDefinition.machineId 必须引用已移除前缀的 EntityDefinition.id。
 export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
   ...CROP_RECIPES,
@@ -3044,28 +3033,6 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     recipeType: "immediate-consume",
     tags: [ACTIVITY_LIMITED_FORMULA_1_TAG],
   },
-  // AI-REMOVED 2026-09-01:
-  // Reason: 该项目自定义 ID 与 AKEData 原始配方 shaper_gas_copper_jar_1 重复，且不应作为独立配方注册。
-  // Trigger: 用户要求删除错误配方，仅保留 AKEData ID。
-  // Evidence: 两条记录的耗时、输入、输出和设备完全相同；塑形设备不能手选该配方，不存在蓝图配方引用迁移需求。
-  // Replacement: 本文件下方 id 为 shaper_gas_copper_jar_1 的配方定义。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // {
-  //   id: "r_shaper_gas_copper_jar",
-  //   nameKey: "registry.recipe.shaper_gas_copper_jar_1.name",
-  //   durationSeconds: 2,
-  //   inputs: [
-  //     { itemId: "item_copper_nugget", amount: 2 },
-  //     { itemId: "item_gas_inert", amount: 1 },
-  //   ],
-  //   outputs: [{ itemId: "item_copper_jar", amount: 1 }],
-  //   machineId: "shaper_1_gas",
-  //   recipeType: "immediate-consume",
-  //   tags: [],
-  // },
   {
     id: "xiranite_oven_xiranite_powder_1",
     nameKey: "registry.recipe.xiranite_oven_xiranite_powder_1.name",
@@ -3356,39 +3323,6 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     recipeType: "immediate-consume",
     tags: [],
   },
-  // =========================================================================
-  // 暗管入口销毁配方 — 默认销毁进入槽位的任意流体（液体或气体）
-  // =========================================================================
-  // AI-CORRECTION 2026-08-19: 下列销毁配方已退出；暗管入口未直连时统一提交当前运行架构的仓库。
-  // AI-REMOVED 2026-08-19:
-  // Reason: 暗管入口不再具有销毁语义，保留配方会让 Registry 继续暴露不可达且误导的运行能力。
-  // Trigger: 用户明确要求单基地提交单基地仓库、多基地提交区域仓库，并抛弃销毁机制。
-  // Evidence: 两种入口的两个 SimulationMode 均选择 warehouse-sink-when-unlinked behavior。
-  // Replacement: src/registry/entity-definition.ts 中 udpipe_loader_1/2 的模式配置。
-  // Risk: 旧文档若保存了这些隐藏 recipe ID，编译时会忽略不存在的配方选择。
-  // Human Review: Required
-  //
-  // Original code:
-  // {
-  //   id: "r_udpipe_loader_void_fluid_any_internal",
-  //   nameKey: "registry.recipe.r_udpipe_loader_void_fluid_any_internal.name",
-  //   durationSeconds: 0.5,
-  //   inputs: [{ itemId: FLUID_DOMAIN_RECIPE_ITEM_ID, amount: 1 }],
-  //   outputs: [],
-  //   machineId: "udpipe_loader_1",
-  //   recipeType: "immediate-consume",
-  //   tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
-  // },
-  // {
-  //   id: "r_udpipe_loader_multi_void_fluid_any_internal",
-  //   nameKey: "registry.recipe.r_udpipe_loader_multi_void_fluid_any_internal.name",
-  //   durationSeconds: 0.5,
-  //   inputs: [{ itemId: FLUID_DOMAIN_RECIPE_ITEM_ID, amount: 1 }],
-  //   outputs: [],
-  //   machineId: "udpipe_loader_2",
-  //   recipeType: "immediate-consume",
-  //   tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
-  // },
   {
     id: "r_udpipe_unloader_transport_fluid_any_internal",
     nameKey: "registry.recipe.r_udpipe_unloader_transport_fluid_any_internal.name",
@@ -3445,10 +3379,8 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
 
   // =========================================================================
   // 自然资源采集配方 — 无限产出
-  // AI-CORRECTION 2026-06-15: 抽水泵已改为 warehouse link 模式，当前不使用 recipe channel。
   // 这两个配方保留不删，供未来可能切换回 recipe 模式或作为参考定义。
   // machineId 仍指向 item_port_water_pump_1，但该设备当前 recipeChannels 为空。
-  // AI-CORRECTION 2026-08-19: 上述 warehouse link 状态已结束；四条配方现由抽水泵/气体收集泵的手选 default channel 直接执行。
   // =========================================================================
   {
     id: "r_pump_water_basic",
@@ -3623,18 +3555,6 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     id: "r_miner_copper_ore_basic",
     nameKey: "registry.recipe.r_miner_copper_ore_basic.name",
     durationSeconds: 3,
-    // AI-REMOVED 2026-07-22:
-    // Reason: 水驱矿机采矿配方刻意不消耗水，防止产线规划中错误地将采矿用水计入水消耗统计。
-    // Trigger: 用户需求 — 产线规划中采矿用水被错误计入常规生产消耗。
-    // Evidence: 水驱矿机在游戏中实际消耗水，但产线规划工具不应将此视为常规生产消耗。
-    // Replacement: None（inputs 改为空数组）
-    // Risk: Low（仅影响产线规划计算，不影响实际游戏数据呈现）
-    // Human Review: Not Required
-    //
-    // Original code:
-    // inputs: [{ itemId: "item_liquid_water", amount: 1 }],
-    // AI-CORRECTION 2026-09-01:
-    // 按用户确认恢复解包数据中的每轮清水消耗；产线规划仅在求解输入层精确忽略该配方的清水，registry、模块配平与工序图继续保留真实输入。
     inputs: [{ itemId: "item_liquid_water", amount: 1 }],
     outputs: [{ itemId: "item_copper_ore", amount: 1 }],
     machineId: "miner_4",

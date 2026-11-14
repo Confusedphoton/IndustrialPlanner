@@ -3,16 +3,6 @@ import { useState } from "react";
 import LucideCircleDashed from "~icons/lucide/circle-dashed";
 import LucideMinus from "~icons/lucide/minus";
 import LucidePlus from "~icons/lucide/plus";
-// AI-REMOVED 2026-07-10:
-// Reason: 物品选择器本身已承担更换动作，独立铅笔按钮与当前交互重复。
-// Trigger: 用户要求删除无意义的铅笔按钮，并将垃圾桶按钮放到物品选择器同行。
-// Evidence: 本文件 requestItemSelection 已同时用于初选和更换，保留铅笔按钮会增加一处重复入口。
-// Replacement: 物品选择按钮直接用于更换；清除按钮移动到 .admission-rule-item-row。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import LucidePencil from "~icons/lucide/pencil";
 import LucideRotateCcw from "~icons/lucide/rotate-ccw";
 import LucideTrash2 from "~icons/lucide/trash-2";
 
@@ -25,7 +15,7 @@ import type {
   EntityDefinition,
 } from "@/domain/registry/types/entity-definition";
 import type { RegistryQuery } from "@/domain/registry/registry-query";
-import type { AdmissionRuleInspectorDeclaration } from "@/domain/registry/types/entity-inspector";
+import { INSPECTOR_TYPE, type AdmissionRuleInspectorDeclaration } from "@/domain/registry/types/entity-inspector";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation/types/simulation-types";
 import { InspectorCollapsiblePanel } from "@/app/shell/inspector/inspector-collapsible-panel";
@@ -337,29 +327,6 @@ export function AdmissionRuleInspector({
           </div>
 
           <div className={cm(styles, "admission-rule-actions")}>
-            {/* AI-REMOVED 2026-07-10:
-                Reason: 更换按钮与物品选择按钮调用同一个 requestItemSelection，重复占用一格操作区。
-                Trigger: 用户要求删除无意义的铅笔按钮，并为总计/每分钟两行各保留一个重置按钮。
-                Evidence: 物品选择器可直接点击更换，且新增 per-minute reset 后操作区需要按行表达语义。
-                Replacement: 顶部物品选择按钮；本行只保留总计重置。
-                Risk: Low
-                Human Review: Required
-
-                Original code:
-                <button
-                  aria-label="更换"
-                  className={cm(styles, "admission-rule-action-button")}
-                  data-admission-action="change-item"
-                  disabled={pending}
-                  onClick={() => {
-                    void requestItemSelection();
-                  }}
-                  title="更换"
-                  type="button"
-                >
-                  <LucidePencil aria-hidden="true" />
-                </button>
-            */}
             <button
               aria-label={translate("inspectorText.resetTotal")}
               className={cm(styles, "admission-rule-action-button")}
@@ -514,33 +481,6 @@ function resolveAdmissionPortRow(
   };
 }
 
-// AI-REMOVED 2026-09-23:
-// Reason: 该解析语义已被基地问题检查复用，保留私有副本会让 perMinuteLimit 的解析规则在两处漂移。
-// Trigger: 新增“管道准入口限速超过 60/分钟”问题检查，需要读取同一 admissionRule 结构。
-// Evidence: src/app/shell/panels/base-configuration-problems.ts 现在同样解析 admissionRule.perMinuteLimit。
-// Replacement: src/shared/registry/admission-rule.ts 的 readAdmissionRule
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// function readAdmissionRule(value: unknown): EntityAdmissionRuleDefinition | null {
-//   if (value === null || value === undefined || typeof value !== "object") {
-//     return null;
-//   }
-//
-//   const record = value as Record<string, unknown>;
-//   const itemId = typeof record.itemId === "string" && record.itemId.length > 0
-//     ? record.itemId
-//     : null;
-//   const limit = typeof record.limit === "number" && Number.isFinite(record.limit)
-//     ? Math.max(0, Math.floor(record.limit))
-//     : null;
-//   const perMinuteLimit = typeof record.perMinuteLimit === "number" && Number.isFinite(record.perMinuteLimit)
-//     ? Math.max(0, Math.floor(record.perMinuteLimit))
-//     : null;
-//
-//   return { itemId, limit, perMinuteLimit };
-// }
 
 function readAcceptRuleItemId(value: unknown): string | null {
   if (value === null || value === undefined || typeof value !== "object") {
@@ -570,4 +510,46 @@ function normalizeEnabledLimit(rawValue: string): number | null {
   }
 
   return Math.max(1, Math.floor(parsed));
+}
+
+/**
+ * 把物品写入实体全部准入口（配方树快捷操作“设为所选准入口的物品”）。
+ * 仅写入接受该物品的端口，保留原有计数/速率上限；返回实际写入的端口数。
+ */
+export function applyAdmissionItemToEntity(options: {
+  readonly appHost: AppHost;
+  readonly entity: WorldEntity;
+  readonly item: ItemDefinition;
+}): number {
+  const { appHost, entity, item } = options;
+  const registry = appHost.workspace.registry;
+  const definition = registry.queries.findEntityDefinition(entity.definitionId);
+  const editor = appHost.workspace.editor;
+  if (definition === null || editor === null) {
+    return 0;
+  }
+
+  const patch: Record<string, unknown> = {};
+  let applied = 0;
+  for (const declaration of definition.inspectors) {
+    if (declaration.type !== INSPECTOR_TYPE.admissionRule) {
+      continue;
+    }
+    const row = resolveAdmissionPortRow(definition, entity, declaration, null, registry.queries);
+    if (row === null || !matchesItemAcceptRule(item, row.port.acceptRule, registry.queries.resolveItemDomain)) {
+      continue;
+    }
+    patch[row.acceptRulePath] = createItemAcceptRule(item.id);
+    patch[row.admissionRulePath] = {
+      itemId: item.id,
+      limit: row.limit,
+      perMinuteLimit: row.perMinuteLimit,
+    } satisfies EntityAdmissionRuleDefinition;
+    applied += 1;
+  }
+
+  if (applied > 0) {
+    editor.actions.patchEntityConfig(entity.id, patch);
+  }
+  return applied;
 }

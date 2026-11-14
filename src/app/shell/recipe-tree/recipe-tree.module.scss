@@ -1,4 +1,4 @@
-// 2026-11-13：配方树浮层。固定定位于画布上方、低于对话框（DialogShell z-index 13）。
+// 配方树浮层。固定定位于画布上方、低于对话框（DialogShell z-index 13）。
 
 .recipe-tree-overlay {
   position: fixed;
@@ -395,4 +395,131 @@
 
 .recipe-tree-resize-handle:hover {
   color: var(--accent);
+}
+
+// 视图切换、流程图视图与节点快捷操作菜单。
+.recipe-tree-view-toggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 6px;
+  background: var(--surface-1);
+}
+
+.recipe-tree-view-toggle .recipe-tree-icon-button[aria-pressed="true"] {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.recipe-tree-node {
+  cursor: pointer;
+}
+
+.recipe-tree-graph-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding-bottom: 18px;
+}
+
+.recipe-tree-graph {
+  position: relative;
+  flex: 1;
+  min-height: 160px;
+  overflow: hidden;
+}
+
+.recipe-tree-graph > * {
+  height: 100%;
+}
+
+.recipe-action-menu {
+  position: fixed;
+  z-index: 12;
+  display: grid;
+  gap: 2px;
+  width: 280px;
+  padding: 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface-2);
+  box-shadow: 0 10px 28px var(--shadow-floating-control);
+  font-size: 12px;
+}
+
+.recipe-action-menu-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 6px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text-0);
+  font-weight: 600;
+}
+
+.recipe-action-menu-title img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.recipe-action-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 8px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-0);
+  text-align: left;
+}
+
+.recipe-action-menu-item:hover:not(:disabled) {
+  background: var(--surface-4);
+}
+
+.recipe-action-menu-item svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--accent);
+}
+
+// 停靠模式——占据工作台最右侧一列（grid-area: recipe），左缘可拖动调整宽度。
+.recipe-tree-overlay.is-docked {
+  position: relative;
+  z-index: 3;
+  grid-area: recipe;
+  min-width: 0;
+  max-width: none;
+  height: auto;
+  border-width: 0 0 0 1px;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.recipe-tree-overlay.is-docked .recipe-tree-header {
+  cursor: default;
+}
+
+.recipe-tree-dock-resize {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  bottom: 0;
+  left: -4px;
+  width: 8px;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.recipe-tree-dock-resize:hover,
+.recipe-tree-dock-resize:active {
+  background: var(--dock-resize-hover);
+}
+
+.recipe-tree-icon-button[aria-pressed="true"] {
+  color: var(--accent-strong);
 }

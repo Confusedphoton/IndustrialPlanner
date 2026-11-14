@@ -1,113 +1,21 @@
 import { createWorldDocumentFromBlueprint } from "@/tests/simulation/blueprint-test-helpers";
 import { createCanvasTestSession } from "@/tests/helpers/canvas-test-session";
-// AI-REMOVED 2026-11-12:
-// Reason: 空文档工厂不会导入蓝图实体。
-// Trigger: REQ-048 测试装配迁移；Evidence: createWorldDocument 只接受 baseId。
-// Replacement: createWorldDocumentFromBlueprint
-// Risk: Low；Human Review: Required
-// Original code:
-// import { createWorldDocument } from "@/domain/document/world-document";
 const cleanups: Array<() => void> = [];
 afterEach(() => { for (const dispose of cleanups.splice(0).reverse()) dispose(); vi.restoreAllMocks(); });
 import { loadBlueprintFromFile, getBlueprintEntityArray } from "@/tests/simulation/blueprint-test-helpers";
 import { afterEach, describe, expect, it, vi } from "vitest";
-// AI-REMOVED 2026-11-12:
-// Reason: 选择测试的旧 App/Editor 桩不再符合 Canvas/View 契约。
-// Trigger: REQ-048 会话输入归属迁移。
-// Evidence: 选择模块读取 context.canvas，而非全局工作台工具状态。
-// Replacement: createCanvasTestSession，真实动作与 call-through spies。
-// Risk: 保留原行为断言；原生命中由浏览器验证。
-// Human Review: Required
-// Original code:
-// import { makeAutoObservable } from "mobx";
 
 
-// AI-REMOVED 2026-08-03:
-// Reason: 返回选择模式不再依赖 SHORTCUT_KEY.RETURN_SELECT。
-// Trigger: ST2-RQ-002 禁止绑定 Escape。
-// Evidence: select 手势直接匹配 Escape，测试断言 isShortcutFor 未被调用。
-// Replacement: 本文件的 Escape 硬编码测试。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
-// AI-REMOVED 2026-11-12:
-// Reason: 选择测试的旧 App/Editor 桩不再符合 Canvas/View 契约。
-// Trigger: REQ-048 会话输入归属迁移。
-// Evidence: 选择模块读取 context.canvas，而非全局工作台工具状态。
-// Replacement: createCanvasTestSession，真实动作与 call-through spies。
-// Risk: 保留原行为断言；原生命中由浏览器验证。
-// Human Review: Required
-// Original code:
-// import type { AppHost } from "@/app/host/app-host";
 
-// AI-REMOVED 2026-11-12:
-// Reason: 选择测试的旧 App/Editor 桩不再符合 Canvas/View 契约。
-// Trigger: REQ-048 会话输入归属迁移。
-// Evidence: 选择模块读取 context.canvas，而非全局工作台工具状态。
-// Replacement: createCanvasTestSession，真实动作与 call-through spies。
-// Risk: 保留原行为断言；原生命中由浏览器验证。
-// Human Review: Required
-// Original code:
-// import type { KeyboardSnapshot } from "@/app/input/gesture/adapter";
 
-// AI-REMOVED 2026-11-12:
-// Reason: 选择测试的旧 App/Editor 桩不再符合 Canvas/View 契约。
-// Trigger: REQ-048 会话输入归属迁移。
-// Evidence: 选择模块读取 context.canvas，而非全局工作台工具状态。
-// Replacement: createCanvasTestSession，真实动作与 call-through spies。
-// Risk: 保留原行为断言；原生命中由浏览器验证。
-// Human Review: Required
-// Original code:
-// import {
-//   createHypergryphSelectGestureModule,
-//   type GestureActionContext,
-// } from "@/app/input/gesture/actions";
 import { createHypergryphSelectGestureModule } from "@/app/input/gesture/actions";
-// AI-REMOVED 2026-11-12:
-// Reason: 选择测试的旧 App/Editor 桩不再符合 Canvas/View 契约。
-// Trigger: REQ-048 会话输入归属迁移。
-// Evidence: 选择模块读取 context.canvas，而非全局工作台工具状态。
-// Replacement: createCanvasTestSession，真实动作与 call-through spies。
-// Risk: 保留原行为断言；原生命中由浏览器验证。
-// Human Review: Required
-// Original code:
-// import { WorkbenchOverlapEntityMenuController } from "@/app/shell/state/overlap-entity-menu-state";
 
-// AI-REMOVED 2026-11-12:
-// Reason: 选择测试的旧 App/Editor 桩不再符合 Canvas/View 契约。
-// Trigger: REQ-048 会话输入归属迁移。
-// Evidence: 选择模块读取 context.canvas，而非全局工作台工具状态。
-// Replacement: createCanvasTestSession，真实动作与 call-through spies。
-// Risk: 保留原行为断言；原生命中由浏览器验证。
-// Human Review: Required
-// Original code:
-// import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 
 import { handleKeyboardShortcutThroughRouter } from "./shortcut-route-test-helper";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { ActiveTool } from "@/domain/app/types/app-types";
-// AI-REMOVED 2026-11-12:
-// Reason: 选择测试的旧 App/Editor 桩不再符合 Canvas/View 契约。
-// Trigger: REQ-048 会话输入归属迁移。
-// Evidence: 选择模块读取 context.canvas，而非全局工作台工具状态。
-// Replacement: createCanvasTestSession，真实动作与 call-through spies。
-// Risk: 保留原行为断言；原生命中由浏览器验证。
-// Human Review: Required
-// Original code:
-// import type { EntityCollection } from "@/domain/editor/types/editor-types";
 
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
-// AI-REMOVED 2026-11-12:
-// Reason: 选择测试的旧 App/Editor 桩不再符合 Canvas/View 契约。
-// Trigger: REQ-048 会话输入归属迁移。
-// Evidence: 选择模块读取 context.canvas，而非全局工作台工具状态。
-// Replacement: createCanvasTestSession，真实动作与 call-through spies。
-// Risk: 保留原行为断言；原生命中由浏览器验证。
-// Human Review: Required
-// Original code:
-// import { createRegistryContract } from "@/registry";
 
 
 describe("createHypergryphSelectGestureModule", () => {
@@ -648,28 +556,8 @@ describe("createHypergryphSelectGestureModule", () => {
 
   it("only selects entities while select mode is active", () => {
     const module = createHypergryphSelectGestureModule();
-    // AI-REMOVED 2026-09-10:
-    // Reason: 操作模式总开关已废弃，不再保留关闭分支
-    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-    // Replacement: 本测试保留的工具与选择条件
-    // Risk: 历史 false 设置统一使用当前操作行为。
-    // Human Review: Required
-    //
-    // Original code:
-    // const disabledContext = createContext("select", false).context;
     const moveContext = createContext("move").context;
 
-    // AI-REMOVED 2026-09-10:
-    // Reason: 操作模式总开关已废弃，不再保留关闭分支
-    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-    // Replacement: 本测试保留的工具与选择条件
-    // Risk: 历史 false 设置统一使用当前操作行为。
-    // Human Review: Required
-    //
-    // Original code:
-    // expect(module.when?.(disabledContext)).toBe(false);
     expect(
       module.handle(
         {
@@ -768,21 +656,6 @@ describe("createHypergryphSelectGestureModule", () => {
     });
 
     expect(result).toEqual({ status: "handled" });
-    // AI-REMOVED 2026-08-03:
-    // Reason: Escape 不再经过可配置快捷键匹配。
-    // Trigger: ST2-RQ-002 禁止绑定 Escape。
-    // Evidence: 结果 handled 且 isShortcutFor 未被调用。
-    // Replacement: 下方 not.toHaveBeenCalled 断言。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // expect(isShortcutFor).toHaveBeenCalledWith(
-    //   SHORTCUT_KEY.RETURN_SELECT,
-    //   "Escape",
-    //   "Escape",
-    //   { alt: false, ctrl: false, meta: false, shift: false },
-    // );
     expect(isShortcutFor).not.toHaveBeenCalled();
     expect(setActiveTool).toHaveBeenCalledWith("select");
   });
@@ -800,15 +673,6 @@ describe("createHypergryphSelectGestureModule", () => {
   });
 
   it("clears any floating toolbar when another tool returns to select with a preserved selection", () => {
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections-extra/app/input/select-gesture-module/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [entity("entity-1")]
     const {
       context,
       hideCanvasFloatingToolbar,
@@ -881,157 +745,6 @@ describe("createHypergryphSelectGestureModule", () => {
   });
 });
 
-// AI-REMOVED 2026-11-12:
-// Reason: 选择测试的旧 App/Editor 桩不再符合 Canvas/View 契约。
-// Trigger: REQ-048 会话输入归属迁移。
-// Evidence: 选择模块读取 context.canvas，而非全局工作台工具状态。
-// Replacement: createCanvasTestSession，真实动作与 call-through spies。
-// Risk: 保留原行为断言；原生命中由浏览器验证。
-// Human Review: Required
-// Original code:
-// function createContext(
-//   activeTool: ActiveTool = "select",
-//   // AI-REMOVED 2026-09-10:
-//   // Reason: 操作模式总开关已废弃，不再保留关闭分支
-//   // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-//   // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-//   // Replacement: 测试状态不再需要模式字段
-//   // Risk: 历史 false 设置统一使用当前操作行为。
-//   // Human Review: Required
-//   //
-//   // Original code:
-//   // hypergryphOperationMode = true,
-//   selectedEntityIds: readonly string[] = [],
-//   rightDockOpen = false,
-//   selectionRightDockSync = true,
-//   useInspectorPanel = true,
-//   inspectorOpenOnSecondClick = false,
-// ): {
-//   context: GestureActionContext<AppHost>;
-//   addToCollection: ReturnType<typeof vi.fn>;
-//   clearCollection: ReturnType<typeof vi.fn>;
-//   showCanvasFloatingToolbarForCollection: ReturnType<typeof vi.fn>;
-//   hideCanvasFloatingToolbar: ReturnType<typeof vi.fn>;
-//   isDedicatedLogisticsDevice: ReturnType<typeof vi.fn>;
-//   isShortcutFor: ReturnType<typeof vi.fn>;
-//   openDialog: ReturnType<typeof vi.fn>;
-//   setActiveTool: ReturnType<typeof vi.fn>;
-//   setRightDockActiveTab: ReturnType<typeof vi.fn>;
-//   toggleRightDock: ReturnType<typeof vi.fn>;
-// } {
-//   const addToCollection = vi.fn();
-//   const clearCollection = vi.fn();
-//   const showCanvasFloatingToolbarForCollection = vi.fn(() => true);
-//   const hideCanvasFloatingToolbar = vi.fn();
-//   const setActiveTool = vi.fn();
-//   const setRightDockActiveTab = vi.fn();
-//   const toggleRightDock = vi.fn();
-//   const openDialog = vi.fn();
-//   // AI-REMOVED 2026-08-03:
-//   // Reason: select 手势不再通过可配置 RETURN_SELECT 快捷键匹配 Escape。
-//   // Trigger: ST2-RQ-002 禁止绑定 Escape。
-//   // Evidence: createHypergryphSelectGestureModule 直接判断 event.code / event.key。
-//   // Replacement: 下方只用于验证未调用的 mock。
-//   // Risk: Low
-//   // Human Review: Required
-//   //
-//   // Original code:
-//   // const isShortcutFor = vi.fn((shortcutKeyId: string, code: string | null) => (
-//   //   shortcutKeyId === SHORTCUT_KEY.RETURN_SELECT && code === "Escape"
-//   // ));
-//   const isShortcutFor = vi.fn(() => false);
-//   const isDedicatedLogisticsDevice = vi.fn((definitionId: string) => [
-//     "belt_straight_1x1",
-//     "belt_turn_cw_1x1",
-//     "belt_turn_ccw_1x1",
-//     "pipe_straight_1x1",
-//     "pipe_turn_cw_1x1",
-//     "pipe_turn_ccw_1x1",
-//   ].includes(definitionId));
-//
-//   return {
-//     context: {
-//       workspace: {
-//         audio: { actions: { unlock: vi.fn(), playDeviceInspector: vi.fn() }, destroy: vi.fn() },
-//         registry: {
-//           queries: {
-//             isDedicatedLogisticsDevice,
-//             isGeneralLogisticsDevice: vi.fn(() => false),
-//           },
-//         },
-//         editor: {
-//           state: {
-//             collections: {
-//               selection: createSelectionCollection(selectedEntityIds),
-//             },
-//           },
-//           actions: {
-//             addToCollection,
-//             clearCollection,
-//           },
-//         },
-//       } as unknown as WorkspaceContract,
-//       appHost: {
-//         // AI-REMOVED 2026-09-26:
-//         // Reason: 音效运行时提取为独立 Audio 模块，App 仅保留 UI 与真实手势入口。
-//         // Trigger: 用户授权模块重构并逐项确认 AudioAction、AudioContract 和 WorkspaceContract.audio。
-//         // Evidence: 原 AppHost 持有控制器，WorkbenchApp effect 管理播放订阅生命周期。
-//         // Replacement: 同一夹具的 workspace.audio 公共契约
-//         // Risk: 需验证手势解锁、单实例生命周期及销毁后的迟到任务。
-//         // Human Review: Required
-//         // Original code:
-//         //         // AppHost 新增音频服务；此既有路由夹具仅验证主动打开属性的动作派发。
-//         //         deviceAudio: { playInspector: vi.fn() },
-//         state: {
-//           settings: {
-//             // AI-REMOVED 2026-09-10:
-//             // Reason: 操作模式总开关已废弃，不再保留关闭分支
-//             // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-//             // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-//             // Replacement: 测试状态不再需要模式字段
-//             // Risk: 历史 false 设置统一使用当前操作行为。
-//             // Human Review: Required
-//             //
-//             // Original code:
-//             // hypergryphOperationMode,
-//             hypergryphSelectionRightDockSync: selectionRightDockSync,
-//             hypergryphInspectorOpenOnSecondClick: inspectorOpenOnSecondClick,
-//             gameUseInspectorPanel: useInspectorPanel,
-//           },
-//           workbench: {
-//             rightDockOpen,
-//           },
-//         },
-//         internalState: {
-//           activeTool,
-//           workbench: {
-//             rightDockOpen,
-//           },
-//         },
-//         internalActions: {
-//           isShortcutFor,
-//           openDialog,
-//           setActiveTool,
-//           setRightDockActiveTab,
-//           showCanvasFloatingToolbarForCollection,
-//           hideCanvasFloatingToolbar,
-//           toggleRightDock,
-//         },
-//       } as unknown as AppHost,
-//       keyboard: emptyKeyboardSnapshot(),
-//     },
-//     addToCollection,
-//     clearCollection,
-//     showCanvasFloatingToolbarForCollection,
-//     hideCanvasFloatingToolbar,
-//     isDedicatedLogisticsDevice,
-//     isShortcutFor,
-//     openDialog,
-//     setActiveTool,
-//     setRightDockActiveTab,
-//     toggleRightDock,
-//   };
-// }
 function createContext(activeTool: ActiveTool = "select", selectedEntityIds: readonly string[] = [], rightDockOpen = false,
   selectionRightDockSync = true, useInspectorPanel = true, inspectorOpenOnSecondClick = false) {
   const test = createCanvasTestSession({ activeTool, document: createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/req048/select-input.schema7.json")) }); cleanups.push(test.dispose);
@@ -1048,128 +761,6 @@ function createContext(activeTool: ActiveTool = "select", selectedEntityIds: rea
     setRightDockActiveTab: vi.spyOn(test.app.internalActions, "setRightDockActiveTab"), toggleRightDock: vi.spyOn(test.app.internalActions, "toggleRightDock") };
 }
 
-// AI-REMOVED 2026-11-12:
-// Reason: 选择测试的旧 App/Editor 桩不再符合 Canvas/View 契约。
-// Trigger: REQ-048 会话输入归属迁移。
-// Evidence: 选择模块读取 context.canvas，而非全局工作台工具状态。
-// Replacement: createCanvasTestSession，真实动作与 call-through spies。
-// Risk: 保留原行为断言；原生命中由浏览器验证。
-// Human Review: Required
-// Original code:
-// function createOverlapSelectContext(): {
-//   context: GestureActionContext<AppHost>;
-//   addToCollection: ReturnType<typeof vi.fn>;
-//   clearCollection: ReturnType<typeof vi.fn>;
-//   overlapEntityMenu: WorkbenchOverlapEntityMenuController;
-// } {
-//   const registry = createRegistryContract();
-//   const overlapEntityMenu = new WorkbenchOverlapEntityMenuController();
-//   // AI-REMOVED 2026-09-14:
-//   // Reason: 场景构造已批量固化为带版本的蓝图文件。
-//   // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-//   // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-//   // Replacement: src/tests/fixtures/blueprints/simulation/select-gesture-module/index.json
-//   // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/app/input/select-gesture-module/index.json。
-//   // Risk: Low；断言与被测动作不变。
-//   // Human Review: Required
-//   // Original code:
-//   // const bottomEntity = entity("bottom-entity", "belt_straight_1x1");
-//   // AI-REMOVED 2026-09-14:
-//   // Reason: 场景构造已批量固化为带版本的蓝图文件。
-//   // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-//   // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-//   // Replacement: src/tests/fixtures/blueprints/simulation/select-gesture-module/index.json
-//   // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections-extra/app/input/select-gesture-module/index.json。
-//   // Risk: Low；断言与被测动作不变。
-//   // Human Review: Required
-//   // Original code:
-//   // const topEntity = entity("top-entity", "pipe_straight_1x1");
-//   // AI-REMOVED 2026-09-14:
-//   // Reason: 场景构造已批量固化为带版本的蓝图文件。
-//   // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-//   // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-//   // Replacement: src/tests/fixtures/blueprints/collections-extra/app/input/select-gesture-module/index.json
-//   // Risk: Low；断言与被测动作不变。
-//   // Human Review: Required
-//   // Original code:
-//   // [bottomEntity, topEntity]
-//   const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/select-gesture-module/scene-02-variant-1.schema7.json"));
-//   const addToCollection = vi.fn();
-//   const clearCollection = vi.fn();
-//   const selection = createSelectionCollection([]);
-//   const editor = {
-//     state: {
-//       suppressBelts: false,
-//       suppressPipes: false,
-//       collections: {
-//         selection,
-//       },
-//     },
-//     queries: {
-//       listEntities: () => entities,
-//       getEntityById: (entityId: string) =>
-//         entities.find((candidate) => candidate.id === entityId) ?? null,
-//       findGridCellForClientPixelPoint: (point: { readonly x: number; readonly y: number }) => ({
-//         x: Math.floor(point.x),
-//         y: Math.floor(point.y),
-//       }),
-//     },
-//     actions: {
-//       addToCollection,
-//       clearCollection,
-//     },
-//   };
-//   const appHost = {
-//     state: {
-//       settings: {
-//         // AI-REMOVED 2026-09-10:
-//         // Reason: 操作模式总开关已废弃，不再保留关闭分支
-//         // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-//         // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-//         // Replacement: 测试状态不再需要模式字段
-//         // Risk: 历史 false 设置统一使用当前操作行为。
-//         // Human Review: Required
-//         //
-//         // Original code:
-//         // hypergryphOperationMode: true,
-//         hypergryphSelectionRightDockSync: true,
-//         hypergryphInspectorOpenOnSecondClick: false,
-//         gameUseInspectorPanel: true,
-//       },
-//       workbench: {
-//         rightDockOpen: true,
-//       },
-//     },
-//     internalState: {
-//       activeTool: "select",
-//       workbench: {
-//         rightDockOpen: true,
-//       },
-//     },
-//     internalActions: {
-//       openDialog: vi.fn(),
-//       setRightDockActiveTab: vi.fn(),
-//       hideCanvasFloatingToolbar: vi.fn(),
-//       toggleRightDock: vi.fn(),
-//     },
-//     overlapEntityMenu,
-//     workspace: {
-//       editor,
-//       registry,
-//     },
-//   } as unknown as AppHost;
-//
-//   return {
-//     context: {
-//       workspace: appHost.workspace,
-//       appHost,
-//       keyboard: emptyKeyboardSnapshot(),
-//     } as unknown as GestureActionContext<AppHost>,
-//     addToCollection,
-//     clearCollection,
-//     overlapEntityMenu,
-//   };
-// }
 function createOverlapSelectContext() {
   const test = createCanvasTestSession({ document: createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/select-gesture-module/scene-02-variant-1.schema7.json")),
     viewport: { center: { x: 50, y: 50 }, gridSize: 1 / 16, displayRotation: 0 } }); cleanups.push(test.dispose);
@@ -1190,23 +781,6 @@ function entity(id: string, definitionId = "filling_pd_mc_1"): WorldEntity {
   };
 }
 
-// AI-REMOVED 2026-11-12:
-// Reason: 选择测试的旧 App/Editor 桩不再符合 Canvas/View 契约。
-// Trigger: REQ-048 会话输入归属迁移。
-// Evidence: 选择模块读取 context.canvas，而非全局工作台工具状态。
-// Replacement: createCanvasTestSession，真实动作与 call-through spies。
-// Risk: 保留原行为断言；原生命中由浏览器验证。
-// Human Review: Required
-// Original code:
-// function emptyKeyboardSnapshot(): KeyboardSnapshot {
-//   return {
-//     pressedKeys: new Set(),
-//     lastCode: null,
-//     lastKey: null,
-//     lastKeyCode: null,
-//     modifiers: emptyModifiers(),
-//   };
-// }
 
 
 function keyDownEvent(options: {
@@ -1233,139 +807,11 @@ function emptyModifiers() {
   };
 }
 
-// AI-REMOVED 2026-11-12:
-// Reason: 选择测试的旧 App/Editor 桩不再符合 Canvas/View 契约。
-// Trigger: REQ-048 会话输入归属迁移。
-// Evidence: 选择模块读取 context.canvas，而非全局工作台工具状态。
-// Replacement: createCanvasTestSession，真实动作与 call-through spies。
-// Risk: 保留原行为断言；原生命中由浏览器验证。
-// Human Review: Required
-// Original code:
-// function createToolbarFallbackContext(options: {
-//   activeTool: ActiveTool;
-//   selectedEntities: readonly WorldEntity[];
-//   // AI-REMOVED 2026-09-10:
-//   // Reason: 操作模式总开关已废弃，不再保留关闭分支
-//   // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-//   // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-//   // Replacement: 测试状态不再需要模式字段
-//   // Risk: 历史 false 设置统一使用当前操作行为。
-//   // Human Review: Required
-//   //
-//   // Original code:
-//   // hypergryphOperationMode?: boolean;
-// }): {
-//   appHost: AppHost;
-//   hideCanvasFloatingToolbar: ReturnType<typeof vi.fn>;
-// } {
-//   const hideCanvasFloatingToolbar = vi.fn();
-//   const selectedEntityMap = new Map(
-//     options.selectedEntities.map((selectedEntity) => [selectedEntity.id, selectedEntity]),
-//   );
-//
-//   const appHost = {
-//     state: {
-//       settings: {
-//         // AI-REMOVED 2026-09-10:
-//         // Reason: 操作模式总开关已废弃，不再保留关闭分支
-//         // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-//         // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-//         // Replacement: 测试状态不再需要模式字段
-//         // Risk: 历史 false 设置统一使用当前操作行为。
-//         // Human Review: Required
-//         //
-//         // Original code:
-//         // hypergryphOperationMode: options.hypergryphOperationMode ?? true,
-//       },
-//     },
-//     internalState: new TestInternalState(options.activeTool),
-//     internalActions: {
-//       hideCanvasFloatingToolbar,
-//     },
-//     workspace: {
-//       editor: {
-//         state: {
-//           collections: {
-//             selection: createSelectionCollection(
-//               options.selectedEntities.map((selectedEntity) => selectedEntity.id),
-//             ),
-//           },
-//         },
-//         queries: {
-//           getEntityById: (entityId: string) => selectedEntityMap.get(entityId) ?? null,
-//         },
-//       },
-//       registry: {
-//         queries: {
-//           isDedicatedLogisticsDevice: (definitionId: string) => [
-//             "belt_straight_1x1",
-//             "belt_turn_cw_1x1",
-//             "belt_turn_ccw_1x1",
-//             "pipe_straight_1x1",
-//             "pipe_turn_cw_1x1",
-//             "pipe_turn_ccw_1x1",
-//           ].includes(definitionId),
-//         },
-//       },
-//     },
-//   } as unknown as AppHost;
-//
-//   return {
-//     appHost,
-//     hideCanvasFloatingToolbar,
-//   };
-// }
 function createToolbarFallbackContext(options: { activeTool: ActiveTool; selectedEntities: readonly WorldEntity[] }) {
   return createContext(options.activeTool, options.selectedEntities.map(entity => entity.id));
 }
 
-// AI-REMOVED 2026-11-12:
-// Reason: 选择测试的旧 App/Editor 桩不再符合 Canvas/View 契约。
-// Trigger: REQ-048 会话输入归属迁移。
-// Evidence: 选择模块读取 context.canvas，而非全局工作台工具状态。
-// Replacement: createCanvasTestSession，真实动作与 call-through spies。
-// Risk: 保留原行为断言；原生命中由浏览器验证。
-// Human Review: Required
-// Original code:
-// function createSelectionCollection(entityIds: readonly string[]): EntityCollection {
-//   const selection = [...entityIds] as string[] & EntityCollection;
-//
-//   selection.contains = (entityId: string) => selection.includes(entityId);
-//
-//   return selection;
-// }
 
 
-// AI-REMOVED 2026-11-12:
-// Reason: 选择测试的旧 App/Editor 桩不再符合 Canvas/View 契约。
-// Trigger: REQ-048 会话输入归属迁移。
-// Evidence: 选择模块读取 context.canvas，而非全局工作台工具状态。
-// Replacement: createCanvasTestSession，真实动作与 call-through spies。
-// Risk: 保留原行为断言；原生命中由浏览器验证。
-// Human Review: Required
-// Original code:
-// function createToolbarFallbackGestureContext(appHost: AppHost): GestureActionContext<AppHost> {
-//   return {
-//     workspace: appHost.workspace,
-//     appHost,
-//     keyboard: emptyKeyboardSnapshot(),
-//   } as unknown as GestureActionContext<AppHost>;
-// }
 
 
-// AI-REMOVED 2026-11-12:
-// Reason: 选择测试的旧 App/Editor 桩不再符合 Canvas/View 契约。
-// Trigger: REQ-048 会话输入归属迁移。
-// Evidence: 选择模块读取 context.canvas，而非全局工作台工具状态。
-// Replacement: createCanvasTestSession，真实动作与 call-through spies。
-// Risk: 保留原行为断言；原生命中由浏览器验证。
-// Human Review: Required
-// Original code:
-// class TestInternalState {
-//   public activeTool: ActiveTool;
-//
-//   public constructor(activeTool: ActiveTool) {
-//     this.activeTool = activeTool;
-//     makeAutoObservable(this, {}, { autoBind: true });
-//   }
-// }

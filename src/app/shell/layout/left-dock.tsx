@@ -15,16 +15,6 @@ import { isMobileOrTabletScreenProfile } from "@/shared/browser/screen-profile";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
-// AI-REMOVED 2026-05-10:
-// Reason: 左侧删除面板已废弃，不再注册到左侧 dock。
-// Trigger: 产品要求移除左侧“删除模式”和整个删除面板。
-// Evidence: delete 面板只由 LeftDock 的 PANEL_COMPONENTS / PANEL_ORDER 控制显示。
-// Replacement: None
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import { DeletePanel } from "@/app/shell/panels/delete-panel";
 
 type LeftDockPanelId = Exclude<ActivePanel, null>;
 
@@ -48,18 +38,6 @@ const PANEL_COMPONENTS: Record<LeftDockPanelId, ComponentType<{ appHost: AppHost
   simulation: SimulationPanel,
 };
 
-// AI-REMOVED 2026-05-10:
-// Reason: 左侧删除面板已废弃，不再出现在左侧 dock 的标题、组件映射和排序中。
-// Trigger: 产品要求移除左侧“删除模式”和整个删除面板。
-// Evidence: LeftDock 是左侧 dock 面板标题和渲染顺序的唯一入口。
-// Replacement: None
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// delete: "workbench.panel.delete.title",
-// delete: DeletePanel,
-// const PANEL_ORDER: LeftDockPanelId[] = ["placement", "delete", "blueprint", "history", "base", "simulation"];
 const PANEL_ORDER: LeftDockPanelId[] = ["placement", "region", "blueprint", "history", "base", "simulation"];
 
 const LeftDockView = observer(function LeftDockView({

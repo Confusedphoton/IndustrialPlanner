@@ -1,4 +1,5 @@
 import { observer } from "mobx-react-lite";
+import { translateKnownText } from "@/app/shell/shared/known-text-translation";
 import type { AppHost } from "@/app/host/app-host";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { EditorHistoryRecord } from "@/domain/editor/editor-history";
@@ -15,16 +16,6 @@ export const HistoryPanel = observer(function HistoryPanel({ appHost }: { appHos
   const redoDepth = history?.redoDepth ?? 0;
   const canUndo = editor !== null && undoDepth > 0;
   const canRedo = editor !== null && redoDepth > 0;
-  // AI-REMOVED 2026-05-10:
-  // Reason: 历史面板头部只保留撤销与重做，清空历史操作已从该入口下线。
-  // Trigger: 用户要求删除“删除所有历史”按钮。
-  // Evidence: 当前组件直接渲染该按钮，且本地状态只用于该按钮的禁用态。
-  // Replacement: None
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // const canClear = editor !== null && records.length > 0;
   const isReady = history?.isReady ?? true;
 
   return (
@@ -32,18 +23,6 @@ export const HistoryPanel = observer(function HistoryPanel({ appHost }: { appHos
       <section className={cm(styles, "placeholder-section history-actions-section")}>
         <div className={cm(styles, "placeholder-section-header")}>
           <h3>{t("workbench.section.historyActions")}</h3>
-          {/*
-            AI-REMOVED 2026-05-10:
-            Reason: 历史面板头部不再显示操作区角标。
-            Trigger: 用户要求删除该面板两个区域的角标。
-            Evidence: 当前角标仅在此处渲染撤销/重做深度信息。
-            Replacement: None
-            Risk: Low
-            Human Review: Required
-
-            Original code:
-            <span className="pill">{`${undoDepth}/${redoDepth}`}</span>
-          */}
         </div>
         <div className={cm(styles, "history-action-grid")}>
           <button
@@ -76,45 +55,12 @@ export const HistoryPanel = observer(function HistoryPanel({ appHost }: { appHos
             </span>
             <span className={cm(styles, "history-action-label")}>{t("workbench.button.redo")}</span>
           </button>
-          {/*
-            AI-REMOVED 2026-05-10:
-            Reason: 历史面板顶部操作区只保留撤销与重做，清空历史按钮已移除。
-            Trigger: 用户要求删除“删除所有历史”操作。
-            Evidence: 该按钮仅在此处渲染，且需求明确要求去掉。
-            Replacement: None
-            Risk: Low
-            Human Review: Required
-
-            Original code:
-            <button
-              data-ui-button-id="history-action-clear"
-              disabled={!canClear}
-              onClick={() => {
-                editor?.actions.clearDocumentHistory();
-              }}
-              type="button"
-            >
-              {t("workbench.button.clearHistory")}
-            </button>
-          */}
         </div>
       </section>
 
       <section className={cm(styles, "placeholder-section history-lane-section")}>
         <div className={cm(styles, "placeholder-section-header")}>
           <h3>{t("workbench.section.historyLane")}</h3>
-          {/*
-            AI-REMOVED 2026-05-10:
-            Reason: 历史面板头部不再显示历史列表区角标。
-            Trigger: 用户要求删除该面板两个区域的角标。
-            Evidence: 当前角标仅在此处渲染历史记录数量/加载状态。
-            Replacement: None
-            Risk: Low
-            Human Review: Required
-
-            Original code:
-            <span className="pill">{isReady ? records.length : t("workbench.history.loading")}</span>
-          */}
         </div>
         {isReady && records.length === 0 ? (
           <div className={cm(styles, "history-empty-state")}>
@@ -149,25 +95,6 @@ export const HistoryPanel = observer(function HistoryPanel({ appHost }: { appHos
                   <span className={cm(styles, "history-record-sequence")}>#0</span>
                   <span className={cm(styles, "history-record-title")}>{t("workbench.history.initialState")}</span>
                 </span>
-                {/*
-                  AI-REMOVED 2026-05-10:
-                  Reason: 历史条目卡片只显示序号和标题，其余信息不再展示。
-                  Trigger: 用户要求删除历史记录条目中的额外信息，并强制单行显示。
-                  Evidence: 初始状态条目原先额外渲染了状态文本。
-                  Replacement: None
-                  Risk: Low
-                  Human Review: Required
-
-                  Original code:
-                  <span className="history-record-main">
-                    <span className="history-record-title">{t("workbench.history.initialState")}</span>
-                    <span className="history-record-status">
-                      {cursorSequence === 0
-                        ? t("workbench.history.current")
-                        : t("workbench.history.applied")}
-                    </span>
-                  </span>
-                */}
               </button>
             ) : null}
           </div>
@@ -204,36 +131,8 @@ function HistoryRecordButton({
     >
       <span className={cm(styles, "history-record-main")}>
         <span className={cm(styles, "history-record-sequence")}>{`#${record.sequence}`}</span>
-        <span className={cm(styles, "history-record-title")}>{translateHistoryLabel(record.action.label, _translate)}</span>
+        <span className={cm(styles, "history-record-title")}>{translateKnownText(record.action.label, _translate)}</span>
       </span>
-      {/*
-        AI-REMOVED 2026-05-10:
-        Reason: 历史条目卡片只显示序号和标题，其余状态、时间和详情信息不再展示。
-        Trigger: 用户要求删除历史记录条目中的额外信息，并强制单行显示。
-        Evidence: 当前按钮额外渲染了状态、时间与 detail 文本，直接造成信息冗余和多行布局。
-        Replacement: None
-        Risk: Low
-        Human Review: Required
-
-        Original code:
-        <span className="history-record-main">
-          <span className="history-record-title">{record.action.label}</span>
-          <span className="history-record-status">
-            {isCurrent
-              ? translate("workbench.history.current")
-              : isRedoable
-                ? translate("workbench.history.redoable")
-                : translate("workbench.history.applied")}
-          </span>
-        </span>
-        <span className="history-record-meta">
-          <span>{`#${record.sequence}`}</span>
-          <span>{formatHistoryTime(record.createdAt)}</span>
-        </span>
-        {detail === "" ? null : (
-          <span className="history-record-detail">{detail}</span>
-        )}
-      */}
     </button>
   );
 }
@@ -260,29 +159,3 @@ function _formatHistoryTime(createdAt: string): string {
   });
 }
 
-/**
- * 2026-11-13：历史记录标签由编辑器以中文写入并随历史持久化，显示时按已知标签翻译；
- * 未登记的标签原样显示。
- */
-const HISTORY_LABEL_KEYS: Readonly<Record<string, string>> = {
-  "修改设备配置": "historyLabel.editConfig",
-  "切换设备模式": "historyLabel.switchMode",
-  "创建仓库物品链接": "historyLabel.createDepotLink",
-  "创建暗管链接": "historyLabel.createConduitLink",
-  "删除区域": "historyLabel.deleteRegion",
-  "删除设备": "historyLabel.deleteDevice",
-  "删除设备配置键": "historyLabel.clearConfig",
-  "放置蓝图": "historyLabel.placeBlueprint",
-  "放置设备": "historyLabel.placeDevice",
-  "断开暗管链接": "historyLabel.unlinkConduit",
-  "旋转设备": "historyLabel.rotateDevice",
-  "移动设备": "historyLabel.moveDevice",
-  "移除仓库物品链接": "historyLabel.removeDepotLink",
-  "铺设物流": "historyLabel.layLogistics",
-  "清理已重新配置的暗管链接": "historyLabel.cleanConduitLinks",
-};
-
-function translateHistoryLabel(label: string, translate: (key: string) => string): string {
-  const key = HISTORY_LABEL_KEYS[label];
-  return key === undefined ? label : translate(key);
-}

@@ -68,7 +68,6 @@ export function createEditorPlacementActions({
       const currentDocument = document.getSnapshot();
       const preview = resolveCollection(EntityCollectionType.preview);
       // draft ID 仅需与已有 draft 去重；最终 ID 在 commit 时基于文档状态重新分配。
-      // AI-CORRECTION 2026-11-12: 显式 entityId 必须在草稿与提交中保持稳定，创建和确认均拒绝冲突。
       if (request.entityId !== undefined && (request.entityId.trim().length === 0
         || isBaseBuiltinEntityId(request.entityId)
         || Object.hasOwn(currentDocument.entities, request.entityId)
@@ -91,7 +90,9 @@ export function createEditorPlacementActions({
         id: nextDraftId,
         definitionId: targetDefinitionId,
         position: rawPosition,
-        rotation: 0,
+        rotation: request.rotation !== undefined && definition.footprint.width === definition.footprint.height
+          ? request.rotation
+          : 0,
         config: {},
         tags: [],
         originalEntityId: nextDraftId,
@@ -257,9 +258,7 @@ export function createEditorPlacementActions({
         drafts: state.drafts,
       });
 
-      // 2026-05-24: 禁止确认放置 outside-base 的设备。
-      // AI-CORRECTION 2026-08-23: 多设备蓝图改为提交合法子集；单设备仍保持原有整次拒绝语义。
-      // AI-CORRECTION 2026-10-10: 提交时再次排除无核心基地的核心，覆盖基地切换或遗留虚影。
+      // 禁止确认放置 outside-base 的设备。
       const outsideBaseDraftIds = resolveOutsideBasePlacementEntityIds({
         document: currentDocument,
         entityIds: previewDrafts.map((draft) => draft.id),
@@ -279,25 +278,6 @@ export function createEditorPlacementActions({
         return false;
       }
 
-      /*
-        AI-REMOVED 2026-08-23:
-        Reason: 原逻辑只要蓝图中任一设备存在 outside-base 就拒绝整张蓝图，无法兼容设备放置规则演进后的旧蓝图。
-        Trigger: 用户要求约束无共同解时允许自由选择位置，并只放下该位置可放置的设备。
-        Evidence: placement validation 已逐实体给出 outside-base；提交层可以安全筛选合法子集。
-        Replacement: 上方 outsideBaseDraftIds + committedPreviewDrafts。
-        Risk: Medium；蓝图可能部分落地，因此历史记录和 slotLinks 必须同步收敛到实际提交子集。
-        Human Review: Required
-
-        Original code:
-        const validationByEntityId = state.internalTransientState.placementValidationByEntityId;
-        if (previewDrafts.some((draft) => {
-          const validation = validationByEntityId[draft.id];
-
-          return validation?.reasons.some((reason) => reason.code === "outside-base") ?? false;
-        })) {
-          return false;
-        }
-      */
 
       // 构建 definition 查找表，用于物流族判定。
       const definitionMap = new Map(
@@ -315,25 +295,9 @@ export function createEditorPlacementActions({
 
       // 蓝图包含协议核心时，标记当前文档中的协议核心为被替换实体，
       // 使其在同一 commit 内被移除，避免出现两个协议核心。
-      // AI-CORRECTION 2026-08-23: 仅实际提交的合法子集可以触发现有协议核心替换。
-      // AI-CORRECTION 2026-10-11: 草稿箱放置核心正常新增，不替换文档中的其他核心。
       const committedPreviewHasProtocolCore = committedPreviewDrafts.some(
         (draft) => workspace.registry.queries.isProtocolCore(draft.definitionId),
       );
-      /*
-        AI-REMOVED 2026-08-23:
-        Reason: 部分蓝图提交时，已跳过的协议核心不得删除文档中现有协议核心。
-        Trigger: 蓝图提交改为只提交不含 outside-base 的合法子集。
-        Evidence: previewDrafts 包含被跳过成员，committedPreviewDrafts 才是实际写入集合。
-        Replacement: committedPreviewHasProtocolCore
-        Risk: Low
-        Human Review: Required
-
-        Original code:
-        const previewHasProtocolCore = previewDrafts.some(
-          (draft) => workspace.registry.queries.isProtocolCore(draft.definitionId),
-        );
-      */
       if (committedPreviewHasProtocolCore
         && !allowsFreeProtocolCorePlacement(currentDocument.baseId, workspace.registry.baseDefinitions)) {
         for (const [entityId, entity] of Object.entries(currentDocument.entities)) {
@@ -362,7 +326,6 @@ export function createEditorPlacementActions({
       );
 
       // 替换 entity ID：基于文档现有实体 + 本次已分配 ID，按 definitionId 重新分配最终 ID。
-      // AI-CORRECTION 2026-11-12: 显式单体身份不重分配；即使同位置替换也不能覆盖同 ID 的已有实体。
       const oldIdToNewId = new Map<string, string>();
       const newlyAllocatedIds = new Set<string>();
       const existingDocumentIds = new Set(Object.keys(currentDocument.entities));
@@ -381,7 +344,6 @@ export function createEditorPlacementActions({
       for (const draft of committedPreviewDrafts) {
         const newId = oldIdToNewId.get(draft.id) ?? draft.id;
 
-        // AI-CORRECTION 2026-06-09: config 中不再存储 entity ID 引用（links 已迁移至 document.slotLinks），
         // 不再需要 rewriteEntityIdInConfig 重写。
         const nextConfig = cloneEntityConfig(draft.config);
 
@@ -393,7 +355,7 @@ export function createEditorPlacementActions({
           config: nextConfig,
           tags: [...draft.tags],
         };
-        // 2026-05-31: 防御 entityOrder 重复——若已存在则跳过。
+        // 防御 entityOrder 重复——若已存在则跳过。
         if (!nextEntityOrder.includes(newId)) {
           nextEntityOrder.push(newId);
         }
@@ -422,7 +384,6 @@ export function createEditorPlacementActions({
         );
       }
 
-      // AI-CORRECTION 2026-05-24: 必须在 documentWriter.commit 之前清除 placement state，
       // 因为 commit → setSnapshot → notify 会同步触发 hookPlacementValidation，
       // 而 syncPlacementValidationState 的 resolveValidationEntries 会包含 state.drafts。
       // 如果 drafts 未清除，预览 draft 会与刚放置的正式实体位置重叠，导致两者都被打入
@@ -442,16 +403,6 @@ export function createEditorPlacementActions({
         ...cloneRegionAnnotation(region),
         id: createPlacementRegionId(reservedRegionIds),
       }));
-      // AI-CORRECTION 2026-11-12: 清理推迟至所有提交校验成功之后、发布之前，失败保留原预览。
-      // AI-REMOVED 2026-11-12:
-      // Reason: 策略拒绝或 reducer 抛错时不能丢失预览。
-      // Trigger: REQ-048 原子放置提交。
-      // Evidence: 原清理先于 documentWriter 的可失败计算。
-      // Replacement: 下方 beforePublish。
-      // Risk: Low
-      // Human Review: Required
-      // Original code:
-      // clearPlacementState(state);
 
       const committedDocument = documentWriter.commit({
         action: historyAction,
@@ -504,20 +455,6 @@ function resolvePlacementCenterOffset(size: number): number {
   return Math.floor((size - 1) / 2);
 }
 
-// AI-REMOVED 2026-11-12:
-// Reason: 放置解析统一到会话空间。
-// Trigger: REQ-048。
-// Evidence: 唯一调用已迁移。
-// Replacement: placement-space.ts。
-// Risk: Low
-// Human Review: Required
-// Original code:
-// function resolveBaseDefinition(
-//   baseId: string,
-//   baseDefinitions: EditorActionsContext["workspace"]["registry"]["baseDefinitions"],
-// ) {
-//   return baseDefinitions.find((definition) => definition.id === baseId) ?? null;
-// }
 
 
 const PLACEMENT_SELF = "[Self]";
@@ -616,7 +553,6 @@ function generatePlacementDraftId(
  * 格式：`definitionId:N`，N 为当前最大值 +1（从 1 开始）。
  *
  * @param definitionId 设备定义 ID，如 "item_port_storager_1"
- * AI-CORRECTION 2026-07-19: 当前无前缀示例为 "storager_1"；上行保留迁移前 ID 作历史审计。
  * @param existingDocumentIds 提交前文档快照中所有实体 ID 的集合
  * @param newlyAllocatedIds 本次 commit 中已分配的最终 ID 集合（防止同一批 draft 内冲突）
  */
@@ -739,7 +675,6 @@ function resolveSlotLinkEntityIdForPlacement(
   if (draftId !== undefined) {
     return draftId;
   }
-  // AI-CORRECTION 2026-06-10: warehouse 和 base-builtin 哨兵不在 blueprint entities 中，
   // 但必须保留——否则取货口/暗管出口的仓库链接会被丢弃。
   if (entityId === "warehouse" || entityId.startsWith("warehouse:") || entityId.startsWith("base-builtin:")) {
     return entityId;
@@ -750,14 +685,12 @@ function resolveSlotLinkEntityIdForPlacement(
 /**
  * 解析物流族标签，返回 "belt" | "pipe" | null。
  * 与 placement-validation.ts 中的同名函数保持语义一致。
- * AI-CORRECTION 2026-07-27: 当前返回 registry 物流族类型，不再解析 tag；
  * 字面值由 LOGISTICS_KIND 统一提供。
  */
 function resolveLogisticsKind(
   definition: EntityDefinition,
   registryQueries: RegistryQuery,
 ): LogisticsKind | null {
-  // AI-CORRECTION 2026-07-27: 物流族由 RegistryQuery 判定，不再读取 BeltFamily / PipeFamily tag。
   if (registryQueries.isBeltFamily(definition.id)) {
     return LOGISTICS_KIND.belt;
   }
@@ -775,8 +708,6 @@ function resolveLogisticsKind(
  * 仅单设备 placement draft 参与替换：
  *   - previewDrafts 必须恰好有 1 个，且其 id 以 "placement-draft:" 开头
  *   - 该 draft 覆盖的文档实体与之属于同一物流族（BeltFamily / PipeFamily）
- *     AI-CORRECTION 2026-07-27: 同族关系由 isBeltFamily / isPipeFamily Query 判定。
- *   - 两者占据的 grid rect 完全相同
  *
  * 蓝图放置（多个 previewDrafts）不会被此函数处理，避免批量误删。
  */

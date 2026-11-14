@@ -18,9 +18,6 @@ import { WULING_FENCE_DEFINITIONS } from "./wuling-fence-definition";
 //      这些设备直接参与仿真求解。
 //   2. 空壳设备 — 通过 createEmptyEntityDefinition() 创建，
 //      只声明 id/nameKey/spriteId/footprint/uiGroup/tags。
-// AI-CORRECTION 2026-08-20: 空壳设备现同时显式声明独立的 UI 图标路径 iconPath。
-//      用于放置面板展示，其端口/槽位/配方由外部配方注册表（recipe-definition.ts）
-//      中的 machineId 对应关系在编译时注入。标记 "v2 metadata sync"。
 //
 // Inspector 声明规则（对应《模拟器抽象方式》§4）：
 //   每个设备的 inspectors[] 声明"用哪个面板编辑哪个路径"。
@@ -59,16 +56,6 @@ import {
   type ItemDomainFlag as ItemDomainFlags,
 } from "@/domain/shared/item-domain-flags";
 import { LOGISTICS_KIND } from "@/domain/shared/logistics";
-// AI-REMOVED 2026-08-19:
-// Reason: 暗管入口的公共 behavior 已提升到 EntityDefinition.simulationBehaviors，不再按模式键声明。
-// Trigger: 用户要求移除两个模式下完全重复的 simulationModeConfigs。
-// Evidence: 本文件已无 Active Code 使用 SIMULATION_MODE，仅审计注释保留历史模式键。
-// Replacement: None
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 import { DEFAULT_PORT_PRIORITY_GROUP } from "@/shared/port-priority-groups";
 import { MAIN_CRAFT_GROUP_TAG } from "@/shared/entity-variants";
 import { RECIPE_CHANNEL_AUTOMATIC_MODE_CONFIG_KEY } from "@/shared/recipe-channel-behavior";
@@ -120,7 +107,6 @@ type StorageSlotOptionsInput = Partial<Pick<
 type PortEdgeInput = "N" | "S" | "W" | "E";
 
 /** 槽位物品过滤类型：solid（固体）/ liquid（液体）/ any（任意） */
-/** AI-CORRECTION 2026-07-10: 过滤类型新增 gas 与 fluid；fluid 表示液体或气体，仅管道基础设施默认使用。 */
 type FilterType = ItemFilterType;
 
 /** createPort() 的输入类型 — 必填字段 + 可选覆盖字段 */
@@ -141,9 +127,6 @@ type EntityDefinitionInput = Omit<EntityDefinition, "inspectors" | "placementBeh
 };
 
 /** createEmptyEntityDefinition() 的输入类型 — 基础字段必填，电力字段可选 */
-/** AI-CORRECTION 2026-09-10: 展示字段 spriteAnimation / spriteOffset 同样可选，与完整设备复用素材契约。 */
-/** AI-CORRECTION 2026-09-10: 本次仅放开实际需要的 spriteAnimation；空壳设备尚无 spriteOffset 接入需求。 */
-/** AI-CORRECTION 2026-09-18: power_diffuser_1 的新 spatial.json 已要求空壳设备接入 spriteOffset。 */
 type EmptyEntityDefinitionInput = Pick<
   EntityDefinitionInput,
   "id" | "nameKey" | "spriteId" | "iconPath" | "footprint" | "uiGroup" | "tags"
@@ -209,18 +192,6 @@ function createGasItemWhitelistAcceptRule(
   };
 }
 
-// AI-REMOVED 2026-06-06:
-// Reason: 协议核心输入缓存不再通过 submitMode 每 tick 入仓；统一走 WarehouseSink 动态入仓。
-// Trigger: 用户要求 submit mode 机制彻底删除，未来都用 warehouse sink 或配方交货。
-// Evidence: RUN_ID 20260606-041337-509040 中 every-tick 全局提交导致产线目标箱库存被清空。
-// Replacement: WAREHOUSE_SINK_TAG + simulation/runtime/runtime-slot-access.ts 动态仓库槽写入。
-// Risk: Medium
-// Human Review: Required
-//
-// Original code:
-// const AUTO_SUBMIT_EVERY_TICK_SLOT_OPTIONS = {
-//   submitMode: "every-tick",
-// } as const satisfies StorageSlotOptionsInput;
 
 // =========================================================================
 // 工厂函数
@@ -231,10 +202,8 @@ function createGasItemWhitelistAcceptRule(
  * 确保 recipeChannels/inspectors 始终为非 null/undefined 的规范化值。
  * 对应《模拟器抽象方式》§2 — Entity 定义层的完整属性默认值。
  * 订正（2026-05-06）：domain EntityDefinition 已移除 recipe/cacheLinks。
- * AI-CORRECTION 2026-06-09: links 字段已从 EntityDefinition 移除，所有槽位链接统一存于 document.slotLinks。
  */
 function createEntityDefinition(definition: EntityDefinitionInput): EntityDefinition {
-  // AI-CORRECTION 2026-08-01: normalizePipeFamilyFluidDefinition 已移除。
   // 其 acceptRule/itemFilterType 转换为恒等映射，capacity 强制覆盖与当前显式定义冲突。
   // 管道族实体定义已直接使用 FluidDomain。
   const normalizedDefinition = definition;
@@ -262,19 +231,6 @@ function createEntityDefinition(definition: EntityDefinitionInput): EntityDefini
     recipeChannels: [...(normalizedDefinition.recipeChannels ?? [])],
     placementBehaviors: normalizePlacementBehaviors(normalizedDefinition.placementBehaviors ?? []),
     inspectors: appendMissingInspectors(declaredInspectors, recipeMachineInspectors),
-    // AI-REMOVED 2026-08-19:
-    // Reason: 实体定义工厂不再规范化任何按 SimulationMode 覆盖的 Registry 配置。
-    // Trigger: 用户要求删除 simulationModeConfigs 及对应基础设施。
-    // Evidence: EntityDefinition 已移除 simulationModeConfigs 属性。
-    // Replacement: 基础 inspectors 与 simulationBehaviors。
-    // Risk: Medium - 模式专用 Inspector/behavior 不再可声明。
-    // Human Review: Required
-    //
-    // Original code:
-    // simulationModeConfigs: normalizeSimulationModeConfigs(
-    //   normalizedDefinition,
-    //   recipeMachineInspectors,
-    // ),
   };
 }
 
@@ -289,104 +245,13 @@ function createProtocolCoreDefinitions(
       nameKey: "registry.entity.sp_sub_hub_1.name",
       spriteId: "item_port_sp_sub_hub_1",
       iconPath: "device-icons/item_port_sp_sub_hub_1.webp",
-      // AI-CORRECTION 2026-09-18: 四级次级协议核心画布仅在西侧扩展 1 格，网站 spatial.json 为 11×9。
       spriteOffset: { topView: { x: -1, y: 0, width: 11, height: 9 } },
       uiGroup: "hidden",
     },
   ];
 }
 
-// AI-REMOVED 2026-08-19:
-// Reason: Registry 不再支持按 SimulationMode 覆盖 behavior 或 Inspector，因此不再需要模式配置规范化。
-// Trigger: 用户要求删除 simulationModeConfigs 及全部对应基础设施。
-// Evidence: EntityDefinition 与 RegistryQuery 已移除模式配置接口，App 和 Compiler 改读基础声明。
-// Replacement: createEntityDefinition 中现有基础 inspectors 规范化；simulationBehaviors 为静态 Registry 声明。
-// Risk: Medium - 未来若有真实模式差异必须重新设计统一模型。
-// Human Review: Required
-//
-// Original code:
-// function normalizeSimulationModeConfigs(
-//   definition: EntityDefinitionInput,
-//   generatedInspectors: readonly EntityInspectorDeclaration[],
-// ): EntityDefinition["simulationModeConfigs"] {
-//   if (definition.simulationModeConfigs === undefined) {
-//     return undefined;
-//   }
-//
-//   return Object.fromEntries(
-//     Object.entries(definition.simulationModeConfigs).map(([mode, config]) => {
-//       if (config === undefined) {
-//         return [mode, config];
-//       }
-//
-//       const inspectors = config.inspectors === undefined
-//         ? undefined
-//         : appendMissingInspectors(
-//             [{ type: INSPECTOR_TYPE.problem }, ...config.inspectors],
-//             generatedInspectors,
-//           );
-//       return [mode, {
-//         ...(config.behaviors === undefined ? {} : { behaviors: [...config.behaviors] }),
-//         ...(inspectors === undefined ? {} : { inspectors }),
-//       }];
-//     }),
-//   );
-// }
 
-// AI-REMOVED 2026-08-01:
-// Reason: normalizePipeFamilyFluidDefinition 与 normalizePipeFamilyAcceptRule 已删除。
-//   前者对 acceptRule 和 itemFilterType 的转换为恒等映射（acceptRuleFromPortKind 默认返回 FluidDomain），
-//   且其对 capacity 的强制覆盖（capacity: 2）与管道族实体定义中显式声明的 capacity: 1 冲突。
-// Trigger: 用户发现 pipe_splitter 定义 capacity=1 但运行时显示 capacity=2。
-// Evidence: normalizePipeFamilyFluidDefinition 中无条件 `capacity: 2` 覆盖了 createSlots 中的 [1]。
-// Replacement: 管道族实体定义（splitter/converger/connector/admission）直接使用 FluidDomain 作为 itemFilterType。
-// Risk: Low — acceptRuleFromPortKind 已保证端口 acceptRule 默认即为 FluidDomain。
-// Human Review: Not Required
-//
-// Original code:
-// function normalizePipeFamilyFluidDefinition(definition: EntityDefinitionInput): EntityDefinitionInput {
-//   if (!isLogisticsFamilyDefinitionId(LOGISTICS_KIND.pipe, definition.id)) {
-//     return definition;
-//   }
-//   return {
-//     ...definition,
-//     portGroups: definition.portGroups.map((portGroup) =>
-//       portGroup.isPipe
-//         ? {
-//             ...portGroup,
-//             ports: portGroup.ports.map((port) => ({
-//               ...port,
-//               acceptRule: normalizePipeFamilyAcceptRule(port.acceptRule),
-//             })),
-//           }
-//         : portGroup,
-//     ),
-//     storageSlotGroups: definition.storageSlotGroups.map((storageSlotGroup) =>
-//       (storageSlotGroup.kind & FluidDomain) !== 0
-//         ? {
-//             ...storageSlotGroup,
-//             slots: storageSlotGroup.slots.map((slot) => ({
-//               ...slot,
-//               itemFilterType: slot.itemFilterType === ItemDomainFlag.Liquid
-//                 ? FluidDomain
-//                 : slot.itemFilterType,
-//               capacity: 2,
-//             })),
-//           }
-//         : storageSlotGroup,
-//     ),
-//   };
-// }
-//
-// function normalizePipeFamilyAcceptRule(
-//   acceptRule: PortDefinition["acceptRule"],
-// ): PortDefinition["acceptRule"] {
-//   return acceptRule.base.kind === "domain"
-//     && acceptRule.base.flags === ItemDomainFlag.Liquid
-//     && acceptRule.exclude.length === 0
-//     ? { base: { kind: "domain", flags: FluidDomain }, exclude: [] }
-//     : acceptRule;
-// }
 
 function normalizePlacementBehaviors(
   behaviors: readonly EntityPlacementBehaviorDeclaration[],
@@ -470,10 +335,8 @@ function appendMissingInspectors(
 /**
  * 创建空壳实体定义。
  * 只声明 id/nameKey/spriteId/footprint/uiGroup/tags + 电力字段。
- * AI-CORRECTION 2026-08-20: 空壳定义现在还必须显式声明 iconPath，UI 图标不再从 id 或 spriteId 推导。
  * inspectors/portGroups/storageSlotGroups/recipeChannels/portStorageBindings 均为空数组。
  * 订正（2026-05-06）：domain EntityDefinition 已移除 recipe/cacheLinks。
- * AI-CORRECTION 2026-06-09: EntityDefinition.links 已移除，空壳定义不再设置 links: []。
  *
  * 空壳设备的实际端口/槽位/配方由外部配方注册表（recipe-definition.ts）中
  * machineId 对应关系在 Topology Compiler 编译时注入。
@@ -544,7 +407,6 @@ function createPort(
  * direction：input（物品流入）/ output（物品流出）/ bidirectional（编译时分解为 input+output）。
  * 每个端口的 acceptRule 默认按 kind 推导，
  * priorityGroup 默认 5，roundRobinSeed 默认按 index 递增。
- * AI-CORRECTION 2026-07-28: kind 已改为域位标志，isPipe 由端口描述符显式提供。
  *
  * 对应《仿真运行原理》§3.1 中 Port 的 accept-rule 配置。
  */
@@ -561,16 +423,6 @@ function createPortGroup(
     ports: ports.map((port, index) => ({
       ...port,
       acceptRule: port.acceptRule ?? acceptRuleFromPortKind(descriptor.kind),
-      // AI-REMOVED 2026-06-12:
-      // Reason: createPortGroup 不再为端口补 count 默认值，per-tick count 已从设计中删除。
-      // Trigger: 用户确认 per tick count 应删除。
-      // Evidence: PortDefinition.count 已注释化删除。
-      // Replacement: admissionRule 只在 admission input port 上显式声明。
-      // Risk: Medium - 旧依赖 count 的测试或配置需要迁移。
-      // Human Review: Required
-      //
-      // Original code:
-      // count: port.count ?? "unlimited",
       priorityGroup: port.priorityGroup ?? DEFAULT_PORT_PRIORITY_GROUP,
       roundRobinSeed: port.roundRobinSeed ?? index,
     })),
@@ -585,10 +437,6 @@ function createPortGroup(
  * - itemFilterType：solid/liquid/any — 决定可存放的物品域
  * - lock：锁定物品 ID，null=不锁定。用户可通过 entity.config["slots[N].lock"] 覆盖
  * - ignoreStock：忽略仓库库存检查，取货口/出货口常用
- * AI-CORRECTION 2026-07-10: itemFilterType 现在还支持 gas 与 fluid；fluid 表示 liquid/gas。
- * AI-CORRECTION 2026-07-28: itemFilterType 已改为域位标志，联合域通过位或表达。
- * AI-CORRECTION 2026-06-06: submitMode 不再作为可配置运行时语义；槽位仅保留 domain 默认字段，入仓改用 WarehouseSink 或配方。
- * AI-CORRECTION 2026-06-06: domain 默认 submitMode 字段也已删除；createSlot 不再生成旧提交字段。
  */
 function createSlot(
   id: string,
@@ -605,24 +453,11 @@ function createSlot(
     initialItemType: options.initialItemType ?? null,
     initialCount: options.initialCount ?? 0,
     ignoreStock: options.ignoreStock ?? false,
-    // AI-REMOVED 2026-06-06:
-    // Reason: StorageSlotDefinition 已删除 submitMode / submitIntervalSeconds，registry 不再生成默认提交字段。
-    // Trigger: 用户要求 submit mode 机制彻底删除。
-    // Evidence: simulation 编译槽位和 runtime 全局提交扫描已删除对应字段。
-    // Replacement: WarehouseSink tag / r_warehouse_submit recipe.
-    // Risk: Medium - 旧 config 同名键仅作为蓝图遗留数据存在，不进入实体定义默认值。
-    // Human Review: Required
-    //
-    // Original code:
-    // submitMode: "never",
-    // submitIntervalSeconds: null,
   };
 }
 
 /**
  * 批量创建同质槽位（相同 itemFilterType，不同 capacity）。
- * AI-CORRECTION 2026-06-06: 支持传入同质槽位共享 options，用于批量设置 submitMode 等槽位行为。
- * AI-CORRECTION 2026-06-06: submitMode 已删除，options 仅用于 lock / initial / ignoreStock 等静态槽位属性。
  * 槽位 ID 格式为 "${prefix}_1", "${prefix}_2", ...
  */
 function createSlots(
@@ -643,7 +478,6 @@ function createSlots(
  * 存储组的输入/输出能力由绑定的端口方向决定；
  * 配方原料/产物角色由 Recipe Channel 声明。
  *
- * AI-CORRECTION 2026-05-13: role 参数已删除。
  * 原 role 推导 slotType → ingredientNodeIds/productNodeIds 的职责已由 Recipe Channel 接管。
  *
  * 每个存储槽组编译后对应一个求解图节点。
@@ -745,16 +579,6 @@ type DirectionalBufferLayoutInput = {
   domain: ItemDomainFlags;
   direction: "input" | "output";
   capacities: number[];
-  // AI-REMOVED 2026-07-16:
-  // Reason: 用户要求拆解机不再通过 helper 生成定义，注册表保持显式字典声明；该覆盖字段因此没有保留价值。
-  // Trigger: 用户明确希望持续去除 helper，直接写入设备定义。
-  // Evidence: itemFilterType 覆盖仅由 item_port_dismantler_1 使用；拆解机已在下方展开完整定义。
-  // Replacement: item_port_dismantler_1.storageSlotGroups 中显式声明 fluid_output_buffer。
-  // Risk: Low - 其他 createSimpleProductionDevice 调用仍使用既有默认物态推导。
-  // Human Review: Required
-  //
-  // Original code:
-  // itemFilterType?: FilterType;
 };
 
 function resolveSlotFilterType(domain: DirectionalBufferLayoutInput["domain"]): FilterType {
@@ -766,9 +590,6 @@ function resolveSlotFilterType(domain: DirectionalBufferLayoutInput["domain"]): 
  *
  * 每个 layout 声明一个方向性缓冲（input/output, item/fluid, 多容量），
  * 函数自动生成对应的定义片段，减少样板代码。
- * AI-CORRECTION 2026-07-16: layout 可显式覆盖 itemFilterType，用于声明兼容液体与气体的生产设备缓存。
- * AI-CORRECTION 2026-07-16: 上述覆盖机制已按用户要求撤回；特殊设备改用显式字典声明。
- * AI-CORRECTION 2026-07-28: layout.kind 已拆为稳定 ID 前缀与域位标志。
  */
 function createSimpleProductionDevice(
   layouts: readonly DirectionalBufferLayoutInput[],
@@ -794,17 +615,6 @@ function createSimpleProductionDevice(
       createSlots(
         `${layout.direction}_${layout.idPrefix}_slot`,
         layout.capacities,
-        // AI-REMOVED 2026-07-16:
-        // Reason: itemFilterType 覆盖字段已撤回，helper 恢复原有默认物态推导。
-        // Trigger: 用户要求拆解机脱离 createSimpleProductionDevice，避免为单个设备扩展 helper。
-        // Evidence: item_port_dismantler_1 已显式声明气液兼容缓存。
-        // Replacement: resolveSlotFilterType(layout.kind)。
-        // AI-CORRECTION 2026-07-28: layout.kind 已拆为 idPrefix 与 domain，现调用 resolveSlotFilterType(layout.domain)。
-        // Risk: Low
-        // Human Review: Required
-        //
-        // Original code:
-        // layout.itemFilterType ?? resolveSlotFilterType(layout.kind),
         resolveSlotFilterType(layout.domain),
       ),
     )),
@@ -820,9 +630,6 @@ function createSimpleProductionDevice(
  * 从端口 kind 推导默认 acceptRule。
  * item → { base: { kind: "solid" }, exclude: [] }
  * fluid → { base: { kind: "fluid" }, exclude: [] }
- * AI-CORRECTION 2026-07-18: fluid 端口默认 acceptRule 从 { kind: "liquid" } 改为 { kind: "fluid" }，
- *   使所有流体端口（含暗管系列）同时接受液体和气体。旧的 PipeFamily normalize 逻辑成为无害的恒等映射。
- * AI-CORRECTION 2026-07-28: acceptRule 域分支改为 { kind: "domain", flags }，不再使用域字符串。
  *
  * 对应《仿真运行原理》§3.1 表格中 Port 的 acceptRule 默认值。
  */
@@ -852,22 +659,8 @@ const FLUID_PIPE_PORT = {
  *   - inputs: any(1) — 接受任意物品
  *   - outputs: same-as-input(1) — 输出与输入相同物品
  * 订正（2026-05-04）：传送带默认 2 秒；管道类设备在定义处显式传入 0.5 秒。
- * AI-CORRECTION 2026-07-23: 管道现为 1 秒周期，并由运行时生成 2 件优先、1 件兜底的双配方。
  * 订正（2026-05-05）：推进阶段若输出缓存可接收，则立即写入产物、消耗原料并结束当前 run；仅在推进阶段无法完整输出时，才留待二次结算阶段处理。
  */
-// 订正（2026-05-06）：domain EntityDefinition 已移除 recipe 字段，createTransportRecipe 已删除。
-// AI-REMOVED 2026-05-29:
-// Reason: createRecipeShell JSDoc 块描述的代码已删除，其引用的 inspector 概念已另行重构为 submitToWarehouse。
-// Replacement: 无（被删除代码无替代者）。
-// Risk: Low
-// Human Review: Not Required
-//
-// Original JSDoc:
-// /**
-//  * 创建空配方壳（生产设备初始配方占位）。
-//  * ... recipeId=null 时表示使用内联配方；
-//  * 用户在 submitToWarehouse 面板中选择外部配方后 recipeId 被设置为实际配方 ID。
-//  */
 
 /** 创建有向缓存代理链接定义。 */
 // 订正（2026-05-06）：domain EntityDefinition 已移除 cacheLinks 字段，createCacheLink 已删除。
@@ -886,8 +679,6 @@ const FLUID_PIPE_PORT = {
 //   5. advancedManufacturing  — 高级合成制造
 //   6. resourcePower          — 资源与电力
 //   7. hidden                 — 隐藏设备（不显示在放置面板）
-// AI-CORRECTION 2026-08-14: 新增第 8 类 cheat，仅允许在放置面板显示，不进入百科等发现入口。
-// AI-CORRECTION 2026-10-12: 新增第 9 类 agriculture，承载普通田块等农业建筑。
 //
 // 每个设备的注释标注了：
 //   - 对应的游戏设备名称
@@ -897,7 +688,6 @@ const FLUID_PIPE_PORT = {
 //   - Link 类型
 // =========================================================================
 
-// AI-CORRECTION 2026-07-19: 下方历史段落注释中的 item_/item_port_ 设备名保留为游戏数据与素材 ID；
 // 当前 EntityDefinition.id 已统一移除这些前缀，nameKey 与 spriteId 不随设备定义 ID 改名。
 
 function createCheatInfiniteDeviceDefinition(options: {
@@ -929,7 +719,6 @@ function createCheatInfiniteDeviceDefinition(options: {
     requiresPower: false,
     powerDemand: 0,
     portGroups: [
-      // AI-CORRECTION 2026-09-17: 四个销毁输入端口分别绑定独立缓存，避免不同物品争用同一槽位而串行化。
       createPortGroup(
         "infinite_input",
         portDescriptor,
@@ -1017,20 +806,6 @@ function createCheatInfiniteDeviceDefinition(options: {
         type: INSPECTOR_TYPE.infiniteStorage,
         slotGroupIds: ["infinite_output_buffer"],
       },
-      // AI-REMOVED 2026-08-14:
-      // Reason: 空 slotConfig 会同时隐藏输入销毁缓存；自动 Inspector 生成器现已只排除被 infiniteStorage 接管的输出槽组。
-      // Trigger: 无限输出槽不得挂载普通槽位编辑器，但 destroy_buffer 仍应遵循配方设备的可检查性约束。
-      // Evidence: createRecipeMachineIngredientSlotInspectors 已按 infiniteStorage.slotGroupIds 排除专用槽组。
-      // Replacement: createRecipeMachineIngredientSlotInspectors 生成 slotConfig(["destroy_buffer"])。
-      // AI-CORRECTION 2026-09-17: 上述单缓存替代说明现扩展为四个方向各自的 destroy_buffer 槽组。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // {
-      //   type: INSPECTOR_TYPE.slotConfig,
-      //   slotGroupIds: [],
-      // },
     ],
   });
 }
@@ -1058,15 +833,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * 本设备 slot.lock=null（未锁定），用户可通过 storageManagement 面板锁定。
    */
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "storager_1",
     nameKey: "registry.entity.storager_1.name",
     spriteId: "item_port_storager_1",
-    // AI-CORRECTION 2026-09-18: 网站现为 close_idle 动画轨道，协议储存箱进入统一 status 动画链。
     spriteAnimation: { closeIdleMode: "hold-last" },
     iconPath: "device-icons/item_port_storager_1.webp",
     footprint: { width: 3, height: 3 },
-    // AI-CORRECTION 2026-09-11: fix2 撤回 3×4 重复包，改用与占地一致的 3×3 画布。
     spriteOffset: { topView: { x: 0, y: 0, width: 3, height: 3 } },
     uiGroup: "warehouse",
     displayOrder: 401,
@@ -1160,7 +932,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_log_hongs_bus",
     iconPath: "device-icons/item_port_log_hongs_bus.webp",
     footprint: { width: 4, height: 8 },
-    // AI-CORRECTION 2026-09-18: 新网站 spatial.json 将画布收敛为与逻辑占地相同的 4×8。
     spriteOffset: { topView: { x: 0, y: 0, width: 4, height: 8 } },
     uiGroup: "warehouse",
     displayOrder: 405,
@@ -1188,8 +959,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_port_log_hongs_bus_source",
     iconPath: "device-icons/item_port_log_hongs_bus_source.webp",
     footprint: { width: 4, height: 4 },
-    // AI-CORRECTION 2026-09-13: 用户授权按网站 spatial.json 同步绘图范围；逻辑占地与端口保持既有定义。
-    // AI-CORRECTION 2026-09-18: 新网站 spatial.json 将画布收敛为与逻辑占地相同的 4×4。
     spriteOffset: { topView: { x: 0, y: 0, width: 4, height: 4 } },
     uiGroup: "warehouse",
     displayOrder: 406,
@@ -1278,12 +1047,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    *   - 1 个槽位组，5 个槽位（反应池普通版）
    *   - 组内互斥：同物品只能出现在一个槽
    *
-   * AI-CORRECTION 2026-05-30: 移除 shared_output_buffer；输入输出端口全部绑定 shared_input_buffer；
    * recipeChannel 的 ingredient/product 都只引用 shared_input_buffer。
    * 配方：immediate-consume（进度 0% 时立即扣除原料）
    */
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "mix_pool_1",
     nameKey: "registry.entity.mix_pool_1.name",
     spriteId: "item_port_mix_pool_1",
@@ -1301,23 +1068,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: [PRODUCER_TAG, "武陵"],
     requiresPower: true,
     powerDemand: 50,
-    // AI-REMOVED 2026-07-16:
-    // Reason: 首轮机械定位误把固气转化机的计量配置写入反应池；反应池没有 consume_input。
-    // Trigger: 注册表补充 meteredConsumption 时命中了相邻的 powerDemand: 50 定义。
-    // Evidence: item_port_mix_pool_1 的端口组不包含 consume_input，编译后配置必然失效。
-    // Replacement: transmuter_2_gastrans.meteredConsumption。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // meteredConsumption: {
-    //   inputPortGroupId: "consume_input",
-    //   itemIds: ["item_gas_inert"],
-    //   windowSeconds: 60,
-    //   startThreshold: 6,
-    //   acceptanceLimit: 30,
-    //   gasDiffusionRange: null,
-    // },
     portGroups: [
       createPortGroup(
         "item_output",
@@ -1407,7 +1157,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * 配方：immediate-consume + recipeShell（选择外部配方 "r_crusher_*"）
    */
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "grinder_1",
     nameKey: "registry.entity.grinder_1.name",
     spriteId: "item_port_grinder_1",
@@ -1446,16 +1195,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     recipeChannels: [
-      // AI-REMOVED 2026-06-06:
-      // Reason: 粉碎机产物不应写回原料槽；配方输入/产出槽位应由 Recipe Channel 精确声明。
-      // Trigger: 用户指出 Recipe Channel 本应决定产物槽位，并要求先修正错误设备定义。
-      // Evidence: 《仿真运行原理》§3.5 明确 productStorageGroupIds 表示配方产物写入哪些存储组；旧写法依赖 compiler 用端口方向过滤多余角色。
-      // Replacement: 下方 default channel：ingredient=item_input_buffer，product=item_output_buffer。
-      // Risk: Low - 当前 compiler 仍做端口方向过滤，修正后现有运行行为应保持不变；后续改为 channel-based 时避免产物回填输入槽。
-      // Human Review: Required
-      //
-      // Original code:
-      // createRecipeChannel("default", ["item_input_buffer", "item_output_buffer"], ["item_input_buffer", "item_output_buffer"]),
       createRecipeChannel("default", ["item_input_buffer"], ["item_output_buffer"]),
     ],
     portStorageBindings: [
@@ -1463,18 +1202,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
     ],
     inspectors: [
-      // AI-REMOVED 2026-07-16:
-      // Reason: 首次批量补丁误将物流物品 Inspector 挂载到粉碎机，粉碎机不是物流设备。
-      // Trigger: 用户要求仅对所有物流设备挂载“物流物品”Inspector。
-      // Evidence: item_port_grinder_1 的 uiGroup 为 basicProduction，且不在 GENERAL_LOGISTICS_DEVICE_IDS 注册集合中。
-      // Replacement: belt_straight_1x1 等 14 个物流设备的显式 inspectors 声明。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // {
-      //   type: INSPECTOR_TYPE.logisticsItem,
-      // },
       {
         type: INSPECTOR_TYPE.recipeStatus,
         channelIds: ["default"],
@@ -1489,10 +1216,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    *
    * 本设备是 item_port_filling_pd_mc_1 的液体变体（alter-variant:liquid），
    * 增加了 fluid_input 端口和对应的 fluid 输入缓冲。
-   * AI-CORRECTION 2026-07-16: fluid_input 及其输入缓冲现兼容 liquid/gas。
    */
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "filling_pd_mc_1_liquid",
     nameKey: "registry.entity.filling_pd_mc_1_liquid.name",
     spriteId: "item_port_liquid_filling_pd_mc_1",
@@ -1544,16 +1269,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     recipeChannels: [
-      // AI-REMOVED 2026-06-06:
-      // Reason: 液体填充器产物不应写回物品/液体原料槽，原料槽也不应参与产物落槽。
-      // Trigger: 用户指出 Recipe Channel 本应决定产物槽位，并要求先修正错误设备定义。
-      // Evidence: 《仿真运行原理》§3.5 明确 ingredientStorageGroupIds / productStorageGroupIds 分别声明配方原料与产物存储组。
-      // Replacement: 下方 default channel：ingredient=item_input_buffer+fluid_input_buffer，product=item_output_buffer。
-      // Risk: Low - 当前 compiler 仍做端口方向过滤，修正后现有运行行为应保持不变；后续改为 channel-based 时避免产物回填输入槽。
-      // Human Review: Required
-      //
-      // Original code:
-      // createRecipeChannel("default", ["item_input_buffer", "fluid_input_buffer", "item_output_buffer"], ["item_input_buffer", "fluid_input_buffer", "item_output_buffer"]),
       createRecipeChannel("default", ["item_input_buffer", "fluid_input_buffer"], ["item_output_buffer"]),
     ],
     portStorageBindings: [
@@ -1569,7 +1284,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "filling_pd_mc_1",
     nameKey: "registry.entity.filling_pd_mc_1.name",
     spriteId: "item_port_filling_pd_mc_1",
@@ -1613,16 +1327,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
     recipeChannels: [
-      // AI-REMOVED 2026-06-06:
-      // Reason: 填充器产物不应写回原料槽；配方输入/产出槽位应由 Recipe Channel 精确声明。
-      // Trigger: 用户指出 Recipe Channel 本应决定产物槽位，并要求先修正错误设备定义。
-      // Evidence: 《仿真运行原理》§3.5 明确 productStorageGroupIds 表示配方产物写入哪些存储组；旧写法依赖 compiler 用端口方向过滤多余角色。
-      // Replacement: 下方 default channel：ingredient=item_input_buffer，product=item_output_buffer。
-      // Risk: Low - 当前 compiler 仍做端口方向过滤，修正后现有运行行为应保持不变；后续改为 channel-based 时避免产物回填输入槽。
-      // Human Review: Required
-      //
-      // Original code:
-      // createRecipeChannel("default", ["item_input_buffer", "item_output_buffer"], ["item_input_buffer", "item_output_buffer"]),
       createRecipeChannel("default", ["item_input_buffer"], ["item_output_buffer"]),
     ],
     portStorageBindings: [
@@ -1632,7 +1336,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   // =========================================================================
   // 传送带物流设备 (uiGroup: "beltLogistics" 或 "hidden")
-  // AI-CORRECTION 2026-07-27: 本节包含传送带节与传送带物流设备；传送带物流设备不包括传送带节。
   // 3 个传送带节使用 hidden，4 个传送带物流设备使用 beltLogistics。
   //
   // 传送带设备的特点（对应《仿真运行原理》§5.1.1-5.1.3）：
@@ -1647,22 +1350,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   // 订正（2026-05-06）：domain EntityDefinition 已移除 recipe/cacheLinks 字段，本注册表不再内联这些运行时配置。
   // =========================================================================
 
-  // AI-REMOVED 2026-07-27:
-  // Reason: BeltFamily tag 与 registry 内部 definition ID 分类重复，且无法表达“传送带节 / 传送带物流设备”的边界。
-  // Trigger: 用户要求传送带分类统一由 registry 常量和 RegistryQuery 提供。
-  // Evidence: logistics-definition-ids.ts 已定义 3 个传送带节和 4 个传送带物流设备；后者明确不包括传送带节。
-  // Replacement: RegistryQuery.isBelt / isBeltLogistics / isBeltFamily。
-  // Risk: Medium - 所有原 tag 消费端必须同步迁移到 RegistryQuery。
-  // Human Review: Required
-  //
-  // Original code:
-  // belt_straight_1x1 tags: ["BeltFamily", "ChevronHidden"]
-  // belt_turn_cw_1x1 tags: ["BeltFamily", "ChevronHidden"]
-  // belt_turn_ccw_1x1 tags: ["BeltFamily", "ChevronHidden"]
-  // log_splitter tags: ["BeltFamily", "OuterRingAllowed"]
-  // log_converger tags: ["BeltFamily", "OuterRingAllowed"]
-  // log_connector tags: ["BeltFamily", "ChevronHidden"]
-  // log_admission tags: ["BeltFamily"]
 
   /**
    * belt_straight_1x1 — 传送带直段（1×1）
@@ -1879,10 +1566,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         ],
       ),
     ],
-    // AI-CORRECTION 2026-05-18: 原端口 input=E, outputs=N/S/W。
     // 现改为 input=N, outputs=E/W/S，使得 rotation=0 时入口朝北。
     // 旧 v2 蓝图通过 LEGACY_DEVICE_REMAPPERS rotationOffset=90 兼容。
-    // AI-CORRECTION 2026-05-13: 原"无显式存储组 → 编译器自动合成"已失效。
     // 现改为显式 bidirectional+share-cap，与 belt_straight_1x1 结构一致，
     // 使编译器生成 input-view/output-view 节点 + share-cap link + reserved-item 搬运配方。
     storageSlotGroups: [
@@ -1946,10 +1631,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [createPort("out_s", 0, 0, "S")],
       ),
     ],
-    // AI-CORRECTION 2026-05-18: 原端口 inputs=N/E/S, output=W。
     // 现改为 inputs=N/E/W, output=S，使得 rotation=0 时出口朝南。
     // 旧 v2 蓝图通过 LEGACY_DEVICE_REMAPPERS rotationOffset=90 兼容。
-    // AI-CORRECTION 2026-05-13: 原 storageSlotGroups: [] 已失效。
     // 现改为显式 bidirectional+share-cap，与 belt_straight_1x1 结构一致。
     storageSlotGroups: [
       createStorageSlotGroup(
@@ -1977,12 +1660,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * item_log_connector — 连接器/十字路口（1×1）
    * 4 方向双通道独立运输：N↔S 与 W↔E 互不干扰。
    * 对应《仿真运行原理》§5.1 桥类设备双通道双槽位模型。
-   * AI-CORRECTION 2026-05-16: 从单通道 synthetic 节点重构为 NS/EW 双通道。
-   *   - ns_buffer: N+S 端口绑定，share-cap 拆分 input-view/output-view
-   *   - ew_buffer: W+E 端口绑定，share-cap 拆分 input-view/output-view
-   *   - NS channel: ns_buffer → ns_buffer（同通道搬运）
-   *   - EW channel: ew_buffer → ew_buffer（同通道搬运）
-   *   禁止 N↔E、N↔W 等跨方向输送。
    */
   createEntityDefinition({
     id: LOGISTICS_DEFINITION_ID_BY_KIND_AND_ROLE[LOGISTICS_KIND.belt].connector,
@@ -2071,7 +1748,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   // =========================================================================
   // 管道物流设备 (uiGroup: "pipeLogistics" 或 "hidden")
-  // AI-CORRECTION 2026-07-27: 本节包含管道节与管道物流设备；管道物流设备不包括管道节。
   // 3 个管道节使用 hidden，4 个管道物流设备使用 pipeLogistics。
   //
   // 管道设备与传送带结构相同（对应《仿真运行原理》§5.1.4）：
@@ -2079,42 +1755,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   //   - Cache Link
   //   - reserved-item 搬运配方
   // 订正（2026-05-04）：管道类搬运配方时间为 0.5 秒。
-  // AI-CORRECTION 2026-07-23: 管道搬运周期改为 1 秒，每周期按库存选择 2 件或 1 件配方。
-  //   - 仅物品域为 liquid
-  // AI-CORRECTION 2026-07-10: 管道默认接受 fluid（liquid/gas），普通设备 fluid 槽位仍默认 liquid。
-  // AI-CORRECTION 2026-07-23: PipeFamily 的显式槽位容量统一改为 2；直管与弯管的 synthetic 槽位由编译器同步扩容。
   // 订正（2026-05-06）：domain EntityDefinition 已移除 recipe/cacheLinks 字段，本注册表不再内联这些运行时配置。
   // =========================================================================
 
-  // AI-REMOVED 2026-07-23:
-  // Reason: 容量 1 无法容纳管道的 2 件优先配方。
-  // Trigger: 用户要求所有 PipeFamily 槽位容量上限统一为 2。
-  // Evidence: pipe_splitter、pipe_converger、pipe_connector(NS/EW)、pipe_admission 均使用显式槽位。
-  // Replacement: 对应 createSlots 容量数组改为 [2]，并由 normalizePipeFamilyFluidDefinition 兜底规范化。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // createSlots("slot", [1], "liquid")
-  // createSlots("ns_slot", [1], "liquid")
-  // createSlots("ew_slot", [1], "liquid")
 
-  // AI-REMOVED 2026-07-27:
-  // Reason: PipeFamily tag 与 registry 内部 definition ID 分类重复，且无法表达“管道节 / 管道物流设备”的边界。
-  // Trigger: 用户要求管道分类统一由 registry 常量和 RegistryQuery 提供。
-  // Evidence: logistics-definition-ids.ts 已定义 3 个管道节和 4 个管道物流设备；后者明确不包括管道节。
-  // Replacement: RegistryQuery.isPipe / isPipeLogistics / isPipeFamily。
-  // Risk: Medium - 所有原 tag 消费端必须同步迁移到 RegistryQuery。
-  // Human Review: Required
-  //
-  // Original code:
-  // pipe_straight_1x1 tags: ["武陵", "PipeFamily", "OuterRingAllowed"]
-  // pipe_turn_cw_1x1 tags: ["武陵", "PipeFamily", "OuterRingAllowed"]
-  // pipe_turn_ccw_1x1 tags: ["武陵", "PipeFamily", "OuterRingAllowed"]
-  // pipe_splitter tags: ["武陵", "PipeFamily", "OuterRingAllowed"]
-  // pipe_converger tags: ["武陵", "PipeFamily", "OuterRingAllowed"]
-  // pipe_connector tags: ["武陵", "PipeFamily", "ChevronHidden"]
-  // pipe_admission tags: ["武陵", "PipeFamily", "OuterRingAllowed"]
 
   /**
    * pipe_straight_1x1 — 管道直段（1×1）
@@ -2285,14 +1929,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         ],
       ),
     ],
-    // AI-CORRECTION 2026-05-18: 与 item_log_splitter 同步：原 input=E, outputs=N/S/W → input=N, outputs=E/W/S。
-    // AI-CORRECTION 2026-05-13: 原 storageSlotGroups: [] 已失效。
     // 现改为显式 bidirectional+share-cap（fluid），与 pipe 直段结构一致。
     storageSlotGroups: [
       createStorageSlotGroup(
         "fluid_buffer",
         FluidDomain,
-        // AI-CORRECTION 2026-07-30: 容量从 2 改为 1，配合 0.5s 单件配方回滚。
         createSlots("slot", [1], FluidDomain),
         "share-cap",
       ),
@@ -2347,14 +1988,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [createPort("out_s", 0, 0, "S")],
       ),
     ],
-    // AI-CORRECTION 2026-05-18: 与 item_log_converger 同步：原 inputs=N/E/S, output=W → inputs=N/E/W, output=S。
-    // AI-CORRECTION 2026-05-13: 原 storageSlotGroups: [] 已失效。
     // 现改为显式 bidirectional+share-cap（fluid），与 pipe 直段结构一致。
     storageSlotGroups: [
       createStorageSlotGroup(
         "fluid_buffer",
         FluidDomain,
-        // AI-CORRECTION 2026-07-30: 容量从 2 改为 1，配合 0.5s 单件配方回滚。
         createSlots("slot", [1], FluidDomain),
         "share-cap",
       ),
@@ -2376,14 +2014,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   /**
    * item_pipe_connector — 管道连接器/十字路口（1×1）
    * 4 方向双通道独立运输：N↔S 与 W↔E 互不干扰，ChevronHidden=不显示方向箭头。
-   * AI-CORRECTION 2026-08-19: ChevronHidden 仅在非物流布设模式隐藏端口提示；传送带/管道布设模式仍参与箭头、叉号与隐藏判定。
    * 对应《仿真运行原理》§5.1 桥类设备双通道双槽位模型。
-   * AI-CORRECTION 2026-05-16: 从单通道 synthetic 节点重构为 NS/EW 双通道。
-   *   - ns_buffer: N+S 端口绑定，share-cap 拆分 input-view/output-view
-   *   - ew_buffer: W+E 端口绑定，share-cap 拆分 input-view/output-view
-   *   - NS channel: ns_buffer → ns_buffer（同通道搬运）
-   *   - EW channel: ew_buffer → ew_buffer（同通道搬运）
-   *   禁止 N↔E、N↔W 等跨方向输送。
    */
   createEntityDefinition({
     id: LOGISTICS_DEFINITION_ID_BY_KIND_AND_ROLE[LOGISTICS_KIND.pipe].connector,
@@ -2439,7 +2070,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createStorageSlotGroup(
         "ns_buffer",
         FluidDomain,
-      // AI-CORRECTION 2026-07-30: 容量从 2 改为 1，配合 0.5s 单件配方回滚。
         createSlots("ns_slot", [1], FluidDomain),
         "share-cap",
       ),
@@ -2473,36 +2103,17 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   /**
    * item_port_udpipe_loader_1 — 地下管道装载口（3×3）
    * 流体输入方向。仅 1 个 input port(西)。
-   * AI-CORRECTION 2026-06-06: 默认行为改为销毁模式；进入 loader_buffer 的液体由隐藏配方消耗。
-   * AI-CORRECTION 2026-07-18: 槽位 itemFilterType 已从 "liquid" 改为 "fluid"，同时接受气体进入销毁。
-   * AI-CORRECTION 2026-08-19: 未直连时不再销毁流体；单基地与区域多基地均提交到各自仓库，已直连时仍使用 loader_buffer。
-   * AI-CORRECTION 2026-08-20: 解包坐标确认 0° 输入端口位于东侧；原“西”描述与端口定义同步订正。
    */
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "udpipe_loader_1",
     nameKey: "registry.entity.udpipe_loader_1.name",
     spriteId: "item_port_udpipe_loader_1",
-    // AI-CORRECTION 2026-09-18: 网站已交付 RUNNING/CLOSED/PORT_DISCONNECT 完整 RGBA status 轨道。
     spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_udpipe_loader_1.webp",
     footprint: { width: 3, height: 3 },
-    // AI-CORRECTION 2026-09-11: 180°端口校准同步翻转非占地扩展框，西侧扩展改到东侧。
-    // AI-CORRECTION 2026-09-11: 用户明确暂不处理 3D top 资源，保留原 topView 偏移，待素材包统一覆盖。
-    // AI-CORRECTION 2026-09-13: 用户授权按网站 spatial.json 同步绘图范围；逻辑占地与端口保持既有定义。
     spriteOffset: { topView: { x: 0, y: 0, width: 4, height: 3 } },
     uiGroup: "warehouse",
     displayOrder: 407,
-    // AI-REMOVED 2026-06-06:
-    // Reason: 暗管入口默认销毁进入流体，不能再由 WarehouseSink 直接写入仓库槽。
-    // Trigger: 用户要求未链接暗管入口销毁所有进入液体，并明确默认摆放为销毁模式。
-    // Evidence: runtime-slot-access.findInputSlotForItem 会优先将 WarehouseSink 输入写入仓库槽，导致本地隐藏销毁配方拿不到输入。
-    // Replacement: 本定义的 loader_buffer + r_udpipe_loader_void_fluid_any_internal。
-    // Risk: Medium - 已保存蓝图若依赖暗管入口入仓行为，运行结果会改为销毁液体。
-    // Human Review: Required
-    //
-    // Original code:
-    // tags: ["武陵", "OuterRingAllowed", WAREHOUSE_SINK_TAG],
     placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: ["武陵", "OuterRingAllowed"],
     requiresPower: false,
@@ -2512,31 +2123,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       strategy: ENTITY_INPUT_ROUTING_STRATEGY.warehouseSinkWhenUnlinked,
       storageSlotGroupIds: ["loader_buffer"],
     }],
-    // AI-REMOVED 2026-08-19:
-    // Reason: 两个仿真模式声明完全相同，公共行为不应伪装成模式差异。
-    // Trigger: 用户要求移除重复 simulationModeConfigs，并将暗管入口统一为基础 behavior。
-    // Evidence: single-base 与 regional-multi-base 均使用 warehouse-sink-when-unlinked，Topology Compiler 现支持基础行为回退。
-    // Replacement: 本定义的 simulationBehaviors。
-    // Risk: Low - 两种模式编译出的有效 behavior 保持不变。
-    // Human Review: Required
-    //
-    // Original code:
-    // simulationModeConfigs: {
-    //   [SIMULATION_MODE.singleBase]: {
-    //     behaviors: [{
-    //       type: ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting,
-    //       strategy: ENTITY_INPUT_ROUTING_STRATEGY.warehouseSinkWhenUnlinked,
-    //       storageSlotGroupIds: ["loader_buffer"],
-    //     }],
-    //   },
-    //   [SIMULATION_MODE.regionalMultiBase]: {
-    //     behaviors: [{
-    //       type: ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting,
-    //       strategy: ENTITY_INPUT_ROUTING_STRATEGY.warehouseSinkWhenUnlinked,
-    //       storageSlotGroupIds: ["loader_buffer"],
-    //     }],
-    //   },
-    // },
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -2545,16 +2131,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [createPort("in_w_1", 0, 1, "W")],
       ),
     ],
-    // AI-REMOVED 2026-06-06:
-    // Reason: 暗管入口需要本地槽位供隐藏销毁配方消费。
-    // Trigger: 用户要求默认销毁模式使用 0.5 秒销毁 1 流体的隐藏配方实现。
-    // Evidence: 无本地 storageSlotGroups/portStorageBindings 时，入口只能依赖 synthetic 输入节点或 WarehouseSink，无法稳定挂载槽位配置面板与销毁配方通道。
-    // Replacement: 下方 loader_buffer、void_fluid recipeChannel 和 bind_fluid_input。
-    // Risk: Medium - 编译拓扑节点从无显式缓存变为显式缓存。
-    // Human Review: Required
-    //
-    // Original code:
-    // storageSlotGroups: [],
     storageSlotGroups: [
       createStorageSlotGroup(
         "loader_buffer",
@@ -2562,31 +2138,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         createSlots("slot", [500], FluidDomain),
       ),
     ],
-    // AI-REMOVED 2026-08-19:
-    // Reason: 暗管入口在单基地与区域多基地模式下均于未直连时提交仓库，不再运行隐藏销毁配方。
-    // Trigger: 用户明确抛弃暗管入口销毁机制，统一为按当前运行架构提交仓库。
-    // Evidence: simulationModeConfigs 的两个模式均选择 warehouse-sink-when-unlinked；保留 channel 会留下无效销毁入口。
-    // Replacement: simulationModeConfigs 中统一的 warehouse-sink-when-unlinked behavior。
-    // Risk: 已保存文档中的 recipeChannels[0].manualRecipeOnly 配置会成为无效遗留键，但不会参与编译。
-    // Human Review: Required
-    //
-    // Original code:
-    // recipeChannels: [
-    //   // AI-CORRECTION 2026-06-07: loader_buffer 同时声明为产物槽，仅用于表达槽位配置的混合归属；销毁配方本身仍没有 outputs。
-    //   createRecipeChannel("void_fluid", ["loader_buffer"], ["loader_buffer"]),
-    // ],
     recipeChannels: [],
-    // AI-CORRECTION 2026-08-19: 上方审计记录中的 behavior 替代位置现为本定义的 simulationBehaviors；模式配置已不再重复声明公共行为。
-    // AI-REMOVED 2026-06-06:
-    // Reason: 暗管入口端口必须绑定到本地销毁槽位。
-    // Trigger: 用户要求未链接暗管入口销毁进入液体，并要求槽位挂载 Slot 配置 behavior。
-    // Evidence: 空绑定会让编译器创建 synthetic 输入槽，隐藏销毁配方无法绑定该自动槽组。
-    // Replacement: 下方 bind_fluid_input 绑定 fluid_input -> loader_buffer。
-    // Risk: Medium - 显式绑定改变拓扑节点 id。
-    // Human Review: Required
-    //
-    // Original code:
-    // portStorageBindings: [],
     portStorageBindings: [
       createBinding("bind_fluid_input", "fluid_input", "loader_buffer"),
     ],
@@ -2605,42 +2157,23 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * item_port_udpipe_unloader_1 — 暗管出口（3×3）
    *
    * 缓存组：1 个 universal（单槽 × 1 容量）
-   * AI-CORRECTION 2026-09-18: 当前改为隐藏 transport_input 与物理 unloader_buffer 两组流体槽，前者只供暗管运输配方读取。
-   * AI-CORRECTION 2026-06-06: 暗管系列槽位容量统一改为 500。
    * 求解图节点：1 个
    * 端口：1 fluid output(东)
-   * AI-CORRECTION 2026-08-20: 解包坐标确认 0° 输出端口位于西侧；原“东”描述与端口定义同步订正。
    *
    * 通过 warehouse-item-link 面板将槽位连接到仓库。
    * 与取货口结构一致，区别在于 kind="fluid" 限制仅可选流体（液体和气体）。
    * ignoreStock 可设为 true 实现无限取货。
    */
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "udpipe_unloader_1",
     nameKey: "registry.entity.udpipe_unloader_1.name",
     spriteId: "item_port_udpipe_unloader_1",
-    // AI-CORRECTION 2026-09-18: 网站已交付 RUNNING/CLOSED/PORT_DISCONNECT 完整 RGBA status 轨道。
     spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_udpipe_unloader_1.webp",
     footprint: { width: 3, height: 3 },
-    // AI-CORRECTION 2026-09-11: 180°端口校准同步翻转非占地扩展框，东侧扩展改到西侧。
-    // AI-CORRECTION 2026-09-11: 用户明确暂不处理 3D top 资源，保留原 topView 偏移，待素材包统一覆盖。
-    // AI-CORRECTION 2026-09-13: 用户授权按网站 spatial.json 同步绘图范围；逻辑占地与端口保持既有定义。
-    // AI-CORRECTION 2026-09-18: 新网站 spatial.json 将出口画布收敛为西侧扩展 1 格、总宽 4 格。
     spriteOffset: { topView: { x: -1, y: 0, width: 4, height: 3 } },
     uiGroup: "warehouse",
     displayOrder: 408,
-    // AI-REMOVED 2026-06-06:
-    // Reason: 暗管出口是生成/取货语义，WarehouseSink 只应表达输入入仓语义。
-    // Trigger: 用户明确默认暗管出口是生成模式，但没有选择任何物品。
-    // Evidence: runtime-slot-access 只在 input-view 节点识别 WarehouseSink；出口保留该 tag 无运行收益且会误导语义。
-    // Replacement: warehouseItemLink inspector + unloader_buffer。
-    // Risk: Low - 当前出口只有 output port，移除该 tag 不改变实际输送路径。
-    // Human Review: Required
-    //
-    // Original code:
-    // tags: ["武陵", "OuterRingAllowed", WAREHOUSE_SINK_TAG],
     placementWhitelist: WULING_PLACEMENT_WHITELIST,
     tags: ["武陵", "OuterRingAllowed"],
     requiresPower: false,
@@ -2665,8 +2198,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         createSlots("slot", [500], FluidDomain),
       ),
     ],
-    // AI-CORRECTION 2026-06-07: 暗管出口保留仓库取货式生成语义，但槽位在 channel 中同时作为原料/产物以显示为混合槽位。
-    // AI-CORRECTION 2026-09-18: 直连运输改为从隐藏 transport_input 读取并写入 unloader_buffer；单口出口以两个一秒单件 channel 形成 2/s 上限。
     recipeChannels: [
       createRecipeChannel("transport_1", ["transport_input"], ["unloader_buffer"]),
       createRecipeChannel("transport_2", ["transport_input"], ["unloader_buffer"]),
@@ -2730,9 +2261,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     requiresPower: false,
     powerDemand: 0,
-    // AI-CORRECTION 2026-06-06: 仓库存货口旋转 180°。
     // 原端口朝北(N)，现改为朝南(S)，使 rotation=0 方向与显示 sprite 对齐。
-    // AI-CORRECTION 2026-06-06: 撤销上述旋转，恢复端口朝北(N)。
     portGroups: [
       createPortGroup(
         "item_input",
@@ -2746,7 +2275,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "furnance_1",
     nameKey: "registry.entity.furnance_1.name",
     spriteId: "item_port_furnance_1",
@@ -2783,7 +2311,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "furnance_1_liquid",
     nameKey: "registry.entity.furnance_1_liquid.name",
     spriteId: "item_port_liquid_furnance_1",
@@ -2846,7 +2373,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "cmpt_mc_1",
     nameKey: "registry.entity.cmpt_mc_1.name",
     spriteId: "item_port_cmpt_mc_1",
@@ -2880,7 +2406,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "shaper_1",
     nameKey: "registry.entity.shaper_1.name",
     spriteId: "item_port_shaper_1",
@@ -2917,7 +2442,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "shaper_1_gas",
     nameKey: "registry.entity.shaper_1_gas.name",
     spriteId: "shaper_1_gas",
@@ -2990,7 +2514,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "seedcol_1",
     nameKey: "registry.entity.seedcol_1.name",
     spriteId: "item_port_seedcol_1",
@@ -3022,7 +2545,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "planter_1",
     nameKey: "registry.entity.planter_1.name",
     spriteId: "item_port_planter_1",
@@ -3059,7 +2581,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "planter_1_liquid",
     nameKey: "registry.entity.planter_1_liquid.name",
     spriteId: "item_port_hydro_planter_1",
@@ -3112,7 +2633,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "winder_1",
     nameKey: "registry.entity.winder_1.name",
     spriteId: "item_port_winder_1",
@@ -3144,7 +2664,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "tools_asm_mc_1",
     nameKey: "registry.entity.tools_asm_mc_1.name",
     spriteId: "item_port_tools_asm_mc_1",
@@ -3176,7 +2695,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "thickener_1",
     nameKey: "registry.entity.thickener_1.name",
     spriteId: "item_port_thickener_1",
@@ -3188,8 +2706,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: [PRODUCER_TAG],
     requiresPower: true,
     powerDemand: 50,
-    // AI-CORRECTION 2026-08-20: 0° 端口按解包 liquid_purifier_1 顺时针旋转 90° 后的坐标对齐。
-    // AI-CORRECTION 2026-08-20: 上一行误挂在 thickener_1；本设备端口没有变更，订正目标见 liquid_purifier_1。
     portGroups: [
       createPortGroup(
         "item_input",
@@ -3210,7 +2726,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "power_sta_1",
     nameKey: "registry.entity.power_sta_1.name",
     spriteId: "item_port_power_sta_1",
@@ -3235,14 +2750,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ]),
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "mix_pool_2",
     nameKey: "registry.entity.mix_pool_2.name",
     spriteId: "item_port_mix_pool_2",
     iconPath: "device-icons/item_port_mix_pool_2.webp",
     footprint: { width: 6, height: 5 },
     spriteAnimation: { closeIdleMode: "hold-last" },
-    // AI-CORRECTION 2026-09-18: 新网站 spatial.json 将画布收敛为与逻辑占地相同的 6×5。
     spriteOffset: { topView: { x: 0, y: 0, width: 6, height: 5 } },
     uiGroup: "advancedManufacturing",
     displayOrder: 607,
@@ -3337,7 +2850,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "liquid_purifier_1",
     nameKey: "registry.entity.liquid_purifier_1.name",
     spriteId: "item_port_liquid_purifier_1",
@@ -3356,7 +2868,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     requiresPower: true,
     powerDemand: 50,
-    // AI-CORRECTION 2026-08-20: 0° 端口按解包 liquid_purifier_1 顺时针旋转 90° 后的坐标对齐。
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -3380,21 +2891,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         ],
       ),
     ],
-    // AI-REMOVED 2026-07-11:
-    // Reason: createSimpleProductionDevice 会把 kind="fluid" 的槽位过滤器固定为 liquid；
-    //   提纯机现在是首个非管道的 fluid 设备，四个管道出入口和对应缓存都必须允许 liquid/gas。
-    // Trigger: 用户要求提纯机四个管道出入口可以同时接受气体和液体。
-    // Evidence: resolveSlotFilterType("fluid") 返回 "liquid"，仅改端口 acceptRule 会导致气体仍被缓存槽拒绝。
-    // Replacement: 下方显式 storageSlotGroups / recipeChannels / portStorageBindings / inspectors。
-    // Risk: Low - 保留原 storage group id 与 channel id，旧蓝图路径不变。
-    // Human Review: Required
-    //
-    // Original code:
-    // ...createSimpleProductionDevice([
-    //   { kind: "fluid", direction: "input", capacities: [50] },
-    //   { kind: "fluid", direction: "output", capacities: [50, 50] },
-    //   { kind: "item", direction: "input", capacities: [50] },
-    // ]),
     storageSlotGroups: [
       createStorageSlotGroup(
         "fluid_input_buffer",
@@ -3422,7 +2918,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "liquid_purifier_1_gas",
     nameKey: "registry.entity.liquid_purifier_1_gas.name",
     spriteId: "liquid_purifier_1_gas",
@@ -3499,7 +2994,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "xiranite_oven_1",
     nameKey: "registry.entity.xiranite_oven_1.name",
     spriteId: "item_port_xiranite_oven_1",
@@ -3552,7 +3046,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "dismantler_1",
     nameKey: "registry.entity.dismantler_1.name",
     spriteId: "item_port_dismantler_1",
@@ -3587,20 +3080,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         })],
       ),
     ],
-    // AI-REMOVED 2026-07-16:
-    // Reason: 用户要求拆解机注册表使用显式字典声明，不再由 helper 隐式生成缓存、通道和绑定。
-    // Trigger: 用户持续推进注册表去 helper 化，并明确要求 item_port_dismantler_1 脱离 createSimpleProductionDevice。
-    // Evidence: 下方显式定义保持原 group/slot/channel/binding ID，并将管道输出缓存声明为 fluid。
-    // Replacement: 下方 storageSlotGroups / recipeChannels / portStorageBindings / inspectors。
-    // Risk: Low - 标识符和容量保持不变，仅定义方式从 helper 展开为显式字段。
-    // Human Review: Required
-    //
-    // Original code:
-    // ...createSimpleProductionDevice([
-    //   { kind: "item", direction: "input", capacities: [50] },
-    //   { kind: "item", direction: "output", capacities: [50] },
-    //   { kind: "fluid", direction: "output", capacities: [50], itemFilterType: "fluid" },
-    // ]),
     storageSlotGroups: [
       createStorageSlotGroup(
         "item_input_buffer",
@@ -3638,16 +3117,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "transmuter_2_gastrans",
     nameKey: "registry.entity.transmuter_2_gastrans.name",
     spriteId: "transmuter_2_gastrans",
     iconPath: "device-icons/transmuter_2_gastrans.webp",
     footprint: { width: 5, height: 5 },
     spriteAnimation: { closeIdleMode: "hold-last" },
-    // AI-CORRECTION 2026-09-11: 180°端口校准同步翻转非占地扩展框，东侧扩展改到西侧。
-    // AI-CORRECTION 2026-09-11: 用户明确暂不处理 3D top 资源，保留原 topView 偏移，待素材包统一覆盖。
-    // AI-CORRECTION 2026-09-18: 新网站 spatial.json 将扩展画布更新为西侧 1 格、总宽 7 格。
     spriteOffset: { topView: { x: -1, y: 0, width: 7, height: 5 } },
     uiGroup: "advancedManufacturing",
     displayOrder: 612,
@@ -3661,25 +3136,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     requiresPower: true,
     powerDemand: 50,
-    // AI-REMOVED 2026-07-23:
-    // Reason: 固定分钟计量窗口改为五路十秒 consumption-channel 配方。
-    // Trigger: 用户要求移除计数器，并让真实容量 5 缓存在配方完成时扣料。
-    // Evidence: consume_buffer、五个 consumption channel 与内部 reserved-item 配方共同表达新机制。
-    // Replacement: createConsumptionStorageSlotGroup + createConsumptionRecipeChannels。
-    // Risk: Medium
-    // Human Review: Required
-    //
-    // Original code:
-    // meteredConsumption: {
-    //   inputPortGroupId: "consume_input",
-    //   itemIds: ["item_gas_xiranite"],
-    //   windowSeconds: 60,
-    //   startThreshold: 6,
-    //   acceptanceLimit: 30,
-    //   gasDiffusionRange: null,
-    // },
-    // AI-CORRECTION 2026-08-20: 0° 端口按解包 gas_reactor_1 的默认朝向旋转 180° 对齐。
-    // AI-CORRECTION 2026-08-20: 上一行误挂在 transmuter_2_gastrans；本设备端口没有变更，订正目标见 gas_reactor_1。
     portGroups: [
       createPortGroup(
         "item_input",
@@ -3718,20 +3174,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         createSlots("output_gas_slot", [50], ItemDomainFlag.Gas),
       ),
       createConsumptionStorageSlotGroup(ItemDomainFlag.Gas, ["item_gas_xiranite"]),
-      // AI-REMOVED 2026-07-16:
-      // Reason: 计量材料抵达 consume_input 后立即销毁，不应占用可配置的真实存储槽。
-      // Trigger: 用户要求删除消耗槽位并验证 synthetic sink 求解。
-      // Evidence: compiler 会为未绑定的 metered input port 生成内部 synthetic-input node/slot。
-      // Replacement: topology-compiler.compileSyntheticNodesForUnboundPorts。
-      // Risk: Low - 目标 synthetic slot 仅作求解锚点，consumeAtTarget 不会写入库存。
-      // Human Review: Required
-      //
-      // Original code:
-      // createStorageSlotGroup(
-      //   "consume_buffer",
-      //   "fluid",
-      //   createSlots("consume_slot", [50], "gas"),
-      // ),
     ],
     recipeChannels: [
       ...createConsumptionRecipeChannels(),
@@ -3745,16 +3187,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_item_input", "item_input", "item_input_buffer"),
       createBinding("bind_gas_output", "gas_output", "gas_output_buffer"),
       createBinding("bind_consume", "consume_input", CONSUMPTION_STORAGE_GROUP_ID),
-      // AI-REMOVED 2026-07-16:
-      // Reason: consume_input 改由 compiler 绑定内部 synthetic sink，不再绑定真实 consume_buffer。
-      // Trigger: 用户要求删除消耗槽位并验证求解。
-      // Evidence: meteredConsumption.inputPortGroupId 仍指向 consume_input，计量配置不依赖 storage binding。
-      // Replacement: synthetic-input node binding。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // createBinding("bind_consume", "consume_input", "consume_buffer"),
     ],
     inspectors: [
       {
@@ -3764,16 +3196,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "transmuter_2_solidtrans",
     nameKey: "registry.entity.transmuter_2_solidtrans.name",
     spriteId: "transmuter_2_solidtrans",
     iconPath: "device-icons/transmuter_2_solidtrans.webp",
     footprint: { width: 5, height: 5 },
     spriteAnimation: { closeIdleMode: "hold-last" },
-    // AI-CORRECTION 2026-09-11: 180°端口校准同步翻转非占地扩展框，东侧扩展改到西侧。
-    // AI-CORRECTION 2026-09-11: 用户明确暂不处理 3D top 资源，保留原 topView 偏移，待素材包统一覆盖。
-    // AI-CORRECTION 2026-09-18: 新网站 spatial.json 将扩展画布更新为西侧 1 格、总宽 7 格。
     spriteOffset: { topView: { x: -1, y: 0, width: 7, height: 5 } },
     uiGroup: "advancedManufacturing",
     displayOrder: 613,
@@ -3781,23 +3209,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: [PRODUCER_TAG, "武陵", "alter:transmuter_2", "alter-variant:solidtrans"],
     requiresPower: true,
     powerDemand: 50,
-    // AI-REMOVED 2026-07-23:
-    // Reason: 固定分钟计量窗口改为真实缓存上的五路十秒消耗配方。
-    // Trigger: 用户要求消耗配方并行预留、十秒后扣料。
-    // Evidence: consume_buffer 容量 5，频道类型显式标记 consumption-channel。
-    // Replacement: createConsumptionStorageSlotGroup + createConsumptionRecipeChannels。
-    // Risk: Medium
-    // Human Review: Required
-    //
-    // Original code:
-    // meteredConsumption: {
-    //   inputPortGroupId: "consume_input",
-    //   itemIds: ["item_gas_xiranite"],
-    //   windowSeconds: 60,
-    //   startThreshold: 6,
-    //   acceptanceLimit: 30,
-    //   gasDiffusionRange: null,
-    // },
     portGroups: [
       createPortGroup(
         "gas_input",
@@ -3836,20 +3247,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         createSlots("output_item_slot", [50], ItemDomainFlag.Solid),
       ),
       createConsumptionStorageSlotGroup(ItemDomainFlag.Gas, ["item_gas_xiranite"]),
-      // AI-REMOVED 2026-07-16:
-      // Reason: 计量材料抵达 consume_input 后立即销毁，不应占用可配置的真实存储槽。
-      // Trigger: 用户要求删除消耗槽位并验证 synthetic sink 求解。
-      // Evidence: compiler 会为未绑定的 metered input port 生成内部 synthetic-input node/slot。
-      // Replacement: topology-compiler.compileSyntheticNodesForUnboundPorts。
-      // Risk: Low - 目标 synthetic slot 仅作求解锚点，consumeAtTarget 不会写入库存。
-      // Human Review: Required
-      //
-      // Original code:
-      // createStorageSlotGroup(
-      //   "consume_buffer",
-      //   "fluid",
-      //   createSlots("consume_slot", [50], "gas"),
-      // ),
     ],
     recipeChannels: [
       ...createConsumptionRecipeChannels(),
@@ -3859,16 +3256,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_gas_input", "gas_input", "gas_input_buffer"),
       createBinding("bind_item_output", "item_output", "item_output_buffer"),
       createBinding("bind_consume", "consume_input", CONSUMPTION_STORAGE_GROUP_ID),
-      // AI-REMOVED 2026-07-16:
-      // Reason: consume_input 改由 compiler 绑定内部 synthetic sink，不再绑定真实 consume_buffer。
-      // Trigger: 用户要求删除消耗槽位并验证求解。
-      // Evidence: meteredConsumption.inputPortGroupId 仍指向 consume_input，计量配置不依赖 storage binding。
-      // Replacement: synthetic-input node binding。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // createBinding("bind_consume", "consume_input", "consume_buffer"),
     ],
     inspectors: [
       {
@@ -3878,7 +3265,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "gas_reactor_1",
     nameKey: "registry.entity.gas_reactor_1.name",
     spriteId: "item_port_gas_reactor_1",
@@ -3891,24 +3277,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: [PRODUCER_TAG, "武陵"],
     requiresPower: true,
     powerDemand: 50,
-    // AI-REMOVED 2026-07-16:
-    // Reason: 首轮机械定位误把液气转化机的计量配置写入气体反应机；该设备没有 consume_input。
-    // Trigger: 注册表补充 meteredConsumption 时命中了相邻的 powerDemand: 50 定义。
-    // Evidence: item_port_gas_reactor_1 的端口组只有 gas_input/gas_output。
-    // Replacement: transmuter_1_gastrans.meteredConsumption。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // meteredConsumption: {
-    //   inputPortGroupId: "consume_input",
-    //   itemIds: ["item_liquid_water"],
-    //   windowSeconds: 60,
-    //   startThreshold: 6,
-    //   acceptanceLimit: 30,
-    //   gasDiffusionRange: null,
-    // },
-    // AI-CORRECTION 2026-08-20: 0° 端口按解包 gas_reactor_1 的默认朝向旋转 180° 对齐。
     portGroups: [
       createPortGroup(
         "gas_input",
@@ -3954,14 +3322,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "transmuter_1_gastrans",
     nameKey: "registry.entity.transmuter_1_gastrans.name",
     spriteId: "transmuter_1_gastrans",
     iconPath: "device-icons/transmuter_1_gastrans.webp",
     footprint: { width: 5, height: 5 },
     spriteAnimation: { closeIdleMode: "hold-last" },
-    // AI-CORRECTION 2026-09-18: 新网站 spatial.json 声明西侧扩展 1 格、总宽 7 格。
     spriteOffset: { topView: { x: -1, y: 0, width: 7, height: 5 } },
     uiGroup: "advancedManufacturing",
     displayOrder: 615,
@@ -3975,23 +3341,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     requiresPower: true,
     powerDemand: 50,
-    // AI-REMOVED 2026-07-23:
-    // Reason: 固定分钟计量窗口改为真实缓存上的五路十秒消耗配方。
-    // Trigger: 用户要求消耗配方并行预留、十秒后扣料。
-    // Evidence: consume_buffer 容量 5，频道类型显式标记 consumption-channel。
-    // Replacement: createConsumptionStorageSlotGroup + createConsumptionRecipeChannels。
-    // Risk: Medium
-    // Human Review: Required
-    //
-    // Original code:
-    // meteredConsumption: {
-    //   inputPortGroupId: "consume_input",
-    //   itemIds: ["item_liquid_xiranite"],
-    //   windowSeconds: 60,
-    //   startThreshold: 6,
-    //   acceptanceLimit: 30,
-    //   gasDiffusionRange: null,
-    // },
     portGroups: [
       createPortGroup(
         "liquid_input",
@@ -4032,20 +3381,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         createSlots("output_gas_slot", [50], ItemDomainFlag.Gas),
       ),
       createConsumptionStorageSlotGroup(ItemDomainFlag.Liquid, ["item_liquid_xiranite"]),
-      // AI-REMOVED 2026-07-16:
-      // Reason: 计量材料抵达 consume_input 后立即销毁，不应占用可配置的真实存储槽。
-      // Trigger: 用户要求删除消耗槽位并验证 synthetic sink 求解。
-      // Evidence: compiler 会为未绑定的 metered input port 生成内部 synthetic-input node/slot。
-      // Replacement: topology-compiler.compileSyntheticNodesForUnboundPorts。
-      // Risk: Low - 目标 synthetic slot 仅作求解锚点，consumeAtTarget 不会写入库存。
-      // Human Review: Required
-      //
-      // Original code:
-      // createStorageSlotGroup(
-      //   "consume_buffer",
-      //   "fluid",
-      //   createSlots("consume_slot", [50], "liquid"),
-      // ),
     ],
     recipeChannels: [
       ...createConsumptionRecipeChannels(),
@@ -4059,16 +3394,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_liquid_input", "liquid_input", "liquid_input_buffer"),
       createBinding("bind_gas_output", "gas_output", "gas_output_buffer"),
       createBinding("bind_consume", "consume_input", CONSUMPTION_STORAGE_GROUP_ID),
-      // AI-REMOVED 2026-07-16:
-      // Reason: consume_input 改由 compiler 绑定内部 synthetic sink，不再绑定真实 consume_buffer。
-      // Trigger: 用户要求删除消耗槽位并验证求解。
-      // Evidence: meteredConsumption.inputPortGroupId 仍指向 consume_input，计量配置不依赖 storage binding。
-      // Replacement: synthetic-input node binding。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // createBinding("bind_consume", "consume_input", "consume_buffer"),
     ],
     inspectors: [
       {
@@ -4078,14 +3403,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "transmuter_1_liquidtrans",
     nameKey: "registry.entity.transmuter_1_liquidtrans.name",
     spriteId: "transmuter_1_liquidtrans",
     iconPath: "device-icons/transmuter_1_liquidtrans.webp",
     footprint: { width: 5, height: 5 },
     spriteAnimation: { closeIdleMode: "hold-last" },
-    // AI-CORRECTION 2026-09-18: 新网站 spatial.json 声明西侧扩展 1 格、总宽 7 格。
     spriteOffset: { topView: { x: -1, y: 0, width: 7, height: 5 } },
     uiGroup: "advancedManufacturing",
     displayOrder: 616,
@@ -4093,23 +3416,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: [PRODUCER_TAG, "武陵", "alter:transmuter_1", "alter-variant:liquidtrans"],
     requiresPower: true,
     powerDemand: 50,
-    // AI-REMOVED 2026-07-23:
-    // Reason: 固定分钟计量窗口改为真实缓存上的五路十秒消耗配方。
-    // Trigger: 用户要求消耗配方并行预留、十秒后扣料。
-    // Evidence: consume_buffer 容量 5，频道类型显式标记 consumption-channel。
-    // Replacement: createConsumptionStorageSlotGroup + createConsumptionRecipeChannels。
-    // Risk: Medium
-    // Human Review: Required
-    //
-    // Original code:
-    // meteredConsumption: {
-    //   inputPortGroupId: "consume_input",
-    //   itemIds: ["item_liquid_xiranite"],
-    //   windowSeconds: 60,
-    //   startThreshold: 6,
-    //   acceptanceLimit: 30,
-    //   gasDiffusionRange: null,
-    // },
     portGroups: [
       createPortGroup(
         "gas_input",
@@ -4150,20 +3456,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         createSlots("output_liquid_slot", [50], ItemDomainFlag.Liquid),
       ),
       createConsumptionStorageSlotGroup(ItemDomainFlag.Liquid, ["item_liquid_xiranite"]),
-      // AI-REMOVED 2026-07-16:
-      // Reason: 计量材料抵达 consume_input 后立即销毁，不应占用可配置的真实存储槽。
-      // Trigger: 用户要求删除消耗槽位并验证 synthetic sink 求解。
-      // Evidence: compiler 会为未绑定的 metered input port 生成内部 synthetic-input node/slot。
-      // Replacement: topology-compiler.compileSyntheticNodesForUnboundPorts。
-      // Risk: Low - 目标 synthetic slot 仅作求解锚点，consumeAtTarget 不会写入库存。
-      // Human Review: Required
-      //
-      // Original code:
-      // createStorageSlotGroup(
-      //   "consume_buffer",
-      //   "fluid",
-      //   createSlots("consume_slot", [50], "liquid"),
-      // ),
     ],
     recipeChannels: [
       ...createConsumptionRecipeChannels(),
@@ -4173,16 +3465,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createBinding("bind_gas_input", "gas_input", "gas_input_buffer"),
       createBinding("bind_liquid_output", "liquid_output", "liquid_output_buffer"),
       createBinding("bind_consume", "consume_input", CONSUMPTION_STORAGE_GROUP_ID),
-      // AI-REMOVED 2026-07-16:
-      // Reason: consume_input 改由 compiler 绑定内部 synthetic sink，不再绑定真实 consume_buffer。
-      // Trigger: 用户要求删除消耗槽位并验证求解。
-      // Evidence: meteredConsumption.inputPortGroupId 仍指向 consume_input，计量配置不依赖 storage binding。
-      // Replacement: synthetic-input node binding。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // createBinding("bind_consume", "consume_input", "consume_buffer"),
     ],
     inspectors: [
       {
@@ -4196,16 +3478,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    *
    * 14 个独立输入端口（7N + 7S），各挂独立接收缓存。
    * 6 个独立输出端口（3W + 3E），各挂独立取货缓存 + warehouseItemLink inspector。
-   * AI-CORRECTION 2026-06-05: 输出端口仍独立配置，但 warehouseItemLink 声明合并为一个 inspector，在面板内展开为 P1-P6 六行。
-   * AI-CORRECTION 2026-06-06: 输入端走 WarehouseSink 动态入仓，支持输出绕回任一入口后继续出货。
    * 每个输出端口等价于一个独立仓库取货口。
    *
    * 输入缓存组：14 个（各 1 槽 × 1 容量）
    * 输出缓存组：6 个（各 1 槽 × 1 容量）
    * 编译节点：20 个（14 input-view + 6 output-view）
    */
-  // AI-CORRECTION 2026-09-18: 协议核心与次级协议核心共用完整功能定义，仅身份与素材不同。
-  // AI-CORRECTION 2026-10-11: 主核心进入仓库存取分组，由基地规则限制手动入口；次级核心继续隐藏。
   ...createProtocolCoreDefinitions(createEntityDefinition({
     id: "sp_hub_1",
     nameKey: "registry.entity.sp_hub_1.name",
@@ -4213,7 +3491,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     iconPath: "device-icons/item_port_sp_hub_1.webp",
     footprint: { width: 9, height: 9 },
     spriteAnimation: { closeIdleMode: "hold-last" },
-    // AI-CORRECTION 2026-09-18: 新网站 spatial.json 将协议核心画布更新为四周各扩展 1 格。
     spriteOffset: { topView: { x: -1, y: -1, width: 11, height: 11 } },
     uiGroup: "warehouse",
     tags: [WAREHOUSE_SINK_TAG],
@@ -4408,27 +3685,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
           "unbuffer_e8",
         ],
       },
-      /*
-        AI-REMOVED 2026-06-05:
-        Reason: 六个独立 warehouseItemLink inspector 会让每个面板都从 links[0] 开始写入，无法独立配置六个输出。
-        Trigger: 用户明确协议核心是该功能目标场景，要求每个输出可独立配置。
-        Evidence: WarehouseItemLinkInspector 按单个 declaration 展开 slotGroupIds 并分配 linkIndex；拆成六个 declaration 时 linkIndex 全部为 0。
-        Replacement: 上方单个 warehouseItemLink declaration，slotGroupIds 按输出端口顺序展开为 links[0..5]。
-        Risk: Medium - 已保存旧蓝图若依赖重复 inspector 写入同一 links[0]，打开后面板行为会变为按六个槽位分别展示。
-        Human Review: Required
-
-        Original code:
-        { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unbuffer_w2"] },
-        { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unbuffer_w5"] },
-        { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unbuffer_w8"] },
-        { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unbuffer_e2"] },
-        { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unbuffer_e5"] },
-        { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["unbuffer_e8"] },
-      */
     ],
   })),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "water_pump_1",
     nameKey: "registry.entity.water_pump_1.name",
     spriteId: "item_port_water_pump_1",
@@ -4436,9 +3695,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     footprint: { width: 3, height: 3 },
     spriteAnimation: { closeIdleMode: "loop" },
     spriteOffset: {
-      // AI-CORRECTION 2026-08-20: 顶视图随解包默认朝向旋转 180°，扩展区域由西侧改到东侧。
-      // AI-CORRECTION 2026-09-10: v1.5 素材按 spatial.json 占地矩形定位，替代旧素材扩展区域。
-      // AI-CORRECTION 2026-09-13: 用户授权按网站 spatial.json 同步绘图范围；逻辑占地与端口保持既有定义。
       topView: { x: -2, y: 0, width: 5, height: 3 },
     },
     uiGroup: "resourcePower",
@@ -4451,7 +3707,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     requiresPower: true,
     powerDemand: 10,
-    // AI-CORRECTION 2026-08-20: 0° 输出端口按解包 pump_1 的默认朝向旋转 180° 对齐。
     portGroups: [
       createPortGroup(
         "fluid_output",
@@ -4463,10 +3718,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ),
     ],
 
-    // AI-CORRECTION 2026-06-15: 移除 createSimpleProductionDevice 和 recipeChannels。
     // 改用 warehouseItemLink 模式从仓库获取液体，放置时默认链接清水并开启无限供应。
     // r_pump_water_basic / r_pump_acid_basic 配方保留在 recipe-definition.ts（见 4）。
-    // AI-CORRECTION 2026-08-19: 上述仓库代理模式已退出；抽水泵改为通过单个手选配方 channel 真实生产清水或沉积酸。
 
     storageSlotGroups: [
       createStorageSlotGroup("fluid_output_buffer", ItemDomainFlag.Liquid,
@@ -4482,60 +3735,17 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
 
     inspectors: [
       { type: INSPECTOR_TYPE.recipeStatus, channelIds: ["default"] },
-      // AI-REMOVED 2026-08-19:
-      // Reason: 新版抽水泵由手选配方真实生产，不再以仓库槽位链接代理自然资源。
-      // Trigger: 用户明确要求新版泵不再拥有 warehouseItemLink inspector。
-      // Evidence: default channel 的产物写入 fluid_output_buffer，r_pump_water_basic/r_pump_acid_basic 均为零输入生产配方。
-      // Replacement: recipeStatus inspector + recipeChannels.default
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["fluid_output_buffer"] },
       { type: INSPECTOR_TYPE.slotConfig, slotGroupIds: ["fluid_output_buffer"] },
     ],
 
-    // AI-REMOVED 2026-08-19:
-    // Reason: 新放置的抽水泵必须由用户选择配方，不能默认创建清水仓库链接或开启无限库存。
-    // Trigger: 抽水泵从仓库代理改为真实配方生产设备。
-    // Evidence: placementDefaults 是新泵产生仓库链接与 ignoreStock 的唯一注册表来源。
-    // Replacement: None；新实体 config 默认为空。
-    // Risk: 新放置的泵在选择配方前不会运行，符合手动 channel 语义。
-    // Human Review: Required
-    //
-    // Original code:
-    // placementDefaults: createPlacementDefaults({
-    //   config: {
-    //     "storageSlotGroups[0].slots[0].ignoreStock": true,
-    //   },
-    //   slotLinks: [
-    //     {
-    //       id: "warehouse-link:[Self]:fluid_output_buffer:output_fluid_slot_1",
-    //       linkType: "share-all",
-    //       source: {
-    //         entityId: "[Self]",
-    //         storageSlotGroupId: "fluid_output_buffer",
-    //         slotId: "output_fluid_slot_1",
-    //       },
-    //       target: {
-    //         entityId: "warehouse",
-    //         storageSlotGroupId: "warehouse",
-    //         slotId: "item_liquid_water",
-    //       },
-    //     },
-    //   ],
-    // }),
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "udpipe_loader_2",
     nameKey: "registry.entity.udpipe_loader_2.name",
     spriteId: "item_port_udpipe_loader_2",
-    // AI-CORRECTION 2026-09-18: 网站已交付 RUNNING/CLOSED/PORT_DISCONNECT 完整 RGBA status 轨道。
     spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_udpipe_loader_2.webp",
     footprint: { width: 3, height: 5 },
-    // AI-CORRECTION 2026-09-13: 用户授权按网站 spatial.json 同步绘图范围；逻辑占地与端口保持既有定义。
     spriteOffset: { topView: { x: 0, y: 0, width: 4, height: 5 } },
     uiGroup: "warehouse",
     displayOrder: 409,
@@ -4543,38 +3753,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
-    // AI-CORRECTION 2026-08-19: 未直连时不再销毁流体；单基地与区域多基地均提交到各自仓库，已直连时仍使用 loader_buffer。
     simulationBehaviors: [{
       type: ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting,
       strategy: ENTITY_INPUT_ROUTING_STRATEGY.warehouseSinkWhenUnlinked,
       storageSlotGroupIds: ["loader_buffer"],
     }],
-    // AI-REMOVED 2026-08-19:
-    // Reason: 两个仿真模式声明完全相同，公共行为不应伪装成模式差异。
-    // Trigger: 用户要求移除重复 simulationModeConfigs，并将暗管入口统一为基础 behavior。
-    // Evidence: single-base 与 regional-multi-base 均使用 warehouse-sink-when-unlinked，Topology Compiler 现支持基础行为回退。
-    // Replacement: 本定义的 simulationBehaviors。
-    // Risk: Low - 两种模式编译出的有效 behavior 保持不变。
-    // Human Review: Required
-    //
-    // Original code:
-    // simulationModeConfigs: {
-    //   [SIMULATION_MODE.singleBase]: {
-    //     behaviors: [{
-    //       type: ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting,
-    //       strategy: ENTITY_INPUT_ROUTING_STRATEGY.warehouseSinkWhenUnlinked,
-    //       storageSlotGroupIds: ["loader_buffer"],
-    //     }],
-    //   },
-    //   [SIMULATION_MODE.regionalMultiBase]: {
-    //     behaviors: [{
-    //       type: ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting,
-    //       strategy: ENTITY_INPUT_ROUTING_STRATEGY.warehouseSinkWhenUnlinked,
-    //       storageSlotGroupIds: ["loader_buffer"],
-    //     }],
-    //   },
-    // },
-    // AI-CORRECTION 2026-08-20: 0° 双输入端口按解包 udpipe_loader_2 的默认朝向旋转 180° 对齐。
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -4586,19 +3769,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         ],
       ),
     ],
-    // AI-REMOVED 2026-06-06:
-    // Reason: 多口暗管入口需要两个端口共享一个槽位，且两个销毁 channel 绑定同一个槽位以满足最大销毁速度。
-    // Trigger: 用户明确“多口暗管入口只需要一个存储槽位，两个端口都对接这一个槽位，两个 channel 绑定一个槽位”。
-    // Evidence: createSimpleProductionDevice 只能生成单个默认 channel 和默认 recipeStatus inspector，不适合隐藏销毁配方。
-    // Replacement: 下方 loader_buffer、void_liquid_1/2 recipeChannels 和 bind_fluid_input。
-    // AI-CORRECTION 2026-07-18: 槽位 itemFilterType 已从 "liquid" 改为 "fluid"，channel 已从 void_liquid_1/2 改为 void_fluid_1/2，以同时接受气体。
-    // Risk: Medium - 旧 synthetic 风格槽组 id 改为 loader_buffer。
-    // Human Review: Required
-    //
-    // Original code:
-    // ...createSimpleProductionDevice([
-    //   { kind: "fluid", direction: "input", capacities: [1] },
-    // ]),
     storageSlotGroups: [
       createStorageSlotGroup(
         "loader_buffer",
@@ -4606,25 +3776,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         createSlots("slot", [500], FluidDomain),
       ),
     ],
-    // AI-REMOVED 2026-08-19:
-    // Reason: 多口暗管入口在两个仿真模式下均直接提交仓库，不再需要两个并行销毁 channel。
-    // Trigger: 用户明确抛弃暗管入口销毁机制，统一为按当前运行架构提交仓库。
-    // Evidence: 两个输入端口共享 loader_buffer，统一 warehouse-sink-when-unlinked 已覆盖两个端口的未直连输入。
-    // Replacement: simulationModeConfigs 中统一的 warehouse-sink-when-unlinked behavior。
-    // Risk: 已保存文档中的 recipeChannels[0/1].manualRecipeOnly 配置会成为无效遗留键，但不会参与编译。
-    // Human Review: Required
-    //
-    // Original code:
-    // recipeChannels: [
-    //   // AI-CORRECTION 2026-06-07: loader_buffer 同时声明为产物槽，仅用于表达槽位配置的混合归属；销毁配方本身仍没有 outputs。
-    //   createRecipeChannel("void_fluid_1", ["loader_buffer"], ["loader_buffer"]),
-    //   createRecipeChannel("void_fluid_2", ["loader_buffer"], ["loader_buffer"]),
-    // ],
-    // recipeChannelBehavior: {
-    //   allowDuplicateRecipesAcrossChannels: true,
-    // },
     recipeChannels: [],
-    // AI-CORRECTION 2026-08-19: 上方审计记录中的 behavior 替代位置现为本定义的 simulationBehaviors；模式配置已不再重复声明公共行为。
     portStorageBindings: [
       createBinding("bind_fluid_input", "fluid_input", "loader_buffer"),
     ],
@@ -4639,15 +3791,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "udpipe_unloader_2",
     nameKey: "registry.entity.udpipe_unloader_2.name",
     spriteId: "item_port_udpipe_unloader_2",
-    // AI-CORRECTION 2026-09-18: 网站已交付 RUNNING/CLOSED/PORT_DISCONNECT 完整 RGBA status 轨道。
     spriteAnimation: { closeIdleMode: "loop" },
     iconPath: "device-icons/item_port_udpipe_unloader_2.webp",
     footprint: { width: 3, height: 5 },
-    // AI-CORRECTION 2026-09-18: 新网站 spatial.json 将出口画布更新为西侧扩展 1 格。
     spriteOffset: { topView: { x: -1, y: 0, width: 4, height: 5 } },
     uiGroup: "warehouse",
     displayOrder: 410,
@@ -4666,18 +3815,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         ],
       ),
     ],
-    // AI-REMOVED 2026-06-06:
-    // Reason: 多口暗管出口需要两个端口共享一个槽位，并保持默认生成/取货配置为空。
-    // Trigger: 用户明确“出口也一样，一个存储槽位，两个端口都对接这一个槽位”。
-    // Evidence: createSimpleProductionDevice 会生成生产配方通道和 recipeStatus inspector，不能表达仓库取货式生成语义。
-    // Replacement: 下方 unloader_buffer、bind_fluid_output 和 warehouseItemLink/slotConfig inspectors。
-    // Risk: Medium - 旧 fluid_output_buffer 槽组 id 改为 unloader_buffer。
-    // Human Review: Required
-    //
-    // Original code:
-    // ...createSimpleProductionDevice([
-    //   { kind: "fluid", direction: "output", capacities: [1] },
-    // ]),
     storageSlotGroups: [
       createStorageSlotGroup(
         "unloader_buffer",
@@ -4690,8 +3827,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         createSlots("slot", [500], FluidDomain),
       ),
     ],
-    // AI-CORRECTION 2026-06-07: 暗管出口保留仓库取货式生成语义，但槽位在 channel 中同时作为原料/产物以显示为混合槽位。
-    // AI-CORRECTION 2026-09-18: 直连运输改为从隐藏 transport_input 读取并写入 unloader_buffer；多口出口以四个一秒单件 channel 形成 4/s 上限。
     recipeChannels: [
       createRecipeChannel("transport_1", ["transport_input"], ["unloader_buffer"]),
       createRecipeChannel("transport_2", ["transport_input"], ["unloader_buffer"]),
@@ -4719,7 +3854,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "liquid_cleaner_1",
     nameKey: "registry.entity.liquid_cleaner_1.name",
     spriteId: "item_liquid_cleaner_1",
@@ -4732,7 +3866,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: [PRODUCER_TAG, "武陵", "OuterRingAllowed"],
     requiresPower: true,
     powerDemand: 50,
-    // AI-CORRECTION 2026-08-20: 0° 输入端口按解包 liquid_cleaner_1 的默认朝向旋转 180° 对齐。
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -4774,8 +3907,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     requiresPower: false,
     powerDemand: 0,
-    // AI-CORRECTION 2026-08-20: 0° 输入输出端口按解包 liquid_storager_1 的默认朝向旋转 180° 对齐。
-    // AI-CORRECTION 2026-08-20: 上一行误挂在 water_purifier_node_1；本设备端口没有变更，订正目标见 liquid_storager_1。
     portGroups: [
       createPortGroup(
         "fluid_input_1",
@@ -4908,7 +4039,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "liquid_storager_1",
     nameKey: "registry.entity.liquid_storager_1.name",
     spriteId: "item_port_liquid_storager_1",
@@ -4921,7 +4051,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
-    // AI-CORRECTION 2026-08-20: 0° 输入输出端口按解包 liquid_storager_1 的默认朝向旋转 180° 对齐。
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -4940,12 +4069,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         })],
       ),
     ],
-    // AI-CORRECTION 2026-05-17: 储液罐从 createSimpleProductionDevice（管道/缓冲器模式）改为
-    //   单槽储存组模式（与协议储存箱的单槽分组原则对齐），仅储存液体。
-    //   - 移除 createSimpleProductionDevice（含自动生成的 input/output 分离缓冲组和 channel）。
-    //   - 改为一个 liquid_storage 储存组：1 槽，容量 500，液体过滤器。
-    //   - portStorageBindings：input 和 output 端口均绑定到同一储存组。
-    //   - 移除 recipeChannels：纯储存设备无需配方通道。
     storageSlotGroups: [
       createStorageSlotGroup(
         "liquid_storage",
@@ -4965,7 +4088,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "gas_storager_1",
     nameKey: "registry.entity.gas_storager_1.name",
     spriteId: "gas_storager_1",
@@ -4977,7 +4099,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["武陵", "OuterRingAllowed"],
     requiresPower: false,
     powerDemand: 0,
-    // AI-CORRECTION 2026-08-20: 0° 输入输出端口按解包 gas_storager_1 的默认朝向旋转 180° 对齐。
     portGroups: [
       createPortGroup(
         "gas_input",
@@ -5025,19 +4146,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     iconPath: "device-icons/item_port_power_diffuser_1.webp",
     footprint: { width: 2, height: 2 },
     spriteAnimation: { closeIdleMode: "hold-last" },
-    // AI-CORRECTION 2026-09-18: 新网站 spatial.json 声明四周各扩展 1 格的 4×4 画布。
     spriteOffset: { topView: { x: -1, y: -1, width: 4, height: 4 } },
     uiGroup: "resourcePower",
     displayOrder: 302,
-// AI-REMOVED 2026-10-13:
-// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
-// Trigger: 洒水机和定向离体区域支持。
-// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
-// Replacement: 本设备 ranges。
-// Risk: 保持既有供电与气体规则，需范围回归验证。
-// Human Review: Required
-// Original code:
-//     powerRange: 12,
     ranges: [{
       id: "power", localRect: { x: -5, y: -5, width: 12, height: 12 },
       coverage: "intersects", interactionKind: "power", visualId: "power",
@@ -5046,7 +4157,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: [],
   }),
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "vaporizer_1",
     nameKey: "registry.entity.vaporizer_1.name",
     spriteId: "vaporizer_1",
@@ -5064,29 +4174,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     requiresPower: false,
     powerDemand: 0,
-    // AI-REMOVED 2026-07-23:
-    // Reason: 气体环境生命周期改由十秒 consumption-channel 配方直接决定。
-    // Trigger: 用户要求单个气体只产生十秒环境，并删除分钟计量窗口。
-    // Evidence: 四个气体配方各自声明 gasDiffusionOutput，运行状态能够确定环境种类与范围。
-    // Replacement: 五个 consumption channel + 容量 5 gas_input_buffer。
-    // Risk: Medium
-    // Human Review: Required
-    //
-    // Original code:
-    // meteredConsumption: {
-    //   inputPortGroupId: "gas_input",
-    //   itemIds: [
-    //     "item_gas_acid",
-    //     "item_gas_inert",
-    //     "item_gas_water",
-    //     "item_gas_xiranite",
-    //   ],
-    //   windowSeconds: 60,
-    //   startThreshold: 6,
-    //   acceptanceLimit: 30,
-    //   gasDiffusionRange: 13,
-    // },
-    // AI-CORRECTION 2026-08-20: 0° 输入端口按解包 vaporizer_1 的默认朝向旋转 180° 对齐。
     portGroups: [
       createPortGroup(
         "gas_input",
@@ -5099,52 +4186,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         ],
       ),
     ],
-    // AI-REMOVED 2026-07-16:
-    // Reason: vaporizer 输入气体由 metered sink 立即销毁，真实 gas_input_buffer 不再保存任何物品。
-    // Trigger: 用户要求删除消耗槽位并现场验证求解。
-    // Evidence: 未绑定 gas_input 会由 compiler 生成内部 synthetic-input node/slot。
-    // Replacement: topology-compiler.compileSyntheticNodesForUnboundPorts。
-    // Risk: Low - synthetic slot 保持空槽，仅用于 Stage 3 目标定位。
-    // Human Review: Required
-    //
-    // Original code:
-    // storageSlotGroups: [
-    //   createStorageSlotGroup(
-    //     "gas_input_buffer",
-    //     "fluid",
-    //     createSlots("gas_input_slot", [500], "gas"),
-    //   ),
-    // ],
     storageSlotGroups: [
       createConsumptionStorageSlotGroup(ItemDomainFlag.Gas, VAPORIZER_CONSUMPTION_ITEM_IDS),
     ],
-    // AI-REMOVED 2026-07-16:
-    // Reason: 气体散布机改由计量消费窗口直接销毁输入并产生气体环境，不再运行计时配方。
-    // Trigger: 用户确认下限 6、上限 30 的整分钟计量机制适用于 vaporizer_1。
-    // Evidence: meteredConsumption 已声明 gas_input 为销毁型入口，配方通道无法再从该虚拟槽取得输入。
-    // Replacement: vaporizer_1.meteredConsumption + simulation/runtime/metered-consumption.ts。
-    // Risk: Medium - 旧蓝图中的 channelRecipes.default 配置将保留为无效配置。
-    // Human Review: Required
-    //
-    // Original code:
-    // recipeChannels: [
-    //   createRecipeChannel("default", ["gas_input_buffer"], []),
-    // ],
     recipeChannels: [
       ...createConsumptionRecipeChannels(),
     ],
-    // AI-REMOVED 2026-07-16:
-    // Reason: gas_input 改由 compiler 绑定内部 synthetic sink，不再绑定真实 gas_input_buffer。
-    // Trigger: 用户要求删除消耗槽位并验证求解。
-    // Evidence: meteredConsumption 通过 inputPortGroupId 定位 compiled port，不依赖 storage binding。
-    // Replacement: synthetic-input node binding。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // portStorageBindings: [
-    //   createBinding("bind_gas_input", "gas_input", "gas_input_buffer"),
-    // ],
     portStorageBindings: [
       createBinding("bind_gas_input", "gas_input", CONSUMPTION_STORAGE_GROUP_ID),
     ],
@@ -5153,32 +4200,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         type: INSPECTOR_TYPE.recipeStatus,
         channelIds: [],
       },
-      // AI-REMOVED 2026-07-16:
-      // Reason: vaporizer_1 不再运行配方，配方状态面板没有有效 channel 可展示。
-      // Trigger: 气体环境生命周期迁移到 meteredConsumption 运行许可。
-      // Evidence: recipeChannels 已清空；气体效果由计量状态决定。
-      // Replacement: None；计量状态通过仿真快照提供。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // {
-      //   type: INSPECTOR_TYPE.recipeStatus,
-      //   channelIds: ["default"],
-      // },
-      // AI-REMOVED 2026-07-16:
-      // Reason: gas_input_buffer 已删除，内部 synthetic sink 不应暴露为可配置库存。
-      // Trigger: 用户要求删除消耗槽位；若不能删除则至少从 inspector 隐藏。
-      // Evidence: vaporizer 的计量状态由 runtime snapshot 表达，不再由 slotConfig 表达。
-      // Replacement: None。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // {
-      //   type: INSPECTOR_TYPE.slotConfig,
-      //   slotGroupIds: ["gas_input_buffer"],
-      // },
     ],
   }),
   createEntityDefinition({
@@ -5196,7 +4217,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     requiresPower: false,
     powerDemand: 0,
-    // AI-CORRECTION 2026-09-12: AKEData FactoryBoxValveTable.log_conditioner 的角色+yaw 端口面规则确认 rotation=0 为 N→S；稳定端口 ID 保留以兼容既有配置。
     portGroups: [
       createPortGroup(
         "item_input",
@@ -5213,7 +4233,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [createPort("out_e", 0, 0, "S")],
       ),
     ],
-    // AI-CORRECTION 2026-05-13: 原 createSimpleProductionDevice（分离 input+output 组）已失效。
     // 现改为 bidirectional+share-cap，与 belt_straight_1x1 结构一致。
     storageSlotGroups: [
       createStorageSlotGroup(
@@ -5247,7 +4266,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     spriteId: "item_pipe_admission",
     iconPath: "device-icons/item_pipe_admission.webp",
     footprint: { width: 1, height: 1 },
-    // AI-CORRECTION 2026-09-13: 用户授权按网站 spatial.json 同步绘图范围；逻辑占地与端口保持既有定义。
     spriteOffset: { topView: { x: 0, y: -1, width: 1, height: 3 } },
     uiGroup: "pipeLogistics",
     displayOrder: 204,
@@ -5259,7 +4277,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     ],
     requiresPower: false,
     powerDemand: 0,
-    // AI-CORRECTION 2026-09-12: AKEData FactoryFluidValveTable.log_pipe_conditioner 的角色+yaw 端口面规则确认 rotation=0 为 N→S；稳定端口 ID 保留以兼容既有配置。
     portGroups: [
       createPortGroup(
         "fluid_input",
@@ -5276,13 +4293,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
         [createPort("out_e", 0, 0, "S")],
       ),
     ],
-    // AI-CORRECTION 2026-05-13: 原 createSimpleProductionDevice（分离 input+output 组）已失效。
     // 现改为 bidirectional+share-cap，与 pipe 直段结构一致。
     storageSlotGroups: [
       createStorageSlotGroup(
         "fluid_buffer",
         FluidDomain,
-        // AI-CORRECTION 2026-07-30: 容量从 2 改为 1，配合 0.5s 单件配方回滚。
         createSlots("slot", [1], FluidDomain),
         "share-cap",
       ),
@@ -5377,17 +4392,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    * gas_pump_1 — 气体收集泵（3×3）
    *
    * 气体采集设备，1 个管道输出口在东侧，仅限气体。
-   * AI-CORRECTION 2026-07-16: 根据导出数据新增端口定义，从 createEmptyEntityDefinition 改为 createEntityDefinition。
-   *   导出数据: outputPorts[0]=(x:2,y:3,z:1), rotation Y=90(E)
-   * AI-CORRECTION 2026-07-21: 改为可摆放，使用 warehouseItemLink 模式从仓库获取气体，
-   *   放置时默认链接惰气并开启无限供应。参照 water_pump_1 模式。
-   * AI-CORRECTION 2026-08-19: 上述仓库代理模式已退出；气体收集泵改为通过单个手选配方 channel 真实生产惰气或息壤气。
-   * AI-CORRECTION 2026-08-20: 解包默认朝向的输出端口位于西侧；原东侧描述与旧 rotation 记录仅保留用于审计。
    */
-// AI-CORRECTION 2026-08-07: 解包数据 buildingTable.gas_pump_1 中 needPower=false, powerConsume=0，
-//   游戏中描述为"无需通电即可工作"。移除 requiresPower 和 powerDemand。
   createEntityDefinition({
-    // AI-CORRECTION 2026-09-11: 按 AKEData 1.5.3@9913107-5 与 transmuter_1 游戏实测订正默认端口为 X=x、Y=depth-1-z；历史朝向注释保留作审计记录。
     id: "gas_pump_1",
     nameKey: "registry.entity.gas_pump_1.name",
     spriteId: "gas_pump_1",
@@ -5402,10 +4408,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       { type: PLACEMENT_BEHAVIOR_TYPE.noNearSameEntity, range: 2 },
     ],
     requiresPower: false,
-    // AI-CORRECTION 2026-08-08: powerDemand 是 EntityDefinitionInput 的必填字段，
-    //   解包数据 powerConsume=0，补充 powerDemand: 0 以通过类型检查。
     powerDemand: 0,
-    // AI-CORRECTION 2026-08-20: 0° 输出端口按解包 gas_pump_1 的默认朝向旋转 180° 对齐。
     portGroups: [
       createPortGroup(
         "gas_output",
@@ -5434,70 +4437,18 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
 
     inspectors: [
       { type: INSPECTOR_TYPE.recipeStatus, channelIds: ["default"] },
-      // AI-REMOVED 2026-08-19:
-      // Reason: 新版气体收集泵由手选配方真实生产，不再以仓库槽位链接代理自然资源。
-      // Trigger: 用户明确要求新版泵不再拥有 warehouseItemLink inspector。
-      // Evidence: default channel 的产物写入 gas_output_buffer，两个气体采集配方均为零输入生产配方。
-      // Replacement: recipeStatus inspector + recipeChannels.default
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // { type: INSPECTOR_TYPE.warehouseItemLink, slotGroupIds: ["gas_output_buffer"] },
       { type: INSPECTOR_TYPE.slotConfig, slotGroupIds: ["gas_output_buffer"] },
     ],
 
-    // AI-REMOVED 2026-08-19:
-    // Reason: 新放置的气体收集泵必须由用户选择配方，不能默认创建惰气仓库链接或开启无限库存。
-    // Trigger: 气体收集泵从仓库代理改为真实配方生产设备。
-    // Evidence: placementDefaults 是新泵产生仓库链接与 ignoreStock 的唯一注册表来源。
-    // Replacement: None；新实体 config 默认为空。
-    // Risk: 新放置的泵在选择配方前不会运行，符合手动 channel 语义。
-    // Human Review: Required
-    //
-    // Original code:
-    // placementDefaults: createPlacementDefaults({
-    //   config: {
-    //     "storageSlotGroups[0].slots[0].ignoreStock": true,
-    //   },
-    //   slotLinks: [
-    //     {
-    //       id: "warehouse-link:[Self]:gas_output_buffer:output_gas_slot_1",
-    //       linkType: "share-all",
-    //       source: {
-    //         entityId: "[Self]",
-    //         storageSlotGroupId: "gas_output_buffer",
-    //         slotId: "output_gas_slot_1",
-    //       },
-    //       target: {
-    //         entityId: "warehouse",
-    //         storageSlotGroupId: "warehouse",
-    //         slotId: "item_gas_inert",
-    //       },
-    //     },
-    //   ],
-    // }),
   }),
 
   // AKEData 1.5.3@10731330-8：3×3、西侧中央液体输入；当前仅接入编辑与范围展示。
-  // AI-CORRECTION 2026-10-14: 现已接入通用环境配方与按需求启停的浇水仿真。
   createEntityDefinition({
     id: "squirter_1",
     nameKey: "registry.entity.squirter_1.name",
     spriteId: "item_port_squirter_1",
     iconPath: "device-icons/item_port_squirter_1.webp",
     footprint: { width: 3, height: 3 },
-    // AI-REMOVED 2026-10-13:
-    // Reason: 本次经用户确认仅发布 close_idle 首帧。
-    // AI-CORRECTION 2026-10-13: 原建议 close_idle 缺少配套高度图，遵循网站 staticPose 使用 open_idle 首帧。
-    // Trigger: 网站动画 statusControl 缺少必需字段，导入器拒绝。
-    // Evidence: create_status_playback 报 Invalid statusControl entry。
-    // Replacement: resources/building-top-view-v15.json 的 staticPhase。
-    // Risk: 暂无设备本体状态动画；范围交互不受影响。
-    // Human Review: Required
-    // Original code:
-    // spriteAnimation: { closeIdleMode: "hold-last" },
-    // AI-CORRECTION 2026-10-15: 已按用户确认接入 watering 循环与无水待机，按展示状态立即切换，不播放启停过渡。
     spriteAnimation: { closeIdleMode: "hold-last" },
     spriteOffset: { topView: { x: 0, y: 0, width: 6, height: 3 } },
     uiGroup: "agriculture",
@@ -5514,14 +4465,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createPort("in_w_1", 0, 1, "W", { acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Liquid }, exclude: [] } }),
     ])],
     // 不声明缓存、配方和耗水周期，避免编辑能力被误当成浇水仿真。
-    // AI-CORRECTION 2026-10-14: 新增容量 50 液体缓存与按需运行的 1 秒环境配方。
     storageSlotGroups: [createStorageSlotGroup("liquid", ItemDomainFlag.Liquid, [createSlot("liquid", 50, ItemDomainFlag.Liquid)])],
     portStorageBindings: [createBinding("liquid-input", "fluid_input", "liquid")],
     recipeChannels: [{ id: "irrigation", startPolicy: "environment-demand", ingredientStorageGroupIds: ["liquid"], productStorageGroupIds: [] }],
   }),
 
   // 普通田块的 raw renderer 共用 soil_1；蓝图使用无端口方框，3D 素材待提供。
-  // AI-CORRECTION 2026-10-12: 已接入各田块独立的 soil_1_mature 首帧；蓝图仍为方框，列表使用各自物品图标。
   /** 锦草田块：4×4 普通田块，仅允许在农牧用地地图摆放。 */
   createEntityDefinition({
     id: "soil_grass_1",
@@ -5733,7 +4682,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
 
   /** 球豆田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
-  // AI-CORRECTION 2026-10-16: 已接入本田块的独立原生外观与积水动画，不再共用芽针外观。
   createEntityDefinition({
     id: "soil_corp_bean_1",
     nameKey: "registry.entity.soil_corp_bean_1.name",
@@ -5755,7 +4703,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
 
   /** 青菜田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
-  // AI-CORRECTION 2026-10-16: 已接入本田块的独立原生外观与积水动画，不再共用芽针外观。
   createEntityDefinition({
     id: "soil_corp_cabbage_1",
     nameKey: "registry.entity.soil_corp_cabbage_1.name",
@@ -5779,8 +4726,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
 
   /** 优质青菜田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
-  // 2026-10-15：按用户暂视为教学用途田块的假定隐藏入口，保留独立定义。
-  // AI-CORRECTION 2026-10-16: 已接入本田块的独立原生外观与积水动画，不再共用芽针外观。
+  // 按用户暂视为教学用途田块的假定隐藏入口，保留独立定义。
   createEntityDefinition({
     id: "soil_corp_cabbage_2",
     nameKey: "registry.entity.soil_corp_cabbage_2.name",
@@ -5802,7 +4748,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
 
   /** 籽油花田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
-  // AI-CORRECTION 2026-10-16: 已接入本田块的独立原生外观与积水动画，不再共用芽针外观。
   createEntityDefinition({
     id: "soil_corp_canolaflower_1",
     nameKey: "registry.entity.soil_corp_canolaflower_1.name",
@@ -5824,7 +4769,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
 
   /** 多味菇田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
-  // AI-CORRECTION 2026-10-16: 已接入本田块的独立原生外观与积水动画，不再共用芽针外观。
   createEntityDefinition({
     id: "soil_corp_mushroom_1",
     nameKey: "registry.entity.soil_corp_mushroom_1.name",
@@ -5848,8 +4792,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
 
   /** 优质多味菇田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
-  // 2026-10-15：按用户暂视为教学用途田块的假定隐藏入口，保留独立定义。
-  // AI-CORRECTION 2026-10-16: 已接入本田块的独立原生外观与积水动画，不再共用芽针外观。
+  // 按用户暂视为教学用途田块的假定隐藏入口，保留独立定义。
   createEntityDefinition({
     id: "soil_corp_mushroom_2",
     nameKey: "registry.entity.soil_corp_mushroom_2.name",
@@ -5871,7 +4814,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
 
   /** 平薯田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
-  // AI-CORRECTION 2026-10-16: 已接入本田块的独立原生外观与积水动画，不再共用芽针外观。
   createEntityDefinition({
     id: "soil_corp_potato_1",
     nameKey: "registry.entity.soil_corp_potato_1.name",
@@ -5893,7 +4835,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
 
   /** 青叶莓田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
-  // AI-CORRECTION 2026-10-16: 已接入本田块的独立原生外观与积水动画，不再共用芽针外观。
   createEntityDefinition({
     id: "soil_corp_strawberry_1",
     nameKey: "registry.entity.soil_corp_strawberry_1.name",
@@ -5917,8 +4858,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
 
   /** 优质青叶莓田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
-  // 2026-10-15：按用户暂视为教学用途田块的假定隐藏入口，保留独立定义。
-  // AI-CORRECTION 2026-10-16: 已接入本田块的独立原生外观与积水动画，不再共用芽针外观。
+  // 按用户暂视为教学用途田块的假定隐藏入口，保留独立定义。
   createEntityDefinition({
     id: "soil_corp_strawberry_2",
     nameKey: "registry.entity.soil_corp_strawberry_2.name",
@@ -5940,7 +4880,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
 
   /** 脆蔗田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
-  // AI-CORRECTION 2026-10-16: 已接入本田块的独立原生外观与积水动画，不再共用芽针外观。
   createEntityDefinition({
     id: "soil_corp_sugarcane_1",
     nameKey: "registry.entity.soil_corp_sugarcane_1.name",
@@ -5963,7 +4902,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
 
   /** 茄果田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
-  // AI-CORRECTION 2026-10-16: 已接入本田块的独立原生外观与积水动画，不再共用芽针外观。
   createEntityDefinition({
     id: "soil_corp_tomato_1",
     nameKey: "registry.entity.soil_corp_tomato_1.name",
@@ -5985,7 +4923,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
 
   /** 白瓜田块：仅限缘缘庄，临时共用芽针田块的整套外观。 */
-  // AI-CORRECTION 2026-10-16: 已接入本田块的独立原生外观与积水动画，不再共用芽针外观。
   createEntityDefinition({
     id: "soil_corp_whitegourd_1",
     nameKey: "registry.entity.soil_corp_whitegourd_1.name",
@@ -6055,8 +4992,6 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     tags: ["不可摆放"],
   }),
   /** 自动农植机仅作为基地自带静态设备；5×5 项目占地由用户于 2026-10-28 确认。 */
-  /** AI-CORRECTION 2026-10-28: 用户确认逻辑占地为 3×3；原 5×5 仅为视觉画布，用 spriteOffset 保留外沿。 */
-  /** AI-CORRECTION 2026-10-28: 底座横向中心在画布第 2 格，补偿局部 X 半格，使旋转后的底座与占地框对齐。 */
   createEntityDefinition({
     id: "int_system_farm_terminal",
     nameKey: "registry.entity.int_system_farm_terminal.name",

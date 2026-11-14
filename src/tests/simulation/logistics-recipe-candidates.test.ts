@@ -5,7 +5,6 @@ import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { BELT_TRANSPORT_DURATION_SECONDS, PIPE_TRANSPORT_DURATION_SECONDS } from "@/domain/registry";
 import { createRegistryContract } from "@/registry";
 import { createRegistryQuery } from "@/registry/registry-query";
-import { createDenseBlueprintEngine } from "@/simulation/dense";
 import { createLegacyBlueprintEngine } from "@/simulation/legacy";
 import { compileSimulationTopology } from "@/simulation/topology";
 import { ACTIVITY_LIMITED_FORMULA_1_TAG } from "@/shared/registry/activity-availability";
@@ -39,7 +38,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("ST2-RQ-046 物流候选组合 [%s]", en
     const topology = compileSimulationTopology({ document, registry, simulationMode: "single-base", standardTickRate: engineKind === "legacy" ? 20 : 4,
       poweredEntityIds: new Set(document.entityOrder), activeActivityIds: [] });
     expect(topology.diagnostics.filter(entry => entry.severity === "error")).toEqual([]);
-    const engine = (engineKind === "legacy" ? createLegacyBlueprintEngine : createDenseBlueprintEngine)(registry, { topology, powerMode: "infinite", initialSlots: [] });
+    const engine = createLegacyBlueprintEngine(registry, { topology, powerMode: "infinite", initialSlots: [] });
     const targetId = topology.ordering.deviceOrder.find(id => topology.devices[id]!.sourceEntityId === "target")!;
     return { engine, topology, targetId,
       read: () => engine.readDevices().find(device => device.deviceId === targetId)!,

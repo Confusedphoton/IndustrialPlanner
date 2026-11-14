@@ -2,6 +2,8 @@ import type { EditorQuery } from "@/domain/editor/editor-query";
 import type { EditorQueriesContext } from "./types";
 import {
   createEntityDefinitionMap,
+  resolveDevicePortAtGridPoint,
+  resolveTransportLineAtGridPoint,
   resolveLogisticsEndpointAtGridPoint,
 } from "../logistics/logistics-utils";
 
@@ -9,6 +11,8 @@ type EditorLogisticsQueries = Pick<
   EditorQuery,
   | "canCreateLogisticsDraftStartHere"
   | "findLogisticsDraftEndpointAtGridPoint"
+  | "findDevicePortAtGridPoint"
+  | "findTransportLineAtGridPoint"
   | "resolveLogisticsDraftState"
 >;
 
@@ -34,6 +38,19 @@ export function createEditorLogisticsQueries(
         baseDefinitions: context.workspace.registry.baseDefinitions,
       });
     },
+    findDevicePortAtGridPoint: (gridPoint) => resolveDevicePortAtGridPoint({
+      gridPoint,
+      document: context.document.getSnapshot(),
+      entityDefinitionMap,
+      registryQueries: context.workspace.registry.queries,
+    }),
+    findTransportLineAtGridPoint: (gridPoint, kind) => resolveTransportLineAtGridPoint({
+      gridPoint,
+      kind,
+      document: context.document.getSnapshot(),
+      entityDefinitionMap,
+      registryQueries: context.workspace.registry.queries,
+    }),
     canCreateLogisticsDraftStartHere: (gridPoint, kind) => {
       return resolveLogisticsEndpointAtGridPoint({
         gridPoint,

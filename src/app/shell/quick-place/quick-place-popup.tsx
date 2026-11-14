@@ -28,16 +28,6 @@ import {
   removeQuickPlaceFavoriteAtSlot,
   triggerQuickPlaceDeviceSelection,
 } from "@/app/quick-place";
-// AI-REMOVED 2026-08-30:
-// Reason: 快速放置固定按键由 quick-place Shortcut Routes 解析。
-// Trigger: ST2-RQ-020 输入层统一。
-// Evidence: quick-place.favorite-* Route 直接携带 slotIndex。
-// Replacement: quick-place-gesture-module.ts shortcutRoutes
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import { resolveQuickPlaceSlotIndexFromKey } from "@/app/quick-place";
 import type { AppHost } from "@/app/host/app-host";
 import { useEditorDocumentSnapshot } from "../hooks";
 import { cm } from "@/app/shell/shared/css-module-class";
@@ -71,16 +61,6 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
   const suppressPointerSelectionRef = useRef(false);
   const [draggingFavoriteIndex, setDraggingFavoriteIndex] = useState<number | null>(null);
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
-  // AI-REMOVED 2026-08-30:
-  // Reason: 当前高亮结果必须由 UI 与 Shortcut Route 共享，不能继续保存在组件局部 state。
-  // Trigger: ST2-RQ-020 快速放置键盘 Route 迁移。
-  // Evidence: ArrowUp/ArrowDown/Enter handler 已位于 quick-place-gesture-module.ts。
-  // Replacement: appHost.internalState.runtime.quickPlace.activeResultId
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // const [activeResultId, setActiveResultId] = useState<string | null>(null);
   const deviceListId = useId();
   const t = appHost.actions.translate;
   const runtime = appHost.mainCanvas.state.runtime.quickPlace;
@@ -145,40 +125,13 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
     }
   }, [appHost, favorites, visible]);
 
-  // AI-REMOVED 2026-07-18:
-  // Reason: 快速放置浮窗不应替用户决定输入焦点，避免打开浮窗时自动唤起输入法。
-  // Trigger: 用户要求 PC 与移动端统一取消自动聚焦，搜索必须由用户主动点击输入框开始。
-  // Evidence: 此 effect 是浮窗显示后唯一主动调用 searchInputRef.focus() 的位置。
-  // Replacement: 搜索框保留原生点击聚焦；下方 document pointerdown 监听统一处理外部交互失焦。
-  // Risk: 键盘用户打开浮窗后需要先手动聚焦搜索框才能输入；符合本次统一交互要求。
-  // Human Review: Required
-  //
-  // Original code:
-  // useEffect(() => {
-  //   if (!visible) {
-  //     return;
-  //   }
-  //
-  //   searchInputRef.current?.focus({ preventScroll: true });
-  // }, [visible]);
 
-  // AI-CORRECTION 2026-08-29: 上述取消统一自动聚焦的规则仍适用于指针入口；
   // 快速放置键盘快捷键现在显式请求搜索焦点，以支持连续键盘搜索与选择。
   useEffect(() => {
     if (!visible) {
       return;
     }
 
-    // AI-REMOVED 2026-08-30:
-    // Reason: activeResultId 已迁入共享 QuickPlaceRuntime。
-    // Trigger: ST2-RQ-020 Route 与 UI 共享高亮结果。
-    // Evidence: runtime.activeResultId 同时由本 effect 与 quick-place Route 更新。
-    // Replacement: runInAction assignment below
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // setActiveResultId(null);
     runInAction(() => {
       runtime.activeResultId = null;
     });
@@ -231,15 +184,6 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
     return id !== null && id !== undefined && availableEntityIds.has(id) ? id : null;
   });
 
-  // AI-REMOVED 2026-08-30:
-  // Reason: 快速放置固定按键必须通过 GestureActionRouter 执行，避免组件内形成独立输入层和触发规则。
-  // Trigger: ST2-RQ-020 运行时与冲突系统使用同一可执行 Route。
-  // Evidence: quick-place.close、favorite-*、result-*、confirm Route 已覆盖下方全部旧分支。
-  // Replacement: quick-place-gesture-module.ts shortcutRoutes
-  // Risk: 键盘事件改由 native event 进入 Adapter；真实浏览器三档验证已覆盖捕获链路。
-  // Human Review: Required
-  //
-  // Original code:
   /*
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === "Escape") {
@@ -604,16 +548,6 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
             className={cm(styles, "quick-place-search-input")}
             onChange={(event) => {
               const nextSearchQuery = event.currentTarget.value;
-              // AI-REMOVED 2026-08-30:
-              // Reason: activeResultId 已迁入可供 Shortcut Route 与 UI 共享的 MobX runtime。
-              // Trigger: ST2-RQ-020 快速放置键盘 Route 统一。
-              // Evidence: quickPlace.activeResultId 由 Route 更新，组件只负责展示。
-              // Replacement: runtime.activeResultId assignment below
-              // Risk: Low
-              // Human Review: Required
-              //
-              // Original code:
-              // setActiveResultId(null);
               runInAction(() => {
                 runtime.activeResultId = null;
                 runtime.searchQuery = nextSearchQuery;

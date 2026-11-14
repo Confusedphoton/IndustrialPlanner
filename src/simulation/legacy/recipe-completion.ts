@@ -10,7 +10,6 @@ import type { RegistryContract } from "@/domain/registry/registry-contract";
  *
  * Stage1 正常推进完成与 Stage5 溢出推进完成必须共同调用这里，避免完成位置变化后
  * 遗漏仓库提交等配方级副作用。
- * AI-CORRECTION 2026-10-14: Stage5 只重试阻塞输出，不再处理溢出；完成事件交给 Stage6，下一 run 在 Stage7 启动。
  */
 export function completeRecipeIfPossible(options: {
   readonly registry: RegistryContract;

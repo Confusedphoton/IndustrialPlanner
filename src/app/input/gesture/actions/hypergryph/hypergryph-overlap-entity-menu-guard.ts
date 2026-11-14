@@ -1,31 +1,11 @@
 import type { AppHost } from "@/app/host/app-host";
 
 import type { GestureMappingModule } from "../types";
-// AI-REMOVED 2026-09-10:
-// Reason: 操作模式总开关已废弃，不再保留关闭分支
-// Trigger: 用户要求彻底移除 hypergryphOperationMode。
-// Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-// Replacement: gesture-action-router.ts 的默认启用语义
-// Risk: 历史 false 设置统一使用当前操作行为。
-// Human Review: Required
-//
-// Original code:
-// import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 
 export function createHypergryphOverlapEntityMenuGuardModule(): GestureMappingModule<AppHost> {
   return {
     id: "hypergryph-overlap-entity-menu-guard",
     priority: 1000,
-    // AI-REMOVED 2026-09-10:
-    // Reason: 操作模式总开关已废弃，不再保留关闭分支
-    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-    // Replacement: gesture-action-router.ts 的默认启用语义
-    // Risk: 历史 false 设置统一使用当前操作行为。
-    // Human Review: Required
-    //
-    // Original code:
-    // when: isHypergryphGestureEnabled,
     shortcutRoutes: [{
       id: "overlap-entity-menu.cancel",
       actionId: "fixed.overlap-entity-menu.cancel",
@@ -49,35 +29,11 @@ export function createHypergryphOverlapEntityMenuGuardModule(): GestureMappingMo
       },
     }],
     handle(event, context) {
-      // AI-REMOVED 2026-11-12:
-// Reason: 按画布读取真实交互对象，退出旧工作台结构探测。
-// Trigger: REQ-048 D7。
-// Evidence: CanvasInteractionController 明确持有相机、菜单与状态。
-// Replacement: context.canvas.overlapEntityMenu
-// Risk: Low
-// Human Review: Required
-// Original code:
-// const menu = (context.canvas as AppHost & {
-//         overlapEntityMenu?: AppHost["overlapEntityMenu"];
-//       }).overlapEntityMenu;
 const menu = context.canvas.overlapEntityMenu;
       if (menu === undefined || !menu.visible) {
         return { status: "ignored" };
       }
 
-      // AI-REMOVED 2026-08-30:
-      // Reason: 重叠菜单 Escape 已迁入最高输入层固定 Route。
-      // Trigger: ST2-RQ-020 输入层统一。
-      // Evidence: overlap-entity-menu.cancel 仅在 overlap-entity-menu 层可达。
-      // Replacement: shortcutRoutes[overlap-entity-menu.cancel] in this module
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // if (event.type === "key down" && event.code === "Escape") {
-      //   menu.cancel();
-      //   return { status: "handled" };
-      // }
 
       if (event.type === "on-exit-active-tool" || event.type === "on-enter-active-tool") {
         menu.cancel();

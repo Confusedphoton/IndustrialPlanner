@@ -7,19 +7,6 @@ import type { GridPoint, GridRect } from "@/domain/shared/grid";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { resolveEntityGridGeometry } from "@/shared/geometry/entity-grid-geometry";
 
-// AI-REMOVED 2026-09-11:
-// Reason: 实体 definition 查找、旋转占地与包围盒计算已提取为共享几何能力。
-// Trigger: 修复蓝图属性面板只按锚点跨度计算尺寸的问题，并统一各调用方的包围盒语义。
-// Evidence: resolveEntityGridGeometry 同时覆盖原 getRotatedGridFootprint 与 getGridBoundingBox 调用链。
-// Replacement: src/shared/geometry/entity-grid-geometry.ts resolveEntityGridGeometry
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import {
-//   getGridBoundingBox,
-//   getRotatedGridFootprint,
-// } from "@/shared/geometry/grid";
 
 import { resolveEntityById } from "./entity-resolvers";
 

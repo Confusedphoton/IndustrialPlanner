@@ -34,7 +34,7 @@ export function normalizeBlueprintDocument(value: unknown): BlueprintDocument | 
     return null;
   }
 
-  // 2026-07-23: 清理 entityOrder 中 entities 已不存在的无效 ID，
+  // 清理 entityOrder 中 entities 已不存在的无效 ID，
   // 修复历史删除操作未同步清理 entityOrder 导致计数虚高的问题。
   const validEntityOrder = migration.entityOrder.filter(
     (entityId) => entityId in migration.entities,

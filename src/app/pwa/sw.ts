@@ -188,7 +188,7 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") {
     return;
   }
-  // 2026-09-28: 回滚后的发布验证必须直连网络，禁止用离线 HTML 证明旧代码仍是当前发布。
+  // 回滚后的发布验证必须直连网络，禁止用离线 HTML 证明旧代码仍是当前发布。
   if (request.headers.get("X-IndustrialPlanner-Network-Only") === "1") return;
 
   const requestUrl = new URL(request.url);
@@ -199,25 +199,10 @@ self.addEventListener("fetch", (event) => {
   // AI-GENERATED 2026-06-13:
   // V2 旧版部署在 /v2/ 子路径下，不参与 PWA 预缓存。
   // SW 对 /v2/ 路径完全放行，避免用 v3 预缓存响应 v2 请求。
-  // AI-CORRECTION 2026-08-19: V2 已退出新发布产物；继续放行该路径，使服务器返回 410/404，避免 PWA 缓存把历史地址解析成当前版本。
   if (requestUrl.pathname.startsWith("/v2/") || requestUrl.pathname === "/v2") {
     return;
   }
 
-  // AI-GENERATED 2026-06-13:
-  // changelog 图片不进入 PWA 缓存，每次在线加载，确保版本更新后图片即时生效。
-  // AI-REMOVED 2026-06-29:
-  // Reason: 安装型离线包需要覆盖 changelog 图片，否则离线打开更新记录会缺图。
-  // Trigger: 用户要求不做实时缓存，而是安装后真正离线可用。
-  // Evidence: public/changelog 下存在图片资源；旧逻辑在 fetch 阶段直接放行网络，离线无法回退到预缓存。
-  // Replacement: vite.config.ts 的 globPatterns 覆盖图片资源，resolvePrecachedResponse 统一 cache-first。
-  // Risk: 离线包体积增加；通过哈希复用和并发下载降低更新成本。
-  // Human Review: Required
-  //
-  // Original code:
-  // if (/^\/changelog\/.*\.(png|jpe?g|webp|svg|gif)$/i.test(requestUrl.pathname)) {
-  //   return;
-  // }
 
   event.respondWith(resolvePrecachedResponse(request));
 });
@@ -372,14 +357,6 @@ async function installOptionalPrecacheEntries(
     if (bytes === null) missing.push(entry);
     else {
       cached.push(entry);
-      // AI-REMOVED 2026-10-09:
-      // Reason: 缓存校验与复用不属于网络下载，不应逐文件触发下载进度。
-      // Trigger: 刷新后完整动画和音频包仍弹出下载提示。
-      // Evidence: 此分支只读取已缓存的文件；missing 才交给下载器。
-      // Replacement: 下方仅在 missing 非空时广播复用起点；下载回调继续上报进度。
-      // Risk: Low。Human Review: Required
-      // Original code:
-      // await reportPrecacheProgress(task, cacheName, entry, bytes, progress, totalBytes, entries.length);
       progress.completedFiles += 1;
       progress.completedBytes += bytes;
     }
@@ -428,99 +405,12 @@ async function installAnimationPrecache(taskId: number, signal: AbortSignal): Pr
   const cache = await caches.open(ANIMATION_CACHE_NAME);
   const totalFiles = ANIMATION_ENTRIES.length;
   const totalBytes = calculateTotalBytes(ANIMATION_ENTRIES);
-  // AI-REMOVED 2026-09-26: 已移至 installOptionalPrecacheEntries；原因及风险见下方记录。
-  // const cachedEntries: PrecacheEntry[] = [];
-  // AI-REMOVED 2026-10-09:
-  // Reason: 完整包必须先静默检查；无条件清除完成标记和广播会制造重复下载提示。
-  // Trigger: 每次刷新重新显示动画下载进度。
-  // Evidence: 原代码在检查缓存前删除标记并广播 0% 下载进度。
-  // Replacement: installOptionalPrecacheEntries 的完成检查、失效处理和缺失文件进度。
-  // Risk: Low。Human Review: Required
-  // Original code:
-  // const progress: PrecacheInstallProgress = {
-  //   completedBytes: 0,
-  //   completedFiles: 0,
-  // };
-  //
-  // await cache.delete(ANIMATION_COMPLETE_MARKER_CACHE_URL);
-  // await broadcastAnimationProgress(progress, totalBytes, totalFiles, "");
 
   try {
-  // AI-REMOVED 2026-09-26:
-  // Reason: 动画和音频共用可续传、校验及进度下载流程。
-  // Trigger: 独立可选音频离线包。
-  // Evidence: 两种资源均使用同一 PrecacheEntry 与哈希验证。
-  // Replacement: installOptionalPrecacheEntries。
-  // Risk: 需回归动画取消、续传。
-  // Human Review: Required
-  // Original code:
-  //     const reusableCaches = await openReusablePrecacheCaches(
-  //       cacheNamesBeforeDownload,
-  //       "industrial-planner-animation-precache-",
-  //     );
-  //     const entriesToDownload: PrecacheEntry[] = [];
-  //
-  //     for (const entry of ANIMATION_ENTRIES) {
-  //       throwIfAnimationTaskInactive(taskId, signal);
-  //       const reusedBytes = await tryReusePrecachedEntry(entry, cache, reusableCaches);
-  //
-  //       if (reusedBytes === null) {
-  //         entriesToDownload.push(entry);
-  //         continue;
-  //       }
-  //
-  //       cachedEntries.push(entry);
-  //       await reportPrecacheProgress(
-  //         "animation",
-  //         ANIMATION_CACHE_NAME,
-  //         entry,
-  //         reusedBytes,
-  //         progress,
-  //         totalBytes,
-  //         totalFiles,
-  //       );
-  //     }
-  //
-  //     await writePrecacheMetadata(cache, cachedEntries);
-  //     await downloadPrecacheEntries(entriesToDownload, cache, async (entry, downloadedBytes) => {
-  //       throwIfAnimationTaskInactive(taskId, signal);
-  //
-  //       if (downloadedBytes === null) {
-  //         throw new Error(`Required animation resource is unavailable: ${entry.url}`);
-  //       }
-  //
-  //       cachedEntries.push(entry);
-  //       await writePrecacheMetadata(cache, cachedEntries);
-  //       await reportPrecacheProgress(
-  //         "animation",
-  //         ANIMATION_CACHE_NAME,
-  //         entry,
-  //         downloadedBytes,
-  //         progress,
-  //         totalBytes,
-  //         totalFiles,
-  //       );
-  //     }, signal);
-  //     throwIfAnimationTaskInactive(taskId, signal);
-  //
-  //     await writePrecacheMetadata(cache, cachedEntries);
-  //
-  //     if (cachedEntries.length !== ANIMATION_ENTRIES.length) {
-  //       throw new Error(
-  //         `Animation package is incomplete: expected ${ANIMATION_ENTRIES.length}, got ${cachedEntries.length}`,
-  //       );
-  //     }
-  //
     await installOptionalPrecacheEntries("animation", ANIMATION_ENTRIES, ANIMATION_CACHE_NAME,
       "industrial-planner-animation-precache-", cache, cacheNamesBeforeDownload, signal,
       () => throwIfAnimationTaskInactive(taskId, signal));
 
-    // AI-REMOVED 2026-10-09:
-    // Reason: 动画和音频统一在共用安装器完成校验后写入标记。
-    // Trigger: 修复可选资源包刷新恢复。Evidence: installOptionalPrecacheEntries 已写入标记。
-    // Replacement: writeOptionalPrecacheCompleteMarker。Risk: Low。Human Review: Required
-    // Original code:
-    // await writeAnimationCompleteMarker(cache, totalBytes, totalFiles);
     await cleanupObsoleteAnimationCaches();
     await broadcastMessage({
       type: "PWA_PRECACHE_DONE",
@@ -971,7 +861,6 @@ async function resolvePrecachedResponse(request: Request): Promise<Response> {
     ? INDEX_CACHE_URL
     : createRuntimePrecacheCacheUrl(requestUrl, self.registration.scope);
 
-  // AI-CORRECTION 2026-06-13:
   // 导航请求改用 network-first：先尝试网络获取最新 index.html，
   // 成功后更新缓存；网络失败时回退到缓存中的 index.html。
   // 旧逻辑为 cache-first，导致旧 SW 在 waiting 期间始终返回缓存中的

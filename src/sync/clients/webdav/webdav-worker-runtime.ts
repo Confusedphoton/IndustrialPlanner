@@ -27,16 +27,6 @@ export class WebDavWorkerRuntime {
   }
 
   public async handleRequest(request: WebDavWorkerRequest): Promise<WebDavWorkerResponse> {
-    // AI-REMOVED 2026-08-08:
-    // Reason: 并发请求不能各自修改 Worker 进程级日志级别。
-    // Trigger: ST2-RQ-009 将 debugMode 同步移到公共 controlPort。
-    // Evidence: maxConcurrentRequests 默认允许四个请求同时执行。
-    // Replacement: worker-endpoint.ts 在 bootstrap/control 消息时设置 logger 级别。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // setLogLevel(request.debugEnabled ? "debug" : "silent");
     const debugEnabled = readDebugModeEnabled();
     const startedAt = debugEnabled ? performance.now() : 0;
     const operationLabel = debugEnabled ? formatOperationLabel(request.operation) : "";

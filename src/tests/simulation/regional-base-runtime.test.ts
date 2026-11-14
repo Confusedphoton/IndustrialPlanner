@@ -2,15 +2,6 @@ import { loadBlueprintVariantFromFile, loadBlueprintFromFile } from "./blueprint
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/regional-base-runtime/index.json
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// import { createDarkPipeSlotLink } from "@/shared/dark-pipe-link";
 import { compileSimulationTopology } from "@/simulation/topology/compiler";
 import { buildRegionalWarehouseOutletTable } from "@/simulation/regional/warehouse-outlet-table";
 import {
@@ -24,54 +15,12 @@ import type {
 } from "@/simulation/regional/types";
 import { SimulationWorkerRuntime } from "@/simulation/legacy/worker-runtime";
 import { createWorldDocumentFromBlueprint } from "./blueprint-test-helpers";
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/regional-base-runtime/index.json
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// import {
-//   createBlueprint,
-//   // AI-REMOVED 2026-08-19:
-//   // Reason: createDarkPipeSlotLink 由 shared/dark-pipe-link 导出，不属于 blueprint-test-helpers。
-//   // Trigger: 新增区域暗管直连回归测试时发现导入来源错误。
-//   // Evidence: blueprint-test-helpers.ts 未导出该函数。
-//   // Replacement: 文件顶部 @/shared/dark-pipe-link 导入。
-//   // Risk: Low
-//   // Human Review: Not Required
-//   //
-//   // Original code:
-//   // createDarkPipeSlotLink,
-//   createEntity,
-//   createWarehouseSlotLink,
-// } from "./blueprint-test-helpers";
 
 describe("区域基地 Runtime 门禁", () => {
   it.each(["udpipe_loader_1", "udpipe_loader_2"] as const)(
     "区域模式下未链接的 %s 将流体写入区域仓库 journal",
     (inletDefinitionId) => {
       const registry = createRegistryContract();
-      // AI-REMOVED 2026-09-14:
-      // Reason: 场景构造已批量固化为带版本的蓝图文件。
-      // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-      // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-      // Replacement: src/tests/fixtures/blueprints/simulation/regional-base-runtime/index.json
-      // Risk: Low；断言与被测动作不变。
-      // Human Review: Required
-      // Original code:
-      // createBlueprint(
-      //         `regional-unlinked-${inletDefinitionId}`,
-      //         [
-      //           createEntity("source", "udpipe_unloader_1", 0, 0, 180, {
-      //             "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
-      //             "storageSlotGroups[0].slots[0].initialCount": 1,
-      //           }),
-      //           createEntity("pipe", "pipe_straight_1x1", 3, 1),
-      //           createEntity("inlet", inletDefinitionId, 4, 0, 180),
-      //         ],
-      //       )
       const document = createWorldDocumentFromBlueprint(loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/simulation/regional-base-runtime/index.json", "scene-01", { inletDefinitionId }));
       const topology = compileSimulationTopology({
         document,
@@ -138,30 +87,6 @@ describe("区域基地 Runtime 门禁", () => {
 
   it("区域模式下已直连的暗管入口保持本地 share-all，不重复写入仓库", () => {
     const registry = createRegistryContract();
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/regional-base-runtime/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // createBlueprint(
-    //       "regional-linked-dark-pipe",
-    //       [
-    //         createEntity("source", "udpipe_unloader_1", 0, 0, 180, {
-    //           "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
-    //           "storageSlotGroups[0].slots[0].initialCount": 1,
-    //         }),
-    //         createEntity("pipe", "pipe_straight_1x1", 3, 1),
-    //         createEntity("inlet", "udpipe_loader_1", 4, 0, 180),
-    //         createEntity("linked-outlet", "udpipe_unloader_1", 10, 0, 180),
-    //       ],
-    //       [createDarkPipeSlotLink({
-    //         inletEntityId: "inlet",
-    //         outletEntityId: "linked-outlet",
-    //       })],
-    //     )
     const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/regional-base-runtime/scene-02-regional-linked-dark-pipe-266c8d9b.schema7.json"));
     const topology = compileSimulationTopology({
       document,
@@ -205,20 +130,6 @@ describe("区域基地 Runtime 门禁", () => {
 
   it("Epoch 0 在 tick1 提货，管道/传送带相位错误时不产生 demand", () => {
     const registry = createRegistryContract();
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/regional-base-runtime/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // createBlueprint("regional-runtime-belt", [
-    //       createEntity("unloader", "unloader_1", 51, 34, 270),
-    //       createEntity("belt_0", "belt_straight_1x1", 52, 35, 0),
-    //     ], [
-    //       createWarehouseSlotLink("unloader", "item_copper_ore"),
-    //     ])
     const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/regional-base-runtime/scene-03-regional-runtime-belt-0af9999d.schema7.json"));
     const topology = compileSimulationTopology({
       document,
@@ -339,18 +250,6 @@ describe("区域基地 Runtime 门禁", () => {
 
   it("区域前台 Runtime 取走增量快照后只保留最新 tick 锚点", () => {
     const registry = createRegistryContract();
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/regional-base-runtime/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // createBlueprint(
-    //       "regional-snapshot-retention",
-    //       [createEntity("belt", "belt_straight_1x1", 0, 0)],
-    //     )
     const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/regional-base-runtime/scene-04-regional-snapshot-retention-78c359e0.schema7.json"));
     const topology = compileSimulationTopology({
       document,

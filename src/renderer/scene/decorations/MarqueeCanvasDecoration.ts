@@ -6,7 +6,6 @@ import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
 
 /** 框选模式标签固定蓝色 */
-/** AI-CORRECTION 2026-06-13: 参考游戏 HUD 后，框选模式标签改为白色主标题，避免和浅蓝画布背景抢色。 */
 const MARQUEE_LABEL_COLOR = 0xF8FBFF;
 
 /** 左上角模式标签样式（不含 dropShadow.color，由 sync 动态设置） */

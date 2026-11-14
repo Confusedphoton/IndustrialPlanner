@@ -133,20 +133,6 @@ export function MeteredConsumptionInspector({
           <span>{appHost.actions.translate("inspectorText.start")}</span>
         </button>
       </div>
-      {/* AI-REMOVED 2026-07-16:
-          Reason: 用户要求去掉标尺下方的文字说明行，只保留物品图标和标尺。
-          Trigger: “文字说明那一行直接去掉，只留下标尺”。
-          Evidence: 该行与标尺 aria-valuenow 重复表达同一数值。
-          Replacement: .metered-consumption-content 内的物品图标与 role=meter 标尺。
-          Risk: Low
-          Human Review: Required
-
-          Original code:
-          <div className={cm(styles, "metered-consumption-summary")}>
-            <span>当前/上一分钟最大值</span>
-            <strong>{displayedCount}</strong>
-          </div>
-      */}
     </InspectorCollapsiblePanel>
   );
 }

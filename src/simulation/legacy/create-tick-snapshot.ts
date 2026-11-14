@@ -132,10 +132,8 @@ function createDeviceSnapshots(
       continue;
     }
 
-    // AI-CORRECTION 2026-05-13: snapshot 投影遍历所有 channel，取第一个运行中的 recipe。
     const firstRecipe = Object.values(runtimeDevice.channelRecipes).find(r => r !== null) ?? null;
 
-    // AI-CORRECTION 2026-05-29: 新增 channelRecipes 投影所有 channel 的运行时状态。
     const channelRecipes: Record<string, RuntimeTickSnapshot["devices"][string]["recipe"]> = {};
     for (const [chId, chRecipe] of Object.entries(runtimeDevice.channelRecipes)) {
       channelRecipes[chId] = chRecipe === null
@@ -182,16 +180,6 @@ function createDeviceSnapshots(
           },
       channelRecipes,
       admissionCounters: createAdmissionCounterSnapshots(topology, state, deviceId),
-      // AI-REMOVED 2026-07-23:
-      // Reason: RuntimeDeviceSnapshot 已删除分钟计量字段。
-      // Trigger: 消耗状态改由真实槽位和频道配方表达。
-      // Evidence: 同一 tick 快照已包含 slots 与上方 channelRecipes。
-      // Replacement: RuntimeTickSnapshot.slots + channelRecipes。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // meteredConsumption: createMeteredConsumptionSnapshot(topology, state, deviceId),
     };
   }
   return devices;
@@ -229,16 +217,6 @@ function isLegacyRecipeProgressing(options: {
   });
 }
 
-// AI-REMOVED 2026-07-23:
-// Reason: tick 快照不再投影固定窗口计量状态。
-// Trigger: 用户要求 Inspector 直接显示真实消耗槽数量 × 6。
-// Evidence: createSlotSnapshots 与 channelRecipes 已提供库存、预留和运行状态。
-// Replacement: RuntimeTickSnapshot.slots + devices.channelRecipes。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// function createMeteredConsumptionSnapshot(...) { ... }
 
 function createAdmissionCounterSnapshots(
   topology: CompiledSimulationTopology,

@@ -192,6 +192,11 @@ describe("KeyboardShortcutManager", () => {
       [SHORTCUT_KEY.PAN_VIEWPORT_LEFT]: "A;ArrowLeft",
       [SHORTCUT_KEY.PAN_VIEWPORT_RIGHT]: "D;ArrowRight",
       [SHORTCUT_KEY.MARQUEE]: ";X",
+      // 新增物流设备快捷插入。
+      [SHORTCUT_KEY.INSERT_SPLITTER]: "Y;Ctrl+Y",
+      [SHORTCUT_KEY.INSERT_CONVERGER]: "O;Ctrl+O",
+      [SHORTCUT_KEY.INSERT_CONNECTOR]: "J;Ctrl+J",
+      [SHORTCUT_KEY.INSERT_ADMISSION]: "I;Ctrl+I",
     } as const;
     localStorage.setItem(APP_SHORTCUTS_LOCAL_STORAGE_KEY, JSON.stringify({
       _v: 1,
@@ -200,7 +205,7 @@ describe("KeyboardShortcutManager", () => {
 
     const manager = createManager();
 
-    expect(Object.values(SHORTCUT_KEY)).toHaveLength(29);
+    expect(Object.values(SHORTCUT_KEY)).toHaveLength(33);
     for (const shortcutId of Object.values(SHORTCUT_KEY)) {
       expect(manager.getKeyboardShortcutFor(shortcutId)).toBe(persistedShortcuts[shortcutId]);
     }
@@ -214,7 +219,7 @@ describe("KeyboardShortcutManager", () => {
 
     manager.resetAllShortcutsToDefaults();
 
-    expect(CONFIGURABLE_SHORTCUT_ACTION_SPECS).toHaveLength(29);
+    expect(CONFIGURABLE_SHORTCUT_ACTION_SPECS).toHaveLength(33);
     for (const spec of CONFIGURABLE_SHORTCUT_ACTION_SPECS) {
       expect(manager.getKeyboardShortcutFor(spec.id)).toBe(spec.defaultBindings.join(";"));
     }

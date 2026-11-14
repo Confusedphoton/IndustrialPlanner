@@ -220,16 +220,6 @@ export function compileSimulationTopology(
         inactiveActivityItemIds,
         baseId: options.document.baseId,
         poweredEntityIds: options.poweredEntityIds,
-        // AI-REMOVED 2026-08-19:
-        // Reason: 单个设备编译不再接收 SimulationMode；模式只属于拓扑运行架构。
-        // Trigger: 用户要求 Registry 删除 mode override 及对应基础设施。
-        // Evidence: compileEntityDevice 只读取基础 simulationBehaviors。
-        // Replacement: 顶层 CompiledSimulationTopology.simulationMode。
-        // Risk: Low
-        // Human Review: Required
-        //
-        // Original code:
-        // simulationMode: options.simulationMode,
       }),
       devices,
       nodes,
@@ -242,26 +232,6 @@ export function compileSimulationTopology(
       portOrder,
     });
 
-    // AI-REMOVED 2026-06-09:
-    // Reason: EntityDefinition.links 字段已从领域模型中移除，所有槽位链接统一存放于 document.slotLinks。
-    // Trigger: 用户要求将设备级链接与文档级链接合并为单一数据源。
-    // Evidence: compileDefinitionSlotLinks 仅消费 EntityDefinition.links（已删除），无其他数据来源。
-    // Replacement: compileDocumentSlotLinks 统一处理所有 slotLinks。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // for (const link of compileDefinitionSlotLinks({
-    //   definition,
-    //   entityConfig: entity.config,
-    //   compiledEntityId: `device:${entity.id}`,
-    //   compiledDevice: devices[`device:${entity.id}`],
-    //   compiledSlots: slots,
-    //   compiledNodes: nodes,
-    //   baseId: options.document.baseId,
-    // })) {
-    //   links[link.id] = link;
-    // }
   }
 
   for (const link of compileDocumentSlotLinks({
@@ -376,15 +346,6 @@ export function compileSimulationTopology(
     simulationMode: options.simulationMode,
     documentHash,
     registryHash,
-    // AI-REMOVED 2026-10-04:
-    // Reason: 运行频率不是连接结构身份；原地调速必须保留拓扑索引。
-    // Trigger: 快速拖动时调速反复全量编译，造成约 150 ms 主线程停顿。
-    // Evidence: Trace-20261004T205802 中 28 次长任务进入 switchDenseStandardTickRate。
-    // Replacement: topology.standardTickRate 与 Dense Kernel 原地调速。
-    // Risk: 拓扑 ID 不再区分时间单位，帧与检查点必须使用各自的频率。
-    // Human Review: Required
-    // Original code:
-    // standardTickRate,
     totalPowerDemand,
     activeActivityIds,
     devices,
@@ -410,8 +371,6 @@ export function compileSimulationTopology(
   };
 
   return {
-    // AI-CORRECTION 2026-09-11: 当前文档 schema 已升至 7，拓扑快照跟随当前版本。
-    // AI-CORRECTION 2026-09-11: 发布 tag v1.5.0 的 schema 为 5，当前文档及拓扑统一为未发布 schema 6。
     schemaVersion: 6,
     simulationMode: options.simulationMode,
     topologyId: hashStable(topologyHashInput),
@@ -523,54 +482,6 @@ function addDeviceCompileResult(options: {
   }
 }
 
-// AI-REMOVED 2026-08-02:
-// Reason: topology 不再携带 registry item/recipe 镜像。
-// Trigger: Worker 入口独立构造唯一 RegistryContract。
-// Evidence: compileSimulationTopology 仅保留 active item/recipe ID 集用于编译期校验。
-// Replacement: activeItemDefinitions/activeItemIds/activeRecipeIds 局部视图。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// function compileItemCatalog(
-//   registry: RegistryContract,
-//   activeActivityIds: readonly string[],
-// ): Record<string, CompiledSimulationItem> {
-//   const catalog: Record<string, CompiledSimulationItem> = {};
-//
-//   for (const item of [...registry.itemDefinitions].sort((left, right) =>
-//     left.id.localeCompare(right.id),
-//   )) {
-//     if (!isItemAvailableByActivity(item, activeActivityIds)) {
-//       continue;
-//     }
-//
-//     catalog[item.id] = {
-//       id: item.id,
-//       domain: registry.queries.resolveItemDomain(item.id),
-//       tags: [...item.tags].sort(),
-//     };
-//   }
-//
-//   return catalog;
-// }
-//
-// function compileRecipeCatalog(
-//   registry: RegistryContract,
-//   activeActivityIds: readonly string[],
-// ): Record<string, CompiledSimulationRecipeDefinition> {
-//   const catalog: Record<string, CompiledSimulationRecipeDefinition> = {};
-//   for (const recipe of [...registry.recipeDefinitions].sort((left, right) =>
-//     left.id.localeCompare(right.id),
-//   )) {
-//     if (!isRecipeAvailableByActivity(recipe, activeActivityIds)) {
-//       continue;
-//     }
-//
-//     catalog[recipe.id] = compileRecipeDefinition(recipe, convertSecondsToSimulationTicks(recipe.durationSeconds));
-//   }
-//   return catalog;
-// }
 
 function computeTotalPowerDemand(
   devices: Readonly<Record<string, CompiledSimulationDevice>>,
@@ -600,15 +511,6 @@ function compileWarehouseDevice(
     initialCount: 0,
     ignoreStock: regionalInfiniteItemIds.has(item.id),
   }));
-  // AI-REMOVED 2026-08-02:
-  // Reason: 仓库槽位直接由活动可用 ItemDefinition 编译，不再经过 itemCatalog。
-  // Trigger: 删除 topology.itemCatalog。
-  // Evidence: itemDefinitions 已按 ID 排序并通过活动过滤。
-  // Replacement: 上方 itemDefinitions.map。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
   /*
   const slots: CompiledSimulationSlot[] = Object.keys(itemCatalog).sort().map((itemId) => ({
     id: `${nodeId}/slot:${itemId}`,
@@ -621,19 +523,7 @@ function compileWarehouseDevice(
     initialItemType: itemId,
     initialCount: 0,
     ignoreStock: false,
-    // AI-REMOVED 2026-06-06:
-    // Reason: CompiledSimulationSlot 不再持有 submitMode；隐藏仓库槽不参与全局提交机制。
-    // Trigger: 用户要求 submit mode 机制彻底删除，避免旧蓝图配置被运行时误消费。
-    // Evidence: RUN_ID 20260606-041337-509040 中 submitMode 全局扫描清空目标存储箱。
-    // Replacement: WarehouseSink 动态写入仓库槽。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // submitMode: "never" as const,
-    // submitIntervalTicks: null,
-  }));
-  */
+    */
   const node: CompiledSimulationNode = {
     id: nodeId,
     deviceId,
@@ -807,16 +697,6 @@ function compileEntityDevice(options: {
   readonly inactiveActivityItemIds: ReadonlySet<string>;
   readonly baseId: string;
   readonly poweredEntityIds: ReadonlySet<string>;
-  // AI-REMOVED 2026-08-19:
-  // Reason: 设备编译不再根据 SimulationMode 解析 Registry 覆盖。
-  // Trigger: 用户要求删除 Registry mode override 基础设施。
-  // Evidence: simulationBehaviors 是模式无关的唯一设备行为输入。
-  // Replacement: CompileOptions.simulationMode 仅保留在拓扑层。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // readonly simulationMode: SimulationMode;
 }): DeviceCompileResult {
   const deviceId = `device:${options.entity.id}`;
   const definition = applyPortPriorityGroupConfig(
@@ -886,27 +766,6 @@ function compileEntityDevice(options: {
     ...behavior,
     storageSlotGroupIds: [...behavior.storageSlotGroupIds],
   }));
-  // AI-REMOVED 2026-08-19:
-  // Reason: Topology Compiler 不再从 Registry 按 SimulationMode 选择设备 behavior 覆盖。
-  // Trigger: 用户要求删除 simulationModeConfigs 及对应基础设施。
-  // Evidence: EntityDefinition.simulationBehaviors 是设备行为唯一声明，所有模式编译相同静态行为。
-  // Replacement: 上方直接编译 options.definition.simulationBehaviors。
-  // Risk: Medium - 未来真实模式差异不能在 Registry 中局部恢复。
-  // Human Review: Required
-  //
-  // Original code:
-  // const modeSimulationBehaviors = options.registryQueries.resolveEntitySimulationModeConfig(
-  //   definition.id,
-  //   options.simulationMode,
-  // )?.behaviors;
-  // const simulationBehaviors = (
-  //   modeSimulationBehaviors
-  //   ?? options.definition.simulationBehaviors
-  //   ?? []
-  // ).map((behavior) => ({
-  //   ...behavior,
-  //   storageSlotGroupIds: [...behavior.storageSlotGroupIds],
-  // }));
   const device: CompiledSimulationDevice = {
     id: deviceId,
     sourceEntityId: options.entity.id,
@@ -933,16 +792,6 @@ function compileEntityDevice(options: {
       entity: options.entity,
       definition,
       simulationBehaviors,
-      // AI-REMOVED 2026-08-19:
-      // Reason: 设备 configHash 不再因运行架构模式不同而变化。
-      // Trigger: 用户要求 Registry 删除 mode override；设备基础声明在所有模式下相同。
-      // Evidence: topologyHashInput 已独立包含 simulationMode，Worker 路由校验仍保留。
-      // Replacement: topologyHashInput.simulationMode。
-      // Risk: Low - 模式切换仍会生成不同 topologyId，但不会伪造设备配置变化。
-      // Human Review: Required
-      //
-      // Original code:
-      // simulationMode: options.simulationMode,
     }),
     blockageAutoClearance: compileBlockageAutoClearance(definition, options.entity.config),
     waterPurifierNode: compileWaterPurifierNode(definition.id, options.entity.config),
@@ -957,16 +806,6 @@ function compileEntityDevice(options: {
   };
 }
 
-// AI-REMOVED 2026-07-23:
-// Reason: 固定窗口计量配置不再参与拓扑编译。
-// Trigger: 用户要求真实槽位与十秒 consumption-channel 配方。
-// Evidence: compileRecipeChannels 已编译频道用途和直接节点引用。
-// Replacement: compileRecipeChannels + consumptionChannelCount。
-// Risk: Medium
-// Human Review: Required
-//
-// Original code:
-// function compileMeteredConsumption(...) { ... }
 
 function compileStorageSlotGroups(options: {
   readonly deviceId: string;
@@ -1088,7 +927,6 @@ function compileStorageNodeSet(options: {
     options.compiledSlots.push(compiledSlot);
     slotIds.push(compiledSlot.id);
   });
-  // AI-CORRECTION 2026-05-13: viewRole 现在纯粹由端口绑定方向决定，不需要 slotType。
   const viewRole: SimulationNodeViewRole = options.hasInputBinding ? "input-view"
     : options.hasOutputBinding ? "output-view"
     : "input-view";
@@ -1104,39 +942,17 @@ function compileStorageNodeSet(options: {
   return {
     inputNodeIds: options.hasInputBinding ? [nodeId] : [],
     outputNodeIds: options.hasOutputBinding ? [nodeId] : [],
-    // AI-REMOVED 2026-06-06:
-    // Reason: Recipe Channel 的 ingredient/product 角色不应被端口方向过滤；单节点存储组应按 channel 声明角色参与配方。
-    // Trigger: 用户要求按《仿真运行原理》恢复“配方原料/产物由 Recipe Channel 决定”的原始设计。
-    // Evidence: .docs/common/模拟器/仿真运行原理.md §3.5 明确 channel 的 ingredient/product 与端口 input/output 正交，互不约束。
-    // Replacement: 下方 ingredientNodeIds/productNodeIds 均指向该单节点；端口物流能力仍由 inputNodeIds/outputNodeIds 保持。
-    // Risk: Medium - 依赖旧端口过滤兜底的错误 channel 定义必须先修正；当前已修正粉碎机/填充器/液体填充器。
-    // Human Review: Required
-    //
-    // Original code:
-    // ingredientNodeIds: options.hasInputBinding ? [nodeId] : [],
-    // productNodeIds: options.hasOutputBinding ? [nodeId] : [],
     ingredientNodeIds: [nodeId],
     productNodeIds: [nodeId],
   };
 }
 
-// AI-REMOVED 2026-05-13: resolveSplitStorageViewConfig
-// Reason: slotType no longer exists; split linkType is now read directly from storageGroup.splitLinkType.
-// Trigger: Recipe Channel 重构
-// Replacement: storageGroup.splitLinkType ?? "share-all"
-// Risk: Low
 
-// AI-REMOVED 2026-05-13: resolveSingleStorageNodeViewRole
-// Reason: viewRole is now purely determined by port binding direction, not slotType.
-// Trigger: Recipe Channel 重构
-// Replacement: hasInputBinding ? "input-view" : hasOutputBinding ? "output-view" : "input-view"
-// Risk: Low
 
 function createSplitStorageGroupNodeBinding(options: {
   readonly inputNodeId: string;
   readonly outputNodeId: string;
 }): StorageGroupNodeBinding {
-  // AI-CORRECTION 2026-05-13: ingredientNodeIds/productNodeIds 现在由 Recipe Channel 编译决定。
   // 展开后的 input-view 始终标记为 ingredient，output-view 始终标记为 product。
   return {
     inputNodeIds: [options.inputNodeId],
@@ -1146,11 +962,6 @@ function createSplitStorageGroupNodeBinding(options: {
   };
 }
 
-// AI-REMOVED 2026-05-13: isIngredientSlotType / isProductSlotType
-// Reason: SimulationSlotType no longer exists.
-// Trigger: Recipe Channel 重构, slotType field removed.
-// Replacement: ingredientNodeIds/productNodeIds now come from Recipe Channel compilation.
-// Risk: Low
 
 function createCompiledNode(options: {
   readonly id: string;
@@ -1160,7 +971,6 @@ function createCompiledNode(options: {
   readonly groupOrder: number;
   readonly viewRole: SimulationNodeViewRole;
 }): CompiledSimulationNode {
-  // AI-CORRECTION 2026-05-13: slotType 字段已从 CompiledSimulationNode 删除。
   return {
     id: options.id,
     deviceId: options.deviceId,
@@ -1191,7 +1001,6 @@ function compileSyntheticNodesForUnboundPorts(options: {
     !boundPortGroupIds.has(portGroup.id)
     && (portGroup.direction === "output" || portGroup.direction === "bidirectional"),
   );
-  // AI-CORRECTION 2026-07-30: 回滚 — 管道设备族槽位容量恢复为 1，
   // 配合 0.5 秒单件配方实现 2/s 最大吞吐。
   const syntheticSlotCapacity = 1;
 
@@ -1237,7 +1046,6 @@ function addSyntheticNode(options: {
 }): void {
   const nodeId = `${options.deviceId}/node:${options.sourceStorageSlotGroupId}`;
   const slotId = `${nodeId}/slot:slot_1`;
-  // AI-CORRECTION 2026-05-13: slotType removed. ingredientNodeIds/productNodeIds now determined by Recipe Channel.
   options.nodes.push(createCompiledNode({
     id: nodeId,
     deviceId: options.deviceId,
@@ -1257,49 +1065,15 @@ function addSyntheticNode(options: {
     initialItemType: null,
     initialCount: 0,
     ignoreStock: false,
-    // AI-REMOVED 2026-06-06:
-    // Reason: Synthetic slot 不再编译 submitMode；入仓语义由设备标签和目标节点决定。
-    // Trigger: submit mode 机制彻底删除。
-    // Evidence: REQ-087 方案要求仓库存货口使用动态 warehouse sink，不使用 tick 末尾 submit。
-    // Replacement: runtime-slot-access.findInputSlotForItem 动态返回仓库目标槽。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // submitMode: "never",
-    // submitIntervalTicks: null,
   });
   options.nodeBindingsByStorageGroupId.set(options.sourceStorageSlotGroupId, {
     inputNodeIds: options.bindDirection === "input" ? [nodeId] : [],
     outputNodeIds: options.bindDirection === "output" ? [nodeId] : [],
-    // AI-REMOVED 2026-06-06:
-    // Reason: synthetic 缓存组的配方角色也应由 Recipe Channel 引用决定，而不是由未绑定端口方向过滤。
-    // Trigger: 用户要求按《仿真运行原理》恢复“配方原料/产物由 Recipe Channel 决定”的原始设计。
-    // Evidence: .docs/common/模拟器/仿真运行原理.md §3.5：若某存储组只绑定单侧端口、未展开，则该 Node 按 channel 声明角色参与。
-    // Replacement: 下方 ingredientNodeIds/productNodeIds 均指向 synthetic 单节点；端口物流能力仍由 inputNodeIds/outputNodeIds 保持。
-    // Risk: Medium - 若 registry 中 synthetic channel 声明错误，将不再被端口方向兜底隐藏。
-    // Human Review: Required
-    //
-    // Original code:
-    // ingredientNodeIds: options.bindDirection === "input" ? [nodeId] : [],
-    // productNodeIds: options.bindDirection === "output" ? [nodeId] : [],
     ingredientNodeIds: [nodeId],
     productNodeIds: [nodeId],
   });
 }
 
-// AI-REMOVED 2026-07-23:
-// Reason: 所有 synthetic 槽位固定容量 1 会使严格管道的 2 件配方永远无法取得或放下 2 件。
-// Trigger: 用户要求 PipeFamily 槽位容量上限统一为 2。
-// Evidence: .docs/common/模拟器/仿真运行原理.md v5 §6.2；严格直管与弯管使用 synthetic-input/output。
-// Replacement: compileSyntheticNodesForUnboundPorts 根据 PipeFamily 计算 syntheticSlotCapacity 并传入 addSyntheticNode。
-// Risk: Low - 非 PipeFamily synthetic 槽位仍保持容量 1。
-// Human Review: Required
-// AI-CORRECTION 2026-07-30: 回滚 — 管道恢复 0.5s 单件配方，槽位容量恢复为 1。
-// syntheticSlotCapacity 恢复为固定 1，不区分 PipeFamily。
-//
-// Original code (restored):
-// capacity: 1,
 
 function compileSlot(options: {
   readonly slot: StorageSlotDefinition;
@@ -1311,19 +1085,6 @@ function compileSlot(options: {
   readonly initialItemType?: string | null;
   readonly initialCount?: number;
 }): CompiledSimulationSlot {
-  // AI-REMOVED 2026-06-06:
-  // Reason: slot.submitMode / submitIntervalSeconds 不再进入 CompiledSimulationSlot。
-  // Trigger: 用户要求 submit mode 机制彻底删除；全局 submit 阶段已移除。
-  // Evidence: RUN_ID 20260606-041337-509040 证明该机制会误消费旧蓝图中的 every-tick 配置。
-  // Replacement: WarehouseSink 动态入仓；协议存储箱 r_warehouse_submit 配方提交。
-  // Risk: Medium - domain 层旧配置仍存在但 simulation 忽略。
-  // Human Review: Required
-  //
-  // Original code:
-  // const submitMode = options.slot.submitMode;
-  // const submitInterval = submitMode === "every-n-seconds"
-  //   ? convertSecondsToSimulationTicks(options.slot.submitIntervalSeconds ?? 10)
-  //   : null;
   const rawLock = options.slot.lock;
   const lock = rawLock !== null && options.activeItemIds.has(rawLock)
     ? rawLock
@@ -1351,17 +1112,6 @@ function compileSlot(options: {
     initialItemType: itemType,
     initialCount,
     ignoreStock: configuredItemBecameUnavailable ? false : options.slot.ignoreStock,
-    // AI-REMOVED 2026-06-06:
-    // Reason: submitMode 字段从 active compiled slot shape 删除。
-    // Trigger: 用户要求 submit mode 机制彻底删除。
-    // Evidence: REQ-087 已指定入仓由动态 sink 或配方交货承担。
-    // Replacement: WarehouseSink tag + r_warehouse_submit recipe.
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // submitMode,
-    // submitIntervalTicks: submitInterval,
   };
 }
 
@@ -1630,7 +1380,6 @@ function resolveDocumentLinkEndpointSlotIds(options: {
   readonly baseId: string;
 }): readonly string[] {
   let entityId = options.endpoint.entityId;
-  // AI-CORRECTION 2026-06-09: warehouse 实体 ID 在编译时需解析为 device:warehouse:${baseId}。
   // 此前该逻辑在 compileDefinitionSlotLinks 中，EntityDefinition.links 移除后迁移至此。
   if (entityId === "warehouse" || entityId.startsWith("warehouse:")) {
     entityId = `device:warehouse:${options.baseId}`;
@@ -1681,7 +1430,6 @@ function pairSourceSlotsToTargetSlots(
 }
 
 
-// AI-CORRECTION 2026-05-13: compileRecipeChannels 替代 resolveDeviceRecipeNodeIds。
 // 从 Recipe Channel 声明编译 ingredientNodeIds / productNodeIds。
 function compileRecipeChannels(
   channelDefs: readonly RecipeChannelDefinition[],
@@ -1738,65 +1486,6 @@ function compilePhysicalConnections(
   }));
 }
 
-// AI-REMOVED 2026-09-28:
-// Reason: 编辑态与拓扑编译需要共用实际端口连接判定，避免默认优先级不一致。
-// Trigger: Registry 默认端口组合规则及 Inspector 展示需求。
-// Evidence: 原实现按内外坐标、运输类型和物流族判定连接。
-// Replacement: src/shared/port-connections.ts::findDirectPortConnections。
-// Risk: 保持连接遍历顺序；需验证旋转、物流族限制和异类端口隔离。
-// Human Review: Required
-//
-// Original code:
-// function compilePhysicalConnections(
-//   maybePorts: readonly (CompiledSimulationPort | undefined)[],
-//   devices: Record<string, CompiledSimulationDevice>,
-//   isGeneralLogisticsDevice: (definitionId: string) => boolean,
-// ): CompiledSimulationPhysicalConnection[] {
-//   const sourcePorts = maybePorts.filter((port): port is CompiledSimulationPort =>
-//     port !== undefined && port.direction === "output",
-//   );
-//   const targetPorts = maybePorts.filter((port): port is CompiledSimulationPort =>
-//     port !== undefined && port.direction === "input",
-//   );
-//   const connections: CompiledSimulationPhysicalConnection[] = [];
-//
-//   for (const sourcePort of sourcePorts) {
-//     for (const targetPort of targetPorts) {
-//       if (sourcePort.isPipe !== targetPort.isPipe || sourcePort.deviceId === targetPort.deviceId) {
-//         continue;
-//       }
-//       if (
-//         areGridPointsEqual(sourcePort.outsideGridPoint, targetPort.insideGridPoint)
-//         && areGridPointsEqual(sourcePort.insideGridPoint, targetPort.outsideGridPoint)
-//       ) {
-//         // 设备间不可直接相连：两端均非通用物流设备时，跳过不建立连接。
-//         // AI-CORRECTION 2026-07-27: 此处“通用物流设备”指完整传送带族或管道设备族；
-//         // 传送带物流设备不包括传送带节，管道物流设备不包括管道节。
-//         // 允许设备紧贴摆放，但端口不生效。
-//         const sourceDevice = devices[sourcePort.deviceId];
-//         const targetDevice = devices[targetPort.deviceId];
-//         if (
-//           sourceDevice !== undefined
-//           && targetDevice !== undefined
-//           && !isGeneralLogisticsDevice(sourceDevice.definitionId)
-//           && !isGeneralLogisticsDevice(targetDevice.definitionId)
-//         ) {
-//           continue;
-//         }
-//
-//         connections.push({
-//           id: `connection:${sourcePort.id}->${targetPort.id}`,
-//           sourcePortId: sourcePort.id,
-//           targetPortId: targetPort.id,
-//           sourceInsideGridPoint: sourcePort.insideGridPoint,
-//           targetInsideGridPoint: targetPort.insideGridPoint,
-//         });
-//       }
-//     }
-//   }
-//
-//   return connections;
-// }
 
 function getOrderedEntityIds(document: WorldDocument): string[] {
   const ordered = document.entityOrder.filter((entityId, index, array) =>
@@ -1833,27 +1522,15 @@ function resolveStorageGroupPortDirections(
   return { hasInput, hasOutput };
 }
 
-// AI-REMOVED 2026-05-13: resolveSlotType
-// Reason: role field removed from StorageSlotGroupDefinition.
-// Trigger: Recipe Channel 重构.
-// Replacement: None needed; slotType concept eliminated.
-// Risk: Low
 
-// AI-REMOVED 2026-05-13: resolveDeviceRecipeNodeIds
-// Reason: ingredientNodeIds/productNodeIds now compiled from Recipe Channel declarations.
-// Trigger: Recipe Channel 重构.
-// Replacement: compileRecipeChannels()
-// Risk: Low
 
 function resolveSlotDomain(
   storageGroup: StorageSlotGroupDefinition,
   slot: StorageSlotDefinition,
 ): SimulationItemDomainFilter {
-  // AI-CORRECTION 2026-05-30: itemFilterType="any" 必须直接返回 "any"，
   // 不能 fallthrough 到 storageGroup.kind 分支。
   // 原逻辑对 "any" 无匹配，落入 kind==="item"→返回 "solid"，
   // 导致反应池共享输入缓存（kind="item", filterType="any"）拒绝液体。
-  // AI-CORRECTION 2026-07-28: itemFilterType 与 storageGroup.kind 均为位标志，联合域无需分支展开。
   return slot.itemFilterType ?? storageGroup.kind;
 }
 
@@ -2025,27 +1702,6 @@ function resolveAcceptRuleCandidateDomains(
   }
 }
 
-// AI-REMOVED 2026-06-12:
-// Reason: 边的 count = min(sourcePort.count, targetPort.count) 是 per-tick 限流旧设计。
-// Trigger: 用户要求删除 per tick count，并改为准入口跨 tick admission counter。
-// Evidence: CompiledSimulationTransferEdge.count 已注释化删除。
-// Replacement: target input port 的 admissionRule。
-// Risk: Medium - 分流求解逻辑需通过 targetPortId 查询 runtime counter。
-// Human Review: Required
-//
-// Original code:
-// function minCountLimit(
-//   left: SimulationCountLimit,
-//   right: SimulationCountLimit,
-// ): SimulationCountLimit {
-//   if (left === "unlimited") {
-//     return right;
-//   }
-//   if (right === "unlimited") {
-//     return left;
-//   }
-//   return Math.min(left, right);
-// }
 
 /**
  * 解析设备的运输类别。
@@ -2054,18 +1710,10 @@ function resolveAcceptRuleCandidateDomains(
  * 1. 在 DEDICATED_LOGISTICS_DEVICE_KINDS 中注册的 → strict-belt 或 strict-pipe。
  *    当前仅 belt_straight_1x1 / belt_turn_cw_1x1 / belt_turn_ccw_1x1 为 strict-belt，
  *    pipe_straight_1x1 / pipe_turn_cw_1x1 / pipe_turn_ccw_1x1 为 strict-pipe。
- *    AI-CORRECTION 2026-07-27: 上述两组现分别称为传送带节、管道节，
- *    由 RegistryQuery.isBelt / isPipe 判定，不再读取旧映射。
  *
  * 2. 通用物流设备（item_pipe_splitter、item_pipe_converger、item_pipe_connector、
  *    item_log_splitter、item_log_converger、item_log_connector、
  *    item_pipe_admission、item_log_admission）不在专用物流注册表中，
- *    AI-CORRECTION 2026-07-19: 当前上述设备定义 ID 已移除 item_ 前缀；原名仅作历史审计。
- *    AI-CORRECTION 2026-07-27: “通用物流设备”现分别称为传送带物流设备、管道物流设备；
- *    两者分别不包括传送带节、管道节。
- *    因此 resolveDedicatedLogisticsKind 返回 null → 归为 anchor。
- *    这是有意设计：这些设备有自己的 buffer 和搬运配方，不应受管道域锁约束，
- *    且它们应分割 strict-pipe 的 TransportComponent。
  *
  * 3. 无端口且无存储槽的空壳设备 → non-graph（不进求解图）。
  *
@@ -2261,30 +1909,7 @@ function resolveEdgeDelta(edge: GridEdge): GridPoint {
   }
 }
 
-// AI-REMOVED 2026-09-28:
-// Reason: 端口连接匹配已由共用坐标索引实现，此私有比较函数不再使用。
-// Trigger: 默认端口优先级的编辑态与编译态连接判定统一。
-// Evidence: 唯一调用者为已替换的 compilePhysicalConnections 原实现。
-// Replacement: src/shared/port-connections.ts::findDirectPortConnections。
-// Risk: Low
-// Human Review: Required
-// Original code:
-// function areGridPointsEqual(left: GridPoint, right: GridPoint): boolean {
-//   return left.x === right.x && left.y === right.y;
-// }
 
-// AI-REMOVED 2026-08-02:
-// Reason: Registry recipe 不再编译进 topology，compiler 已无秒到 tick 的配方换算职责。
-// Trigger: runtime 从 RegistryContract 构造 CompiledSimulationRecipePlan。
-// Evidence: topology compiler 中剩余引用仅存在于历史审计注释。
-// Replacement: runtime-slot-access.ts::getOrCreateRegistryRecipePlan。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// function convertSecondsToSimulationTicks(durationSeconds: number): number {
-//   return Math.max(1, Math.round(durationSeconds * STANDARD_TICK_RATE_PER_SECOND));
-// }
 
 function mergeEntityDefinitionConfig(
   definition: EntityDefinition,

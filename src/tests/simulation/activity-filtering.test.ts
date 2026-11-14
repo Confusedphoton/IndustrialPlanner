@@ -43,16 +43,6 @@ function createActivityTestEntityDefinition(): EntityDefinition {
             localCellY: 0,
             edge: "NORTH",
             acceptRule: { base: { kind: "item", itemId: ACTIVITY_ITEM_ID }, exclude: [] },
-            // AI-REMOVED 2026-06-12:
-            // Reason: PortDefinition.count per-tick 限流字段已删除。
-            // Trigger: 用户要求删除 per tick count。
-            // Evidence: 仿真准入数量限制已改为 admissionRule 跨 tick counter。
-            // Replacement: None - 此测试仅需要 acceptRule。
-            // Risk: Low
-            // Human Review: Required
-            //
-            // Original code:
-            // count: "unlimited",
             priorityGroup: 5,
             roundRobinSeed: 0,
           },
@@ -96,28 +86,6 @@ function createActivityTestEntityDefinition(): EntityDefinition {
 }
 
 function createActivityTestDocument(): WorldDocument {
-  // AI-REMOVED 2026-09-14:
-  // Reason: 场景构造已批量固化为带版本的蓝图文件。
-  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-  // Replacement: src/tests/fixtures/blueprints/collections/simulation/activity-filtering/index.json
-  // Risk: Low；断言与被测动作不变。
-  // Human Review: Required
-  // Original code:
-  // {
-  //       machine: {
-  //         id: "machine",
-  //         definitionId: "test_activity_machine",
-  //         position: { x: 0, y: 0 },
-  //         rotation: 0,
-  //         config: {
-  //           channelRecipes: {
-  //             default: ACTIVITY_RECIPE_ID,
-  //           },
-  //         },
-  //         tags: [],
-  //       },
-  //     }
   return {
     ...createWorldDocument(),
     entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/simulation/activity-filtering/scene-01-variant-1.schema7.json").entities,

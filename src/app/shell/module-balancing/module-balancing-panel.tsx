@@ -47,17 +47,6 @@ import type {
   ModuleBalancingIOPort,
   ModuleBalancingModule,
   ModuleBalancingRecommendedModule,
-  // AI-REMOVED 2026-07-27:
-  // Reason: ModuleCard 不再直接访问系统配方 recipeId，标题和图标统一由 module-balancing-model 解析。
-  // Trigger: 系统配方卡改为设备头图和“产物 · 设备”文本。
-  // Evidence: resolveModuleDisplayTitle 与 resolveModuleIconSrc 已覆盖显示所需数据。
-  // Replacement: ModuleBalancingModule
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // ModuleBalancingSystemRecipeModule,
-  // AI-CORRECTION 2026-09-01: 图标解析接口现为 resolveModuleIconSrcs，可返回 1～4 个物品图标资源。
 } from "@/app/toolbox-types";
 import {
   buildModuleBalancingIndex,
@@ -113,17 +102,6 @@ import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { NumberInput } from "@/app/shell/shared/number-input";
 import { OverlayStackLayer, useOverlayStackLayer } from "@/app/shell/shared/overlay-stack";
-// AI-REMOVED 2026-07-27:
-// Reason: 系统配方卡改为设备图标与“产出物品 · 设备名称”单行头部，不再渲染完整配方公式。
-// Trigger: 用户要求调整系统配方模块外观。
-// Evidence: ModuleCard 的系统配方分支现由 resolveModuleDisplayTitle 提供头部文本。
-// Replacement: src/app/shell/module-balancing/module-balancing-model.ts:resolveModuleDisplayTitle
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import { RecipeDisplay } from "@/app/shell/shared/recipe-display";
-// AI-CORRECTION 2026-07-27: 用户澄清设备图标与“产物 · 设备”文本仅规范头部，系统配方卡仍需保留下方的配方展示控件。
 import { RecipeDisplay } from "@/app/shell/shared/recipe-display";
 
 const MODULE_DRAG_TYPE = "application/x-industrial-planner-module-balancing-module";
@@ -153,16 +131,6 @@ type ModuleBalancingPage =
   | { kind: "stage"; stageId: string }
   | { kind: "summary" };
 
-// AI-REMOVED 2026-07-27:
-// Reason: 模块库由互斥 tab 改为系统配方、推荐模块、自定义模块三个可独立展开的区块。
-// Trigger: 用户要求将 tab 切换改为展开/收起形式。
-// Evidence: ModuleLibrarySectionId 与 ModuleSection 共同管理三个区块的展开状态。
-// Replacement: ModuleLibrarySectionId
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// type ModuleLibraryTab = "recipes" | "modules";
 type ModuleLibrarySectionId = "system" | "recommended" | "custom";
 
 interface QuantityDraft {
@@ -211,16 +179,6 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
   const [activePage, setActivePage] = useState<ModuleBalancingPage>({ kind: "canvas" });
   const [libraryOpen, setLibraryOpen] = useState(!isTouch);
   const [libraryHighlight, setLibraryHighlight] = useState(false);
-  // AI-REMOVED 2026-07-27:
-  // Reason: 模块库不再使用互斥 tab，三个板块改为独立展开/收起。
-  // Trigger: 用户要求 tab 样式切换改为展开收起形式。
-  // Evidence: 展开状态已下沉至 ModuleLibrary 的 expandedSections。
-  // Replacement: ModuleLibrary.expandedSections
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // const [libraryTab, setLibraryTab] = useState<ModuleLibraryTab>("recipes");
   const [newCanvasDialogOpen, setNewCanvasDialogOpen] = useState(false);
   const [newCanvasName, setNewCanvasName] = useState("");
   const [canvasLibraryDialogOpen, setCanvasLibraryDialogOpen] = useState(false);
@@ -243,16 +201,6 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
 
   useEffect(() => {
     let active = true;
-    // AI-REMOVED 2026-07-27:
-    // Reason: effect 首次执行时状态已默认为 false，同步 setState 会造成一次无意义的级联渲染。
-    // Trigger: 推荐画布静态资源加载接入 React effect。
-    // Evidence: recommendedCanvasLoadFailed 的 useState 初始值已是 false。
-    // Replacement: Promise rejection 分支仅在真实加载失败时写入 true。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // setRecommendedCanvasLoadFailed(false);
     void readRecommendedCanvasLibrary()
       .then((library) => {
         if (active) {
@@ -839,16 +787,6 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
     runInAction(() => {
       const newCanvasId = applyCanvasImport(
         {
-          // AI-REMOVED 2026-09-01:
-          // Reason: 画布导出结构已升级到 v2，内部构造不能继续声明为 v1。
-          // Trigger: 自定义模块图标由 iconId 升级为 iconItemIds。
-          // Evidence: CanvasExportData.version 的当前唯一合法类型为 2。
-          // Replacement: version: 2
-          // Risk: Low；解析器仍兼容外部 v1 导入。
-          // Human Review: Required
-          //
-          // Original code:
-          // version: 1,
           version: 2,
           canvas: {
             name: importPlan.canvasData.name,
@@ -1152,20 +1090,6 @@ export const ModuleBalancingPanel = observer(function ModuleBalancingPanel({
     <>
       <header className={cm(styles, "module-balancing-drawer-header")}>
         <h3>{t("moduleBalancing.moduleLibrary")}</h3>
-        {/* AI-REMOVED 2026-07-27:
-            Reason: recipes/modules 互斥 tab 被三个独立展开区块替代。
-            Trigger: 用户要求模块库由 tab 切换改为展开收起形式。
-            Evidence: ModuleLibrary 内固定渲染三个 ModuleSection。
-            Replacement: ModuleLibrary
-            Risk: Low
-            Human Review: Required
-
-            Original code:
-            <div className={cm(styles, "module-balancing-library-tabs")}>
-              <button className={cm(styles, libraryTab === "recipes" ? "is-active" : "")} type="button" onClick={() => setLibraryTab("recipes")}>{t("moduleBalancing.recipes")}</button>
-              <button className={cm(styles, libraryTab === "modules" ? "is-active" : "")} type="button" onClick={() => setLibraryTab("modules")}>{t("moduleBalancing.modules")}</button>
-            </div>
-        */}
         <button className={cm(styles, "module-balancing-icon-button")} type="button" onClick={() => setLibraryOpen(false)} aria-label={t("action.close")}>
           <LucideX aria-hidden="true" />
         </button>
@@ -1569,26 +1493,6 @@ function ModuleLibrary({
     || !folderIdSet.has(module.folderId),
   );
 
-  // AI-REMOVED 2026-07-27:
-  // Reason: 同步 effect 内直接 setState 会产生级联渲染并违反 react-hooks/set-state-in-effect。
-  // Trigger: ESLint 在模块库搜索自动展开逻辑中发现同步状态更新。
-  // Evidence: 搜索输入事件本身已是展开板块的直接触发源，可在同一事件中完成状态更新。
-  // Replacement: 下方搜索框 onChange
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // useEffect(() => {
-  //   if (!isSearching) {
-  //     return;
-  //   }
-  //
-  //   setExpandedSections({
-  //     system: true,
-  //     recommended: true,
-  //     custom: true,
-  //   });
-  // }, [isSearching]);
 
   const toggleSection = (sectionId: ModuleLibrarySectionId) => {
     setExpandedSections((current) => {
@@ -1660,22 +1564,6 @@ function ModuleLibrary({
             } else if (!nextIsSearching && isSearching) {
               setExpandedSections({ ...libraryUiState.expandedSections });
             }
-            // AI-REMOVED 2026-09-01:
-            // Reason: 搜索触发的临时展开不应覆盖用户持久化的折叠偏好。
-            // Trigger: 用户要求模块库折叠状态仅在本机持久化。
-            // Evidence: expandedSections 现在区分搜索期临时状态与 libraryUiState 中的用户偏好。
-            // Replacement: 上方 nextIsSearching 分支；退出搜索时恢复 libraryUiState.expandedSections。
-            // Risk: Low
-            // Human Review: Required
-            //
-            // Original code:
-            // if (nextQuery.trim().length > 0) {
-            //   setExpandedSections({
-            //     system: true,
-            //     recommended: true,
-            //     custom: true,
-            //   });
-            // }
             setSearchQuery(nextQuery);
           }}
         />
@@ -2046,21 +1934,6 @@ function ModuleCard({
           <span className={cm(styles, "module-balancing-module-title")}>{title}</span>
           <ActivityIconStrip activityIds={activityIds} />
         </span>
-        {/* AI-REMOVED 2026-07-27:
-            Reason: 系统配方卡头部改为设备图标与产物/设备文本，完整配方公式会与新头部重复。
-            Trigger: 用户要求系统配方模块外观改版。
-            Evidence: resolveModuleDisplayTitle 生成“产物 · 设备”文本，resolveModuleIconSrc 返回设备图标。
-            Replacement: 当前 ModuleCard 标题行
-            Risk: Low
-            Human Review: Required
-
-            Original code:
-            {isSystemRecipe ? (
-              <RecipeDisplay recipeId={(module as ModuleBalancingSystemRecipeModule).recipeId} index={index} isTouch={isTouch} t={t} variant="moduleLibrary" />
-            ) : null}
-        */}
-        {/* AI-CORRECTION 2026-07-27: 用户澄清新外观只约束头部，原有 RecipeDisplay 需要继续显示在头部下方。 */}
-        {/* AI-CORRECTION 2026-09-01: 当前头部通过 resolveModuleIconSrcs 渲染 1～4 个物品组合图标，系统配方仍保持单设备图标。 */}
         {module.sourceType === "system-recipe" ? (
           <RecipeDisplay recipeId={module.recipeId} index={index} isTouch={isTouch} t={t} variant="moduleLibrary" />
         ) : null}
@@ -2330,17 +2203,6 @@ const CanvasSettingsPanel = observer(function CanvasSettingsPanel({
   t: (key: string) => string;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // AI-REMOVED 2026-07-27:
-  // Reason: 画布切换由原生下拉框升级为支持文件夹管理的独立选择对话框。
-  // Trigger: 用户要求移除画布下拉框，并在“加载其他画布”对话框中切换与管理画布。
-  // Evidence: CanvasLibraryDialog 统一承载用户画布、推荐画布与文件夹操作。
-  // Replacement: onOpenCanvasLibrary
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // onSelectCanvas: (canvasId: string) => void;
-  // visibleCanvases: readonly ModuleBalancingCanvasReadWrite[];
   return (
     <section className={cm(styles, "module-balancing-canvas-settings")}>
       <header className={cm(styles, "module-balancing-section-header")}>
@@ -2354,24 +2216,6 @@ const CanvasSettingsPanel = observer(function CanvasSettingsPanel({
         </div>
       </header>
       <div className={cm(styles, "module-balancing-canvas-form")}>
-        {/* AI-REMOVED 2026-07-27:
-            Reason: 原生 select 无法表达用户/推荐根目录、折叠文件夹和管理操作。
-            Trigger: 用户要求画布下拉框改为对话框选择画布。
-            Evidence: CanvasLibraryDialog 已提供完整的树形选择与管理界面。
-            Replacement: 页脚“加载其他画布”按钮与 CanvasLibraryDialog
-            Risk: Low
-            Human Review: Required
-
-            Original code:
-            <label className={cm(styles, "module-balancing-form-field")}>
-              <span>{t("moduleBalancing.canvas")}</span>
-              <select value={activeCanvas.id} onChange={(event) => onSelectCanvas(event.currentTarget.value)}>
-                {visibleCanvases.map((canvas) => (
-                  <option key={canvas.id} value={canvas.id}>{canvas.name}</option>
-                ))}
-              </select>
-            </label>
-        */}
         <label className={cm(styles, "module-balancing-form-field")}>
           <span>{t("moduleBalancing.canvasPlaceholder")}</span>
           <input value={activeCanvas.name} onChange={(event) => {
@@ -3152,16 +2996,6 @@ function SummaryPanel({
   warehouseForecasts: ModuleBalancingWarehouseForecast[];
 }) {
   const meaningfulForecasts = warehouseForecasts.filter((forecast) => Math.abs(forecast.netDeltaPerMin) >= 0.005);
-  // AI-REMOVED 2026-08-29:
-  // Reason: 武陵与四号谷地调度券不可跨地区合计。
-  // Trigger: ST2-RQ-018 要求每个地区独立合计且页面不提供两地总计。
-  // Evidence: ModuleBalancingDispatchTicketGroup 已在模型层持有地区合计。
-  // Replacement: group.totalDispatchPerMin
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // const dispatchTotal = dispatchTicketSummaries.reduce((sum, item) => sum + item.dispatchPerMin, 0);
   const hasSideLists = dispatchTicketGroups.length > 0 || warehouseForecasts.length > 0;
 
   return (
@@ -3605,7 +3439,6 @@ function resolveModuleTitle(
   t: (key: string) => string,
 ): string {
   // 无产出配方：优先用输入物品名作为标题，而非 recipe.nameKey（后者 i18n 可能缺失导致显示 ID）
-  // AI-CORRECTION 2026-07-27: 系统配方标题现统一由模型层输出“产物 1 · … · 设备名称”，无产出时仍回退输入物品。
   return resolveModuleDisplayTitle(module, index, t);
 }
 

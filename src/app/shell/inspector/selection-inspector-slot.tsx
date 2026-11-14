@@ -11,16 +11,6 @@ import type {
 } from "@/domain/registry/types/entity-inspector";
 import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
 import type { SimulationDeviceRuntimeStatusReadModel } from "@/domain/simulation/types/simulation-types";
-// AI-REMOVED 2026-08-19:
-// Reason: Inspector 声明不再根据 SimulationMode 从 Registry 选择覆盖配置。
-// Trigger: 用户要求 Registry 删除 mode override 及对应基础设施。
-// Evidence: Selection Inspector 现始终读取 EntityDefinition.inspectors。
-// Replacement: selectedDefinition.inspectors。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 import {
   buildProductionPlanningIndex,
   type ProductionPlanningIndex,
@@ -55,10 +45,17 @@ import { MeteredConsumptionInspector } from "./metered-consumption-inspector";
 import { CanvasFloatingToolbarButtonStrip } from "@/app/shell/shared/canvas-floating-toolbar-button-strip";
 import {
   findDarkPipeSlotLinkForEntity,
-  findRegionalDarkPipeLinkForEndpoint,
   resolveDarkPipeRole,
 } from "@/shared/dark-pipe-link";
 import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
+import {
+  LOGISTICS_ROLE_ORDER,
+  resolveLogisticsDeviceIdForRole,
+  resolveLogisticsDeviceKind,
+  swapLogisticsDeviceRole,
+} from "@/app/logistics-role-swap";
+import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
+import { createEntityIconAssetUrl } from "@/shared/browser/public-asset-url";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -117,18 +114,6 @@ function EmptyInspector({
       dataInspectorKey={declaration.type}
       title={translate(INSPECTOR_LABELS[declaration.type] ?? declaration.type)}
     >
-      {/*
-        AI-REMOVED 2026-05-26:
-        Reason: inspector 卡片不再显示标题。
-        Trigger: 槽位配置 inspector 需求要求所有 inspector 无标题和副标题。
-        Evidence: 用户明确要求“所有inspector都没有标题和副标题”。
-        Replacement: data-inspector-label 保留语义标签，卡片主体只显示有效内容。
-        Risk: Low
-        Human Review: Required
-
-        Original code:
-        <h4>{INSPECTOR_LABELS[declaration.type] ?? declaration.type}</h4>
-      */}
       <p>{translate("inspectorText.thisSettingIsNotAvailableYet")}</p>
     </InspectorCollapsiblePanel>
   );
@@ -136,7 +121,7 @@ function EmptyInspector({
 
 const recipeStatusIndexCache = new WeakMap<AppHost["workspace"]["registry"], Map<boolean, ProductionPlanningIndex>>();
 
-function resolveCachedRecipeStatusIndex(
+export function resolveCachedRecipeStatusIndex(
   registry: AppHost["workspace"]["registry"],
   debugMode: boolean,
 ): ProductionPlanningIndex {
@@ -173,7 +158,6 @@ function renderRecipeStatusInspector(options: {
 }) {
   const registry = options.appHost.workspace.registry;
   const debugMode = options.appHost.state.settings.debugMode === true;
-  // AI-CORRECTION 2026-11-13：索引按 registry 与调试模式缓存；原实现在 50ms 刷新周期内每次重建整库索引。
   const index = resolveCachedRecipeStatusIndex(registry, debugMode);
   const channelIds = debugMode
     ? options.definition.recipeChannels.map((channel) => channel.id)
@@ -214,15 +198,6 @@ function renderInspector(options: {
       ) {
         return null;
       }
-      // AI-REMOVED 2026-09-24:
-      // Reason: SlotConfigInspector 已从同一次父层采样取得 runtimeStatus，无需额外 prop。
-      // Trigger: 本次统一 Inspector 运行态采样时误传无用参数。
-      // Evidence: SlotConfigInspector 仅读取设备槽位运行态。
-      // Replacement: runtimeStatus prop。
-      // Risk: Low
-      // Human Review: Required
-      // Original code:
-      // runtimeSample={options.runtimeSample}
       return (
         <SlotConfigInspector
           appHost={options.appHost}
@@ -234,15 +209,6 @@ function renderInspector(options: {
         />
       );
     case INSPECTOR_TYPE.logisticsItem:
-      // AI-REMOVED 2026-09-24:
-      // Reason: LogisticsItemInspector 已从同一次父层采样取得 runtimeStatus，无需额外 prop。
-      // Trigger: 本次统一 Inspector 运行态采样时误传无用参数。
-      // Evidence: LogisticsItemInspector 仅读取设备槽位运行态。
-      // Replacement: runtimeStatus prop。
-      // Risk: Low
-      // Human Review: Required
-      // Original code:
-      // runtimeSample={options.runtimeSample}
       return (
         <LogisticsItemInspector
           appHost={options.appHost}
@@ -384,63 +350,9 @@ function isWarehouseItemLinkSuppressedByDarkPipeLink(options: {
     return false;
   }
 
-  return findDarkPipeSlotLinkForEntity(documentSnapshot, options.entity.id) !== null
-    || (options.appHost.state.settings.regionalMultiBaseEnabled
-      && options.appHost.workspace.simulation?.engineKind === "dense-v2"
-      && findRegionalDarkPipeLinkForEndpoint(options.appHost.workspace.editor?.queries.getRegionalDarkPipeLinks() ?? [], {
-        baseId: documentSnapshot.baseId,
-        entityId: options.entity.id,
-      }) !== null);
+  return findDarkPipeSlotLinkForEntity(documentSnapshot, options.entity.id) !== null;
 }
 
-// AI-REMOVED 2026-05-31:
-// Reason: InspectorScopeCard（编辑模式切换 UI）被删除，scope 改为 inspector 级别管理。
-// Trigger: 设计需求将 scope 从设备级别改为 inspector 级别，每个子 inspector 独立持有自己的 scope。
-// Evidence: 当前无 UI 暴露 scope 切换入口，后续由用户自行添加 per-inspector 的 toggle UI。
-// Replacement: 每个 inspector 的 scope 由 SelectionInspectorSlot 内 scopeByInspectorId 管理，通过 per-inspector Provider 注入。
-// Risk: Low
-// Human Review: Not required — UI 暂缺是预期行为。
-//
-// Original code:
-// function InspectorScopeCard({
-//   scope,
-//   simulationRunning,
-//   onScopeChange,
-// }: {
-//   scope: InspectorDataScope;
-//   simulationRunning: boolean;
-//   onScopeChange: (scope: InspectorDataScope) => void;
-// }) {
-//   return (
-//     <article
-//       className={cm(styles, "definition-card inspector-expanded-panel inspector-scope-card")}
-//       data-inspector-key="data-scope"
-//     >
-//       <div className={cm(styles, "inspector-expanded-header")}>
-//         <span>编辑模式</span>
-//       </div>
-//       <div className={cm(styles, "inspector-scope-toggle")} role="group">
-//         <button
-//           className={cm(styles, scope === "initial-config" ? "is-selected" : "")}
-//           data-inspector-scope="initial-config"
-//           onClick={() => onScopeChange("initial-config")}
-//           type="button"
-//         >
-//           初始配置
-//         </button>
-//         <button
-//           className={cm(styles, scope === "runtime-state" ? "is-selected" : "")}
-//           data-inspector-scope="runtime-state"
-//           disabled={!simulationRunning}
-//           onClick={() => onScopeChange("runtime-state")}
-//           type="button"
-//         >
-//           当前状态
-//         </button>
-//       </div>
-//     </article>
-//   );
-// }
 
 function resolveSelectedDeviceLabel(
   definition: EntityDefinition,
@@ -551,21 +463,6 @@ export function SelectionInspectorSlot({
       }
 
       const inspectorDeclarations = selectedDefinition.inspectors;
-      // AI-REMOVED 2026-08-19:
-      // Reason: App Inspector 不再消费 Registry 的 SimulationMode 覆盖配置。
-      // Trigger: 用户要求 Registry 删除 mode override 及对应基础设施。
-      // Evidence: EntityDefinition.inspectors 是所有模式唯一的 Inspector 声明。
-      // Replacement: 上方 selectedDefinition.inspectors。
-      // Risk: Low - 当前没有设备存在模式专用 Inspector。
-      // Human Review: Required
-      //
-      // Original code:
-      // const simulationModeConfig = appHost.workspace.registry.queries.resolveEntitySimulationModeConfig(
-      //   selectedDefinition.id,
-      //   appHost.workspace.simulation?.state.simulationMode ?? SIMULATION_MODE.singleBase,
-      // );
-      // const inspectorDeclarations = simulationModeConfig?.inspectors
-      //   ?? selectedDefinition.inspectors;
       const inspectors = inspectorDeclarations.map((declaration, declarationIndex) => {
         const id = [
           selectedEntity.id,
@@ -645,25 +542,12 @@ export function SelectionInspectorSlot({
         selectedEntity={slotState.selectedEntity}
         translate={translate}
       />
-      {/*
-        AI-REMOVED 2026-05-26:
-        Reason: inspector 容器不再显示统一标题。
-        Trigger: 槽位配置 inspector 需求要求所有 inspector 无标题和副标题。
-        Evidence: 用户明确要求"注意所有inspector都没有标题和副标题！现有的需要修改。"
-        Replacement: InspectorScopeCard 提供模式切换，具体 inspector 直接显示主体内容。
-        Risk: Low
-        Human Review: Required
-
-        Original code:
-        <div className={cm(styles, "card-header card-subheader")}>
-          <h4>{translate("section.runtimeDetails")}</h4>
-        </div>
-      */}
-      {/*
-        AI-CORRECTION 2026-05-31:
-        Reason: InspectorScopeCard（上述 Replacement）已被删除，scope 改为 inspector 级别管理，不再使用全局 scope toggle。
-        Trigger: 设计需求将 scope 从设备级别改为 inspector 级别。
-      */}
+      <LogisticsRoleSwitcher
+        appHost={appHost}
+        definition={slotState.selectedDefinition}
+        entity={slotState.selectedEntity}
+        translate={translate}
+      />
       <div className={cm(styles, "definition-list")}>
         {(() => {
           const renderedInspectors = slotState.inspectors.flatMap((inspector) => {
@@ -752,18 +636,6 @@ export function SelectionInspectorSlot({
         })()}
         {slotState.debugEntityJson !== null ? (
           <article className={cm(styles, "definition-card")} data-inspector-key="json-debug">
-            {/*
-              AI-REMOVED 2026-05-26:
-              Reason: debug inspector 也遵循无标题规则。
-              Trigger: 槽位配置 inspector 需求要求所有 inspector 无标题和副标题。
-              Evidence: 用户明确要求"所有inspector都没有标题和副标题"。
-              Replacement: textarea 本身提供调试内容。
-              Risk: Low
-              Human Review: Required
-
-              Original code:
-              <h4>JSON Debug</h4>
-            */}
             <textarea
               className={cm(styles, "json-debug-textarea")}
               readOnly
@@ -813,27 +685,58 @@ function resolveInspectorDiscriminator(
   }
 }
 
-/*
-  AI-REMOVED 2026-05-30:
-  Reason: 显式 SimulationRecipeStatusRuntimeInspector 渲染块已删除，recipeStatus 统一由 inspector 声明循环渲染。
-  Trigger: 反应池在仿真运行时显示两个配方选择器（显式块 + 声明循环各渲染一次）。
-  Evidence: 显式块仅在 showSimulationRuntimeInspector 时渲染，声明循环始终渲染，导致仿真时 double。
-  Replacement: inspector 声明循环（renderInspector → renderRecipeStatusInspector）已覆盖全部场景。
-  Risk: Low
-  Human Review: Required
 
-  Original code:
-  function collectRecipeStatusChannelIds(
-    declarations: readonly EntityInspectorDeclaration[],
-  ): readonly string[] {
-    const ids = new Set<string>();
-    for (const d of declarations) {
-      if (d.type === INSPECTOR_TYPE.recipeStatus) {
-        for (const chId of d.channelIds) {
-          ids.add(chId);
-        }
-      }
-    }
-    return [...ids];
+const LOGISTICS_ROLE_SHORTCUT_IDS = {
+  splitter: SHORTCUT_KEY.INSERT_SPLITTER,
+  converger: SHORTCUT_KEY.INSERT_CONVERGER,
+  connector: SHORTCUT_KEY.INSERT_CONNECTOR,
+  admission: SHORTCUT_KEY.INSERT_ADMISSION,
+} as const;
+
+/** 物流设备（分流器/汇流器/桥接器/准入口）类型原位切换；非物流设备不渲染。 */
+export function LogisticsRoleSwitcher({
+  appHost,
+  definition,
+  entity,
+  translate,
+}: {
+  appHost: AppHost;
+  definition: EntityDefinition;
+  entity: WorldEntity;
+  translate: Translate;
+}) {
+  const registry = appHost.workspace.registry;
+  const kind = resolveLogisticsDeviceKind(registry, definition.id);
+  const currentRole = registry.queries.resolveLogisticsRole(definition.id);
+  const editor = appHost.workspace.editor;
+  if (kind === null || currentRole === null || editor === null) {
+    return null;
   }
-*/
+
+  return (
+    <div aria-label={translate("inspectorText.logisticsType")} className={cm(styles, "logistics-role-switcher")} role="group">
+      {LOGISTICS_ROLE_ORDER.map((role) => {
+        const definitionId = resolveLogisticsDeviceIdForRole(registry, kind, role);
+        const roleDefinition = definitionId === null ? undefined : registry.entityDefinitions.find((entry) => entry.id === definitionId);
+        if (definitionId === null || roleDefinition === undefined) {
+          return null;
+        }
+        const name = translate(roleDefinition.nameKey);
+        const shortcut = appHost.internalActions.getKeyboardShortcutFor(LOGISTICS_ROLE_SHORTCUT_IDS[role]).split(";")[0] ?? "";
+        return (
+          <button
+            aria-pressed={role === currentRole}
+            className={cm(styles, role === currentRole ? "logistics-role-option is-current" : "logistics-role-option")}
+            key={role}
+            onClick={() => swapLogisticsDeviceRole({ editor, registry, entityId: entity.id, role })}
+            title={shortcut.length > 0 ? `${name} (${shortcut})` : name}
+            type="button"
+          >
+            <img alt="" src={createEntityIconAssetUrl(roleDefinition.iconPath)} />
+            <span>{name}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}

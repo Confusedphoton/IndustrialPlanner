@@ -3,7 +3,7 @@
   top: var(--top-bar-height, 48px);
   bottom: var(--canvas-bottom-obstruction-height, 28px);
   left: calc(var(--left-toolbar-width, 68px) + var(--left-dock-width, 0px));
-  right: var(--right-dock-width, 0px);
+  right: calc(var(--right-dock-width, 0px) + var(--recipe-dock-width, 0px));
   z-index: 3;
   pointer-events: none;
 }

@@ -9,18 +9,6 @@ import type { SimulationMutableRuntimeState } from "./runtime-state";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { isRecipeAvailableByActivity } from "@/shared/registry/activity-availability";
 
-// AI-REMOVED 2026-10-13:
-// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
-// Trigger: 洒水机和定向离体区域支持。
-// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
-// Replacement: src/shared/geometry/entity-range.ts。
-// Risk: 保持既有供电与气体规则，需范围回归验证。
-// Human Review: Required
-// Original code:
-// import {
-//   getGridFootprintCenterCells,
-//   getRotatedGridFootprint,
-// } from "@/shared/geometry/grid";
 
 
 interface GasDiffusionTopologyIndex {
@@ -36,21 +24,11 @@ interface GasDiffusionRuntimeIndex {
 }
 
 const EMPTY_GAS_DIFFUSIONS: readonly RuntimeEnvironmentSnapshot[] = [];
-// AI-REMOVED 2026-09-09:
-// Reason: 明确状态归属并清理重组产生的重复声明。
-// Trigger: Host / legacy 控制器重构。
-// Evidence: 公共 Query 与子控制器已接管对应职责，原 import 或状态入口不再需要。
-// Replacement: src/simulation/projection/gas-coverage.ts
-// Risk: Low
-// Human Review: Required
-// Original code:
-// const EMPTY_DEVICE_GAS_COVERAGE: ReadonlyMap<string, ReadonlySet<string>> = new Map();
 
 const topologyIndexByTopology = new WeakMap<CompiledSimulationTopology, GasDiffusionTopologyIndex>();
 const runtimeIndexByState = new WeakMap<SimulationMutableRuntimeState, GasDiffusionRuntimeIndex>();
 
 /**
- * AI-CORRECTION 2026-07-17：气体范围改为按潜在气体源稀疏观察，并在来源集合变化时重建设备覆盖索引。
  * 派生索引通过 WeakMap 绑定运行时状态，不进入每 tick 的深拷贝；拓扑迁移或状态恢复会自然创建新索引。
  */
 export function computeActiveGasDiffusions(
@@ -206,33 +184,6 @@ function collectActiveGasDiffusions(
   return result;
 }
 
-// AI-REMOVED 2026-10-13:
-// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
-// Trigger: 洒水机和定向离体区域支持。
-// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
-// Replacement: resolveDeviceRangeRect。
-// Risk: 保持既有供电与气体规则，需范围回归验证。
-// Human Review: Required
-// Original code:
-// function resolveDeviceCenteredRangeRect(
-//   device: CompiledSimulationDevice,
-//   range: number,
-// ): RuntimeGasDiffusionSnapshot["gridRect"] | null {
-//   if (device.position === null || device.rotation === null || device.footprint === null) {
-//     return null;
-//   }
-//
-//   const rotatedFootprint = getRotatedGridFootprint(device.footprint, device.rotation);
-//   const center = getGridFootprintCenterCells(device.position, rotatedFootprint);
-//   const halfRange = range / 2;
-//
-//   return {
-//     x: center.x - halfRange,
-//     y: center.y - halfRange,
-//     width: range,
-//     height: range,
-//   };
-// }
 function resolveDeviceRangeRect(
   device: CompiledSimulationDevice, registry: RegistryContract, rangeId: string,
 ): RuntimeEnvironmentSnapshot["gridRect"] | null {

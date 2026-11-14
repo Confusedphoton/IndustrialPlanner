@@ -73,16 +73,6 @@ export class LogisticsBakedFlowScene {
       if (view.visibilityVersion !== options.version || view.occupied !== route.occupied || view.exact !== route.exact) {
         const indices = createLogisticsFlowIndices(route.segments, (entityId) => visible(entityId)
           && !options.effects?.has(entityId) && (!route.exact || route.occupied.has(entityId)));
-        // AI-REMOVED 2026-09-14:
-        // Reason: setDataWithSize 的实际实现将 size 再乘元素字节数，传 byteLength 会使 GPU 更新越界。
-        // Trigger: 精确模式的真实截图仍连续填充前几格，没有保留占用空洞。
-        // Evidence: Pixi Buffer.mjs 的 _updateSize = size * value.BYTES_PER_ELEMENT；CPU 索引正确但 GPU 沿用旧值。
-        // Replacement: 下方 Buffer.data 标准赋值，由 Pixi 自行传入元素数量并更新 GPU。
-        // Risk: Low；通过真实 GPU 索引回读及三个 Screen Profile 验证。
-        // Human Review: Required
-        // Original code:
-        // view.mesh.geometry.indexBuffer.setDataWithSize(indices, indices.byteLength, true);
-        // view.mesh.geometry.indexBuffer.update();
         view.mesh.geometry.indexBuffer.data = indices;
         for (const item of view.sprites) item.sprite.visible = visible(item.id);
         view.occupied = route.occupied; view.exact = route.exact; view.visibilityVersion = options.version;
@@ -119,7 +109,7 @@ export class LogisticsBakedFlowScene {
     const rgba = () => new Float32Array([1, 1, 1, 1]);
     const uniforms = new UniformGroup({
       uTime: { value: 0, type: 'f32' }, uThickness: { value: 0, type: 'f32' }, uGas: { value: 0, type: 'f32' },
-      // 2026-09-23: 与 Pixi 全局 vec2 uResolution 分名，避免同名 float 在每次绘制时触发 glUniform2f 类型错误。
+      // 与 Pixi 全局 vec2 uResolution 分名，避免同名 float 在每次绘制时触发 glUniform2f 类型错误。
       uMaterialResolution: { value: assets.manifest.resolution, type: 'f32' },
       uBounds: { value: new Float32Array([4, 5, .012, 0]), type: 'vec4<f32>' },
       uBody: { value: rgba(), type: 'vec4<f32>' }, uSkin: { value: rgba(), type: 'vec4<f32>' },
@@ -174,19 +164,3 @@ export class LogisticsBakedFlowScene {
   }
 }
 
-// AI-REMOVED 2026-09-14:
-// Reason: baked manifest 不再复制流体配色，也不再回退到 Registry tag 单色。
-// Trigger: 用户要求 ItemDefinition.fluidColors 成为唯一运行时颜色来源。
-// Evidence: 路线状态已经携带当前物品定义的 fluidColors 引用。
-// Replacement: sync 中的 route.fluidColors + shared/fluid-color.ts。
-// Risk: Low
-// Human Review: Required
-// Original code:
-// const profile = playback.itemId === null ? undefined : this.assets.manifest.fluidProfiles[playback.itemId];
-// u.uGas = (profile ? profile.phase === 'gas' : route.gas) ? 1 : 0;
-// for (const [uniform, role] of [['uBody', 'body'], ['uSkin', 'skin'], ['uSkin2', 'skin2'], ['uFoam', 'splash']] as const) {
-//   // 未提供多层配色的物品沿用 Registry 单色，不凭空推断游戏颜色。
-//   const hex = profile?.colors[role] ?? profile?.colors.skin ?? route.color;
-//   const value = Number.parseInt(hex.replace('#', ''), 16);
-//   (u[uniform] as Float32Array).set([(value >> 16 & 255) / 255, (value >> 8 & 255) / 255, (value & 255) / 255, 1]);
-// }

@@ -1,31 +1,3 @@
-// AI-REMOVED 2026-10-12:
-// Reason: 标签解析退出地理资格规则。
-// Trigger: 用户确认结构化白名单。
-// Evidence: 当前业务改用 resolveEntityPlacementAreas。
-// Replacement: 本文件的新白名单用例。
-// Risk: 地图和区域边界需保持回归覆盖。
-// Human Review: Required
-//
-// Original code:
-// import { describe, expect, it } from "vitest";
-// import { matchesEntityBaseOnlyTag } from "@/shared/base-tags";
-//
-// describe("地图限定标签", () => {
-//   it("没有地图限定的设备保持原有可用性", () => {
-//     expect(matchesEntityBaseOnlyTag(["武陵", "baseAreaOnly=wuling_yuanyuan_zhuang"], "draft_box")).toBe(true);
-//     expect(matchesEntityBaseOnlyTag([], null)).toBe(true);
-//   });
-//
-//   it("完整匹配地图 ID，禁止空参数并区分地图与子区域", () => {
-//     const tags = ["baseOnly=wuling_agricultural_land"];
-//     expect(matchesEntityBaseOnlyTag(tags, "wuling_agricultural_land")).toBe(true);
-//     expect(matchesEntityBaseOnlyTag(tags, "wuling_yuanyuan_zhuang")).toBe(false);
-//     expect(matchesEntityBaseOnlyTag(tags, "wuling_agricultural_land_extra")).toBe(false);
-//     expect(matchesEntityBaseOnlyTag(tags, null)).toBe(false);
-//     expect(matchesEntityBaseOnlyTag(["baseOnly="], "")).toBe(false);
-//     expect(matchesEntityBaseOnlyTag(["baseOnly="], "wuling_agricultural_land")).toBe(false);
-//   });
-// });
 import { describe, expect, it } from "vitest";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { BASE_DEFINITIONS } from "@/registry/base-definition";

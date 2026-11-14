@@ -34,18 +34,6 @@ function isValidGridRect(gridRect: GridRect): boolean {
 export function resolveCurrentBaseDefinition(
   ctx: Pick<DecorationSyncContext, "renderHost">,
 ): SceneSpace | null {
-  // AI-REMOVED 2026-11-12: 几何输入改为会话空间；REQ-048 D1/D5；Replacement: source.snapshot.space；Risk: Low；Human Review: Required
-  //   if (ctx.renderHost.showBaseBoundary === false) return null;
-  //   const source = ctx.renderHost.input.source;
-  //   if (source === null) {
-  //     return null;
-  //   }
-  //
-  //   const baseId = source.snapshot.getSnapshot().document.baseId;
-  //
-  //   return ctx.renderHost.input.source.registry.baseDefinitions.find(
-  //     (definition) => definition.id === baseId,
-  //   ) ?? null;
   return ctx.renderHost.input.presentation.getSnapshot().showBaseBoundary
     ? ctx.renderHost.input.source.snapshot.getSnapshot().space : null;
 }
@@ -130,59 +118,6 @@ export function createBaseBoundaryDecoration(): DecorationLayer {
         return;
       }
 
-      // AI-REMOVED 2026-09-26:
-      // Reason: 单条边界只能绘制主区域，0×0 分区还需要绘制自身外边界。
-      // Trigger: 草稿箱新增不连续分区。
-      // Evidence: resolveBaseBoundaryGridRects 返回主核心与零核心分区的可见轮廓。
-      // Replacement: 下方遍历全部轮廓。
-      // Risk: Low。
-      // Human Review: Required
-      // Original code:
-      // const gridRect = resolveBaseBoundaryGridRect(baseDefinition);
-      // if (gridRect === null) {
-      //   return;
-      // }
-      // const layout = resolveMarqueeGridRectLayout({
-      //   gridRect,
-      //   viewportBounds: ctx.viewportBounds,
-      //   viewportCenter: { x: ctx.viewportState.centerX, y: ctx.viewportState.centerY },
-      //   gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
-      //   displayRotation: ctx.viewportState.displayRotation,
-      // });
-      // if (layout === null) {
-      //   return;
-      // }
-      // graphics.rect(layout.x, layout.y, layout.width, layout.height).stroke({
-      //   width: resolveBaseBoundaryStrokeWidth(ctx.viewportState.gridCellPixelSize),
-      //   color: BASE_BOUNDARY_STROKE_COLOR,
-      //   alpha: BASE_BOUNDARY_STROKE_ALPHA,
-      // });
-      // AI-REMOVED 2026-11-12:
-      // Reason: 完整矩形描边会在无界方向和区域接缝生成假边。
-      // Trigger: REQ-048 真实空间外缘。
-      // Evidence: resolveSceneBoundarySegments 提供并集外缘，裁剪只截短线段。
-      // Replacement: 下方真实边缘逐段绘制。
-      // Risk: Low；描边颜色和宽度不变。
-      // Human Review: Required
-      // Original code:
-      //       for (const gridRect of gridRects) {
-      //         const layout = resolveMarqueeGridRectLayout({
-      //           gridRect,
-      //           viewportBounds: ctx.viewportBounds,
-      //           viewportCenter: {
-      //             x: ctx.viewportState.centerX,
-      //             y: ctx.viewportState.centerY,
-      //           },
-      //           gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
-      //           displayRotation: ctx.viewportState.displayRotation,
-      //         });
-      //         if (layout === null) continue;
-      //         graphics.rect(layout.x, layout.y, layout.width, layout.height).stroke({
-      //           width: resolveBaseBoundaryStrokeWidth(ctx.viewportState.gridCellPixelSize),
-      //           color: BASE_BOUNDARY_STROKE_COLOR,
-      //           alpha: BASE_BOUNDARY_STROKE_ALPHA,
-      //         });
-      //       }
       for (const { from, to } of resolveSceneBoundaryLines(baseDefinition, ctx)) {
         graphics.moveTo(from.x, from.y).lineTo(to.x, to.y).stroke({
           width: resolveBaseBoundaryStrokeWidth(ctx.viewportState.gridCellPixelSize),

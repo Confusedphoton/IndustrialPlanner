@@ -5,12 +5,10 @@
  *
  * 受测范围：CloudflareSyncRemote / Session / WriteBatch
  * Mock 策略：vi.stubGlobal("fetch") + createFakeIndexedDbFactory()
- * AI-CORRECTION 2026-08-09: 后端已完全重构为 cf-sync-v2 协议，
  * 本测试验证 prepare/upload/commit 两阶段流程。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// AI-CORRECTION 2026-08-12: 公共入口现在覆盖生产使用的 cf-sync-v2 Worker remote；
 // jsdom 无 Worker 时使用同一个 runtime 的进程内测试适配器。
 import {
   CloudflareV2WorkerClient,

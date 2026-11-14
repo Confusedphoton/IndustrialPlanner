@@ -10,16 +10,6 @@ import type {
   GestureMappingModule,
   KeyboardGestureEvent,
 } from "../types";
-// AI-REMOVED 2026-09-10:
-// Reason: 操作模式总开关已废弃，不再保留关闭分支
-// Trigger: 用户要求彻底移除 hypergryphOperationMode。
-// Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-// Replacement: gesture-action-router.ts 的默认启用语义
-// Risk: 历史 false 设置统一使用当前操作行为。
-// Human Review: Required
-//
-// Original code:
-// import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 
 const ROTATE_VIEW_BUTTON_ID = "canvas-bottom-left-secondary-toolbar-button-rotate-view";
 const ROTATE_VIEW_HOLD_DURATION_MS = 2_000;
@@ -201,16 +191,6 @@ export function createHypergryphViewportRotationModule(): GestureMappingModule<A
       completedUiButtonGestureId = null;
       clearKeyboardResetSubscription();
     },
-    // AI-REMOVED 2026-09-10:
-    // Reason: 操作模式总开关已废弃，不再保留关闭分支
-    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-    // Replacement: gesture-action-router.ts 的默认启用语义
-    // Risk: 历史 false 设置统一使用当前操作行为。
-    // Human Review: Required
-    //
-    // Original code:
-    // when: isHypergryphGestureEnabled,
     shortcutRoutes: [{
       id: "rotate-viewport.non-operation",
       operation: "rotate-viewport",
@@ -261,27 +241,6 @@ export function createHypergryphViewportRotationModule(): GestureMappingModule<A
           return { status: "handled" };
         }
 
-        // AI-REMOVED 2026-08-30:
-        // Reason: 画布旋转快捷键的非操作模式有效域已迁入 Shortcut Route。
-        // Trigger: ST2-RQ-020 的 R / Ctrl+R 基准冲突案例。
-        // Evidence: rotate-viewport.non-operation 仅覆盖 select/marquee/dark-pipe-link。
-        // Replacement: shortcutRoutes[rotate-viewport.non-operation] in this module
-        // Risk: Low
-        // Human Review: Required
-        //
-        // Original code:
-        // case "key down":
-        //   if (!context.appHost.internalActions.isShortcutFor(
-        //     SHORTCUT_KEY.ROTATE_VIEWPORT,
-        //     event.code,
-        //     event.key,
-        //     event.modifiers,
-        //   )) {
-        //     return { status: "ignored" };
-        //   }
-        //   rotateViewport(context.canvas.view, "clockwise");
-        //   context.appHost.internalActions.alignCanvasFloatingToolbar();
-        //   return { status: "handled" };
 
         case "ui-button-press-start":
           if (

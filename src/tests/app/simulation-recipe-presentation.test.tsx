@@ -101,15 +101,6 @@ describe("配方单帧展示时钟", () => {
   });
 });
 
-// AI-REMOVED 2026-09-04:
-// Reason: 基于 jsdom 和 fake AppHost 的 Hook 测试违反项目 App / Editor 必须使用真实浏览器的测试架构。
-// Trigger: ST2-RQ-024 暂停 / 恢复展示时钟回归用例的测试架构复核。
-// Evidence: .docs/common/测试/测试架构设计通则.md 第 3 节与第 7 节禁止 UI 测试构造 fake AppHost。
-// Replacement: 本文件上方对纯状态转换函数 advanceSimulationRecipePresentationClock 的无 DOM 单元测试；真实 UI 链路由浏览器验收覆盖。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
 /*
 // @vitest-environment jsdom
 

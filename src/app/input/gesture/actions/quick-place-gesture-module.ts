@@ -125,63 +125,11 @@ export function createQuickPlaceGestureModule(): GestureMappingModule<AppHost> {
         return { status: "ignored" };
       }
 
-      // AI-REMOVED 2026-08-30:
-      // Reason: 快速放置的打开与关闭按键已迁入同模块的输入层 Shortcut Route。
-      // Trigger: ST2-RQ-020 要求快速放置层和画布层的同键复用可分析。
-      // Evidence: quick-place.open 与 quick-place.close 分别声明 canvas/select 和 quick-place 作用域。
-      // Replacement: shortcutRoutes in createQuickPlaceGestureModule
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // if (event.type !== "key down") return { status: "ignored" };
-      // if (context.appHost.internalState.runtime.quickPlace.visible && event.code === "Escape") {
-      //   closeQuickPlace(context.appHost);
-      //   return { status: "handled", consume: true };
-      // }
-      // const matches = context.appHost.internalActions.isShortcutFor(
-      //   SHORTCUT_KEY.QUICK_PLACE, event.code, event.key, event.modifiers,
-      // );
-      // if (!matches) return { status: "ignored" };
-      // if (!tryOpenQuickPlaceAt(context, lastMousePosition, "keyboard-shortcut")) {
-      //   return { status: "ignored" };
-      // }
-      // return { status: "handled", consume: true };
       return { status: "ignored" };
     },
   };
 }
 
-// AI-REMOVED 2026-07-12:
-// Reason: 快速放置打开条件从快捷键分支内联逻辑抽取为公共函数，供快捷键和空白双击共同复用。
-// Trigger: 新增选择模式下空白双击 / double tap 触发快速放置，需要与快捷键保持完全一致的 select、enabled、grid 命中条件。
-// Evidence: createQuickPlaceGestureModule 中快捷键路径和 double tap 路径均调用 tryOpenQuickPlaceAt。
-// Replacement: tryOpenQuickPlaceAt in this file
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// if (
-//   context.appHost.internalState.activeTool !== "select"
-//   || !context.appHost.internalState.settings.quickPlaceEnabled
-// ) {
-//   return { status: "ignored" };
-// }
-//
-// const editor = context.workspace.editor;
-// if (
-//   editor === null
-//   || lastMousePosition === null
-//   || editor.queries.findGridCellForClientPixelPoint(lastMousePosition) === null
-// ) {
-//   return { status: "ignored" };
-// }
-//
-// runInAction(() => {
-//   context.appHost.internalState.runtime.quickPlace.visible = true;
-//   context.appHost.internalState.runtime.quickPlace.anchor = lastMousePosition;
-//   context.appHost.internalState.runtime.quickPlace.searchQuery = "";
-// });
 function tryOpenQuickPlaceAt(
   context: GestureActionContext<AppHost>,
   position: GesturePosition | null,

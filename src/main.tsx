@@ -2,61 +2,14 @@ import { createSceneSessionFactories } from "./editor/scene-session";
 import { bindEditorViewToDocument, createDefaultWorldDocumentViewportSettings } from "./editor/document-viewport";
 import { resolveEditorSceneSpace, resolveEditorPlacementGeometry } from "./editor/placement-space";
 import { isDataMigrationComplete } from "@/shared/storage/data-migration-state";
-// AI-REMOVED 2026-10-09:
-// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
-// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
-// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
-// Replacement: notifyDataMigrationAbandoned，不报告虚假的持久化失败
-// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
-// Human Review: Required
-// Original code:
-// import { reportStorageFailure } from "@/shared/storage/storage-failure";
 import { BLUEPRINT_SCHEMA_VERSION } from "@/domain/document/blueprint-document";
 import { prepareLocalMigrationRecovery } from "@/shared/storage/local-migration-recovery";
 import { createDataMigrationController, installDataMigrationController, isDataMigrationFrozen, notifyDataMigrationAbandoned } from "@/shared/data-migration";
 import { prepareBlueprintLibraryMigration } from "@/shared/blueprint-library-migration";
 import { prepareEditorDataMigration } from "./editor/data-migration";
-// AI-REMOVED 2026-10-09:
-// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
-// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
-// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
-// Replacement: startWorkbench 启动迁移
-// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
-// Human Review: Required
-// Original code:
-// import type { EditorHost } from "./editor/editor-host";
 import { prepareAppDataMigration } from "./app/data-migration";
-// AI-REMOVED 2026-10-09:
-// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
-// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
-// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
-// Replacement: startWorkbench 启动迁移
-// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
-// Human Review: Required
-// Original code:
-// import { pauseAppStorageForMigration, refreshAppStorageAfterMigration } from "./app/state/storage-hook";
-import { prepareEdaDataMigration, EDA_MIGRATION_VERSION } from "./blueprint-planner/data-migration";
-// AI-REMOVED 2026-10-09:
-// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
-// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
-// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
-// Replacement: startWorkbench 启动迁移
-// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
-// Human Review: Required
-// Original code:
-// import type { BlueprintPlannerHost } from "./blueprint-planner/blueprint-planner-host";
 import { DataMigrationOverlay } from "./app/migration/data-migration-overlay";
-// AI-REMOVED 2026-10-09:
-// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
-// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
-// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
-// Replacement: startWorkbench 启动迁移
-// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
-// Human Review: Required
-// Original code:
-// import { createMigrationVerification } from "./simulation/migration-verification";
 
-import { createBlueprintPlannerHost } from "./blueprint-planner";
 import { createAudioHost } from "./audio";
 import { createScenePresentation, mountCanvasSceneView, createCanvasRenderDiagnosticSession } from "./app/canvas";
 import { createEditableSceneSource } from "./editor/scene-source";
@@ -73,17 +26,6 @@ import { BlueprintEmbed, BlueprintEmbedStatus } from "./app/shell/blueprint-embe
 import { createBlueprintEmbedBridge, applyBlueprintEmbedSettings, createEmbedWorldDocument, loadEmbedBlueprint, parseBlueprintEmbedOptions, resolveEmbedBlueprintBounds } from "./app/embed";
 import { createAppHost, type AppHost } from "@/app/host/app-host";
 import { createModuleBalancingSyncSources } from "@/app/module-balancing-sync-sources";
-// AI-REMOVED 2026-09-20:
-// Reason: 组合根不再读取区域多基地设置或维护仿真模式。
-// Trigger: ST2-RQ-035 要求 Simulation 在每次启动时从 AppContract 固化会话模式。
-// Evidence: Dense / Legacy Host 的 start 已拥有引擎能力与会话生命周期边界。
-// Replacement: 双引擎 start 方法读取 workspace.app.state.settings.regionalMultiBaseEnabled。
-// Risk: Low；AppSettings 继续由 MobX 驱动静态 UI，运行会话不再被设置热切换。
-// Human Review: Required
-//
-// Original code:
-// import { regionalSimulationUiState } from "@/app/state/regional-simulation-ui-state";
-import { captureSimulationEngineLaunchPreference } from "@/app/shell/state/simulation-engine-launch-preference";
 import { createSyncHost } from "@/sync";
 import "@/styles/global.scss";
 import { resolveEffectiveActivityIds } from "@/shared/registry/activity-availability";
@@ -109,7 +51,7 @@ declare global {
 
 // 数据安全入口必须先于所有主机初始化和同步任务。
 async function startWorkbench(): Promise<void> {
-  const migrationVersion = `local-data-2:${BLUEPRINT_SCHEMA_VERSION}:${EDA_MIGRATION_VERSION}:${import.meta.env.VITE_APP_VERSION_CACHE_KEY}`;
+  const migrationVersion = `local-data-2:${BLUEPRINT_SCHEMA_VERSION}:${import.meta.env.VITE_APP_VERSION_CACHE_KEY}`;
   const reactRoot = ReactDOM.createRoot(document.getElementById("root")!);
   reactRoot.render(<DataMigrationOverlay />);
   const disposeStorageGeneration = await prepareLocalMigrationRecovery({
@@ -135,7 +77,6 @@ async function startWorkbench(): Promise<void> {
   if (import.meta.hot) import.meta.hot.dispose(disposeStorageGeneration);
 
   const registry = createRegistryContract();
-  const simulationEngineLaunchPreference = captureSimulationEngineLaunchPreference();
 
   const workspace : WorkspaceContract = {
     state: createWorkspaceState(),
@@ -146,54 +87,12 @@ async function startWorkbench(): Promise<void> {
     render: null,
     simulation: null,
     sync: null,
-    blueprintPlanner: null,
   }
 
-// AI-REMOVED 2026-10-09:
-// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
-// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
-// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
-// Replacement: createDataMigrationController 只装配 JSON 迁移参与者
-// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
-// Human Review: Required
-// Original code:
-//   let migrationApp: AppHost | null = null;
-//   let migrationEditor: EditorHost | null = null;
-//   let migrationPlanner: BlueprintPlannerHost | null = null;
-//   let migrationSimulation: ReturnType<typeof createSimulationHost> | null = null;
-//   let resumeSimulation = false;
-//   const verification = createMigrationVerification(registry);
-//   const migration = createDataMigrationController(migrationVersion, [
-//     {
-//       prepare: async () => ({ jobs: [] }),
-//       pause: async () => {
-//         resumeSimulation = workspace.simulation?.state.runningState === "start";
-//         workspace.simulation?.actions.pause();
-//         await migrationPlanner?.pauseForMigration();
-//         if (migrationEditor !== null) {
-//           await migrationEditor.internalDocuments.flush();
-//           await migrationEditor.internalHistory.flush();
-//         }
-//         if (migrationApp !== null) await pauseAppStorageForMigration(migrationApp);
-//       },
-//       refresh: async () => {
-//         if (migrationApp !== null) await refreshAppStorageAfterMigration(migrationApp);
-//         await migrationEditor?.internalDocuments.refreshAfterMigration();
-//         await migrationEditor?.internalHistory.refreshAfterMigration();
-//         await migrationPlanner?.reloadAfterMigration();
-//         if (migrationSimulation?.internalState.hasStarted) {
-//           const refreshed = await migrationSimulation.internalActions.refreshFromCurrentDocument();
-//           migrationSimulation.actions.pause();
-//           if (refreshed.status === "failed") throw new Error(refreshed.error ?? "升级后的仿真状态未能恢复。");
-//         }
-//       },
-//       resume: () => { if (resumeSimulation) workspace.simulation?.actions.resume(); },
-//     },
   const migration = createDataMigrationController(migrationVersion, [
     { label: "检查应用设置", prepare: version => prepareAppDataMigration(registry, version) },
     { label: "检查基地与编辑历史", prepare: version => prepareEditorDataMigration(registry, version) },
     { label: "检查蓝图库", prepare: prepareBlueprintLibraryMigration },
-    { label: "检查计算任务", prepare: prepareEdaDataMigration },
   ]);
   const disposeMigration = installDataMigrationController(migration);
   const freezeInput = (event: Event) => {
@@ -240,15 +139,6 @@ async function startWorkbench(): Promise<void> {
   try {
   appHost = createAppHost(workspace, { sceneFactories, mainView });
   retainMainScene(() => appHost.dispose());
-// AI-REMOVED 2026-10-09:
-// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
-// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
-// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
-// Replacement: None
-// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
-// Human Review: Required
-// Original code:
-//   migrationApp = appHost;
   await appHost.regionalSettings.hydrate();
   mainSceneAbort.signal.throwIfAborted();
   if (import.meta.env.DEV) {
@@ -265,17 +155,6 @@ async function startWorkbench(): Promise<void> {
     },
     { fireImmediately: true },
   ));
-  // AI-REMOVED 2026-09-25:
-  // Reason: 旧 App 清理订阅已归档，不再需要组合根的 Editor 局部引用。
-  // Trigger: M01 接入后的 ESLint unused-vars 错误。
-  // Evidence: Editor 初始化仍通过 workspace 发布契约，下方没有活动引用。
-  // Replacement: 下方 createEditorHost(workspace) 初始化调用。
-  // Risk: Low
-  // Human Review: Required
-  // Original code:
-  // const editorHost = createEditorHost(workspace);
-  // AI-CORRECTION 2026-10-08: 组合根保留具体 Host 供全局迁移结算与刷新，不增加 Domain 属性。
-  // AI-CORRECTION 2026-10-09: 启动迁移先于 Host；不再保留运行期刷新引用。
   const editorHost = createEditorHost(workspace, {
     beforeDocumentChange: () => viewPersistence?.flush(),
     captureOperationGuard: () => {
@@ -290,60 +169,10 @@ async function startWorkbench(): Promise<void> {
     readSpace: () => resolveEditorSceneSpace(editorHost.services, editorHost.document.getSnapshot()),
   });
   retainMainScene(() => viewPersistence?.dispose());
-  // AI-REMOVED 2026-11-12:
-  // Reason: 清理边界必须先于任何异步主机初始化建立。
-  // Trigger: REQ-048 A5 初始化失败与中途关闭。
-  // Evidence: 原 disposer 在 hydrate 后注册，且未包含 App、Simulation 和 Planner。
-  // Replacement: 上方统一 releases 与 retainMainScene。
-  // Risk: 初始化和重复销毁需浏览器回归。
-  // Human Review: Required
-  // Original code:
-  // const disposeMainScene = () => {
-  // mainSceneAbort.abort();
-  // for (const release of mainSceneReleases.splice(0).reverse()) {
-  // try { release(); } catch (error) { console.error("Workbench scene cleanup failed", error); }
-  // }
-  // viewPersistence?.dispose();
-  // mainView.dispose();
-  // editorHost.dispose();
-  // window.removeEventListener("pagehide", onMainScenePageHide);
-  // };
-  // const onMainScenePageHide = (event: PageTransitionEvent) => { if (!event.persisted) disposeMainScene(); };
-  // window.addEventListener("pagehide", onMainScenePageHide);
-  // if (import.meta.hot) import.meta.hot.dispose(disposeMainScene);
-  // AI-REMOVED 2026-09-25:
-  // Reason: Editor 区域文档负责关系生命周期，App 资产仅保留旧记录迁移入口。
-  // Trigger: REQ-038 出口文档权威。
-  // Evidence: D01～D11 契约及 Editor 文档集合已接入。
-  // Replacement: src/editor/editor-host.ts 区域关系维护及旧资产迁移。
-  // Risk: 旧关系迁移、后台删除与仿真启动须回归。
-  // Human Review: Required
-  // Original code:
-  // editorHost.document.subscribe((document) => {
-  //   appHost.regionalSettings.pruneDarkPipeLinksForBase(
-  //     document.baseId,
-  //     new Set(Object.keys(document.entities)),
-  //   );
-  // });
-// AI-REMOVED 2026-10-08:
-// Reason: 收敛全局迁移入口，避免重复调度及旧缓存覆盖。
-// Trigger: REQ-041 用户授权统一迁移。
-// Evidence: 启动、导入和保存调用链审查。
-// Replacement: main.tsx 全部 Host 创建后的同步装配
-// Risk: 需回归迁移失败与恢复。
-// Human Review: Required
-// Original code:
-//   await createSyncHost(workspace, {
-//     assetSources: [
-//       ...createModuleBalancingSyncSources(appHost),
-//       appHost.regionalSettings.createSyncSource(),
-//     ],
-//   });
   const renderHost = createRenderHost();
   workspace.render = renderHost;
   retainMainScene(() => renderHost.destroy());
   const simulationHost = createSimulationHost(workspace, {
-    engineKind: simulationEngineLaunchPreference.activeDenseEnabled ? "dense-v2" : "legacy",
     getPerfEnabled: () => appHost.internalState.settings.debugMode,
     getDebugDataEnabled: () => appHost.internalState.settings.debugMode
       && appHost.internalState.settings.debugSimulationWorkerDetailedReport,
@@ -352,30 +181,9 @@ async function startWorkbench(): Promise<void> {
     }),
     getRegionalResourceSettings: (regionTag) =>
       appHost.regionalSettings.getRegionResources(regionTag),
-  // AI-REMOVED 2026-09-25:
-  // Reason: Dense 改为从世界文档解析跨基地关系，移除 App getter 装配。
-  // Trigger: REQ-038 出口文档权威。
-  // Evidence: D01～D11 契约及 Editor 文档集合已接入。
-  // Replacement: src/simulation/dense/dense-regional-document.ts。
-  // Risk: 旧关系迁移、后台删除与仿真启动须回归。
-  // Human Review: Required
-  // Original code:
-  //   getRegionalDarkPipeLinks: (regionTag) =>
-  //     appHost.regionalSettings.getRegionalDarkPipeLinks(regionTag),
   });
 
-// AI-REMOVED 2026-10-09:
-// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
-// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
-// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
-// Replacement: None
-// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
-// Human Review: Required
-// Original code:
-//   migrationSimulation = simulationHost;
   retainMainScene(() => simulationHost.dispose());
-  const plannerHost = createBlueprintPlannerHost(workspace);
-  retainMainScene(() => plannerHost.dispose());
 
   const mainSource = createEditableSceneSource("workbench", editorHost);
   retainMainScene(mainSource.dispose);
@@ -403,15 +211,6 @@ async function startWorkbench(): Promise<void> {
     retainMainScene(() => syncHost.dispose());
     mainSceneAbort.signal.throwIfAborted();
   } else {
-// AI-REMOVED 2026-10-09:
-// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
-// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
-// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
-// Replacement: notifyDataMigrationAbandoned
-// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
-// Human Review: Required
-// Original code:
-//     reportStorageFailure("data-migration", new Error("部分本地数据暂时无法升级，原件已保留。为保护远端数据，网络同步已暂停；更新版本后会重新尝试。"));
     notifyDataMigrationAbandoned();
   }
 
@@ -421,52 +220,8 @@ async function startWorkbench(): Promise<void> {
     readEnabled: () => appHost.internalState.settings.gamePlayDeviceAudio,
     readViewport: () => mainView.state,
   });
-  // AI-REMOVED 2026-11-12:
-  // Reason: Audio 随组合根清理，初始化失败也必须释放。
-  // Trigger: REQ-048 A5。
-  // Evidence: 独立 pagehide/HMR 监听不覆盖后续初始化抛错。
-  // Replacement: retainMainScene(audioHost.destroy)
-  // Risk: 保留 BFCache 不销毁语义。
-  // Human Review: Required
-  // Original code:
-  // const disposeAudio = () => {
-  // window.removeEventListener("pagehide", handleAudioPageHide);
-  // audioHost.destroy();
-  // };
-  // const handleAudioPageHide = (event: PageTransitionEvent) => {
-  // // BFCache 保留工作台；后台暂停与恢复由 Audio 的 visibilitychange 订阅负责。
-  // if (!event.persisted) disposeAudio();
-  // };
-  // window.addEventListener("pagehide", handleAudioPageHide);
-  // if (import.meta.hot) import.meta.hot.dispose(disposeAudio);
-  //
   retainMainScene(() => audioHost.destroy());
 
-  // AI-REMOVED 2026-09-20:
-  // Reason: 多基地是下一次仿真会话的启动设置，不应由组合根持续同步为 SimulationMode。
-  // Trigger: ST2-RQ-035 要求 main 只装配模块，Simulation 启动时读取 AppSettings 并固化模式。
-  // Evidence: 原 reaction 混合持久化选择、实验门控和运行状态，导致静态设置与会话事实双向泄漏。
-  // Replacement: DenseSimulationController.start 与 SimulationActionImpl.start。
-  // Risk: Medium；所有静态 UI 必须改读 AppSettings，双引擎启动测试必须覆盖固化边界。
-  // Human Review: Required
-  //
-  // Original code:
-  // reaction(
-  //   () => [
-  //     appHost.regionalSettings.multiBaseEnabled,
-  //     regionalSimulationUiState.experimentalEnabled,
-  //     simulationHost.internalState.runningState,
-  //   ] as const,
-  //   ([persistedEnabled, experimentalEnabled, runningState]) => {
-  //     if (runningState !== "stop") {
-  //       return;
-  //     }
-  //     simulationHost.actions.setRegionalMultiBaseEnabled(
-  //       persistedEnabled && experimentalEnabled,
-  //     );
-  //   },
-  //   { fireImmediately: true },
-  // );
 
   retainMainScene(reaction(
     () => JSON.stringify(appHost.internalState.settings.selectedActivityIds),
@@ -481,7 +236,6 @@ async function startWorkbench(): Promise<void> {
     <React.StrictMode>
       <WorkbenchApp
         appHost={appHost}
-        simulationEngineLaunchPreference={simulationEngineLaunchPreference}
       />
       <DataMigrationOverlay />
     </React.StrictMode>,
@@ -533,7 +287,7 @@ async function startBlueprintEmbed(): Promise<void> {
     const workspace: WorkspaceContract = {
       state: createWorkspaceState(), registry,
       app: null, editor: null, render: null, simulation: null,
-      audio: null, sync: null, blueprintPlanner: null,
+      audio: null, sync: null,
     };
     const initialDocument = createEmbedWorldDocument(blueprint, registry, {
       width: window.innerWidth, height: window.innerHeight, gridCellPixelSize: resolveViewportGridCellPixelSize(1),
@@ -556,10 +310,6 @@ async function startBlueprintEmbed(): Promise<void> {
         resolvePlacementAreaIds: entity => resolveEditorPlacementGeometry(workspace, initialDocument, entity).allowedAreaIds,
         validateTransition: () => ["嵌入蓝图为只读会话。"],
       },
-      // AI-REMOVED 2026-11-12: Reason: 取景策略属于 View；Trigger: REQ-048 D4；Evidence: 独立 embedView；Replacement: 上方 content bounds；Risk: Low；Human Review: Required
-      // viewportBounds: { content: resolveEmbedBlueprintBounds(blueprint, registry), padding: 3, maxAutoZoom: 2 },
-      // AI-REMOVED 2026-11-12: Reason: 无界是空间而非校验旁路；Trigger: REQ-048；Evidence: 旧值跳过资格校验；Replacement: space；Risk: Low；Human Review: Required
-      // placementBounds: options.showBase ? "base" : "unbounded",
       space: options.showBase ? undefined : { areas: [{ id: initialDocument.baseId,
         bounds: { minX: null, maxX: null, minY: null, maxY: null },
         outerRing: { top: 0, right: 0, bottom: 0, left: 0 } }] },
@@ -569,20 +319,7 @@ async function startBlueprintEmbed(): Promise<void> {
     await editor.internalDocuments.ready();
     abort.signal.throwIfAborted();
     embedView.actions.setViewportClientRect({ left: 0, top: 0, width: window.innerWidth, height: window.innerHeight });
-    // AI-REMOVED 2026-10-12:
-    // Reason: 预热期间不能创建会按渲染帧推进仿真的 Renderer。
-    // Trigger: 用户要求按秒预热，完成前画面保持空白。
-    // Evidence: RenderHost 的 scheduler 每帧调用 advancePlaybackByDeltaMs。
-    // Replacement: 下方预热完成后创建 RenderHost。
-    // Risk: Low；销毁顺序随创建顺序调整，Renderer 先于 Simulation 回收。
-    // Human Review: Required
-    // Original code:
-    // const render = await createRenderHost(workspace, { showBaseBoundary: options.showBase });
-    // if (disposed) { render.destroy(); return; }
-    // releases.push(() => render.destroy());
     simulation = createSimulationHost(workspace, {
-      engineKind: "dense-v2",
-      initialDenseTickRate: options.warmupSeconds > 0 ? 2 : 4,
       getRegionalResourceSettings: region => app.regionalSettings.getRegionResources(region),
       getActiveActivityIds: () => resolveEffectiveActivityIds({ selectedActivityIds: [] }),
     });
@@ -595,9 +332,8 @@ async function startBlueprintEmbed(): Promise<void> {
       const rate = simulation.queries.getDocumentRuntimeStatus()?.standardTickRate;
       const warmupTicks = Math.ceil(options.warmupSeconds * (rate ?? NaN));
       if (!Number.isSafeInteger(warmupTicks) || warmupTicks <= 0) {
-        throw Object.assign(new Error("预热秒数无法换算为有效的 dense tick 数。"), { code: "INVALID_PARAMETER" });
+        throw Object.assign(new Error("预热秒数无法换算为有效的 tick 数。"), { code: "INVALID_PARAMETER" });
       }
-      // 复用当前 Dense 会话，只发布目标 tick；暂停态避免额外的播放时间进入预热。
       const result = await simulation.internalActions.syncToTick(warmupTicks);
       abort.signal.throwIfAborted();
       if (result.status !== "ready" || simulation.queries.getDocumentRuntimeStatus()?.tickNumber !== warmupTicks) {
@@ -674,14 +410,5 @@ void (new URLSearchParams(window.location.search).has("embed")
     root.replaceChildren(message, retry);
   }
   window.addEventListener("online", () => window.location.reload(), { once: true });
-  // AI-REMOVED 2026-09-28:
-  // Reason: 启动失败已展示恢复入口，不再制造未处理的顶层拒绝。
-  // Trigger: 补齐存储异常处理。
-  // Evidence: 原 catch 只覆盖恢复门禁，主机读取失败会遗漏。
-  // Replacement: startWorkbench 的统一 catch。
-  // Risk: Low
-  // Human Review: Required
-  // Original code:
-  // throw error;
   console.error("Workbench startup failed; stored data was retained.", error);
 });

@@ -6,12 +6,6 @@ import type { LogisticsDraftActionResult } from "@/domain/shared/logistics";
 export const AVAILABLE_OPERATION: CanvasOperationAvailability = Object.freeze({ supported: true, enabled: true, reason: null });
 
 const ACTION_OPERATIONS: Record<keyof EditorAction, CanvasOperationId | null> = {
-// AI-REMOVED 2026-11-12: Reason: 相机移至 View；Trigger: REQ-048 D4；Evidence: 旧 viewport 已退役；Replacement: EditorView；Risk: 消费者待迁移；Human Review: Required
-// Original code:
-//   setViewportClientRect: null, moveViewportByClientPixelVector: "pan-viewport", zoom: "zoom-viewport",
-// AI-REMOVED 2026-11-12: Reason: 相机移至 View；Trigger: REQ-048 D4；Evidence: 旧 viewport 已退役；Replacement: EditorView；Risk: 消费者待迁移；Human Review: Required
-// Original code:
-//   setViewportDisplayRotation: "rotate-viewport", focusOnEntity: "pan-viewport", focusOnRegion: "pan-viewport",
   setHoverPoint: "select", clearHoverPoint: null,
   patchEntityConfig: "configure-device", deleteEntityConfigKeys: "configure-device",
   createDarkPipeLink: "configure-device", removeDarkPipeLink: "configure-device",

@@ -39,16 +39,6 @@ export interface GestureActionRouterOptions<THost = unknown> {
 }
 
 const MODULE_PERF_LOG_WINDOW_MS = DEBUG_PERFORMANCE_STATISTICS_PERIOD_MS
-// AI-REMOVED 2026-05-21:
-// Reason: MODULE_PERF_TOP_COUNT 声明后未被任何代码引用，ESLint 报 no-unused-vars
-// Trigger: lint error @typescript-eslint/no-unused-vars
-// Evidence: grep 搜索仅命中声明行，无任何使用点
-// Replacement: None（该常量从未被使用，仅声明）
-// Risk: Low
-// Human Review: Not Required
-//
-// Original code:
-// const MODULE_PERF_TOP_COUNT = 10
 
 interface ModulePerfWindow {
   startedAtMs: number

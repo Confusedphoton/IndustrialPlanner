@@ -1,14 +1,3 @@
-// AI-REMOVED 2026-09-25:
-// Reason: 查询改为复用 Editor 最新文档，默认文档与实体补全由 repository 负责。
-// Trigger: REQ-038 D04 已获确认。
-// Evidence: 原查询总是读取持久化版本，无法看到后台未落盘编辑。
-// Replacement: 下方 documents.readMany。
-// Risk: Low
-// Human Review: Required
-// Original code:
-// import { createWorldDocument } from "@/domain/document/world-document";
-// import { resolveLatestWorldDocumentForBase } from "../document-storage";
-// import { ensureProtocolCoreEntity } from "../ensure-protocol-core";
 import type { EditorBaseDocumentSummary } from "@/domain/editor/editor-document";
 import type { EditorQuery } from "@/domain/editor/editor-query";
 import type { WorldDocument } from "@/domain/document/world-document";
@@ -49,32 +38,12 @@ export function createEditorDocumentQueries({
         return {
           baseId: baseDefinition.id,
           documentKey: latestDocument?.documentKey ?? null,
-          // 2026-07-23: 改用 entities keys 计数兜底，避免 entityOrder 残留导致虚高。
+          // 改用 entities keys 计数兜底，避免 entityOrder 残留导致虚高。
           entityCount: latestDocument != null ? Object.keys(latestDocument.entities).length : 0,
           updatedAt: latestDocument?.meta.updatedAt ?? null,
         };
       });
     },
-    // AI-REMOVED 2026-09-25:
-    // Reason: 删除公共查询中的第二套磁盘加载路径。
-    // Trigger: REQ-038 内存最新版本优先。
-    // Evidence: 旧实现未查询 Editor 驻留集合。
-    // Replacement: documents.readMany。
-    // Risk: 初始化必须完成后才能返回；由 repository.ready 保证。
-    // Human Review: Required
-    // Original code:
-    // readLatestBaseDocuments: async (baseIds) => {
-    //   const documents = await Promise.all(baseIds.map((baseId) =>
-    //     resolveLatestWorldDocumentForBase({
-    //       baseId,
-    //       latestDocumentIdByBaseId: state.internalPersistState.latestDocumentIdByBaseId,
-    //     }),
-    //   ));
-    //   return baseIds.map((baseId, index) => {
-    //     const document = documents[index] ?? createWorldDocument({ baseId });
-    //     return ensureProtocolCoreEntity({ document, queries: workspace.registry.queries });
-    //   });
-    // },
     readLatestBaseDocuments: async (baseIds) => {
       await documents.settleMaintenance();
       return documents.readMany(baseIds);

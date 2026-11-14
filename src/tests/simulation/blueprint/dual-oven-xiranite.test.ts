@@ -1,4 +1,3 @@
-// AI-CORRECTION 2026-10-08: REQ-041 普通夹具空升级为 schema 7；归档注释中的 .schema6.json 路径现对应 .schema7.json，专用迁移输入保留原版。
 import { loadBlueprintFromFile } from "../blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
@@ -7,29 +6,7 @@ import {
   BLUEPRINT_SIMULATION_ENGINE_KINDS,
   runBlueprintSimulation,
 } from "../blueprint-runner";
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/dual-oven-xiranite/index.json
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// import {
-//   createEntity,
-//   createWarehouseSlotLink,
-//   loadBlueprintWithExtras,
-// } from "../blueprint-test-helpers";
 
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/dual-oven-xiranite/index.json
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// const BLUEPRINT_PATH = "public/blueprints/dual-oven-xiranite.json";
 
 // 息壤粉 item 标识
 const XIRANITE_POWDER_ITEM = "item_xiranite_powder";
@@ -38,39 +15,14 @@ const WARMUP_SECONDS = 120; // 2 分钟预热
 const WINDOW_SECONDS = 60; // 1 分钟窗口（20 tick/s × 60s）
 const OBSERVATION_SECONDS = 120; // 预热后观察 2 分钟
 const WINDOW_STEP_SECONDS = 5;   // 窗口滑动步长
-// AI-CORRECTION 2026-09-04: 上述窗口统一改用秒，运行后按 topology.standardTickRate 换算，不再固定假设 20 TPS。
 const EXPECTED_XIRANITE_PER_MINUTE = 60;
 
 // 该测试需从磁盘读取大型蓝图文件并运行仿真。
 // 由 vitest blueprint project 承载，独立串行执行，不再依赖 HEAVY 环境变量。
-// AI-CORRECTION 2026-05-18: 移除 HEAVY=1 / describe.skipIf，改为 vitest projects 区分。
 describe.each(BLUEPRINT_SIMULATION_ENGINE_KINDS)(
   "双烘炉息壤产线 - 息壤粉稳态产量验证 [%s]",
   (engineKind) => {
   it("2 分钟预热后，1 分钟滑动窗口产出 >= 60 个息壤粉，持续 2 分钟", { timeout: 600_000 }, async () => {
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/production/dual-oven-xiranite.schema6.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // loadBlueprintWithExtras(BLUEPRINT_PATH, [
-    //       // 上方暗管出口 → 接入左侧水管网末端 pipe_straight_1x1 @ (9,0) rot=90
-    //       // 出水口位于 (9,-1) 朝南，向 (9,0) 输出清水
-    //       createEntity("extra-top", "udpipe_unloader_1", 8, -3, 270, {
-    //         "storageSlotGroups[0].slots[0].ignoreStock": true
-    //       }),
-    //       // 下方暗管出口 → 接入右侧水管网末端 pipe_straight_1x1 @ (20,24) rot=270
-    //       // rot=270: 出水口位于 (x+1, y+0) = (20, 25) 朝北，向 (20, 24) 输出清水
-    //       createEntity("extra-bottom", "udpipe_unloader_1", 19, 25, 90, {
-    //         "storageSlotGroups[0].slots[0].ignoreStock": true
-    //       }),
-    //     ], [
-    //       createWarehouseSlotLink("extra-top", "item_liquid_water"),
-    //       createWarehouseSlotLink("extra-bottom", "item_liquid_water"),
-    //     ])
     const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/production/dual-oven-xiranite.schema7.json");
 
     // 收集蓝图中所有息壤烘炉实体 ID
@@ -119,7 +71,6 @@ describe.each(BLUEPRINT_SIMULATION_ENGINE_KINDS)(
     }
 
     // 滑动窗口验证：步长 WINDOW_STEP=100 tick
-    // AI-CORRECTION 2026-09-04: 当前步长为 WINDOW_STEP_SECONDS，并按本次引擎返回的 standardTickRate 换算。
     const slidingWindowStartMin = warmupTicks;
     const slidingWindowStartMax = maxTick - windowSize + 1;
     const results: { windowStart: number; produced: number }[] = [];

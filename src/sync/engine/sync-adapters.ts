@@ -118,7 +118,7 @@ export interface SyncPlanUpload {
  * 二段删除落地全部由引擎在 commit 成功后统一执行。
  */
 export interface SyncEngineTransaction {
-  /** 2026-10-08：收齐已采纳输入后才统一落地；版本转换输入在全局冻结中提交。 */
+  /** 收齐已采纳输入后才统一落地；版本转换输入在全局冻结中提交。 */
   stageDownload?(key: string, value: { readonly label: string; readonly requiresMigration: boolean; readonly run: () => Promise<void> }): void;
   unstageDownload?(key: string): void;
   /** 共享上传批次；commit 由引擎在全部下载完成后执行。 */
@@ -164,34 +164,6 @@ export interface SyncAdapter {
     session: SyncRemoteSession,
     options: SyncAdapterSyncOptions,
   ): Promise<SyncAdapterResult>;
-  // AI-REMOVED 2026-08-13:
-  // Reason: 旧“同步后探测冲突 + 分阶段执行决议”工作流已被引擎级弹框取代。
-  // Trigger: sync-model.md 要求上传/下载/冲突资产全部进入对话框逐项选择，
-  //   决议执行由引擎统一编排（先下载、后上传、单次 commit）。
-  // Evidence: 旧 runConflictWorkflow 依赖这些方法按 adapter 分组二次执行；
-  //   新引擎直接从 SyncPlanItem 的决议句柄执行，不再需要探测与执行分离。
-  // Replacement: SyncPlanItem.applyDownload / applyUpload / applyLocalRestore。
-  // Risk: Low；外部模块无这两个方法的其他调用点。
-  // Human Review: Required
-  //
-  // Original code:
-  // inspectConflicts?(
-  //   session: SyncRemoteSession,
-  //   scope?: SyncAdapterScope,
-  // ): Promise<readonly SyncAdapterConflict<unknown>[]>;
-  // /**
-  //  * 执行冲突决策：Phase 1 并行下载 use-remote，Phase 2 单事务并行上传 use-local。
-  //  * 不走 sync() 的全量比较逻辑,只处理 decisions 中明确决定的条目。
-  //  *
-  //  * 若提供 sharedWriteBatch，use-local 条目将写入该共享批次，且不在此方法内 commit；
-  //  * 调用方负责在所有 adapter 完成后调用 sharedWriteBatch.commit()，并仅在提交成功后
-  //  * 持久化 use-local 条目的 lastSyncedHash。
-  //  */
-  // executeConflictDecisions?(
-  //   session: SyncRemoteSession,
-  //   decisions: readonly SyncAdapterConflictDecision[],
-  //   sharedWriteBatch?: SyncRemoteWriteBatch,
-  // ): Promise<SyncAdapterResult>;
 }
 
 export interface SyncAdapterScope {
@@ -226,20 +198,6 @@ export interface FullWithRevisionAdapterOptions<TValue> {
     scope?: SyncAdapterScope,
   ) => Promise<readonly FullWithRevisionEntry<TValue>[]>;
   readonly writeLocal: (entry: FullWithRevisionEntry<TValue>) => Promise<void>;
-  // AI-REMOVED 2026-09-09:
-  // Reason: 真实浏览器复现证明迁移回写失败源于同步 provider 未激活，此开关不解决当前故障且会引入额外 hash 成本。
-  // Trigger: Cloudflare schema migration E2E 夹具仍写旧 provider key，现代激活状态为 disabled。
-  // Evidence: 同步状态 lastResults 为空、任务计数为 0；使用正式 activateSyncProvider 后既有首次同步路径会计算当前投影。
-  // Replacement: src/tests/e2e/cloudflare-migration-sync.spec.ts 使用 activateSyncProvider 激活夹具目标。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // /**
-  //  * clean 条目的本地读取结果是否可直接沿用上次同步 hash。
-  //  * 读取时会执行 schema 迁移或其他规范化的资产必须设为 false。
-  //  */
-  // readonly reuseLastSyncedHashForCleanEntries?: boolean;
   readonly isRemoteVersionUnsupported?: (value: unknown) => boolean;
   readonly normalizeRemote?: (value: unknown) => TValue | null;
   readonly resolveConflict?: (conflict: SyncAdapterConflict<TValue>) => Promise<SyncAdapterConflictResolution> | SyncAdapterConflictResolution;
@@ -274,20 +232,6 @@ export interface PatchCollectionWithRevisionAdapterOptions<TValue> {
   readonly writeLocal: (entry: PatchWithRevisionEntry<TValue>) => Promise<void>;
   /** 仅在用户对远端独有资产明确选择“使用我的”时，将本地缺席解释为远端删除。 */
   readonly deleteRemoteOnlyOnUseLocal?: (assetId: string) => boolean;
-  // AI-REMOVED 2026-09-09:
-  // Reason: 真实浏览器复现证明迁移回写失败源于同步 provider 未激活，此开关不解决当前故障且会引入额外 hash 成本。
-  // Trigger: Cloudflare schema migration E2E 夹具仍写旧 provider key，现代激活状态为 disabled。
-  // Evidence: 同步状态 lastResults 为空、任务计数为 0；使用正式 activateSyncProvider 后既有首次同步路径会计算当前投影。
-  // Replacement: src/tests/e2e/cloudflare-migration-sync.spec.ts 使用 activateSyncProvider 激活夹具目标。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // /**
-  //  * clean 条目的本地读取结果是否可直接沿用上次同步 hash。
-  //  * 读取时会执行 schema 迁移或其他规范化的资产必须设为 false。
-  //  */
-  // readonly reuseLastSyncedHashForCleanEntries?: boolean;
   readonly normalizeRemote?: (value: unknown) => TValue | null;
   readonly deltaThreshold?: number;
   readonly resolveConflict?: (conflict: SyncAdapterConflict<TValue>) => Promise<SyncAdapterConflictResolution> | SyncAdapterConflictResolution;
@@ -344,23 +288,6 @@ interface NormalizedRemoteAsset<TValue> {
   readonly etag: string | null;
 }
 
-// AI-REMOVED 2026-08-13:
-// Reason: writeRemoteValue 已随单值 adapter 的自建批次提交一并移除，接口不再有消费方。
-// Trigger: sync-model.md“先下载、后上传、单次 commit”语义。
-// Replacement: transaction.recordUpload。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-// interface WriteRemoteValueOptions<TValue> {
-//   readonly session: SyncRemoteSession;
-//   readonly collection: SyncRemoteCollection;
-//   readonly assetId: string;
-//   readonly value: TValue;
-//   readonly contentHash: string;
-//   readonly baseRevision: number | null;
-//   readonly baseContentHash: string | null;
-// }
 
 async function createSyncContentHash(
   session: SyncRemoteSession,
@@ -398,36 +325,6 @@ async function readRemoteAssetValue<TValue>(
     return null;
   }
 
-  // AI-REMOVED 2026-08-11:
-  // Reason: JSON 解析或 schema 归一化失败不等于远端资产不存在。
-  // Trigger: 返回 null 会进入“仅本地存在”分支，并可能用本地内容覆盖损坏或暂时不兼容的远端资产。
-  // Evidence: syncFullNoRevision 将 remoteValue=null 解释为新本地资产并调用 writeRemote。
-  // Replacement: 下方显式解析与归一化错误，远端无效时中止同步。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // try {
-  //   const parsed: unknown = JSON.parse(asset.content);
-  //   const value = normalizeRemote === undefined
-  //     ? parsed as TValue
-  //     : normalizeRemote(parsed);
-  //   if (value === null) {
-  //     return null;
-  //   }
-  //
-  //   return {
-  //     value,
-  //     contentHash: await createSyncContentHash(collection, value),
-  //     remoteContentHash: asset.contentHash,
-  //     revision: asset.revision,
-  //     committedAt: asset.committedAt,
-  //     etag: asset.etag ?? null,
-  //   };
-  // } catch {
-  //   return null;
-  // }
-  // AI-CORRECTION 2026-08-12: JSON 解析已下沉到 provider 边界；适配器只消费结构化值。
   const parsed = asset.value;
   if (isRemoteVersionUnsupported?.(parsed) === true) {
     if (onUnavailable !== undefined) { await onUnavailable("unsupported-schema"); return null; }
@@ -464,55 +361,7 @@ async function readRemoteAssetValue<TValue>(
   };
 }
 
-// AI-REMOVED 2026-08-13:
-// Reason: 新编排直接消费 RemoteCollectionIndex，不再需要转换层。
-// Trigger: 先下载后上传重构，分类逻辑统一使用 RemoteAssetMeta 口径标记。
-// Replacement: syncFullWithRevision / syncPatchCollectionWithRevision 直接使用 remoteIndexState。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-// function toRemoteIndexFile(index: RemoteCollectionIndex): RemoteIndexFile {
-//   return {
-//     revision: index.revision,
-//     entries: Object.fromEntries(
-//       Object.entries(index.entries).flatMap(([assetId, entry]) =>
-//         entry.contentHash === null
-//           ? []
-//           : [[assetId, {
-//               contentHash: entry.contentHash,
-//               ...(entry.protocolContentHash === undefined
-//                 ? {}
-//                 : { protocolContentHash: entry.protocolContentHash }),
-//               deletedAt: entry.deletedAt,
-//               committedAt: entry.committedAt,
-//               revision: entry.revision,
-//             } satisfies RemoteIndexEntry]]
-//       ),
-//     ),
-//   };
-// }
 
-// AI-REMOVED 2026-08-13:
-// Reason: 单值 adapter 的上传不再自行建批次提交，统一由引擎的共享批次在下载完成后 commit。
-// Trigger: sync-model.md“先下载、后上传、单次 commit”语义。
-// Replacement: transaction.recordUpload + createPlanItem 的 applyUpload。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-// async function writeRemoteValue<TValue>(options: WriteRemoteValueOptions<TValue>): Promise<void> {
-//   const batch = options.session.beginWriteBatch();
-//   batch.putAsset({
-//     collection: options.collection,
-//     assetId: options.assetId,
-//     value: options.value,
-//     contentHash: options.contentHash,
-//     baseRevision: options.baseRevision,
-//     baseContentHash: options.baseContentHash,
-//   });
-//   await batch.commit();
-// }
 
 function resolveRemoteBaseContentHash(
   entry: RemoteIndexEntry | RemoteAssetMeta | null | undefined,
@@ -716,7 +565,6 @@ function createPlanItem<TValue>(options: CreatePlanItemOptions<TValue>): SyncPla
       return;
     }
 
-    // AI-CORRECTION 2026-09-26: 未注册基地的远端独有文档由用户选择“使用我的”时，
     // 本地缺席代表删除远端；具体墓碑与本地清理在适配器提供的回调中登记。
     if (localValue === null && options.onUseLocalWithoutLocalValue !== undefined) {
       await options.onUseLocalWithoutLocalValue();
@@ -739,7 +587,6 @@ function createPlanItem<TValue>(options: CreatePlanItemOptions<TValue>): SyncPla
     await options.writeLocal(localValue, localDeletedAt);
   };
 
-  // AI-CORRECTION 2026-08-14: 上传条目被用户决议为“用远端”时，语义为放弃本地新增——
   // 本地资产删除（远端墓碑落地，二段式：commit 成功后才执行删除），touch 清空。
   // 原实现走 applyDownload 的“远端资产不存在 → skipping”分支，本地原样保留、不上传，
   // 但本轮同步照常推进 acknowledged 与脏标清理，制造“已同步”假象，
@@ -776,153 +623,6 @@ function createPlanItem<TValue>(options: CreatePlanItemOptions<TValue>): SyncPla
   };
 }
 
-// AI-REMOVED 2026-08-13:
-// Reason: 旧“分阶段冲突决策执行”已被引擎级弹框 + SyncPlanItem 决议句柄取代。
-// Trigger: sync-model.md 要求上传/下载/冲突资产全部进入对话框逐项选择，
-//   引擎统一执行决议并负责单次 commit；adapter 不再持有两阶段执行逻辑。
-// Evidence: 新引擎从 SyncPlanItem.applyDownload / applyUpload / applyLocalRestore 执行决议。
-// Replacement: createPlanItem（上方）与 sync-service 的决议编排。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-//
-// // ============================================================================
-// // executeConflictDecisions — 两阶段冲突执行
-// // ============================================================================
-//
-// interface ConflictExecutionContext<TValue> {
-//   readonly collection: SyncRemoteCollection;
-//   readonly adapterId: string;
-//   /** 归一化远端 JSON → 本地 value；返回 null 视为解析失败。 */
-//   readonly normalizeRemote: ((value: unknown) => TValue | null) | undefined;
-//   /** 读取远端 asset 并返回 parsed + normalized 结果。 */
-//   readonly readRemoteAsset: (session: SyncRemoteSession, assetId: string) => Promise<NormalizedRemoteAsset<TValue> | null>;
-//   /** 读取本地 value（用于上传 use-local 条目）。 */
-//   readonly readLocalValue: (assetId: string) => Promise<TValue | null>;
-//   /** 获取本地墓碑的 deletedAt；非墓碑返回 null。 */
-//   readonly getLocalDeletedAt: (assetId: string) => Promise<string | null>;
-//   /** 将远端 value 写入本地（use-remote 下载）。remoteDeletedAt 用于墓碑场景。 */
-//   readonly writeLocalForDownload: (
-//     session: SyncRemoteSession,
-//     assetId: string,
-//     remoteValue: TValue,
-//     remoteDeletedAt: string | null,
-//   ) => Promise<void>;
-//   /** 获取远端上传所需的乐观并发基线修订号。 */
-//   readonly getRemoteRevision: (session: SyncRemoteSession, assetId: string) => Promise<number | null>;
-//   /** 获取远端上传所需的 baseContentHash。 */
-//   readonly getRemoteBaseContentHash: (session: SyncRemoteSession, assetId: string) => Promise<string | null>;
-// }
-//
-// async function executeCollectionConflictDecisions<TValue>(
-//   session: SyncRemoteSession,
-//   decisions: readonly SyncAdapterConflictDecision[],
-//   ctx: ConflictExecutionContext<TValue>,
-//   sharedWriteBatch?: SyncRemoteWriteBatch,
-// ): Promise<SyncAdapterResult> {
-//   const useRemote = decisions.filter((d) => d.resolution === "use-remote");
-//   const useLocal = decisions.filter((d) => d.resolution === "use-local");
-//   const pause = decisions.filter((d) => d.resolution === "pause");
-//   const changedAssetIds: string[] = [...useRemote.map((d) => d.assetId), ...useLocal.map((d) => d.assetId)];
-//   let status: SyncAdapterStatus = "idle";
-//
-//   // Phase 1: 并行下载所有 use-remote
-//   if (useRemote.length > 0) {
-//     await Promise.all(useRemote.map(async (decision) => {
-//       if (decision.remoteDeletedAt !== null) {
-//         // 墓碑下载：仅写本地 deletedAt，不拉取远端正文
-//         await ctx.writeLocalForDownload(
-//           session, decision.assetId,
-//           null as unknown as TValue,
-//           decision.remoteDeletedAt,
-//         );
-//         const assetKey = createSyncAssetKey(ctx.collection, decision.assetId);
-//         // 墓碑的 lastSyncedHash 使用远端 hash
-//         await session.localState.setLastSyncedHash(assetKey, decision.remoteHash);
-//         logger.info(`${ctx.adapterId}/${decision.assetId}: use-remote (tombstone) → deletedAt=${decision.remoteDeletedAt}`);
-//         status = mergeStatus(status, "downloaded");
-//         return;
-//       }
-//
-//       const remoteAsset = await ctx.readRemoteAsset(session, decision.assetId);
-//       if (remoteAsset === null) {
-//         logger.warn(`${ctx.adapterId}/${decision.assetId}: use-remote but remote asset not found → skipping`);
-//         return;
-//       }
-//       await ctx.writeLocalForDownload(session, decision.assetId, remoteAsset.value, null);
-//       const assetKey = createSyncAssetKey(ctx.collection, decision.assetId);
-//       await session.localState.setLastSyncedHash(assetKey, remoteAsset.contentHash);
-//       logger.info(`${ctx.adapterId}/${decision.assetId}: use-remote → downloaded`);
-//       status = mergeStatus(status, "downloaded");
-//     }));
-//   }
-//
-//   // Phase 2: 上传所有 use-local — 写入共享批次或自建批次
-//   if (useLocal.length > 0) {
-//     const ownedBatch = sharedWriteBatch === undefined;
-//     const batch = sharedWriteBatch ?? session.beginWriteBatch();
-//     for (const decision of useLocal) {
-//       const localDeletedAt = await ctx.getLocalDeletedAt(decision.assetId);
-//       if (localDeletedAt !== null) {
-//         // 本地墓碑：putTombstone
-//         const contentHash = await createSyncContentHash(session, ctx.collection, null);
-//         const baseRevision = await ctx.getRemoteRevision(session, decision.assetId);
-//         const baseContentHash = await ctx.getRemoteBaseContentHash(session, decision.assetId);
-//         batch.putTombstone({
-//           collection: ctx.collection,
-//           assetId: decision.assetId,
-//           deletedAt: localDeletedAt,
-//           targetContentHash: contentHash,
-//           baseRevision,
-//           baseContentHash,
-//         });
-//         logger.info(`${ctx.adapterId}/${decision.assetId}: use-local (tombstone) → uploaded`);
-//         status = mergeStatus(status, "uploaded");
-//         continue;
-//       }
-//
-//       const localValue = await ctx.readLocalValue(decision.assetId);
-//       if (localValue === null) {
-//         logger.warn(`${ctx.adapterId}/${decision.assetId}: use-local but local value not found → skipping`);
-//         continue;
-//       }
-//       const contentHash = await createSyncContentHash(session, ctx.collection, localValue);
-//       const baseRevision = await ctx.getRemoteRevision(session, decision.assetId);
-//       const baseContentHash = await ctx.getRemoteBaseContentHash(session, decision.assetId);
-//       batch.putAsset({
-//         collection: ctx.collection,
-//         assetId: decision.assetId,
-//         value: localValue,
-//         contentHash,
-//         baseRevision,
-//         baseContentHash,
-//       });
-//       logger.info(`${ctx.adapterId}/${decision.assetId}: use-local → uploaded`);
-//       status = mergeStatus(status, "uploaded");
-//     }
-//     if (ownedBatch) {
-//       await batch.commit();
-//       for (const decision of useLocal) {
-//         await session.localState.setLastSyncedHash(
-//           createSyncAssetKey(ctx.collection, decision.assetId),
-//           decision.localHash,
-//         );
-//       }
-//     }
-//   }
-//
-//   if (pause.length > 0) {
-//     status = mergeStatus(status, "conflict");
-//   }
-//
-//   return {
-//     adapterId: ctx.adapterId,
-//     mode: ctx.collection.mode,
-//     status,
-//     changedAssetIds: Array.from(new Set(changedAssetIds)),
-//   };
-// }
 
 export function createFullNoRevisionAdapter<TValue>(
   options: FullNoRevisionAdapterOptions<TValue>,
@@ -948,41 +648,6 @@ export function createFullNoRevisionAdapter<TValue>(
       options,
       syncOptions,
     ),
-    // AI-REMOVED 2026-08-13:
-    // Reason: 旧冲突探测与两阶段决策执行工作流已移除。
-    // Trigger: sync-model.md 引擎级弹框取代 adapter 级决议执行。
-    // Replacement: syncFullNoRevision 通过 SyncPlanItem 登记条目，引擎执行决议。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // inspectConflicts: async (session, scope) =>
-    //   await inspectFullNoRevisionConflicts(session, collection, options, scope),
-    // executeConflictDecisions: async (session, decisions, sharedWriteBatch) =>
-    //   await executeCollectionConflictDecisions(session, decisions, {
-    //     collection,
-    //     adapterId: options.id,
-    //     normalizeRemote: options.normalizeRemote,
-    //     readRemoteAsset: (s, assetId) => readRemoteAssetValue(s, collection, assetId, options.normalizeRemote),
-    //     readLocalValue: async () => await options.readLocal(),
-    //     getLocalDeletedAt: async () => null,
-    //     writeLocalForDownload: async (_s, _assetId, remoteValue, remoteDeletedAt) => {
-    //       if (remoteDeletedAt !== null) {
-    //         // full-no-revision 不支持墓碑；仅记录日志
-    //         logger.warn(`${options.id}: use-remote tombstone not supported for full-no-revision adapter`);
-    //         return;
-    //       }
-    //       await options.writeLocal(remoteValue);
-    //     },
-    //     getRemoteRevision: async (s) => {
-    //       const remoteAsset = await readRemoteAssetValue(s, collection, "single", options.normalizeRemote);
-    //       return remoteAsset?.revision ?? null;
-    //     },
-    //     getRemoteBaseContentHash: async (s) => {
-    //       const remoteAsset = await readRemoteAssetValue(s, collection, "single", options.normalizeRemote);
-    //       return remoteAsset?.remoteContentHash ?? null;
-    //     },
-    //   }, sharedWriteBatch),
   };
 }
 
@@ -1011,47 +676,6 @@ export function createFullWithRevisionAdapter<TValue>(
       options,
       syncOptions,
     ),
-    // AI-REMOVED 2026-08-13:
-    // Reason: 旧冲突探测与两阶段决策执行工作流已移除。
-    // Trigger: sync-model.md 引擎级弹框取代 adapter 级决议执行。
-    // Replacement: syncFullWithRevision 通过 SyncPlanItem 登记条目，引擎执行决议。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // inspectConflicts: async (session, scope) =>
-    //   await inspectFullWithRevisionConflicts(session, collection, options, scope),
-    // executeConflictDecisions: async (session, decisions, sharedWriteBatch) => {
-    //   // 预读远端索引以获取 revision / baseContentHash
-    //   const remoteIndexState = await session.readIndex(collection);
-    //   return await executeCollectionConflictDecisions(session, decisions, {
-    //     collection,
-    //     adapterId: options.id,
-    //     normalizeRemote: options.normalizeRemote,
-    //     readRemoteAsset: (s, assetId) => readRemoteAssetValue(s, collection, assetId, options.normalizeRemote),
-    //     readLocalValue: async (assetId) => {
-    //       const localEntries = await options.listLocal();
-    //       const entry = localEntries.find((e) => e.id === assetId);
-    //       return entry?.value ?? null;
-    //     },
-    //     getLocalDeletedAt: async (assetId) => {
-    //       const localEntries = await options.listLocal();
-    //       const entry = localEntries.find((e) => e.id === assetId);
-    //       return entry?.deletedAt ?? null;
-    //     },
-    //     writeLocalForDownload: async (_s, assetId, remoteValue, remoteDeletedAt) => {
-    //       await options.writeLocal({ id: assetId, value: remoteValue, deletedAt: remoteDeletedAt });
-    //     },
-    //     getRemoteRevision: async (_s, assetId) => {
-    //       const entry = remoteIndexState.entries[assetId];
-    //       return entry?.revision ?? remoteIndexState.revision;
-    //     },
-    //     getRemoteBaseContentHash: async (_s, assetId) => {
-    //       const entry = remoteIndexState.entries[assetId];
-    //       return resolveRemoteBaseContentHash(entry);
-    //     },
-    //   }, sharedWriteBatch);
-    // },
   };
 }
 
@@ -1081,40 +705,6 @@ export function createPatchWithRevisionAdapter<TValue>(
       options,
       syncOptions,
     ),
-    // AI-REMOVED 2026-08-13:
-    // Reason: 旧冲突探测与两阶段决策执行工作流已移除。
-    // Trigger: sync-model.md 引擎级弹框取代 adapter 级决议执行。
-    // Replacement: syncPatchWithRevision 通过 SyncPlanItem 登记条目，引擎执行决议。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // inspectConflicts: async (session, scope) =>
-    //   await inspectPatchWithRevisionConflicts(session, collection, options, scope),
-    // executeConflictDecisions: async (session, decisions, sharedWriteBatch) =>
-    //   await executeCollectionConflictDecisions(session, decisions, {
-    //     collection,
-    //     adapterId: options.id,
-    //     normalizeRemote: options.normalizeRemote,
-    //     readRemoteAsset: (s, assetId) => readRemoteAssetValue(s, collection, assetId, options.normalizeRemote),
-    //     readLocalValue: async () => await options.readLocal(),
-    //     getLocalDeletedAt: async () => null,
-    //     writeLocalForDownload: async (_s, _assetId, remoteValue, remoteDeletedAt) => {
-    //       if (remoteDeletedAt !== null) {
-    //         logger.warn(`${options.id}: use-remote tombstone not supported for patch-with-revision adapter`);
-    //         return;
-    //       }
-    //       await options.writeLocal(remoteValue);
-    //     },
-    //     getRemoteRevision: async (s) => {
-    //       const remoteAsset = await readRemoteAssetValue(s, collection, "snapshot", options.normalizeRemote);
-    //       return remoteAsset?.revision ?? null;
-    //     },
-    //     getRemoteBaseContentHash: async (s) => {
-    //       const remoteAsset = await readRemoteAssetValue(s, collection, "snapshot", options.normalizeRemote);
-    //       return remoteAsset?.remoteContentHash ?? null;
-    //     },
-    //   }, sharedWriteBatch),
   };
 }
 
@@ -1144,371 +734,9 @@ export function createPatchCollectionWithRevisionAdapter<TValue>(
       options,
       syncOptions,
     ),
-    // AI-REMOVED 2026-08-13:
-    // Reason: 旧冲突探测与两阶段决策执行工作流已移除。
-    // Trigger: sync-model.md 引擎级弹框取代 adapter 级决议执行。
-    // Replacement: syncPatchCollectionWithRevision 通过 SyncPlanItem 登记条目，引擎执行决议。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // inspectConflicts: async (session, scope) =>
-    //   await inspectPatchCollectionWithRevisionConflicts(session, collection, options, scope),
-    // executeConflictDecisions: async (session, decisions, sharedWriteBatch) => {
-    //   const remoteIndexState = await session.readIndex(collection);
-    //   return await executeCollectionConflictDecisions(session, decisions, {
-    //     collection,
-    //     adapterId: options.id,
-    //     normalizeRemote: options.normalizeRemote,
-    //     readRemoteAsset: (s, assetId) => readRemoteAssetValue(s, collection, assetId, options.normalizeRemote),
-    //     readLocalValue: async (assetId) => {
-    //       const localEntries = await options.listLocal();
-    //       const entry = localEntries.find((e) => e.id === assetId);
-    //       return entry?.value ?? null;
-    //     },
-    //     getLocalDeletedAt: async (assetId) => {
-    //       const localEntries = await options.listLocal();
-    //       const entry = localEntries.find((e) => e.id === assetId);
-    //       return entry?.deletedAt ?? null;
-    //     },
-    //     writeLocalForDownload: async (_s, assetId, remoteValue, remoteDeletedAt) => {
-    //       await options.writeLocal({ id: assetId, value: remoteValue, deletedAt: remoteDeletedAt });
-    //     },
-    //     getRemoteRevision: async (_s, assetId) => {
-    //       const entry = remoteIndexState.entries[assetId];
-    //       return entry?.revision ?? remoteIndexState.revision;
-    //     },
-    //     getRemoteBaseContentHash: async (_s, assetId) => {
-    //       const entry = remoteIndexState.entries[assetId];
-    //       return resolveRemoteBaseContentHash(entry);
-    //     },
-    //   }, sharedWriteBatch);
-    // },
   };
 }
 
-// AI-REMOVED 2026-08-13:
-// Reason: 旧“同步完成后探测冲突 + 分阶段执行决议”工作流已移除。
-// Trigger: sync-model.md 要求引擎级弹框：上传/下载/冲突资产全部进入对话框逐项选择，
-//   分类与决议执行已统一到 sync 函数内的 SyncPlanItem 登记。
-// Evidence: sync-service 的 runConflictWorkflow 已删除；无其他调用点。
-// Replacement: syncFullNoRevision / syncFullWithRevision / syncPatchWithRevision /
-//   syncPatchCollectionWithRevision 通过 transaction.recordItem 登记条目。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-//
-// async function inspectFullNoRevisionConflicts<TValue>(
-//   session: SyncRemoteSession,
-//   collection: SyncRemoteCollection,
-//   options: FullNoRevisionAdapterOptions<TValue>,
-//   scope?: SyncAdapterScope,
-// ): Promise<readonly SyncAdapterConflict<TValue>[]> {
-//   if (!isAssetIncludedInScope("single", scope)) {
-//     return [];
-//   }
-//
-//   const localValuePromise = options.readLocal();
-//   const remoteAssetPromise = readRemoteAssetValue(
-//     session,
-//     collection,
-//     "single",
-//     options.normalizeRemote,
-//   );
-//   const localValue = await localValuePromise;
-//   const remoteAsset = await remoteAssetPromise;
-//   const conflict = await createValueConflict<TValue>({
-//     session,
-//     collection,
-//     adapterId: options.id,
-//     assetId: "single",
-//     localValue,
-//     remoteValue: remoteAsset?.value ?? null,
-//     lastSyncedHash: await session.localState.getLastSyncedHash(
-//       createSyncAssetKey(collection, "single"),
-//     ),
-//     remoteDeletedAt: null,
-//     remoteUpdatedAt: remoteAsset?.committedAt ?? null,
-//   });
-//
-//   return conflict === null ? [] : [conflict];
-// }
-//
-// async function inspectFullWithRevisionConflicts<TValue>(
-//   session: SyncRemoteSession,
-//   collection: SyncRemoteCollection,
-//   options: FullWithRevisionAdapterOptions<TValue>,
-//   scope?: SyncAdapterScope,
-// ): Promise<readonly SyncAdapterConflict<TValue>[]> {
-//   const [localEntries, remoteIndexState] = await Promise.all([
-//     options.listLocal(scope),
-//     session.readIndex(collection),
-//   ]);
-//   const includedLocalEntries = localEntries.filter((entry) =>
-//     isAssetIncludedInScope(entry.id, scope),
-//   );
-//   const remoteValues = new Map(await Promise.all(
-//     includedLocalEntries.flatMap((entry) => {
-//       const remoteEntry = remoteIndexState.entries[entry.id];
-//       return remoteEntry === undefined || remoteEntry.deletedAt !== null
-//         ? []
-//         : [readRemoteAssetValue(
-//           session,
-//           collection,
-//           entry.id,
-//           options.normalizeRemote,
-//         ).then((value) => [entry.id, value] as const)];
-//     }),
-//   ));
-//
-//   return await inspectCollectionConflicts({
-//     session,
-//     collection,
-//     adapterId: options.id,
-//     localEntries: includedLocalEntries,
-//     remoteIndexState,
-//     readRemoteValue: (entryId) => remoteValues.get(entryId)?.value ?? null,
-//     readRemoteUpdatedAt: (entryId) =>
-//       remoteIndexState.entries[entryId]?.committedAt
-//       ?? remoteIndexState.committedAt,
-//   });
-// }
-//
-// async function inspectPatchWithRevisionConflicts<TValue>(
-//   session: SyncRemoteSession,
-//   collection: SyncRemoteCollection,
-//   options: PatchWithRevisionAdapterOptions<TValue>,
-//   scope?: SyncAdapterScope,
-// ): Promise<readonly SyncAdapterConflict<TValue>[]> {
-//   if (!isAssetIncludedInScope("snapshot", scope)) {
-//     return [];
-//   }
-//
-//   const localValuePromise = options.readLocal();
-//   const remoteAssetPromise = readRemoteAssetValue(
-//     session,
-//     collection,
-//     "snapshot",
-//     options.normalizeRemote,
-//   );
-//   const localValue = await localValuePromise;
-//   const remoteAsset = await remoteAssetPromise;
-//   const conflict = await createValueConflict<TValue>({
-//     session,
-//     collection,
-//     adapterId: options.id,
-//     assetId: "snapshot",
-//     localValue,
-//     remoteValue: remoteAsset?.value ?? null,
-//     lastSyncedHash: await session.localState.getLastSyncedHash(
-//       createSyncAssetKey(collection, "snapshot"),
-//     ),
-//     remoteDeletedAt: null,
-//     remoteUpdatedAt: remoteAsset?.committedAt ?? null,
-//   });
-//
-//   return conflict === null ? [] : [conflict];
-// }
-//
-// async function inspectPatchCollectionWithRevisionConflicts<TValue>(
-//   session: SyncRemoteSession,
-//   collection: SyncRemoteCollection,
-//   options: PatchCollectionWithRevisionAdapterOptions<TValue>,
-//   scope?: SyncAdapterScope,
-// ): Promise<readonly SyncAdapterConflict<TValue>[]> {
-//   const [localEntries, remoteIndexState] = await Promise.all([
-//     options.listLocal(scope),
-//     session.readIndex(collection),
-//   ]);
-//   const includedLocalEntries = localEntries.filter((entry) =>
-//     isAssetIncludedInScope(entry.id, scope),
-//   );
-//   const remoteStates = new Map(await Promise.all(
-//     includedLocalEntries.flatMap((entry) => {
-//       const remoteEntry = remoteIndexState.entries[entry.id];
-//       return remoteEntry === undefined || remoteEntry.deletedAt !== null
-//         ? []
-//         : [readRemoteAssetValue(
-//           session,
-//           collection,
-//           entry.id,
-//           options.normalizeRemote,
-//         ).then((state) => [entry.id, state] as const)];
-//     }),
-//   ));
-//
-//   return await inspectCollectionConflicts({
-//     session,
-//     collection,
-//     adapterId: options.id,
-//     localEntries: includedLocalEntries,
-//     remoteIndexState,
-//     readRemoteValue: (entryId) =>
-//       remoteStates.get(entryId)?.value ?? null,
-//     readRemoteUpdatedAt: (entryId) =>
-//       remoteStates.get(entryId)?.committedAt
-//       ?? remoteIndexState.entries[entryId]?.committedAt
-//       ?? remoteIndexState.committedAt,
-//   });
-// }
-//
-// async function inspectCollectionConflicts<TValue>(options: {
-//   readonly session: SyncRemoteSession;
-//   readonly collection: SyncRemoteCollection;
-//   readonly adapterId: string;
-//   readonly localEntries: readonly {
-//     readonly id: string;
-//     readonly value: TValue;
-//     readonly deletedAt: string | null;
-//   }[];
-//   readonly remoteIndexState: RemoteCollectionIndex;
-//   readonly readRemoteValue: (entryId: string) => TValue | null;
-//   readonly readRemoteUpdatedAt: (entryId: string) => string | null;
-// }): Promise<readonly SyncAdapterConflict<TValue>[]> {
-//   const conflicts: SyncAdapterConflict<TValue>[] = [];
-//   for (const localEntry of options.localEntries) {
-//     const remoteEntry =
-//       options.remoteIndexState.entries[localEntry.id] ?? null;
-//     if (remoteEntry === null) {
-//       continue;
-//     }
-//
-//     const localHash = await createSyncContentHash(options.session, options.collection, localEntry.value);
-//     const lastSyncedHash = await options.session.localState.getLastSyncedHash(
-//       createSyncAssetKey(options.collection, localEntry.id),
-//     );
-//     if (remoteEntry.deletedAt !== null) {
-//       if (
-//         localEntry.deletedAt !== null
-//         || lastSyncedHash === localHash
-//         || localHash === remoteEntry.contentHash
-//       ) {
-//         continue;
-//       }
-//
-//       conflicts.push({
-//         adapterId: options.adapterId,
-//         assetId: localEntry.id,
-//         localValue: localEntry.value,
-//         remoteValue: null,
-//         localHash,
-//         remoteHash: remoteEntry.contentHash,
-//         remoteDeletedAt: remoteEntry.deletedAt,
-//         remoteUpdatedAt: options.readRemoteUpdatedAt(localEntry.id),
-//       });
-//       continue;
-//     }
-//
-//     const remoteValue = options.readRemoteValue(localEntry.id);
-//     if (localEntry.deletedAt !== null) {
-//       if (remoteValue === null) {
-//         continue;
-//       }
-//       const remoteHash = await createSyncContentHash(options.session, options.collection, remoteValue);
-//       if (
-//         localHash === remoteHash
-//         || lastSyncedHash === remoteHash
-//       ) {
-//         continue;
-//       }
-//
-//       conflicts.push({
-//         adapterId: options.adapterId,
-//         assetId: localEntry.id,
-//         localValue: localEntry.value,
-//         remoteValue,
-//         localHash,
-//         remoteHash,
-//         remoteDeletedAt: null,
-//         remoteUpdatedAt: options.readRemoteUpdatedAt(localEntry.id),
-//       });
-//       continue;
-//     }
-//
-//     const conflict = await createValueConflict({
-//       session: options.session,
-//       collection: options.collection,
-//       adapterId: options.adapterId,
-//       assetId: localEntry.id,
-//       localValue: localEntry.value,
-//       remoteValue,
-//       lastSyncedHash,
-//       remoteDeletedAt: null,
-//       remoteUpdatedAt: options.readRemoteUpdatedAt(localEntry.id),
-//     });
-//
-//     if (conflict !== null) {
-//       conflicts.push(conflict);
-//     }
-//   }
-//
-//   return conflicts;
-// }
-//
-// async function createValueConflict<TValue>(options: {
-//   readonly session: SyncRemoteSession;
-//   readonly collection: SyncRemoteCollection;
-//   readonly adapterId: string;
-//   readonly assetId: string;
-//   readonly localValue: TValue | null;
-//   readonly remoteValue: TValue | null;
-//   readonly lastSyncedHash: string | null;
-//   readonly remoteDeletedAt: string | null;
-//   readonly remoteUpdatedAt: string | null;
-// }): Promise<SyncAdapterConflict<TValue> | null> {
-//   if (options.localValue === null || options.remoteValue === null) {
-//     return null;
-//   }
-//
-//   const localHash = await createSyncContentHash(options.session, options.collection, options.localValue);
-//   const remoteHash = await createSyncContentHash(options.session, options.collection, options.remoteValue);
-//   if (
-//     localHash === remoteHash
-//     || options.lastSyncedHash === localHash
-//     || options.lastSyncedHash === remoteHash
-//   ) {
-//     return null;
-//   }
-//
-//   return {
-//     adapterId: options.adapterId,
-//     assetId: options.assetId,
-//     localValue: options.localValue,
-//     remoteValue: options.remoteValue,
-//     localHash,
-//     remoteHash,
-//     remoteDeletedAt: options.remoteDeletedAt,
-//     remoteUpdatedAt: options.remoteUpdatedAt,
-//   };
-// }
-//
-// function createScopedConflictResolver<TValue>(
-//   scope: SyncAdapterScope | undefined,
-//   fallback:
-//     | ((
-//       conflict: SyncAdapterConflict<TValue>,
-//     ) => Promise<SyncAdapterConflictResolution> | SyncAdapterConflictResolution)
-//     | undefined,
-// ): (
-//   conflict: SyncAdapterConflict<TValue>,
-// ) => Promise<SyncAdapterConflictResolution> | SyncAdapterConflictResolution {
-//   return (conflict) => {
-//     if (scope?.conflictDecisions !== undefined) {
-//       const decision = scope.conflictDecisions.find((candidate) =>
-//         candidate.adapterId === conflict.adapterId
-//         && candidate.assetId === conflict.assetId
-//         && candidate.localHash === conflict.localHash
-//         && candidate.remoteHash === conflict.remoteHash
-//         && candidate.remoteDeletedAt === conflict.remoteDeletedAt,
-//       );
-//
-//       return decision?.resolution ?? "pause";
-//     }
-//
-//     return fallback?.(conflict) ?? "pause";
-//   };
-// }
 
 async function syncFullNoRevision<TValue>(
   session: SyncRemoteSession,
@@ -1577,7 +805,6 @@ async function syncFullNoRevision<TValue>(
         value,
         contentHash,
         baseRevision: remoteAsset?.revision ?? null,
-        // AI-CORRECTION 2026-08-08: 乐观并发必须回传服务端权威 SHA，不能使用本地 FNV 归一化 hash。
         baseContentHash: remoteAsset?.remoteContentHash ?? null,
       }),
       createTombstoneParams: null,
@@ -1612,7 +839,6 @@ async function syncFullNoRevision<TValue>(
         value,
         contentHash,
         baseRevision: remoteAsset?.revision ?? null,
-        // AI-CORRECTION 2026-08-08: 乐观并发必须回传服务端权威 SHA，不能使用本地 FNV 归一化 hash。
         baseContentHash: remoteAsset?.remoteContentHash ?? null,
       }),
       createTombstoneParams: null,
@@ -1645,7 +871,6 @@ async function syncFullNoRevision<TValue>(
         value,
         contentHash,
         baseRevision: remoteAsset?.revision ?? null,
-        // AI-CORRECTION 2026-08-08: 乐观并发必须回传服务端权威 SHA，不能使用本地 FNV 归一化 hash。
         baseContentHash: remoteAsset?.remoteContentHash ?? null,
       }),
       createTombstoneParams: null,
@@ -1675,28 +900,6 @@ async function syncFullWithRevision<TValue>(
     isAssetIncludedInScope(entry.id, scope),
   );
   const localEntryById = new Map(localEntries.map((entry) => [entry.id, entry]));
-  // AI-REMOVED 2026-08-25:
-  // Reason: adapter 在已拉取全量 plan 后再次用 collection check 提前返回，会绕开 plan 的全资产分类，
-  //   且每个 adapter 重复请求相同的全局 CF revision。
-  // Trigger: 本地 A 上传与远端 B 变化并存时，原设计要求当前 plan 内完成全部资源三值判断。
-  // Evidence: session.prefetchIndexes 已在 adapter 执行前完成；CF readIndex 直接消费该 plan。
-  // Replacement: 下方读取 plan index 并分类；clean 本地资产通过 persisted touch hash 免重算。
-  // Risk: Medium；WebDAV 不再享受 collection ETag 的 adapter 内短路，本轮明确不要求兼容。
-  // Human Review: Required
-  //
-  // Original code:
-  // if (await isRemoteIndexUnchangedForCleanLocalEntries({
-  //   session,
-  //   collection,
-  //   localEntries,
-  // })) {
-  //   return {
-  //     adapterId: options.id,
-  //     mode: "full-with-revision",
-  //     status: "idle",
-  //     changedAssetIds: [],
-  //   };
-  // }
   const remoteIndexState = await session.readIndex(collection);
   const changedAssetIds: string[] = [];
   const unavailableAssetIds = new Set<string>();
@@ -1722,17 +925,6 @@ async function syncFullWithRevision<TValue>(
     transaction,
     adapterId: options.id,
     localEntries,
-    // AI-REMOVED 2026-09-09:
-    // Reason: 撤回与真实故障无关的 hash 重算参数。
-    // Trigger: 浏览器证据确认同步未激活，而非 clean hash 复用导致迁移未写回。
-    // Evidence: 修正夹具激活后应由既有 unknown 状态路径计算当前投影。
-    // Replacement: None。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // reuseLastSyncedHashForCleanEntries:
-    //   options.reuseLastSyncedHashForCleanEntries ?? true,
   });
   const localContentHashesById = new Map(Array.from(
     localHashStatesById,
@@ -2074,39 +1266,6 @@ async function syncFullWithRevision<TValue>(
     changedAssetIds.push(localEntry.id);
   }
 
-  // AI-REMOVED 2026-07-29:
-  // Reason: 各 remote-only 资产文件互不依赖，逐个 GET 无法利用受限并发。
-  // Trigger: 用户要求在最大连接数限制下并行下载。
-  // Evidence: 本地写回仍可在下载全部完成后按顺序执行。
-  // Replacement: 下方 remoteOnlyValues 并行预取。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // for (const [entryId, remoteEntry] of Object.entries(remoteIndex.entries)) {
-  //   if (
-  //     !isAssetIncludedInScope(entryId, scope)
-  //     || localEntryById.has(entryId)
-  //     || remoteEntry.deletedAt !== null
-  //   ) {
-  //     continue;
-  //   }
-  //
-  //   const remoteValue = await readRemoteJson(client, options.entryPath(entryId), options.normalizeRemote);
-  //   if (remoteValue === null) {
-  //     continue;
-  //   }
-  //
-  //   logger.info(`${options.id}/${entryId}: new remote entry → downloading`);
-  //   await options.writeLocal({
-  //     id: entryId,
-  //     value: remoteValue,
-  //     deletedAt: null,
-  //   });
-  //   writeWebDavLastSyncedContentHash(`${options.id}:${entryId}`, createStableJsonHash(remoteValue));
-  //   status = mergeStatus(status, "downloaded");
-  //   changedAssetIds.push(entryId);
-  // }
   const remoteOnlyValues = await Promise.all(
     Object.entries(remoteIndexState.entries).flatMap(([entryId, remoteEntry]) =>
       isAssetIncludedInScope(entryId, scope)
@@ -2235,7 +1394,6 @@ async function syncPatchWithRevision<TValue>(
         value,
         contentHash,
         baseRevision: remoteAsset?.revision ?? null,
-        // AI-CORRECTION 2026-08-08: 乐观并发必须回传服务端权威 SHA，不能使用本地 FNV 归一化 hash。
         baseContentHash: remoteAsset?.remoteContentHash ?? null,
       }),
       createTombstoneParams: null,
@@ -2282,29 +1440,6 @@ async function syncPatchCollectionWithRevision<TValue>(
   );
   reportSyncProgress(scope, 10);
   const localEntryById = new Map(localEntries.map((entry) => [entry.id, entry]));
-  // AI-REMOVED 2026-08-25:
-  // Reason: adapter 在已拉取全量 plan 后再次做 collection check 并提前返回，会跳过 plan 分类，
-  //   也会让 CF 为每个 adapter 重复检查同一个全局 revision。
-  // Trigger: 本地上传与其他资产远端变化并存时，必须在同一 plan 内完成全部资源判断。
-  // Evidence: runAdapterRequests 已统一 prefetchIndexes；CF readIndex 不产生额外 plan 请求。
-  // Replacement: 下方完整 index 分类；clean 资产复用 touch hash，只有 dirty/unknown 重算。
-  // Risk: Medium；WebDAV 的 adapter 内 ETag 短路不再保留，本轮明确不要求兼容。
-  // Human Review: Required
-  //
-  // Original code:
-  // if (await isRemoteIndexUnchangedForCleanLocalEntries({
-  //   session,
-  //   collection,
-  //   localEntries,
-  // })) {
-  //   reportSyncProgress(scope, 100);
-  //   return {
-  //     adapterId: options.id,
-  //     mode: "patch-with-revision",
-  //     status: "idle",
-  //     changedAssetIds: [],
-  //   };
-  // }
   const remoteIndexState = await session.readIndex(collection);
   reportSyncProgress(scope, 35);
   const changedAssetIds: string[] = [];
@@ -2316,17 +1451,6 @@ async function syncPatchCollectionWithRevision<TValue>(
     transaction,
     adapterId: options.id,
     localEntries,
-    // AI-REMOVED 2026-09-09:
-    // Reason: 撤回与真实故障无关的 hash 重算参数。
-    // Trigger: 浏览器证据确认同步未激活，而非 clean hash 复用导致迁移未写回。
-    // Evidence: 修正夹具激活后应由既有 unknown 状态路径计算当前投影。
-    // Replacement: None。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // reuseLastSyncedHashForCleanEntries:
-    //   options.reuseLastSyncedHashForCleanEntries ?? true,
   });
   const localContentHashesById = new Map(Array.from(
     localHashStatesById,
@@ -2628,9 +1752,7 @@ async function syncPatchCollectionWithRevision<TValue>(
 
     if (classification.kind === "idle") {
       transaction.stageTouch(assetKey, localContentHash);
-      // AI-CORRECTION 2026-08-13: 索引 hash 为 fallback 口径（未映射/未知）时，
       // 与本地口径归一化 hash 比较不得得出“不等”结论，回传分支必须跳过（消除 echo upload）。
-      // AI-CORRECTION 2026-08-19: 若正文归一化确实改变了结构，则变化证据来自原值与归一化值，
       // 不依赖 fallback 索引 hash 的跨口径比较；此时必须回传以持久化 schema 迁移结果。
       if (
         remoteEntry.deletedAt === null
@@ -2723,59 +1845,9 @@ async function syncPatchCollectionWithRevision<TValue>(
     status = mergeStatus(status, "conflict");
     changedAssetIds.push(localEntry.id);
 
-    // AI-REMOVED 2026-07-29:
-    // Reason: patch collection 的墓碑也必须与远端正文一起完成冲突判断。
-    // Trigger: 本地删除与远端 delta 同时发生时，旧逻辑先恢复远端值又覆盖为本地墓碑。
-    // Evidence: 通用 syncSingleValue 不理解 deletedAt，后置索引写入绕过 resolveConflict。
-    // Replacement: 循环前半段 localEntry.deletedAt 分支。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // if (localEntry.deletedAt !== null && remoteEntry?.deletedAt !== localEntry.deletedAt) {
-    //   nextIndex = upsertRemoteIndexEntry(nextIndex, localEntry.id, {
-    //     contentHash: createStableJsonHash(localEntry.value),
-    //     deletedAt: localEntry.deletedAt,
-    //   });
-    //   status = mergeStatus(status, "uploaded");
-    //   changedAssetIds.push(localEntry.id);
-    // }
   }
   reportSyncProgress(scope, 75);
 
-  // AI-REMOVED 2026-07-29:
-  // Reason: remote-only patch 资产的远端重建彼此独立，串行等待会累加网络延迟。
-  // Trigger: 用户要求在最大连接数限制下并行下载。
-  // Evidence: 预取完成后仍按索引顺序写回本地，避免并发修改业务状态。
-  // Replacement: 下方 remoteOnlyStates 并行预取。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // for (const [entryId, remoteEntry] of Object.entries(remoteIndex.entries)) {
-  //   if (
-  //     !isAssetIncludedInScope(entryId, scope)
-  //     || localEntryById.has(entryId)
-  //     || remoteEntry.deletedAt !== null
-  //   ) {
-  //     continue;
-  //   }
-  //
-  //   const remoteState = await readRemotePatchState(client, options.directoryPath(entryId), options.normalizeRemote);
-  //   if (remoteState === null) {
-  //     continue;
-  //   }
-  //
-  //   logger.info(`${options.id}/${entryId}: new remote patch entry → downloading`);
-  //   await options.writeLocal({
-  //     id: entryId,
-  //     value: remoteState.value,
-  //     deletedAt: null,
-  //   });
-  //   writeWebDavLastSyncedContentHash(`${options.id}:${entryId}`, createStableJsonHash(remoteState.value));
-  //   status = mergeStatus(status, "downloaded");
-  //   changedAssetIds.push(entryId);
-  // }
   const remoteOnlyStates = await Promise.all(
     Object.entries(remoteIndexState.entries).flatMap(([entryId, remoteEntry]) =>
       isAssetIncludedInScope(entryId, scope)
@@ -2899,69 +1971,7 @@ function reportSyncProgress(
   scope?.onProgress?.(Math.min(100, Math.max(0, progress)));
 }
 
-// AI-REMOVED 2026-08-13:
-// Reason: scopeComplete 由引擎基于请求 scope 计算（resolveRequestScopeComplete）。
-// Trigger: adapter 不再自行调用 markApplied。
-// Replacement: sync-service.ts 的 finalizeTransaction。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-// function isScopeComplete(scope: SyncAdapterScope | undefined): boolean {
-//   return scope?.includeAssetIds === undefined && scope?.excludeAssetIds === undefined;
-// }
 
-// AI-REMOVED 2026-08-25:
-// Reason: adapter 级 ETag 短路与“已取得 plan 后对全部资源分类”的流程冲突，并为 CF 制造
-//   每个 adapter 一次的重复全局 check；它还必须先重算全部本地 hash 才能判断 clean。
-// Trigger: 本地 A 上传、远端 B 变化并存时需要一次 plan 内闭合下载、上传与 revision 前推。
-// Evidence: 两个 collection adapter 入口均已改为直接消费 prefetched plan index。
-// Replacement: resolveLocalHashStates；远端是否有变化由 plan index 直接参与三值分类。
-// Risk: Medium；WebDAV ETag 快路径移除，用户已明确可不兼容 WebDAV。
-// Human Review: Required
-//
-// Original code:
-// async function isRemoteIndexUnchangedForCleanLocalEntries<TValue>(options: {
-//   readonly session: SyncRemoteSession;
-//   readonly collection: SyncRemoteCollection;
-//   readonly localEntries: readonly {
-//     readonly id: string;
-//     readonly value: TValue;
-//     readonly deletedAt: string | null;
-//   }[];
-// }): Promise<boolean> {
-//   const lastSeenEtag = await options.session.localState.getRemoteEtag(
-//     options.collection.stateKey,
-//   );
-//   if (
-//     lastSeenEtag === null
-//     || options.localEntries.length === 0
-//     || options.localEntries.some((entry) =>
-//       entry.deletedAt !== null
-//     )
-//   ) {
-//     return false;
-//   }
-//
-//   for (const entry of options.localEntries) {
-//     const lastSyncedHash = await options.session.localState.getLastSyncedHash(
-//       createSyncAssetKey(options.collection, entry.id),
-//     );
-//     if (lastSyncedHash !== await createSyncContentHash(options.session, options.collection, entry.value)) {
-//       return false;
-//     }
-//   }
-//
-//   const result = await options.session.checkCollections([options.collection]);
-//   const unchanged = !result.changedCollections.includes(options.collection.adapterId);
-//   if (unchanged) {
-//     logger.debug(
-//       `${options.collection.adapterId}: canonical index ETag unchanged and local hashes clean → idle`,
-//     );
-//   }
-//
-//   return unchanged;
-// }
 
 interface LocalHashState {
   readonly contentHash: string;
@@ -2973,16 +1983,6 @@ async function resolveLocalHashStates<TValue>(options: {
   readonly collection: SyncRemoteCollection;
   readonly transaction: SyncEngineTransaction;
   readonly adapterId: string;
-  // AI-REMOVED 2026-09-09:
-  // Reason: hash 重算开关基于已被浏览器复现推翻的根因判断。
-  // Trigger: E2E 夹具没有激活同步 provider。
-  // Evidence: provider activation 为 disabled 时同步任务从未执行。
-  // Replacement: None。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // readonly reuseLastSyncedHashForCleanEntries: boolean;
   readonly localEntries: readonly {
     readonly id: string;
     readonly value: TValue;
@@ -2997,19 +1997,6 @@ async function resolveLocalHashStates<TValue>(options: {
       options.adapterId,
       entry.id,
     ) ?? "unknown";
-    // AI-REMOVED 2026-09-09:
-    // Reason: 此条件变更针对错误根因，会让 clean 资产重复计算 hash。
-    // Trigger: 浏览器复现确认失败发生在同步启动之前。
-    // Evidence: lastResults 为空且所有同步任务计数为 0。
-    // Replacement: 恢复既有 clean touch hash 复用条件；E2E 夹具改用正式激活 API。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // // AI-CORRECTION 2026-09-09: clean 仅表示没有收到本地写入通知；若资产读取本身会
-    // // 执行 schema 迁移，当前同步投影仍可能不同于旧 touch hash，必须重新计算。
-    // const canReuseTouchHash = options.reuseLastSyncedHashForCleanEntries
-    //   && localChangeState === "clean"
     const canReuseTouchHash = localChangeState === "clean"
       && entry.deletedAt === null
       && lastSyncedHash !== null;
@@ -3040,137 +2027,6 @@ function interpolateProgress(
   return start + (end - start) * completedUnitCount / totalUnitCount;
 }
 
-// AI-REMOVED 2026-08-13:
-// Reason: 冲突不再由 adapter 内联询问 resolver，而是登记 SyncPlanItem 由引擎统一弹框决议。
-// Trigger: sync-model.md“上传/下载/冲突资产全部进入对话框逐项选择”。
-// Replacement: classifySingleValue + createPlanItem + transaction.recordItem。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-//
-// async function resolveCollectionConflict<TValue>(options: {
-//   readonly adapterId: string;
-//   readonly assetId: string;
-//   readonly localValue: TValue;
-//   readonly remoteValue: TValue | null;
-//   readonly localHash: string;
-//   readonly remoteHash: string | null;
-//   readonly remoteDeletedAt: string | null;
-//   readonly remoteUpdatedAt: string | null;
-//   readonly resolveConflict?: (
-//     conflict: SyncAdapterConflict<TValue>,
-//   ) => Promise<SyncAdapterConflictResolution> | SyncAdapterConflictResolution;
-// }): Promise<SyncAdapterConflictResolution> {
-//   const resolution = await (options.resolveConflict?.({
-//     adapterId: options.adapterId,
-//     assetId: options.assetId,
-//     localValue: options.localValue,
-//     remoteValue: options.remoteValue,
-//     localHash: options.localHash,
-//     remoteHash: options.remoteHash,
-//     remoteDeletedAt: options.remoteDeletedAt,
-//     remoteUpdatedAt: options.remoteUpdatedAt,
-//   }) ?? "pause");
-//   logger.debug(
-//     `${options.adapterId}/${options.assetId}: collection conflict detected, ` +
-//     `resolved as "${resolution}"`,
-//   );
-//
-//   return resolution;
-// }
-//
-// async function syncSingleValue<TValue>(options: {
-//   readonly session: SyncRemoteSession;
-//   readonly collection: SyncRemoteCollection;
-//   readonly adapterId: string;
-//   readonly assetId: string;
-//   readonly localValue: TValue | null;
-//   readonly remoteValue: TValue | null;
-//   readonly remoteUpdatedAt: string | null;
-//   readonly readLastSyncedHash: () => Promise<string | null>;
-//   readonly writeLastSyncedHash: (contentHash: string) => Promise<void>;
-//   readonly writeLocal: (value: TValue) => Promise<void>;
-//   readonly writeRemote: (value: TValue, contentHash: string) => Promise<void>;
-//   readonly resolveConflict?: (conflict: SyncAdapterConflict<TValue>) => Promise<SyncAdapterConflictResolution> | SyncAdapterConflictResolution;
-// }): Promise<SyncAdapterStatus> {
-//   if (options.localValue === null && options.remoteValue === null) {
-//     return "idle";
-//   }
-//
-//   const lastSyncedHash = await options.readLastSyncedHash();
-//   const localHash = options.localValue === null
-//     ? null
-//     : await createSyncContentHash(options.session, options.collection, options.localValue);
-//   const remoteHash = options.remoteValue === null
-//     ? null
-//     : await createSyncContentHash(options.session, options.collection, options.remoteValue);
-//
-//   if (options.localValue !== null && options.remoteValue === null) {
-//     logger.info(`${options.adapterId}/${options.assetId}: local exists, remote absent → uploading`);
-//     await options.writeRemote(options.localValue, localHash!);
-//     await options.writeLastSyncedHash(localHash!);
-//     return "uploaded";
-//   }
-//
-//   if (options.localValue === null && options.remoteValue !== null) {
-//     logger.info(`${options.adapterId}/${options.assetId}: local absent, remote exists → downloading`);
-//     await options.writeLocal(options.remoteValue);
-//     await options.writeLastSyncedHash(remoteHash!);
-//     return "downloaded";
-//   }
-//
-//   if (options.localValue === null || options.remoteValue === null || localHash === null || remoteHash === null) {
-//     return "skipped";
-//   }
-//
-//   if (localHash === remoteHash) {
-//     logger.debug(`${options.adapterId}/${options.assetId}: hashes match → idle`);
-//     await options.writeLastSyncedHash(localHash);
-//     return "idle";
-//   }
-//
-//   if (lastSyncedHash === remoteHash) {
-//     logger.info(`${options.adapterId}/${options.assetId}: local changed, remote unchanged → uploading`);
-//     await options.writeRemote(options.localValue, localHash);
-//     await options.writeLastSyncedHash(localHash);
-//     return "uploaded";
-//   }
-//
-//   if (lastSyncedHash === localHash) {
-//     logger.info(`${options.adapterId}/${options.assetId}: remote changed, local unchanged → downloading`);
-//     await options.writeLocal(options.remoteValue);
-//     await options.writeLastSyncedHash(remoteHash);
-//     return "downloaded";
-//   }
-//
-//   const resolution = await (options.resolveConflict?.({
-//     adapterId: options.adapterId,
-//     assetId: options.assetId,
-//     localValue: options.localValue,
-//     remoteValue: options.remoteValue,
-//     localHash,
-//     remoteHash,
-//     remoteDeletedAt: null,
-//     remoteUpdatedAt: options.remoteUpdatedAt,
-//   }) ?? "pause");
-//
-//   logger.debug(`${options.adapterId}/${options.assetId}: conflict detected, resolved as "${resolution}"`);
-//
-//   if (resolution === "use-local") {
-//     await options.writeRemote(options.localValue, localHash);
-//     await options.writeLastSyncedHash(localHash);
-//     return "uploaded";
-//   }
-//
-//   if (resolution === "use-remote") {
-//     await options.writeLocal(options.remoteValue);
-//     await options.writeLastSyncedHash(remoteHash);
-//     return "downloaded";
-//   }
-//
-//   return "conflict";
-// }
 
 async function readRemoteJson<TValue>(
   client: SyncStorageClient,
@@ -3222,23 +2078,6 @@ async function _readRemoteIndexState(
 ): Promise<RemoteIndexState> {
   const lastSeenRevision = readLastSeenRemoteRevision(indexPath);
   const canonicalFilePromise = client.readTextFile(indexPath);
-  // AI-REMOVED 2026-07-29:
-  // Reason: 每次读取 canonical 时并行 GET “已知 revision + 1”仍会让 OwnCloud 的不存在文件探测拖慢首屏，且成功提交的 canonical 已包含最新 revision。
-  // Trigger: 真实服务器相同画布测试中，有 revision 游标的检查约 1.46 秒，无游标的 canonical 单次读取约 0.63 秒。
-  // Evidence: 两次路径均在 35% 后直接 idle；额外请求没有提供更新数据。
-  // Replacement: 下方以 canonical 为主，仅 canonical 缺失、损坏或落后于本机已知 revision 时扫描 journal。
-  // Risk: Medium；其他设备只写入 journal、未完成 canonical 的失败事务不再由下一 revision 猜测恢复。
-  // Human Review: Required
-  //
-  // Original code:
-  // const nextRevisionStatePromise = lastSeenRevision === null
-  //   ? null
-  //   : readSpecificRevisionJournalState(
-  //     client,
-  //     indexPath,
-  //     lastSeenRevision + 1,
-  //     normalizeRemoteIndex,
-  //   );
   const file = await canonicalFilePromise;
   let canonicalState: RemoteIndexState | null = null;
   if (file !== null) {
@@ -3255,41 +2094,6 @@ async function _readRemoteIndexState(
     }
   }
 
-  // AI-REMOVED 2026-07-29:
-  // Reason: canonical index 与 revision journal 相互独立，串行等待增加一次网络往返。
-  // Trigger: 用户要求在最大连接数限制下并行下载。
-  // Evidence: journal 读取不依赖 canonical index 内容。
-  // Replacement: canonical GET 与“上次 revision + 1”探测并行；仅检测到变化时才完整枚举 journal。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // const journalState = await readLatestRevisionJournalState(
-  //   client,
-  //   indexPath,
-  //   normalizeRemoteIndex,
-  // );
-  // AI-REMOVED 2026-07-29:
-  // Reason: 首次同步没有 revision 游标时无条件枚举完整 journal，会在读取 canonical 之后再串行执行 PROPFIND、目录列表和 revision GET。
-  // Trigger: 当前画布相同的首次检查仍在 10% 停顿数秒。
-  // Evidence: 成功提交总是先写 revision journal、最后写 canonical 镜像；canonical 完整且不落后时已经是权威快照。
-  // Replacement: 仅 canonical 缺失/损坏，或探测到比 canonical 更新的 revision 时扫描 journal。
-  // Risk: Low；提交中途 canonical 尚未更新的窗口仍由 next revision 探测覆盖。
-  // Human Review: Required
-  //
-  // Original code:
-  // const canUseRevisionCursor = lastSeenRevision !== null
-  //   && nextRevisionState === null
-  //   && canonicalState.index.revision === lastSeenRevision;
-  // const journalState = canUseRevisionCursor
-  //   ? null
-  //   : await readLatestRevisionJournalState(
-  //     client,
-  //     indexPath,
-  //     normalizeRemoteIndex,
-  //   );
-  // AI-CORRECTION 2026-07-29: 无游标的新设备会信任有效 canonical；
-  // 若上一次失败提交只留下了更新 journal、没有完成 canonical 镜像，该孤立 revision 不阻塞首屏，等待后续成功提交修复。
   const shouldScanJournal = canonicalState === null
     || (
       lastSeenRevision !== null
@@ -3426,35 +2230,6 @@ async function _readRemotePatchState<TValue>(
   const meta = metaState.meta;
   const canonicalMissing = metaState.canonicalMissing;
 
-  // AI-REMOVED 2026-07-29:
-  // Reason: full 与每个 delta 文件的路径已由 meta 完整给出，无需串行下载。
-  // Trigger: 用户要求在最大连接数限制下并行下载。
-  // Evidence: JSON Patch 只要求按顺序应用，不要求按顺序获取文件。
-  // Replacement: 下方并行下载 full / delta，完成后仍按 deltaChain 顺序 apply。
-  // Risk: Low；worker client 统一限制实际并发请求数。
-  // Human Review: Required
-  //
-  // Original code:
-  // const fullValue = await readRemoteJson(client, resolvePatchFullPath(directoryPath, meta.currentFullHash), normalizeRemote);
-  // if (fullValue === null) {
-  //   return null;
-  // }
-  //
-  // let value = fullValue;
-  // let baseHash = meta.currentFullHash;
-  // for (const targetHash of meta.deltaChain) {
-  //   const patch = await readRemoteJson<JsonPatchOperation[]>(
-  //     client,
-  //     resolvePatchDeltaPath(directoryPath, baseHash, targetHash),
-  //     normalizeJsonPatchOperations,
-  //   );
-  //   if (patch === null) {
-  //     return null;
-  //   }
-  //
-  //   value = applyJsonPatch(value, patch);
-  //   baseHash = targetHash;
-  // }
   const [fullValue, patches] = await Promise.all([
     readRemoteJson(
       client,
@@ -3504,23 +2279,6 @@ async function readRemotePatchMetaState(
   const metaPath = resolvePath(directoryPath, "meta.json");
   const lastSeenRevision = readLastSeenRemoteRevision(metaPath);
   const canonicalFilePromise = client.readTextFile(metaPath);
-  // AI-REMOVED 2026-07-29:
-  // Reason: canonical meta 已携带 revision，额外读取 next revision 会让未变化画布多一次无收益的 404。
-  // Trigger: 用户要求相同画布尽可能在一秒内解除锁定。
-  // Evidence: 真实 OwnCloud 对不存在 revision 的请求与 canonical 请求共享有限连接并增加尾延迟。
-  // Replacement: canonical meta 缺失、损坏或低于本机已知 revision 时才扫描 journal。
-  // Risk: Medium；未完成 canonical 镜像的外部失败事务不会主动探测。
-  // Human Review: Required
-  //
-  // Original code:
-  // const nextRevisionStatePromise = lastSeenRevision === null
-  //   ? null
-  //   : readSpecificRevisionJournalState(
-  //     client,
-  //     metaPath,
-  //     lastSeenRevision + 1,
-  //     normalizeRemotePatchMeta,
-  //   );
   const file = await canonicalFilePromise;
   let canonicalState: RemotePatchMetaState | null = null;
   if (file !== null) {
@@ -3539,41 +2297,6 @@ async function readRemotePatchMetaState(
     }
   }
 
-  // AI-REMOVED 2026-07-29:
-  // Reason: canonical meta 与 revision journal 可独立下载，串行执行浪费往返时间。
-  // Trigger: 用户要求在限制最大连接数的情况下并行下载。
-  // Evidence: 两条读取路径只在结果选择阶段合并。
-  // Replacement: canonical GET 与“上次 revision + 1”探测并行；游标失配时再完整扫描 journal。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // const journalState = await readLatestRevisionJournalState(
-  //   client,
-  //   metaPath,
-  //   normalizeRemotePatchMeta,
-  // );
-  // AI-REMOVED 2026-07-29:
-  // Reason: canonical meta 有效时首次读取仍扫描整个 revision 目录，重复了成功提交已经镜像的数据。
-  // Trigger: 当前画布检查在 35% 到 55% 之间产生多次串行 WebDAV 请求。
-  // Evidence: writeRemotePatchMeta 先原子认领 revision，随后写 canonical meta；只有 canonical 缺失或落后才需要恢复扫描。
-  // Replacement: 下方 shouldScanJournal 恢复条件。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // const canUseRevisionCursor = lastSeenRevision !== null
-  //   && nextRevisionState === null
-  //   && canonicalState?.meta.revision === lastSeenRevision;
-  // const journalState = canUseRevisionCursor
-  //   ? null
-  //   : await readLatestRevisionJournalState(
-  //     client,
-  //     metaPath,
-  //     normalizeRemotePatchMeta,
-  //   );
-  // AI-CORRECTION 2026-07-29: 无游标的新设备会信任有效 canonical meta；
-  // 仅写入 journal 而未完成 canonical 的失败提交不进入首屏恢复路径。
   const shouldScanJournal = canonicalState === null
     || (
       lastSeenRevision !== null
@@ -3707,35 +2430,6 @@ function createAtomicWriteOptions(canonicalMissing: boolean): SyncWriteOptions {
   return canonicalMissing ? {} : { ifNoneMatch: "*" };
 }
 
-// AI-REMOVED 2026-07-29:
-// Reason: resolveLatestMetaWriteOptions 对 meta.json 做冗余 GET，仅为确认 canonicalMissing 和检查并发修改。
-// Trigger: 每次 PUT 后约 0.5s 的额外 GET 叠加到 ~9 次请求序列中，用户感知到 10+ 秒保存延迟。
-// Evidence: previousState 已携带 canonicalMissing，revision journal 的 ifNoneMatch 原子创建机制已防止并发覆盖。
-// Replacement: writeRemotePatchState 直接使用 options.previousState.canonicalMissing 构造 writeOptions。
-// Risk: Low；跳过 stale-check 不会导致数据丢失，revision journal 的原子写入保证只有一方认领成功。
-// Human Review: Required
-//
-// Original code:
-// async function resolveLatestMetaWriteOptions(
-//   client: SyncStorageClient,
-//   directoryPath: string,
-//   expectedMeta: RemotePatchMetaFile,
-// ): Promise<SyncWriteOptions> {
-//   const latestMetaState = await readRemotePatchMetaState(client, directoryPath);
-//   if (latestMetaState === null) {
-//     return createAtomicWriteOptions(true);
-//   }
-//
-//   if (latestMetaState.canonicalMissing) {
-//     return createAtomicWriteOptions(true);
-//   }
-//
-//   if (!areRemotePatchMetaFilesEqual(latestMetaState.meta, expectedMeta)) {
-//     throw new Error("Remote patch meta changed before write.");
-//   }
-//
-//   return createAtomicWriteOptions(false);
-// }
 
 async function writeRemotePatchMeta(
   client: SyncStorageClient,
@@ -3753,26 +2447,6 @@ async function writeRemotePatchMeta(
   writeLastSeenRemoteRevision(metaPath, meta.revision);
 }
 
-// AI-REMOVED 2026-07-29:
-// Reason: 仅被已删除的 resolveLatestMetaWriteOptions 调用，无其他引用。
-// Trigger: resolveLatestMetaWriteOptions 已被移除。
-// Evidence: rg 仅剩本函数定义及其在 resolveLatestMetaWriteOptions 中的调用点。
-// Replacement: None.
-// Risk: Low.
-// Human Review: Required
-//
-// Original code:
-// function areRemotePatchMetaFilesEqual(
-//   left: RemotePatchMetaFile,
-//   right: RemotePatchMetaFile,
-// ): boolean {
-//   return left.revision === right.revision
-//     && left.currentFullHash === right.currentFullHash
-//     && left.deltaThreshold === right.deltaThreshold
-//     && left.committedAt === right.committedAt
-//     && left.deltaChain.length === right.deltaChain.length
-//     && left.deltaChain.every((entry, index) => entry === right.deltaChain[index]);
-// }
 
 async function readLatestRevisionJournalState<TValue extends { readonly revision: number }>(
   client: SyncStorageClient,
@@ -3825,42 +2499,6 @@ async function readLatestRevisionJournalState<TValue extends { readonly revision
   return null;
 }
 
-// AI-REMOVED 2026-07-29:
-// Reason: 逐次探测 next revision 已从所有读取路径移除，保留该函数会形成无调用的旧协议实现。
-// Trigger: 相同画布首屏检查被不存在 revision 的 GET 拖慢。
-// Evidence: rg 仅剩审计注释引用；active code 已改为 canonical 优先、必要时扫描完整 journal。
-// Replacement: readRemoteIndexState / readRemotePatchMetaState 的 shouldScanJournal 分支。
-// Risk: Medium；canonical 有效时不主动发现其他设备未完成镜像的孤立 revision。
-// Human Review: Required
-//
-// Original code:
-// async function readSpecificRevisionJournalState<TValue extends { readonly revision: number }>(
-//   client: SyncStorageClient,
-//   canonicalPath: string,
-//   revision: number,
-//   normalize: (value: unknown) => TValue | null,
-// ): Promise<{
-//   readonly value: TValue;
-//   readonly etag: string | null;
-// } | null> {
-//   const revisionPath = resolvePath(
-//     resolveRevisionDirectoryPath(canonicalPath),
-//     `rev-${revision.toString().padStart(12, "0")}.json`,
-//   );
-//   const file = await client.readTextFile(revisionPath);
-//   if (file === null) {
-//     return null;
-//   }
-//
-//   try {
-//     const value = normalize(JSON.parse(file.content));
-//     return value?.revision === revision
-//       ? { value, etag: file.etag }
-//       : null;
-//   } catch {
-//     return null;
-//   }
-// }
 
 async function writeRevisionJournalState<TValue extends { readonly revision: number }>(
   client: SyncStorageClient,
@@ -3877,7 +2515,6 @@ async function writeRevisionJournalState<TValue extends { readonly revision: num
   );
 
   // 修订文件通过临时文件 + MOVE(Overwrite:F) 原子认领；canonical 文件仅是便于人工查看的镜像。
-  // AI-CORRECTION 2026-07-29: revision 文件与 canonical 镜像无依赖，可并行写入节省一次网络往返。
   await Promise.all([
     client.writeTextFile(revisionPath, serializedValue, writeOptions),
     client.writeTextFile(canonicalPath, serializedValue),

@@ -2,7 +2,7 @@ import { resolve } from "node:path";
 import { portIsOpen } from "../../../scripts/browser-test/runtime.mjs";
 import { expect, SCREEN_PROFILES, test } from "./harness/fixture";
 
-// 2026-11-10：三屏开发验证完成后另行编写；仅验证真实排版、触控及浮层边界。
+// 三屏开发验证完成后另行编写；仅验证真实排版、触控及浮层边界。
 // 每例自有服务随 round 清理，不复用套件服务；完整文案与翻译由 Vitest 验证。
 test.use({ appServer: false });
 

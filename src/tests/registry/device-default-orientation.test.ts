@@ -200,24 +200,6 @@ describe("device default orientation", () => {
       const definition = requireDefinition(definitionId);
 
       for (const rotation of GRID_ROTATIONS) {
-        // AI-REMOVED 2026-09-14:
-        // Reason: 场景构造已批量固化为带版本的蓝图文件。
-        // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-        // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-        // Replacement: src/tests/fixtures/blueprints/collections/registry/device-default-orientation/index.json
-        // Risk: Low；断言与被测动作不变。
-        // Human Review: Required
-        // Original code:
-        // {
-        //           entity: {
-        //             id: "entity",
-        //             definitionId,
-        //             position: { x: 10, y: 20 },
-        //             rotation,
-        //             config: { retained: true },
-        //             tags: ["retained"],
-        //           },
-        //         }
         const migrated = migrateBlueprintEntityDeviceIds(loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/collections/registry/device-default-orientation/index.json", "scene-01", { definitionId, newPorts, oldPorts, rotation, rotationOffset }).entities, 5, 6);
 
         expect(migrated?.entities.entity).toMatchObject({
@@ -244,7 +226,6 @@ describe("device default orientation", () => {
     },
   );
 
-  // AI-CORRECTION 2026-09-14: 多口暗管出口已纳入当前方向迁移，本用例继续独立锚定其迁移后端口布局。
   it("keeps the separately unpacked purifier gas variant and migrated second dark-pipe outlet ports", () => {
     expect(readPorts(requireDefinition("liquid_purifier_1_gas"))).toEqual([
       port("item_input", "in_s_0", 4, 0, "NORTH"),

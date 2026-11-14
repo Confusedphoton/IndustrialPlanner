@@ -8,69 +8,6 @@ import {
   getRotatedGridFootprint,
 } from "./grid";
 
-// AI-REMOVED 2026-10-13:
-// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
-// Trigger: 洒水机和定向离体区域支持。
-// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
-// Replacement: src/shared/geometry/entity-range.ts。
-// Risk: 保持既有供电与气体规则，需范围回归验证。
-// Human Review: Required
-// Original code:
-// export function resolvePowerRangeGridRect(options: {
-//   entity: WorldEntity;
-//   definition: EntityDefinition;
-// }): GridRect | null {
-//   const powerRange = normalizePowerRange(options.definition.powerRange);
-//   if (powerRange === null) {
-//     return null;
-//   }
-//
-//   const rotatedFootprint = getRotatedGridFootprint(
-//     options.definition.footprint,
-//     options.entity.rotation,
-//   );
-//   const center = getGridFootprintCenterCells(
-//     options.entity.position,
-//     rotatedFootprint,
-//   );
-//   const halfRange = powerRange / 2;
-//
-//   return {
-//     x: center.x - halfRange,
-//     y: center.y - halfRange,
-//     width: powerRange,
-//     height: powerRange,
-//   };
-// }
-//
-// export function resolveGasDiffusionRangeGridRect(options: {
-//   entity: WorldEntity;
-//   definition: EntityDefinition;
-//   gasDiffusionRange: number;
-// }): GridRect | null {
-//   const gasDiffusionRange = options.gasDiffusionRange;
-//   if (!Number.isFinite(gasDiffusionRange) || gasDiffusionRange <= 0) {
-//     return null;
-//   }
-//
-//   const rotatedFootprint = getRotatedGridFootprint(
-//     options.definition.footprint,
-//     options.entity.rotation,
-//   );
-//   const center = getGridFootprintCenterCells(
-//     options.entity.position,
-//     rotatedFootprint,
-//   );
-//   const halfRange = gasDiffusionRange / 2;
-//
-//   return {
-//     x: center.x - halfRange,
-//     y: center.y - halfRange,
-//     width: gasDiffusionRange,
-//     height: gasDiffusionRange,
-//   };
-// }
-//
 export function resolvePowerRangeGridRect(options: {
   entity: WorldEntity;
   definition: EntityDefinition;
@@ -130,22 +67,6 @@ export function areGridRectsContaining(
     && contained.y + contained.height <= container.y + container.height;
 }
 
-// AI-REMOVED 2026-10-13:
-// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
-// Trigger: 洒水机和定向离体区域支持。
-// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
-// Replacement: src/registry/entity-range-validation.ts。
-// Risk: 保持既有供电与气体规则，需范围回归验证。
-// Human Review: Required
-// Original code:
-// function normalizePowerRange(value: number | undefined): number | null {
-//   if (value === undefined || !Number.isFinite(value) || value <= 0) {
-//     return null;
-//   }
-//
-//   return value;
-// }
-//
 /** 供电覆盖统一使用实体矩形与供电范围相交的现有规则。 */
 export function collectPoweredEntityIds(
   entities: readonly WorldEntity[],

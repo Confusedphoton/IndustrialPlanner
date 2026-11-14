@@ -24,18 +24,6 @@ export interface BuildQuickPlaceDeviceEntriesOptions {
   readonly canUseDefinition?: (definition: EntityDefinition) => boolean;
 }
 
-// AI-REMOVED 2026-08-20:
-// Reason: 设备 UI 图标路径已成为 EntityDefinition 的必填属性，不再由当前入口维护 ID 特判。
-// Trigger: 用户要求图标文件与设备 ID、spriteId 解耦，并在 definition 中显式声明路径。
-// Evidence: EntityDefinition.iconPath 已覆盖当前全部设备定义。
-// Replacement: resolveQuickPlaceDeviceIconSrc 读取 definition.iconPath。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// const SPECIAL_ICON_MAP: Readonly<Record<string, string>> = {
-//   liquid_filling_pd_mc_1: "item_port_filling_pd_mc_1",
-// };
 
 export function buildQuickPlaceDeviceEntries(
   options: BuildQuickPlaceDeviceEntriesOptions,

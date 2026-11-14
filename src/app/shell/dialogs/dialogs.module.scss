@@ -180,47 +180,6 @@
   letter-spacing: 0;
 }
 
-/*
-  AI-REMOVED 2026-06-04:
-  Reason: 旧 callout 按 P 编号使用蓝绿橙实心标签，并用阴影强化；这重复编号文字且制造无必要层级。
-  Trigger: 用户要求颜色只传递新增信息，不能和 P1/P2/P3 编号重复；同时偏好扁平化。
-  Evidence: 当前 active CSS 已改为 data-port-kind 类型色和中性气泡底。
-  Replacement: .inspector-port-callout[data-port-kind]
-  Risk: Low
-  Human Review: Required
-
-  Original code:
-  .inspector-port-callout[data-port-tone="blue"] {
-    --inspector-port-callout-accent: #2563eb;
-  }
-
-  .inspector-port-callout[data-port-tone="green"] {
-    --inspector-port-callout-accent: #5e9f4b;
-  }
-
-  .inspector-port-callout[data-port-tone="orange"] {
-    --inspector-port-callout-accent: #f97316;
-  }
-
-  .inspector-port-callout-leader {
-    filter: drop-shadow(0 1px 1px rgb(15 23 42 / 30%));
-  }
-
-  .inspector-port-callout-marker {
-    fill: #ffffff;
-    filter: drop-shadow(0 1px 1px rgb(15 23 42 / 24%));
-  }
-
-  .inspector-port-callout-label rect {
-    fill: var(--inspector-port-callout-accent);
-    stroke: rgb(255 255 255 / 68%);
-    filter: drop-shadow(0 2px 4px rgb(15 23 42 / 28%));
-  }
-
-  .inspector-port-callout-label text {
-    fill: #ffffff;
-  }
-*/
 
 .help-dialog-backdrop,
 .toolbox-dialog-backdrop,
@@ -228,18 +187,6 @@
 .debug-log-dialog-backdrop {
   position: absolute;
   inset: 0;
-  /*
-    AI-REMOVED 2026-06-30:
-    Reason: help/toolbox/debug-log 均由 DialogShell 渲染，层级已改由 OverlayStack 统一分配。
-    Trigger: 用户要求包括工具箱在内的所有弹层场景系统性避免 z-index 冲突。
-    Evidence: DialogShell backdrop 现在通过 inline zIndex 接收 useOverlayStackLayer 的栈序。
-    Replacement: src/app/shell/shared/overlay-stack.tsx
-    Risk: Low
-    Human Review: Required
-
-    Original code:
-    z-index: 13;
-  */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1314,23 +1261,6 @@
     height: min(620px, 100%);
   }
 
-  /* AI-REMOVED 2026-06-15:
-     Reason: 900px 以下仍有足够横向空间时不应强制设置项单列。
-     Trigger: 用户反馈移动端/平板设置项右侧有空间但控件折行。
-     Evidence: Playwright mobile-landscape/tablet-square 截图与 DOM 数据显示 694px/644px 卡片宽度仍被强制单列。
-     Replacement: 同文件 @media (max-width: 640px) 中的窄屏单列规则。
-     Risk: Low
-     Human Review: Required
-
-     Original code:
-     .settings-dialog-setting-card {
-       grid-template-columns: minmax(0, 1fr);
-     }
-
-     .settings-dialog-setting-control {
-       justify-content: flex-start;
-     }
-   */
 }
 
 @media (max-width: 640px) {

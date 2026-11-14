@@ -8,25 +8,7 @@ import {
 } from "@/shared/geometry/viewport-transform";
 import {
   BASE_OUTER_WARNING_PADDING_CELLS,
-  // AI-REMOVED 2026-11-12:
-  // Reason: 旧基地字段由统一 areas 空间模型取代。
-  // Trigger: REQ-048 已确认 D1 接口变化。
-  // Evidence: 原区域身份和有限边界按世界坐标迁移。
-  // Replacement: resolveSceneOuterRects
-  // Risk: Low；原断言行为继续覆盖。
-  // Human Review: Required
-  // Original code:
-  // resolveBaseOuterGridRects,
   resolveCurrentBaseDefinition,
-  // AI-REMOVED 2026-11-12:
-  // Reason: 绘图范围必须在有限视口内从真实空间派生。
-  // Trigger: REQ-048 无界与多区域并集。
-  // Evidence: 旧完整矩形外扩会产生无限尺寸或内部警告边。
-  // Replacement: resolveSceneWarningRects
-  // Risk: 地面和警告轮廓需三屏视觉复核。
-  // Human Review: Required
-  // Original code:
-  // resolveExpandedGridRect,
 } from "./BaseBoundaryDecoration";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
@@ -37,20 +19,7 @@ import {
   GRASS_GROUND_TILE_GRID_CELLS,
   type GrassGroundPlacement,
 } from "./grass-ground-layout";
-// AI-REMOVED 2026-11-12: 从装饰上下文取得所属 Surface 类型；REQ-048；Replacement: DecorationSyncContext["renderHost"]；Risk: Low；Human Review: Required
-// import type { RenderHost } from "../../renderer-host";
 
-// AI-REMOVED 2026-09-05:
-// Reason: 单图草地改用用户提供的分层地面素材及其 16 格尺度。
-// Trigger: ST2-RQ-026 授权接入 pixi-ground-v1。
-// Evidence: 素材 manifest 的底图覆盖 16 世界单位；1 世界单位按 1 格接入。
-// Replacement: grass-ground-layout.ts 的底图资源键与覆盖格数。
-// Risk: 草地视觉尺度变化；已列入三档视口验收。
-// Human Review: Required
-//
-// Original code:
-// const GRASS_TEXTURE_KEY = "texture-Grass005_1K-PNG_Color";
-// const GRASS_TILE_GRID_CELLS = 5;
 const SCANLINE_TEXTURE_KEY = "texture-scanline-45deg-50opacity";
 const WARNING_FILL_COLOR_RED = 0xff4d4f;
 const WARNING_FILL_COLOR_BLUE = 0x4d7fff;
@@ -114,19 +83,6 @@ export function createGrassBackgroundDecoration(
   container.addChild(warningScanlineSprite);
   container.addChild(warningMask);
 
-  // AI-REMOVED 2026-09-05:
-  // Reason: 草地关闭时不应预加载整套地面资源，异步完成也不能写回已销毁的 Sprite。
-  // Trigger: ST2-RQ-026 的懒加载、共享纹理与生命周期要求。
-  // Evidence: 原回调无销毁检查，且构造装饰层即请求草地纹理。
-  // Replacement: 下方 requestGroundTexture，在首次显示草地时调用。
-  // Risk: 首次开启草地需要等待资源加载；沿用统一纹理入口的失败语义。
-  // Human Review: Required
-  //
-  // Original code:
-  // void renderHost.textureManager.getTexture(GRASS_TEXTURE_KEY).then((texture) => {
-  //   grassSprite.texture = texture;
-  //   isGrassTextureReady = true;
-  // });
 
   void renderHost.textureManager.getTexture(SCANLINE_TEXTURE_KEY).then((texture) => {
     if (destroyed) return;
@@ -155,15 +111,6 @@ export function createGrassBackgroundDecoration(
   ): void {
     if (layoutKey === nextLayoutKey) return;
     layoutKey = nextLayoutKey;
-    // AI-REMOVED 2026-09-26:
-    // Reason: 按外接框散布装饰会在分离区域的空地浪费候选计算。
-    // Trigger: 草稿箱增加不连续建造区。
-    // Evidence: 每块外扩区域都能单独使用确定性世界坐标种子生成。
-    // Replacement: 下方逐区域生成并按稳定 ID 去重。
-    // Risk: 相交分区的装饰绘制顺序以区域声明顺序为准。
-    // Human Review: Required
-    // Original code:
-    // const placements = createGrassGroundLayout(bounds);
     const retainedIds = new Set<string>();
     for (const placement of outerRects.flatMap((rect) => createGrassGroundLayout(rect))) {
       if (retainedIds.has(placement.id)) continue;
@@ -191,15 +138,6 @@ export function createGrassBackgroundDecoration(
         instances.delete(id);
       }
     }
-    // AI-REMOVED 2026-09-26:
-    // Reason: 外接矩形遮罩会把分区之间的空地绘成基地草地。
-    // Trigger: 草稿箱加入不连续分区。
-    // Evidence: outerRects 保留每块实际外扩边界。
-    // Replacement: 下方分别填充各区域遮罩。
-    // Risk: Low。
-    // Human Review: Required
-    // Original code:
-    // groundMask.clear().rect(bounds.x, bounds.y, bounds.width, bounds.height).fill(0xffffff);
     groundMask.clear();
     for (const rect of outerRects) {
       groundMask.rect(rect.x, rect.y, rect.width, rect.height).fill(0xffffff);
@@ -235,56 +173,11 @@ export function createGrassBackgroundDecoration(
       const baseTag = ctx.renderHost.input.source.registry.baseDefinitions.find((base) =>
         base.id === ctx.renderHost.input.source.snapshot.getSnapshot().document.baseId)?.tag;
       // 无边场景按当前视口加载地面块；世界坐标相位固定，不创建巨型虚构基地。
-      // AI-CORRECTION 2026-11-12: 有限与部分无界场景也按同一有限视口裁剪。
       const visibleGround = resolveSceneViewportGridRect(ctx, GRASS_GROUND_TILE_GRID_CELLS, GRASS_GROUND_TILE_GRID_CELLS);
       const space = baseDefinition ?? { areas: unbounded ? [{
         id: "preview", bounds: { minX: null, maxX: null, minY: null, maxY: null },
         outerRing: { top: 0, right: 0, bottom: 0, left: 0 },
       }] : [] };
-      // AI-REMOVED 2026-09-26:
-      // Reason: 单个外扩矩形无法保留分离区域间的空地。
-      // Trigger: 草稿箱新增独立分区。
-      // Evidence: resolveBaseOuterGridRects 与 resolveBaseOuterBounds 分别提供实际区域与视口外接框。
-      // Replacement: 下方 outerGridRects、outerGridRect、warningGridRects。
-      // Risk: Low。
-      // Human Review: Required
-      // Original code:
-      // const outerGridRect = baseDefinition === null
-      //   ? null
-      //   : resolveBaseOuterGridRect(baseDefinition);
-      // const warningGridRect = outerGridRect === null
-      //   ? null
-      //   : resolveExpandedGridRect(
-      //     outerGridRect,
-      //     BASE_OUTER_WARNING_PADDING_CELLS,
-      //   );
-      // if (outerGridRect === null || warningGridRect === null) {
-      //   hideBackgroundLayers();
-      //   return;
-      // }
-      // AI-REMOVED 2026-11-12:
-      // Reason: 绘图范围必须在有限视口内从真实空间派生。
-      // Trigger: REQ-048 无界与多区域并集。
-      // Evidence: 旧完整矩形外扩会产生无限尺寸或内部警告边。
-      // Replacement: resolveSceneOuterRects / resolveSceneWarningRects
-      // Risk: 地面和警告轮廓需三屏视觉复核。
-      // Human Review: Required
-      // Original code:
-      //       const outerGridRects = visibleGround !== null ? [visibleGround] : baseDefinition === null
-      //         ? []
-      //         : resolveBaseOuterGridRects(baseDefinition);
-      //       const outerGridRect = visibleGround ?? (baseDefinition === null
-      //         ? null
-      //         : resolveBaseOuterBounds(baseDefinition));
-      //       const warningGridRects = outerGridRects.map((rect) =>
-      //         resolveExpandedGridRect(rect, BASE_OUTER_WARNING_PADDING_CELLS)
-      //       );
-      //
-      //       if (outerGridRect === null || outerGridRects.length === 0
-      //         || warningGridRects.some((rect) => rect === null)) {
-      //         hideBackgroundLayers();
-      //         return;
-      //       }
       const outerGridRects = resolveSceneOuterRects(space, visibleGround);
       const outerGridRect = resolveRegionGridBounds(outerGridRects);
       const warningGridRects = resolveSceneWarningRects(space, visibleGround, BASE_OUTER_WARNING_PADDING_CELLS);
@@ -313,67 +206,6 @@ export function createGrassBackgroundDecoration(
       const warningFillColor = isBlueWarning ? WARNING_FILL_COLOR_BLUE : WARNING_FILL_COLOR_RED;
       const warningScanlineTint = isBlueWarning ? WARNING_SCANLINE_TINT_BLUE : WARNING_SCANLINE_TINT_RED;
 
-      // AI-REMOVED 2026-09-26:
-      // Reason: 单区域布局无法分别绘制两个独立外扩警告环。
-      // Trigger: 草稿箱新增不连续分区。
-      // Evidence: outerGridRects 逐项对应 warningGridRects。
-      // Replacement: 下方 layouts 数组。
-      // Risk: Low。
-      // Human Review: Required
-      // Original code:
-      // const outerLayout = resolveMarqueeGridRectLayout({
-      //   gridRect: outerGridRect,
-      //   viewportBounds: ctx.viewportBounds,
-      //   viewportCenter: { x: ctx.viewportState.centerX, y: ctx.viewportState.centerY },
-      //   gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
-      //   displayRotation: ctx.viewportState.displayRotation,
-      // });
-      // const warningLayout = resolveMarqueeGridRectLayout({
-      //   gridRect: warningGridRect,
-      //   viewportBounds: ctx.viewportBounds,
-      //   viewportCenter: { x: ctx.viewportState.centerX, y: ctx.viewportState.centerY },
-      //   gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
-      //   displayRotation: ctx.viewportState.displayRotation,
-      // });
-      // if (outerLayout === null || warningLayout === null) {
-      //   hideBackgroundLayers();
-      //   return;
-      // }
-      // AI-REMOVED 2026-11-12:
-      // Reason: 绘图范围必须在有限视口内从真实空间派生。
-      // Trigger: REQ-048 无界与多区域并集。
-      // Evidence: 旧完整矩形外扩会产生无限尺寸或内部警告边。
-      // Replacement: 真实警告并集矩形投影
-      // Risk: 地面和警告轮廓需三屏视觉复核。
-      // Human Review: Required
-      // Original code:
-      //       const layouts = outerGridRects.map((rect, index) => ({
-      //         outer: resolveMarqueeGridRectLayout({
-      //           gridRect: rect,
-      //           viewportBounds: ctx.viewportBounds,
-      //           viewportCenter: {
-      //             x: ctx.viewportState.centerX,
-      //             y: ctx.viewportState.centerY,
-      //           },
-      //           gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
-      //           displayRotation: ctx.viewportState.displayRotation,
-      //         }),
-      //         warning: resolveMarqueeGridRectLayout({
-      //           gridRect: warningGridRects[index]!,
-      //           viewportBounds: ctx.viewportBounds,
-      //           viewportCenter: {
-      //             x: ctx.viewportState.centerX,
-      //             y: ctx.viewportState.centerY,
-      //           },
-      //           gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
-      //           displayRotation: ctx.viewportState.displayRotation,
-      //         }),
-      //       }));
-      //
-      //       if (layouts.some((layout) => layout.outer === null || layout.warning === null)) {
-      //         hideBackgroundLayers();
-      //         return;
-      //       }
       const layouts = warningGridRects.flatMap((rect) => {
         const layout = resolveMarqueeGridRectLayout({
           gridRect: rect,
@@ -403,50 +235,8 @@ export function createGrassBackgroundDecoration(
 
       warningScanlineSprite.tint = warningScanlineTint;
 
-      // AI-REMOVED 2026-09-26:
-      // Reason: 警告图层必须围绕每个独立区域绘制，不能使用共同外接框。
-      // Trigger: 草稿箱增加左上角分区。
-      // Evidence: desktop 草地截图可见两块草地与空隙各自独立。
-      // Replacement: 下方对 layouts 逐项绘制 warningFill 与 warningMask。
-      // Risk: Low。
-      // Human Review: Required
-      // Original code:
-      // warningFill
-      //   .clear()
-      //   .rect(warningLayout.x, warningLayout.y, warningLayout.width, warningLayout.height)
-      //   .fill({ color: warningFillColor, alpha: WARNING_FILL_ALPHA })
-      //   .rect(outerLayout.x, outerLayout.y, outerLayout.width, outerLayout.height)
-      //   .cut();
-      // warningMask
-      //   .clear()
-      //   .rect(warningLayout.x, warningLayout.y, warningLayout.width, warningLayout.height)
-      //   .fill({ color: 0xffffff })
-      //   .rect(outerLayout.x, outerLayout.y, outerLayout.width, outerLayout.height)
-      //   .cut();
       warningFill.clear();
       warningMask.clear();
-      // AI-REMOVED 2026-11-12:
-      // Reason: 绘图范围必须在有限视口内从真实空间派生。
-      // Trigger: REQ-048 无界与多区域并集。
-      // Evidence: 旧完整矩形外扩会产生无限尺寸或内部警告边。
-      // Replacement: 并集差集已经去除所有区域内部，直接绘制警告矩形
-      // Risk: 地面和警告轮廓需三屏视觉复核。
-      // Human Review: Required
-      // Original code:
-      //       for (const layout of unbounded ? [] : layouts) {
-      //         const outer = layout.outer!;
-      //         const warning = layout.warning!;
-      //         warningFill
-      //           .rect(warning.x, warning.y, warning.width, warning.height)
-      //           .fill({ color: warningFillColor, alpha: WARNING_FILL_ALPHA })
-      //           .rect(outer.x, outer.y, outer.width, outer.height)
-      //           .cut();
-      //         warningMask
-      //           .rect(warning.x, warning.y, warning.width, warning.height)
-      //           .fill({ color: 0xffffff })
-      //           .rect(outer.x, outer.y, outer.width, outer.height)
-      //           .cut();
-      //       }
       for (const warning of layouts) {
         warningFill.rect(warning.x, warning.y, warning.width, warning.height)
           .fill({ color: warningFillColor, alpha: WARNING_FILL_ALPHA });
@@ -474,7 +264,6 @@ export function createGrassBackgroundDecoration(
         );
 
         // Align grass tile corners with grid origin, handling negative modulo
-        // AI-CORRECTION 2026-09-05: 地面容器统一承担视口变换；此处相位与尺寸改用世界格，底图和点缀随世界一起旋转。
         grassSprite.tilePosition.x = ((-outerGridRect.x % tileGridSize) + tileGridSize) % tileGridSize;
         grassSprite.tilePosition.y = ((-outerGridRect.y % tileGridSize) + tileGridSize) % tileGridSize;
 
@@ -527,24 +316,3 @@ export function createGrassBackgroundDecoration(
   };
 }
 
-// AI-REMOVED 2026-11-12:
-// Reason: 绘图范围必须在有限视口内从真实空间派生。
-// Trigger: REQ-048 无界与多区域并集。
-// Evidence: 旧完整矩形外扩会产生无限尺寸或内部警告边。
-// Replacement: scene-space-layout.ts 的 resolveSceneViewportGridRect
-// Risk: 地面和警告轮廓需三屏视觉复核。
-// Human Review: Required
-// Original code:
-// function resolveUnboundedGroundRect(ctx: DecorationSyncContext): GridRect {
-//   const rotated = ctx.viewportState.displayRotation === 90 || ctx.viewportState.displayRotation === 270;
-//   const width = (rotated ? ctx.viewportBounds.height : ctx.viewportBounds.width) / ctx.viewportState.gridCellPixelSize;
-//   const height = (rotated ? ctx.viewportBounds.width : ctx.viewportBounds.height) / ctx.viewportState.gridCellPixelSize;
-//   const block = GRASS_GROUND_TILE_GRID_CELLS;
-//   const x = (Math.floor((ctx.viewportState.centerX - width / 2) / block) - 1) * block;
-//   const y = (Math.floor((ctx.viewportState.centerY - height / 2) / block) - 1) * block;
-//   return {
-//     x, y,
-//     width: (Math.ceil((ctx.viewportState.centerX + width / 2) / block) + 1) * block - x,
-//     height: (Math.ceil((ctx.viewportState.centerY + height / 2) / block) + 1) * block - y,
-//   };
-// }

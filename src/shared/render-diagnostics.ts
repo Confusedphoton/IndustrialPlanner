@@ -98,7 +98,6 @@ export interface RenderDiagnosticFrameObserver {
 }
 
 /** 临时诊断通道按 workspace 隔离；不写文档、用户设置或跨端同步数据。 */
-// AI-CORRECTION 2026-11-12: 通道改按独立 View 隔离；App 拥有诊断操作，Renderer 只提供帧观测和图层控制。
 function createRenderDiagnosticChannel() {
   const store = createSnapshotStore<RenderDiagnosticState>({ available: false, progress: null, report: null, error: null });
   let controls: RenderDiagnosticControls | null = null;

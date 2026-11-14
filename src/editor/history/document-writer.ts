@@ -82,44 +82,8 @@ export function createEditorDocumentWriter<TIntent = undefined>(options: {
       && !isHistoryOperationAvailable(options.getOperationAvailability, action.type)) return null;
     const currentDocument = options.document.getSnapshot();
     // 历史重放恢复已记录的关系；只有新的用户编辑需要重新判断覆盖。
-    // AI-CORRECTION 2026-10-10: 无核心基地约束适用于所有写入模式，历史重放也不能恢复核心。
     if (mode === "record") nextDocument = options.normalizeEdit?.(currentDocument, nextDocument) ?? nextDocument;
     nextDocument = removeForbiddenProtocolCoreEntities(nextDocument);
-    // AI-REMOVED 2026-11-12:
-    // Reason: 原先先发布文档再记录历史，无法原子提交会话意图，失败时可能留下半提交。
-    // Trigger: REQ-048 统一文档、意图和历史事务。
-    // Evidence: setSnapshot 同步通知早于 history.record，且放置预览在提交前已清空。
-    // Replacement: 下方先准备全部数据，再批量更新历史并发布文档／意图。
-    // Risk: 所有文档写入与历史恢复路径需要回归。
-    // Human Review: Required
-    // Original code:
-    // const documentToWrite = mode === "record"
-    // ? stampWorldDocumentUpdatedAt(nextDocument)
-    // : nextDocument;
-    //
-    // if (currentDocument === documentToWrite) {
-    // return null;
-    // }
-    //
-    // const delta = createWorldDocumentDelta(currentDocument, documentToWrite);
-    //
-    // if (delta === null) {
-    // return null;
-    // }
-    //
-    // const committedDocument = options.document.setSnapshot(documentToWrite, {
-    // origin: mode === "remote-sync" ? "remote-sync" : "local",
-    // });
-    //
-    // if (mode === "record") {
-    // options.history.record({
-    // documentKey: committedDocument.documentKey,
-    // action,
-    // delta,
-    // });
-    // }
-    //
-    // return committedDocument;
     const transition = { before: currentDocument, after: freezeSnapshot(nextDocument), action };
     const session = options.session;
     const beforeIntent = session?.getIntent();

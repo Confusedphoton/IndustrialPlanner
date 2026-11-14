@@ -36,15 +36,6 @@ vi.mock("@/renderer/scene/render-scene-orchestrator", () => ({
 }))
 
 import { createRenderHost } from "@/renderer/renderer-host"
-// AI-REMOVED 2026-11-12:
-// Reason: Renderer 工厂改为无 Workspace 的延迟挂载入口。
-// Trigger: REQ-048 D5/D6 迁移。
-// Evidence: Application 与纹理由 mountView 创建，每个 View 独立释放。
-// Replacement: 本用例真实 SceneViewInput 与 mountView。
-// Risk: GPU 边界沿用原 Pixi 桩；实际画面另由浏览器验证。
-// Human Review: Required
-// Original code:
-// import type { WorkspaceContract } from "@/domain/document/workspace-contract"
 import { createRenderTestScene } from "@/tests/helpers/render-test-scene"
 const cleanups: Array<() => void> = []
 
@@ -133,37 +124,6 @@ describe("createRenderHost", () => {
   })
 
   it("enables autoDensity and roundPixels for high-dpr canvas rendering", async () => {
-    // AI-REMOVED 2026-11-12:
-// Reason: Renderer 工厂改为无 Workspace 的延迟挂载入口。
-// Trigger: REQ-048 D5/D6 迁移。
-// Evidence: Application 与纹理由 mountView 创建，每个 View 独立释放。
-// Replacement: 本用例真实 SceneViewInput 与 mountView。
-// Risk: GPU 边界沿用原 Pixi 桩；实际画面另由浏览器验证。
-// Human Review: Required
-// Original code:
-// const workspace = {
-//       state: {} as never,
-//       registry: {} as never,
-//       app: {
-//         state: {
-//           screenProfile: {
-//             devicePixelRatio: 3,
-//           },
-//         },
-//       },
-//       editor: {
-//         state: {
-//           viewport: {
-//             clientRect: {
-//               width: 640,
-//               height: 480,
-//             },
-//           },
-//         },
-//       },
-//       render: null,
-//       simulation: null,
-//     } as unknown as WorkspaceContract
 const scene = createRenderTestScene(); cleanups.push(scene.dispose)
     scene.app.internalActions.setScreenProfile({ ...scene.app.state.screenProfile, devicePixelRatio: 3 })
     scene.view.actions.setViewportClientRect({ left: 0, top: 0, width: 640, height: 480 })
@@ -201,15 +161,6 @@ const scene = createRenderTestScene(); cleanups.push(scene.dispose)
       context,
       context.textureManager.performanceDiagnostics,
     )
-// AI-REMOVED 2026-11-12:
-// Reason: Renderer 工厂改为无 Workspace 的延迟挂载入口。
-// Trigger: REQ-048 D5/D6 迁移。
-// Evidence: Application 与纹理由 mountView 创建，每个 View 独立释放。
-// Replacement: 本用例真实 SceneViewInput 与 mountView。
-// Risk: GPU 边界沿用原 Pixi 桩；实际画面另由浏览器验证。
-// Human Review: Required
-// Original code:
-//     expect(workspace.render).toBe(renderHost)
     expect(renderHost.queries.getViewStatus(handle)?.phase).toBe("ready")
     renderHost.destroy()
   })
@@ -223,37 +174,6 @@ const scene = createRenderTestScene(); cleanups.push(scene.dispose)
       destroy: orchestratorDestroy,
     })
 
-    // AI-REMOVED 2026-11-12:
-// Reason: Renderer 工厂改为无 Workspace 的延迟挂载入口。
-// Trigger: REQ-048 D5/D6 迁移。
-// Evidence: Application 与纹理由 mountView 创建，每个 View 独立释放。
-// Replacement: 本用例真实 SceneViewInput 与 mountView。
-// Risk: GPU 边界沿用原 Pixi 桩；实际画面另由浏览器验证。
-// Human Review: Required
-// Original code:
-// const workspace = {
-//       state: {} as never,
-//       registry: {} as never,
-//       app: {
-//         state: {
-//           screenProfile: {
-//             devicePixelRatio: 2,
-//           },
-//         },
-//       },
-//       editor: {
-//         state: {
-//           viewport: {
-//             clientRect: {
-//               width: 320,
-//               height: 240,
-//             },
-//           },
-//         },
-//       },
-//       render: null,
-//       simulation: null,
-//     } as unknown as WorkspaceContract
 const scene = createRenderTestScene(); cleanups.push(scene.dispose)
     scene.app.internalActions.setScreenProfile({ ...scene.app.state.screenProfile, devicePixelRatio: 2 })
     scene.view.actions.setViewportClientRect({ left: 0, top: 0, width: 320, height: 240 })

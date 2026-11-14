@@ -3,16 +3,6 @@ import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
 import type { ActiveTool } from "@/domain/app/types/app-types";
 import type { GestureMappingModule } from "../types";
-// AI-REMOVED 2026-09-10:
-// Reason: 操作模式总开关已废弃，不再保留关闭分支
-// Trigger: 用户要求彻底移除 hypergryphOperationMode。
-// Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-// Replacement: gesture-action-router.ts 的默认启用语义
-// Risk: 历史 false 设置统一使用当前操作行为。
-// Human Review: Required
-//
-// Original code:
-// import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 import {
   nudgeMobilePreviewIntoSafeViewport,
 } from "./mobile-preview-bounds";
@@ -20,16 +10,6 @@ import {
 export function createHypergryphMouseViewportPanModule(): GestureMappingModule<AppHost> {
   return {
     id: "hypergryph-mouse-viewport-pan",
-    // AI-REMOVED 2026-09-10:
-    // Reason: 操作模式总开关已废弃，不再保留关闭分支
-    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-    // Replacement: gesture-action-router.ts 的默认启用语义
-    // Risk: 历史 false 设置统一使用当前操作行为。
-    // Human Review: Required
-    //
-    // Original code:
-    // when: isHypergryphGestureEnabled,
     handle(event, context) {
       const editor = context.canvas.editor;
       if (editor === null) {

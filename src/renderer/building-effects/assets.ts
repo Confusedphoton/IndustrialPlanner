@@ -56,19 +56,6 @@ export class BuildingEffectAssets {
   }
 
   public retain(heights: ReadonlySet<string>, colors: ReadonlySet<string>): void {
-    // AI-REMOVED 2026-09-16:
-    // Reason: 离屏即销毁导致往返拖动重复请求和解码。
-    // Trigger: 手机拖动与虚影移动性能优化。
-    // Evidence: Trace 中重复资源请求及全场候选查询。
-    // Replacement: 有预算的近期缓存
-    // Risk: 保留可见资源与原判定规则，需回归编辑后刷新。
-    // Human Review: Required
-    // Original code:
-    //     for (const key of this.heights.keys()) if (!heights.has(key)) this.heights.delete(key);
-    //     for (const [key, texture] of this.textures) {
-    //       if (heights.has(key) || colors.has(key)) continue;
-    //       this.release(texture); this.textures.delete(key);
-    //     }
     retainRecentMapEntries(this.heights, heights, 32 * 1024 * 1024, (bytes) => bytes.byteLength, () => {});
     const visible = new Set([...heights, ...colors]);
     retainRecentMapEntries(this.textures, visible, 32 * 1024 * 1024,

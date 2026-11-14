@@ -1,7 +1,6 @@
 import { completeYituliuCallback } from "@/shared/storage/yituliu-session";
 import { CanvasNotices } from "./canvas/canvas-notices";
-import { BlueprintPlannerDialog } from "./blueprint-planner-dialog";
-import { action, reaction, runInAction } from "mobx";
+import { action, runInAction } from "mobx";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 import { BottomStatusBar } from "@/app/shell/layout/bottom-status-bar";
@@ -16,20 +15,6 @@ import { QuickPlacePopup } from "@/app/shell/quick-place/quick-place-popup";
 import { cleanupPlacementDraft } from "@/app/input";
 import { canPlaceEntityDefinitionInCurrentBase } from "@/app/placement-zone-availability";
 import { FullscreenToggleButton } from "@/app/shell/layout/fullscreen-toggle-button";
-// AI-REMOVED 2026-08-23:
-// Reason: 手机旋转不再自动请求全屏，Workbench 只负责把用户点击失败转交给 PWA 引导。
-// Trigger: 用户确认全屏/PWA 提示只能由全屏按钮点击触发，不能主动打扰。
-// Evidence: Fullscreen API 要求瞬时用户激活；orientationchange 后的 effect 不具备该条件。
-// Replacement: FullscreenToggleButton.onFullscreenActionFailure。
-// Risk: Low；用户仍可从顶栏、悬浮入口或竖屏 Gate 主动请求全屏。
-// Human Review: Required
-//
-// Original code:
-// import {
-//   FullscreenToggleButton,
-//   requestDocumentFullscreen,
-//   resolveFullscreenState,
-// } from "@/app/shell/layout/fullscreen-toggle-button";
 import { DebugLogDialog } from "@/app/shell/dialogs/debug-log-dialog";
 import { FeedbackDialog } from "@/app/shell/dialogs/feedback-dialog";
 import { BaseSelectDialog } from "@/app/shell/dialogs/base-select-dialog";
@@ -63,43 +48,19 @@ import LeftDock from "@/app/shell/layout/left-dock";
 import { LeftToolbar } from "@/app/shell/layout/left-toolbar";
 import { V2MigrationController } from "@/app/migration";
 import { WorkbenchSettingsDialogController } from "@/app/shell/state/settings-dialog-state";
-import {
-  captureSimulationEngineLaunchPreference,
-  type SimulationEngineLaunchPreference,
-} from "@/app/shell/state/simulation-engine-launch-preference";
-import { regionalSimulationUiState } from "@/app/state/regional-simulation-ui-state";
-import { writeRegionalMultiBaseExperimentalEnabled } from "@/shared/storage/regional-simulation-settings";
 import { RightDock } from "@/app/shell/layout/right-dock";
 import { RecipeTreeOverlay } from "@/app/shell/recipe-tree/recipe-tree-overlay";
+import { DevicePopup } from "@/app/shell/canvas/device-popup";
+import { recipeTreeOverlayState } from "@/app/shell/recipe-tree/recipe-tree-state";
 import { SimulationControlButton, TimelineButton, TopBar } from "@/app/shell/layout/top-bar";
 import {
   readSelectedSyncProvider,
   requestSyncProvider,
 } from "@/shared/storage/sync-provider-activation";
-// AI-REMOVED 2026-08-24:
-// Reason: app 模块不应跨模块调用 sync 内部 provider 存储入口。
-// Trigger: provider 选择现由 shared 两阶段激活状态统一持久化。
-// Evidence: 项目模块隔离规范只允许 app 引用 shared 与 domain。
-// Replacement: readSelectedSyncProvider / requestSyncProvider。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-// import { readSyncProvider, writeSyncProvider } from "@/sync/sync-providers";
 import {
   SyncInitialSyncFeatureGate,
   SyncInitialSyncGate,
 } from "@/app/shell/layout/sync-initial-sync-gate";
-// AI-REMOVED 2026-07-29:
-// Reason: 保存提示不再作为折叠顶栏第一排按钮组成员。
-// Trigger: 用户要求隐藏顶栏时位于右上角第二排最右侧。
-// Evidence: 第一排内提示会被 FPS 布局推动或挤压。
-// Replacement: CanvasPanel 内独立定位的 WebDavSaveIndicator。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-// import { WebDavSaveIndicator } from "@/app/shell/layout/webdav-save-indicator";
 import { OverlayStackProvider } from "@/app/shell/shared/overlay-stack";
 import {
   preventMiddleMousePointerDownBrowserBehavior,
@@ -115,7 +76,6 @@ import {
 } from "@/shared/dark-pipe-link";
 import { DEFAULT_RIGHT_DOCK_WIDTH } from "@/app/state/state-impl";
 import { resolveLeftDockWidthForScreenProfile } from "@/app/state/state-impl";
-// AI-CORRECTION 2026-11-13: 本地 isAppThemeId 已移除，主题判断改从 @/app/theme 导入；原 import type { AppThemeId } 随之不再使用。
 import { isAppThemeId } from "@/app/theme";
 import {
   FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED,
@@ -129,18 +89,6 @@ import {
   readBackendApiAddressOverride,
   writeBackendApiAddressOverride,
 } from "@/shared/storage/backend-api-address";
-// AI-REMOVED 2026-07-29:
-// Reason: 设置界面不再直接读写 WebDAV localStorage。
-// Trigger: 同步模块必须通过公开 state/action 自治。
-// Evidence: 直接调用 read/writeWebDavSync* 会绕过 MobX 状态，导致开关需刷新才更新。
-// Replacement: WorkspaceContract.sync.state.settings 与 SyncAction.updateSettings。
-// Risk: Low；持久化仍由 sync 模块使用相同 key 完成。
-// Human Review: Required
-//
-// Original code:
-// import { readWebDavSyncEnabled, readWebDavSyncPassword, readWebDavSyncUrl,
-//   readWebDavSyncUsername, writeWebDavSyncEnabled, writeWebDavSyncPassword,
-//   writeWebDavSyncUrl, writeWebDavSyncUsername } from "@/shared/storage/webdav-sync-settings";
 import {
   isMobileOrTabletScreenProfile,
   isMobilePortraitScreenProfile,
@@ -148,16 +96,6 @@ import {
   resetScreenProfileConsoleDiagnosticsForTest,
   resolveScreenProfileFromWindow,
 } from "@/shared/browser/screen-profile";
-// AI-REMOVED 2026-08-23:
-// Reason: Workbench 不再识别“竖屏转横屏”以自动请求全屏。
-// Trigger: 用户要求只在点击全屏按钮时执行全屏或展示引导。
-// Evidence: screenProfile 仍用于布局；isMobileLandscapeScreenProfile 仅服务于已移除的自动全屏 effect。
-// Replacement: None。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-// import { isMobileLandscapeScreenProfile } from "@/shared/browser/screen-profile";
 import {
   resolveEffectiveCanvasTheme,
   resolveInCanvasThemeCssVariables,
@@ -178,18 +116,6 @@ interface ChangelogReadState {
   changelogKey: string;
 }
 
-// AI-REMOVED 2026-11-13:
-// Reason: 主题 ID 判断与 src/app/theme 的 isAppThemeId 重复，新增主题时需多处同步。
-// Trigger: 新增 graphite-dark 主题。
-// Evidence: src/app/theme/index.ts 已导出同名查表判断。
-// Replacement: import { isAppThemeId } from "@/app/theme"
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// function isAppThemeId(value: unknown): value is AppThemeId {
-//   return value === "ayu-light" || value === "ayu-dark";
-// }
 
 function normalizeStoredChangelogVersion(version: string): string {
   return normalizeChangelogVersionText(version) ?? version;
@@ -239,15 +165,10 @@ function writeChangelogReadState(state: ChangelogReadState): void {
 
 export const WorkbenchApp = observer(function WorkbenchApp({
   appHost,
-  simulationEngineLaunchPreference: providedSimulationEngineLaunchPreference,
 }: {
   appHost: AppHost;
-  simulationEngineLaunchPreference?: SimulationEngineLaunchPreference;
 }) {
   const t = appHost.actions.translate;
-  const [simulationEngineLaunchPreference] = useState(
-    () => providedSimulationEngineLaunchPreference ?? captureSimulationEngineLaunchPreference(),
-  );
   const [pwaController] = useState(() => new PwaController({
     readEnabled: () => appHost.state.settings.gamePlayDeviceAnimations,
     writeEnabled: action((value) => {
@@ -283,28 +204,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           appHost.internalState.settings.themeId = value;
         }),
       },
-      // AI-REMOVED 2026-05-26:
-      // Reason: 鹰角网络操作模式开关已从设置面板移除，对应的 readValue/writeValue 绑定不再需要。
-      // Trigger: 用户需求 — 取消该设置的图像化入口。
-      // Evidence: 设置项 game-arknights-operation-mode 已从 settings-dialog-state.ts 移除。
-      // Replacement: None（字段 hypergryphOperationMode 仍保留于 state，但不再通过设置面板读写）。
-      // AI-CORRECTION 2026-09-10: 字段现已从运行时状态与公开接口移除。
-      // Risk: Low
-      // Human Review: Not Required
-      //
-      // Original code:
-      // "game-arknights-operation-mode": {
-      //   readValue: () => appHost.state.settings.hypergryphOperationMode,
-      //   writeValue: action((value) => {
-      //     if (typeof value !== "boolean") {
-      //       return;
-      //     }
-      //     if (appHost.internalState.settings.hypergryphOperationMode === value) {
-      //       return;
-      //     }
-      //     appHost.internalState.settings.hypergryphOperationMode = value;
-      //   }),
-      // },
       "game-arknights-immediate-move": {
         readValue: () => appHost.state.settings.hypergryphImmediateMove,
         writeValue: action((value) => {
@@ -763,53 +662,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           }
         }),
       },
-      // AI-REMOVED 2026-10-14:
-      // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
-      // Trigger: 用户要求 EDA 默认可用且不再需要开启。
-      // Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
-      // Replacement: EDA 入口直接显示，BlueprintPlannerDialogController 不再持有启用状态。
-      // Risk: Low；规划任务与业务可用性校验保持原行为。
-      // Human Review: Required
-      //
-      // Original code:
-      //       "experimental-blueprint-planner": {
-      //         readValue: () => appHost.blueprintPlannerDialog.enabled,
-      //         writeValue: (value) => { if (typeof value === "boolean") appHost.blueprintPlannerDialog.setEnabled(value); },
-      //       },
 
-      "experimental-regional-multi-base": {
-        readValue: () => regionalSimulationUiState.experimentalEnabled,
-        writeValue: action((value) => {
-          if (typeof value === "boolean") {
-            regionalSimulationUiState.experimentalEnabled = value;
-            writeRegionalMultiBaseExperimentalEnabled(value);
-            if (!value) {
-              // AI-REMOVED 2026-08-19:
-              // Reason: App UI state 不再保存多基地模式副本。
-              // Trigger: SimulationMode 单一事实源改造。
-              // Evidence: 下方 Simulation Action 已负责切回 single-base。
-              // Replacement: appHost.workspace.simulation.state.simulationMode。
-              // Risk: Low
-              // Human Review: Required
-              //
-              // Original code:
-              // regionalSimulationUiState.allBasesEnabled = false;
-              // AI-REMOVED 2026-08-19:
-              // Reason: 关闭开发期实验开关只能停用当前有效模式，不能清除已经同步的用户选择。
-              // Trigger: 用户要求多基地选择具备记忆，且实验性开关保持设备本地。
-              // Evidence: main.tsx 根据实验开关与 RegionalSettingsController.multiBaseEnabled 派生 SimulationMode。
-              // Replacement: src/main.tsx 的多基地有效模式 reaction。
-              // Risk: Low
-              // Human Review: Required
-              //
-              // Original code:
-              // appHost.workspace.simulation?.actions.setRegionalMultiBaseEnabled(false);
-              // AI-CORRECTION 2026-08-19: 上方旧注释所述“Action 已负责切回”不再有效；有效模式由组合根 reaction 负责。
-              // AI-CORRECTION 2026-09-20: 组合根 reaction 已移除；关闭实验门控会直接使 AppSettings 投影为 false，运行中的会话模式保持不变。
-            }
-          }
-        }),
-      },
       "experimental-virtual-mouse-pointer": {
         readValue: () => appHost.state.settings.virtualMousePointer,
         writeValue: action((value) => {
@@ -830,7 +683,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           requestSyncProvider(
             value === "webdav" || value === "cloudflare" || value === "yituliu" ? value : "none",
           );
-          // AI-CORRECTION 2026-08-24: provider 订阅会主动更新宿主；此调用仅兼容初始化期间尚未注册订阅的场景。
           appHost.workspace.sync?.actions.updateSettings({});
         }),
       },
@@ -849,29 +701,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
         }),
       },
     },
-    // AI-REMOVED 2026-08-03:
-    // Reason: 通用设置控制器不再代理快捷键读写与重置。
-    // Trigger: ST2-RQ-002 新建独立快捷键设置对话框。
-    // Evidence: KeyboardShortcutSettingsDialog 直接调用 appHost internalActions。
-    // Replacement: keyboard-shortcut-settings-dialog.tsx。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // // 所有 keybinding 类型设置统一走 shortcutReader/shortcutWriter
-    // shortcutReader: (key) => appHost.internalActions.getKeyboardShortcutFor(key),
-    // shortcutWriter: (key, value) => {
-    //   appHost.internalActions.setShortcutFor(key, value);
-    // },
-    // shortcutResetAll: () => {
-    //   appHost.internalActions.resetAllShortcutsToDefaults();
-    // },
   }));
-  useEffect(() => reaction(
-    () => settingsDialog.getValue("experimental-blueprint-production-planning") === true,
-    enabled => appHost.blueprintPlannerDialog.setBlueprintPlanningEnabled(enabled),
-    { fireImmediately: true },
-  ), [appHost, settingsDialog]);
   const leftDockOpen = appHost.state.workbench.leftDockOpen;
   const leftDockSuppressed = appHost.internalState.workbench.leftDockSuppressed;
   const effectiveLeftDockOpen = leftDockOpen && !leftDockSuppressed;
@@ -912,16 +742,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     && appHost.mainCanvas.state.toolInfo.darkPipeLink === null;
   const shouldAutoOpenInspectorDialog = canKeepInspectorDialogOpen && !openInspectorOnSecondClick;
   const floatingOpenRightDockLabel = `${t("action.open")} ${t("topBar.rightPanel")}`;
-  // AI-REMOVED 2026-08-23:
-  // Reason: 不再比较前后屏幕方向以自动进入全屏。
-  // Trigger: 用户要求全屏动作和 PWA 引导都只由全屏按钮点击触发。
-  // Evidence: previousScreenProfileRef 仅被自动全屏 effect 使用。
-  // Replacement: None。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // const previousScreenProfileRef = useRef(screenProfile);
   const prevUseInspectorPanelRef = useRef(useInspectorPanel);
   const hasVisibleDialogShell =
     isAnyDialogShellVisible(appHost, { showTimelineBottomDock, showToolboxBottomDock })
@@ -932,15 +752,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     appHost.state.settings.showGrassBackground,
   );
 
-  // AI-REMOVED 2026-09-26:
-  // Reason: 音效运行时提取为独立 Audio 模块，App 仅保留 UI 与真实手势入口。
-  // Trigger: 用户授权模块重构并逐项确认 AudioAction、AudioContract 和 WorkspaceContract.audio。
-  // Evidence: 原 AppHost 持有控制器，WorkbenchApp effect 管理播放订阅生命周期。
-  // Replacement: src/main.tsx 装配 Audio；本 effect 只转发真实手势。
-  // Risk: 需验证手势解锁、单实例生命周期及销毁后的迟到任务。
-  // Human Review: Required
-  // Original code:
-  // useEffect(() => appHost.deviceAudio.mount(), [appHost]);
   useEffect(() => {
     const unlock = (event: Event) => {
       if (event.isTrusted) appHost.workspace.audio?.actions.unlock();
@@ -972,22 +783,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     return appHost.portPriorityDefaults.bind(editor);
   }, [appHost]);
 
-// AI-REMOVED 2026-09-25:
-// Reason: 停用期间配置覆盖由文档管理边界维护，不再修改 App 关系表。
-// Trigger: REQ-038 文档权威与 Editor 统一生命周期。
-// Evidence: 建链、入口断开与后台出口历史已接入 Editor。
-// Replacement: src/editor/dark-pipe-link-lifecycle.ts。
-// Risk: 旧资产迁移与关闭模式编辑需要回归。
-// Human Review: Required
-// Original code:
-//   useEffect(() => {
-//     const editor = appHost.workspace.editor;
-//     if (editor === null) return;
-//     return appHost.regionalSettings.bindInactiveDarkPipeLinkEdits(
-//       editor,
-//       () => appHost.state.settings.regionalMultiBaseEnabled,
-//     );
-//   }, [appHost]);
 
 
   useEffect(() => {
@@ -1017,11 +812,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
       if (
         sourceBase === undefined
         || targetBase === undefined
-        || (sourceBase.id !== targetBase.id && (
-          !appHost.state.settings.regionalMultiBaseEnabled
-          || appHost.workspace.simulation?.engineKind !== "dense-v2"
-          || sourceBase.tag !== targetBase.tag
-        ))
+        || sourceBase.id !== targetBase.id
       ) {
         appHost.internalActions.setActiveTool(
           selection.returnTool === DARK_PIPE_LINK_TOOL ? "select" : selection.returnTool,
@@ -1060,7 +851,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
   }, [appHost]);
 
   // 版本检测：新版本自动弹出帮助对话框并切换到"版本更新"tab
-  // AI-CORRECTION 2026-07-06: 现在必须同时满足版本变更与当前版本存在新的 changelog 条目，才自动弹出。
   useEffect(() => {
     const currentVersionText = (window as { __APP_VERSION__?: string }).__APP_VERSION__;
 
@@ -1157,24 +947,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     };
   }, [appHost]);
 
-  // AI-REMOVED 2026-08-08:
-  // Reason: Workbench 不再安装或清空主线程内存日志捕获器，日志运行时在 main.tsx 按应用生命周期初始化。
-  // Trigger: ST2-RQ-009 要求刷新后保留日志，并删除 captureEnabled 冗余状态。
-  // Evidence: debug-log-store.ts 已完整归档；DebugLogDialog 改为查询 SharedWorker。
-  // Replacement: initializeDebugLogging() 与 publishDebugModeEnabled()。
-  // Risk: Low；Workbench 单独挂载时不创建 Collector，只同步设置镜像和 logger 级别。
-  // Human Review: Required
-  //
-  // Original code:
-  // useEffect(() => {
-  //   const disposeDebugLogCapture = installDebugLogCapture();
-  //   clearDebugLogEntries();
-  //   return () => {
-  //     setDebugLogCaptureEnabled(false);
-  //     setLogLevel(DEFAULT_WORKBENCH_LOG_LEVEL);
-  //     disposeDebugLogCapture();
-  //   };
-  // }, []);
 
   useEffect(() => {
     publishDebugModeEnabled(appHost.state.settings.debugMode);
@@ -1193,33 +965,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     resolveScreenProfileFromWindow();
   }, [appHost, appHost.state.settings.debugMode]);
 
-  // AI-REMOVED 2026-08-23:
-  // Reason: 旋转手机后的 effect 没有瞬时用户激活，自动请求全屏会被浏览器拒绝且违背按需提示原则。
-  // Trigger: 用户要求仅在点击全屏按钮时提示，不主动打扰用户。
-  // Evidence: Fullscreen API 要求请求由用户交互直接触发；现有 orientationchange 链路由 screenProfile effect 间接调用。
-  // Replacement: 顶栏、悬浮入口和 MobilePortraitGate 中的 FullscreenToggleButton。
-  // Risk: Low；手机转横屏后需要用户主动点击一次全屏按钮。
-  // Human Review: Required
-  //
-  // Original code:
-  // useEffect(() => {
-  //   const previousScreenProfile = previousScreenProfileRef.current;
-  //   previousScreenProfileRef.current = screenProfile;
-  //
-  //   if (!isMobilePortraitScreenProfile(previousScreenProfile)) {
-  //     return;
-  //   }
-  //
-  //   if (!isMobileLandscapeScreenProfile(screenProfile)) {
-  //     return;
-  //   }
-  //
-  //   if (resolveFullscreenState()) {
-  //     return;
-  //   }
-  //
-  //   requestDocumentFullscreen();
-  // }, [screenProfile]);
 
   useEffect(() => {
     if (!hasVisibleDialogShell) {
@@ -1239,18 +984,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
         return;
       }
 
-      // AI-REMOVED 2026-08-30:
-      // Reason: Inspector 不再在 DOM 入口按字符串特判 M/F；由 Route 的 inspector-dialog 作用域决定穿透。
-      // Trigger: ST2-RQ-020 输入层与冲突系统统一。
-      // Evidence: move.enter-selection、delete-selection.selection、move.delete-operation 显式声明该输入层。
-      // Replacement: GestureActionRouter Shortcut Route scope
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // const isMoveKey = appHost.internalActions.isShortcutFor("shortcut-move-selection", event.code, event.key);
-      // const isDeleteKey = appHost.internalActions.isShortcutFor("shortcut-delete-device", event.code, event.key);
-      // if (hasVisibleDialogShell && !(isInspectorDialogVisible && (isMoveKey || isDeleteKey))) return;
 
       if (isEditableKeyboardTarget(event)) {
         return;
@@ -1355,6 +1088,8 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     "--left-toolbar-button-scale": isCompactLeftToolbar ? "0.75" : "1",
     "--left-dock-width": effectiveLeftDockOpen ? `${effectiveLeftDockWidth}px` : "0px",
     "--right-dock-width": showRightDock ? `${DEFAULT_RIGHT_DOCK_WIDTH}px` : "0px",
+    // 配方树停靠栏占用最右侧一列。
+    "--recipe-dock-width": `${recipeTreeOverlayState.dockLayoutWidth}px`,
     "--top-bar-height": showFloatingTopBarControls ? "0px" : "48px",
     "--bottom-bar-height": showBottomStatusBar ? "28px" : "0px",
     "--toolbox-bottom-dock-height": `${bottomDockGridHeight}px`,
@@ -1394,7 +1129,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           translate={appHost.actions.translate}
           screenProfile={appHost.state.screenProfile}
         />
-        {/* AI-CORRECTION 2026-08-05: 折叠顶栏控件改为 CanvasPanel 的 sibling overlay，保持画布定位但隔离画布手势。 */}
         {showFloatingTopBarControls ? (
           <div className={cm(styles, "workbench-floating-top-bar-controls")}>
             <SimulationControlButton
@@ -1450,24 +1184,11 @@ export const WorkbenchApp = observer(function WorkbenchApp({
                 {`${t("action.expand")} ${t("topBar.controls")}`}
               </span>
             </button>
-            {/* AI-REMOVED 2026-07-29:
-                Reason: 保存提示迁移到折叠顶栏第二排的独立画布 overlay。
-                Trigger: 用户要求第二排最右侧且不受 FPS 布局影响。
-                Evidence: 原实现将提示放在第一排 floating controls 内。
-                Replacement: CanvasPanel 内的 canvas-webdav-save-indicator-collapsed。
-                Risk: Low。
-                Human Review: Required
-
-                Original code:
-                {appHost.workspace.sync !== null ? (
-                  <WebDavSaveIndicator
-                    syncState={appHost.workspace.sync.state}
-                    translate={appHost.actions.translate}
-                  />
-                ) : null} */}
           </div>
         ) : null}
         <OverlapEntityMenu appHost={appHost} />
+        {/* 2026-11-13：选中单个设备时的就地操作卡。 */}
+        <DevicePopup appHost={appHost} />
         <QuickPlacePopup appHost={appHost} />
         <CanvasBottomLeftSecondaryToolbar
           appHost={appHost}
@@ -1495,23 +1216,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
             items={canvasRightDockToolbar.items}
           />
         ) : null}
-        {/* AI-REMOVED 2026-08-22:
-            Reason: Workbench 改为传递逐项功能展示请求，不再传按钮数组和全局 mode。
-            Trigger: 用户要求右侧工具列按项混排 button、shortcut 与 both。
-            Evidence: CanvasRightDockToolbarProps 只接收 items。
-            Replacement: 上方基于 canvasRightDockToolbar.items 的渲染分支。
-            Risk: Low
-            Human Review: Required
-
-            Original code:
-            {canvasRightDockToolbar.visible && canvasRightDockToolbar.buttonIds.length > 0 ? (
-              <CanvasRightDockToolbar
-                appHost={appHost}
-                buttonIds={canvasRightDockToolbar.buttonIds}
-                mode={canvasRightDockToolbar.mode}
-              />
-            ) : null}
-        */}
         {showRightDock ? <RightDock appHost={appHost} /> : null}
         <RecipeTreeOverlay appHost={appHost} />
         {showToolboxBottomDock ? <ToolboxBottomDock appHost={appHost} /> : null}
@@ -1524,7 +1228,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
         <InspectorDialog appHost={appHost} />
         <SaveBlueprintDialog appHost={appHost} />
         <ToolboxDialog appHost={appHost} />
-        <BlueprintPlannerDialog appHost={appHost} />
         <TimelineDialog appHost={appHost} />
         <WarehouseStatsDialog appHost={appHost} />
         <EncyclopediaPickerDialog appHost={appHost} />
@@ -1536,7 +1239,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           controller={settingsDialog}
           migrationController={migrationController}
           pwaController={pwaController}
-          simulationEngineLaunchPreference={simulationEngineLaunchPreference}
         />
         <V2MigrationDialog appHost={appHost} controller={migrationController} />
         <PwaGateway appHost={appHost} pwaController={pwaController} />
@@ -1594,8 +1296,7 @@ function isAnyDialogShellVisible(
     || appHost.encyclopediaPicker.dialogState.visible
     || appHost.recipePicker.dialogState.visible
     || appHost.blueprintFolderDialog.dialogState.visible
-    || appHost.blueprintPreview.dialogState.visible
-    || appHost.blueprintPlannerDialog.dialogState.visible;
+    || appHost.blueprintPreview.dialogState.visible;
 }
 
 function isEditableKeyboardTarget(event: KeyboardEvent): boolean {

@@ -26,7 +26,6 @@ function createWorkspace(): WorkspaceContract {
     simulation: null,
     sync: null,
     audio: null,
-    blueprintPlanner: null,
   };
 }
 
@@ -182,7 +181,7 @@ describe("CanvasPanel", () => {
         width: 640,
         height: 480,
       });
-      // 2026-11-12：测量由 owner 合并到下一帧。
+      // 测量由 owner 合并到下一帧。
       vi.advanceTimersByTime(20);
     });
 
@@ -408,22 +407,6 @@ describe("CanvasPanel", () => {
       runningState: "start",
       simulationMode: "single-base",
         simulationSpeed: 1,
-        // AI-REMOVED 2026-09-12:
-        // Reason: CanvasPanel 不再从 SimulationState 读取性能统计与公共缓存字段。
-        // Trigger: 用户确认面板每秒统一查询 SimulationQuery。
-        // Evidence: 下方 getPerformanceDiagnostics 测试桩提供全部面板仿真指标。
-        // Replacement: queries.getPerformanceDiagnostics。
-        // Risk: Low。
-        // Human Review: Required
-        //
-        // Original code:
-        // statistics: {
-        //   tickPerSecond: 20,
-        //   targetTickPerSecond: 20,
-        //   baseBatteryJoules: 0,
-        //   baseBatteryCapacity: 0,
-        // },
-        // bufferSize: 180,
         timeline,
       },
       actions: {} as SimulationContract["actions"],

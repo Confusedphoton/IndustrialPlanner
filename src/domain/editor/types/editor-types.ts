@@ -57,21 +57,6 @@ export interface EntityPlacementValidationResult {
 // Editor Viewport
 // ---------------------------------------------------------------------------
 
-// AI-REMOVED 2026-11-12:
-// Reason: 相机属于独立 View，Editor 不再持有或驱动视口。
-// Trigger: REQ-048 已确认 D4 契约。
-// Evidence: 同源多视图需要独立相机，无头会话不创建动画驱动。
-// Replacement: EditorViewState / editor-view-types.ts
-// Risk: 全部坐标、聚焦、持久化消费者需要迁移。
-// Human Review: Required
-// Original code:
-// export interface EditorViewportState {
-//   readonly center: GridFloatPoint;
-//   readonly clientRect: ClientPixelRect;
-//   readonly gridSize: number;
-//   readonly gridCellPixelSize: number;
-//   readonly displayRotation: GridRotation;
-// }
 
 // ---------------------------------------------------------------------------
 // Hover Target — 鼠标悬浮在画布上的目标（设备或空单元格）
@@ -84,18 +69,6 @@ export interface HoverTarget {
   readonly gridPoint: GridPoint;
 }
 
-// AI-REMOVED 2026-11-12:
-// Reason: 相机属于独立 View，Editor 不再持有或驱动视口。
-// Trigger: REQ-048 已确认 D4 契约。
-// Evidence: 同源多视图需要独立相机，无头会话不创建动画驱动。
-// Replacement: EditorViewState / editor-view-types.ts
-// Risk: 全部坐标、聚焦、持久化消费者需要迁移。
-// Human Review: Required
-// Original code:
-// export interface MoveViewportByClientPixelVectorOptions {
-//   readonly startClientPixel: ClientPixelPoint;
-//   readonly endClientPixel: ClientPixelPoint;
-// }
 
 export interface EntityCollectionMemberOptions {
   readonly collectionType: EntityCollectionType;
@@ -120,15 +93,3 @@ export interface RotateCollectionToSnapOnBuildingOptions {
 // Editor Snapshot Store（从 contract 中移出）
 // ---------------------------------------------------------------------------
 
-// AI-REMOVED 2026-11-12:
-// Reason: 场景共享契约迁入 Domain Shared，避免 Editor/App 各有一份语义。
-// Trigger: REQ-048 已确认 D2 契约。
-// Evidence: 会话、只读源与交互画布均需要相同标识和只读快照。
-// Replacement: domain/shared/scene-snapshot.ts
-// Risk: 所有引用需同步迁移。
-// Human Review: Required
-// Original code:
-// export interface EditorSnapshotStore<T> {
-//   getSnapshot(): T;
-//   subscribe(listener: (snapshot: T) => void): () => void;
-// }

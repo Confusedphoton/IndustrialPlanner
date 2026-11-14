@@ -1,7 +1,7 @@
 import { CanvasInteractionController } from "../canvas";
 import type { EditorViewContract } from "@/domain/editor/editor-view-contract";
 import type { SceneSessionFactories } from "@/domain/document/scene-session";
-import { BlueprintPlannerDialogController, createProductionPlanningDiagnostics } from "../shell";
+import { createProductionPlanningDiagnostics } from "../shell";
 import { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { AppContract } from "@/domain/app/app-contract";
 import { AppActionImpl, AppInternalAction } from "../actions/action-impl";
@@ -31,60 +31,13 @@ import { WorkbenchEncyclopediaPickerController } from "../shell/state/encycloped
 import { WorkbenchRecipePickerController } from "../shell/state/recipe-picker-state";
 import { WorkbenchSaveBlueprintDialogController } from "../shell/state/save-blueprint-dialog-state";
 import { cleanupDiscardableV2LocalStorageBeforeV3Boot } from "../migration";
-// AI-REMOVED 2026-11-12:
-// Reason: 统一场景迁移后旧对象没有有效调用。
-// Trigger: REQ-048 P6 与 ESLint unused 审计。
-// Evidence: 当前调用由 Canvas 或 SceneViewInput 提供，原引用仅存于审计注释。
-// Replacement: CanvasActionImpl / SceneViewInput / 通用只读场景
-// Risk: Low
-// Human Review: Required
-// Original code:
-// import { WorkbenchOverlapEntityMenuController } from "../shell/state/overlap-entity-menu-state";
 import { RegionalSettingsController } from "../regional-settings";
 import { DefaultPortPriorityController } from "../port-priority";
-// AI-REMOVED 2026-09-26:
-// Reason: 音效运行时提取为独立 Audio 模块，App 仅保留 UI 与真实手势入口。
-// Trigger: 用户授权模块重构并逐项确认 AudioAction、AudioContract 和 WorkspaceContract.audio。
-// Evidence: 原 AppHost 持有控制器，WorkbenchApp effect 管理播放订阅生命周期。
-// Replacement: src/main.tsx 与 src/audio/audio-host.ts
-// Risk: 需验证手势解锁、单实例生命周期及销毁后的迟到任务。
-// Human Review: Required
-// Original code:
-// import { DeviceAudioController } from "../audio";
 import { regionalSimulationUiState } from "../state/regional-simulation-ui-state";
-// AI-REMOVED 2026-09-23:
-// Reason: AppHost 构造时正式入口尚未创建 Editor，无法在此注册文档订阅。
-// Trigger: 跨基地暗管停用后的配置编辑必须覆盖已保存关系。
-// Evidence: main.tsx 先 createAppHost，后 createEditorHost。
-// Replacement: RegionalSettingsController.bindInactiveDarkPipeLinkEdits，由 WorkbenchApp 挂载。
-// Risk: Low
-// Human Review: Required
-// Original code:
-// import { findDarkPipeSlotLinkForEntity } from "@/shared/dark-pipe-link";
-// AI-REMOVED 2026-07-29:
-// Reason: WebDAV 生命周期和状态已由独立顶层 sync 模块拥有。
-// Trigger: 用户要求 app 不再实例化或驱动同步客户端。
-// Evidence: AppHost 原先直接构造 controller 并 hook WebDAV service。
-// Replacement: main.tsx 组合 createSyncHost；UI 通过 workspace.sync 访问公开契约。
-// Risk: Low；AppHost 不再承担网络职责。
-// Human Review: Required
-//
-// Original code:
-// import { hookWebDavSyncAppService } from "../sync/webdav-sync-app-service";
-// import { WebDavSyncAppController } from "../sync/webdav-sync-app-controller";
 
 export interface AppHost extends AppContract {
   readonly mainCanvas: CanvasInteractionController;
   readonly sceneFactories: SceneSessionFactories;
-  // AI-REMOVED 2026-09-26:
-  // Reason: 音效运行时提取为独立 Audio 模块，App 仅保留 UI 与真实手势入口。
-  // Trigger: 用户授权模块重构并逐项确认 AudioAction、AudioContract 和 WorkspaceContract.audio。
-  // Evidence: 原 AppHost 持有控制器，WorkbenchApp effect 管理播放订阅生命周期。
-  // Replacement: WorkspaceContract.audio
-  // Risk: 需验证手势解锁、单实例生命周期及销毁后的迟到任务。
-  // Human Review: Required
-  // Original code:
-  // deviceAudio: DeviceAudioController;
   workspace: WorkspaceContract;
   gestureAdapter: GestureAdapter;
   gestureActionRouter: GestureActionRouter<AppHost>;
@@ -92,35 +45,15 @@ export interface AppHost extends AppContract {
   internalState: UiStateReadWrite;
   internalActions: AppInternalAction;
   blueprintFolderDialog: WorkbenchBlueprintFolderDialogController;
-  blueprintPlannerDialog: BlueprintPlannerDialogController;
   productionPlanningDiagnostics: ReturnType<typeof createProductionPlanningDiagnostics>;
   blueprintPreview: WorkbenchBlueprintPreviewController;
   saveBlueprintDialog: WorkbenchSaveBlueprintDialogController;
   encyclopediaPicker: WorkbenchEncyclopediaPickerController;
   recipePicker: WorkbenchRecipePickerController;
 
-  // AI-REMOVED 2026-11-12:
-  // Reason: 输入及选择菜单归所属画布持有。
-  // Trigger: REQ-048 D7。
-  // Evidence: EDA 与主工作台需要独立工具和选择状态。
-  // Replacement: mainCanvas.overlapEntityMenu
-  // Risk: Low
-  // Human Review: Required
-  // Original code:
-  // overlapEntityMenu: WorkbenchOverlapEntityMenuController;
 
   regionalSettings: RegionalSettingsController;
   portPriorityDefaults: DefaultPortPriorityController;
-  // AI-REMOVED 2026-07-29:
-  // Reason: 同步状态不再是 AppHost 的内部对象。
-  // Trigger: 独立顶层 sync 模块通过 WorkspaceContract.sync 发布状态。
-  // Evidence: webDavSync 属性迫使设置页依赖 app 的同步实现。
-  // Replacement: workspace.sync。
-  // Risk: Low；所有消费者迁移到领域契约。
-  // Human Review: Required
-  //
-  // Original code:
-  // webDavSync: WebDavSyncAppController;
   dispose: () => void;
 }
 
@@ -136,15 +69,6 @@ export function createAppHost(
   const productionPlanningDiagnostics = createProductionPlanningDiagnostics(!embedded);
   disposers.push(productionPlanningDiagnostics.dispose);
   const portPriorityDefaults = new DefaultPortPriorityController(workspace.registry);
-  // AI-REMOVED 2026-09-26:
-  // Reason: 音效运行时提取为独立 Audio 模块，App 仅保留 UI 与真实手势入口。
-  // Trigger: 用户授权模块重构并逐项确认 AudioAction、AudioContract 和 WorkspaceContract.audio。
-  // Evidence: 原 AppHost 持有控制器，WorkbenchApp effect 管理播放订阅生命周期。
-  // Replacement: src/main.tsx 的 createAudioHost
-  // Risk: 需验证手势解锁、单实例生命周期及销毁后的迟到任务。
-  // Human Review: Required
-  // Original code:
-  // const deviceAudio = new DeviceAudioController(workspace, () => internalState.settings.gamePlayDeviceAudio);
   const regionalSettings = new RegionalSettingsController(workspace.registry);
   const host = {
     workspace,
@@ -194,41 +118,8 @@ export function createAppHost(
     get theme() {
       return internalState.theme;
     },
-    // AI-REMOVED 2026-11-12:
-    // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
-    // Trigger: REQ-048 D7 已确认的画布状态拆分。
-    // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
-    // Replacement: mainCanvas.state
-    // Risk: 所有调用入口必须传入所属画布。
-    // Human Review: Required
-    // Original code:
-    // get activeTool() {
-    //       return internalState.activeTool;
-    //     },
 
-    // AI-REMOVED 2026-11-12:
-    // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
-    // Trigger: REQ-048 D7 已确认的画布状态拆分。
-    // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
-    // Replacement: mainCanvas.state
-    // Risk: 所有调用入口必须传入所属画布。
-    // Human Review: Required
-    // Original code:
-    // get moveKind() {
-    //       return internalState.moveKind;
-    //     },
 
-    // AI-REMOVED 2026-11-12:
-    // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
-    // Trigger: REQ-048 D7 已确认的画布状态拆分。
-    // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
-    // Replacement: mainCanvas.state
-    // Risk: 所有调用入口必须传入所属画布。
-    // Human Review: Required
-    // Original code:
-    // get toolInfo() {
-    //       return internalState.toolInfo;
-    //     },
 
   };
   const gestureAdapter = createGestureAdapter(host.mainCanvas, {
@@ -240,47 +131,17 @@ export function createAppHost(
   host.mainCanvas.attachGestureAdapter(gestureAdapter);
   const gestureDiagnostics = createGestureDiagnosticsStore();
   const blueprintFolderDialog = new WorkbenchBlueprintFolderDialogController();
-  const blueprintPlannerDialog = new BlueprintPlannerDialogController(() => workspace.blueprintPlanner, workspace.registry, options.sceneFactories);
   const blueprintPreview = new WorkbenchBlueprintPreviewController();
   const saveBlueprintDialog = new WorkbenchSaveBlueprintDialogController(
     internalState.workbench.dialogState["save-blueprint"],
   );
 
-  // AI-REMOVED 2026-11-12:
-  // Reason: 输入及选择菜单归所属画布持有。
-  // Trigger: REQ-048 D7。
-  // Evidence: EDA 与主工作台需要独立工具和选择状态。
-  // Replacement: mainCanvas.overlapEntityMenu
-  // Risk: Low
-  // Human Review: Required
-  // Original code:
-  // const overlapEntityMenu = new WorkbenchOverlapEntityMenuController();
 
-  // AI-REMOVED 2026-09-20:
-  // Reason: RegionalSettingsController 必须在 AppSettings 公共投影创建前存在，才能无副本公开多基地选择。
-  // Trigger: ST2-RQ-035 要求 AppSettings 成为静态设置 Contract，Simulation 启动时直接读取该 Contract。
-  // Evidence: publicSettings 的 regionalMultiBaseEnabled getter 组合实验门控与同步资产选择。
-  // Replacement: createAppHost 顶部、internalState 创建后的 regionalSettings 实例。
-  // Risk: Low；实例仍由同一个 AppHost 持有并沿用原 hydrate / sync 生命周期。
-  // Human Review: Required
-  //
-  // Original code:
-  // const regionalSettings = new RegionalSettingsController(workspace.registry);
   const encyclopediaPicker = new WorkbenchEncyclopediaPickerController(
     () => internalState.workbench.toolbox.wiki,
     embedded ? "memory" : "browser",
   );
   const recipePicker = new WorkbenchRecipePickerController();
-  // AI-REMOVED 2026-07-29:
-  // Reason: SyncStateImpl 的实例化由 createSyncHost 负责。
-  // Trigger: 顶层模块生命周期解耦。
-  // Evidence: const webDavSync = new WebDavSyncAppController();
-  // Replacement: main.tsx 中的 createSyncHost。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // const webDavSync = new WebDavSyncAppController();
   const gestureActionRouter = createGestureActionRouter<AppHost>({
     gestureAdapter,
     workspace,
@@ -307,31 +168,12 @@ export function createAppHost(
     gestureDiagnostics,
     internalState,
     blueprintFolderDialog,
-    blueprintPlannerDialog,
     productionPlanningDiagnostics,
     blueprintPreview,
     saveBlueprintDialog,
 
-    // AI-REMOVED 2026-11-12:
-    // Reason: 输入及选择菜单归所属画布持有。
-    // Trigger: REQ-048 D7。
-    // Evidence: EDA 与主工作台需要独立工具和选择状态。
-    // Replacement: mainCanvas.overlapEntityMenu
-    // Risk: Low
-    // Human Review: Required
-    // Original code:
-    // overlapEntityMenu,
     regionalSettings,
     portPriorityDefaults,
-    // AI-REMOVED 2026-09-26:
-    // Reason: 音效运行时提取为独立 Audio 模块，App 仅保留 UI 与真实手势入口。
-    // Trigger: 用户授权模块重构并逐项确认 AudioAction、AudioContract 和 WorkspaceContract.audio。
-    // Evidence: 原 AppHost 持有控制器，WorkbenchApp effect 管理播放订阅生命周期。
-    // Replacement: WorkspaceContract.audio
-    // Risk: 需验证手势解锁、单实例生命周期及销毁后的迟到任务。
-    // Human Review: Required
-    // Original code:
-    // deviceAudio,
     encyclopediaPicker,
     recipePicker,
   });
@@ -391,18 +233,7 @@ export function createAppHost(
   Object.assign(host, {
     internalActions,
     dispose: () => {
-      // AI-REMOVED 2026-09-26:
-      // Reason: 音效运行时提取为独立 Audio 模块，App 仅保留 UI 与真实手势入口。
-      // Trigger: 用户授权模块重构并逐项确认 AudioAction、AudioContract 和 WorkspaceContract.audio。
-      // Evidence: 原 AppHost 持有控制器，WorkbenchApp effect 管理播放订阅生命周期。
-      // Replacement: src/main.tsx 的 disposeAudio 与 AudioContract.destroy
-      // Risk: 需验证手势解锁、单实例生命周期及销毁后的迟到任务。
-      // Human Review: Required
-      // Original code:
-      // deviceAudio.dispose();
       blueprintFolderDialog.close();
-      blueprintPlannerDialog.close();
-      blueprintPlannerDialog.manual.dispose();
       blueprintPreview.close();
       saveBlueprintDialog.close();
       host.mainCanvas.dispose();
@@ -437,58 +268,7 @@ export function createAppHost(
     cleanupDiscardableV2LocalStorageBeforeV3Boot();
     disposers.push(hookLocalstorage(host));
   }
-  // AI-REMOVED 2026-09-23:
-  // Reason: 正式启动顺序中 Editor 尚未赋值，订阅在此不会创建。
-  // Trigger: 停用的跨基地链接应在本地链接或端点配置编辑后被覆盖。
-  // Evidence: main.tsx 的 createEditorHost 调用晚于 createAppHost。
-  // Replacement: RegionalSettingsController.bindInactiveDarkPipeLinkEdits，由 WorkbenchApp 挂载。
-  // Risk: 初始化后、工作台挂载前无用户编辑入口。
-  // Human Review: Required
-  // Original code:
-  // const editorDocument = workspace.editor?.document;
-  // if (editorDocument !== undefined) {
-  //   let previousDocument = editorDocument.getSnapshot();
-  //   disposers.push(editorDocument.subscribe((nextDocument) => {
-  //     const priorDocument = previousDocument;
-  //     previousDocument = nextDocument;
-  //     if (
-  //       priorDocument.documentKey !== nextDocument.documentKey
-  //       || host.state.settings.regionalMultiBaseEnabled
-  //     ) return;
-  //
-  //     for (const link of regionalSettings.darkPipeLinks) {
-  //       const endpoint = link.inlet.baseId === nextDocument.baseId
-  //         ? link.inlet
-  //         : link.outlet.baseId === nextDocument.baseId
-  //           ? link.outlet
-  //           : null;
-  //       if (endpoint === null) continue;
-  //       const before = priorDocument.entities[endpoint.entityId];
-  //       const after = nextDocument.entities[endpoint.entityId];
-  //       if (
-  //         before !== undefined
-  //         && (
-  //           after === undefined
-  //           || JSON.stringify(before.config) !== JSON.stringify(after.config)
-  //           || findDarkPipeSlotLinkForEntity(nextDocument, endpoint.entityId) !== null
-  //         )
-  //       ) {
-  //         regionalSettings.removeDarkPipeLink(link.id);
-  //       }
-  //     }
-  //   }));
-  // }
   disposers.push(hookThemeApplicator(host));
-  // AI-REMOVED 2026-07-29:
-  // Reason: AppHost 不再主动挂载 WebDAV 服务。
-  // Trigger: sync 模块自行订阅 editor snapshot 与业务资源端口。
-  // Evidence: disposers.push(hookWebDavSyncAppService(host));
-  // Replacement: createSyncHost 在自身构造时启动服务并持有 disposer。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // disposers.push(hookWebDavSyncAppService(host));
 
   return host;
 }
@@ -503,7 +283,7 @@ function resolveShortcutInputLayer(appHost: AppHost): ShortcutInputLayer {
       && !(dialogId === "timeline" && timelineBottomDockActive)
     ))
     .map(([dialogId]) => dialogId);
-  if (appHost.blueprintPlannerDialog.dialogState.visible || visibleDialogIds.some((dialogId) => dialogId !== "inspector")) {
+  if (visibleDialogIds.some((dialogId) => dialogId !== "inspector")) {
     return "dialog";
   }
   if (visibleDialogIds.includes("inspector")) {

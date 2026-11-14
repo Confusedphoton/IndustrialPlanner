@@ -1,6 +1,4 @@
 import { Assets, Texture } from "pixi.js"
-// AI-REMOVED 2026-11-12: 显示偏好改由显式快照订阅；REQ-048 D5；Replacement: presentation.subscribe；Risk: Low；Human Review: Required
-// import { reaction } from "mobx"
 import type { Renderer } from "pixi.js"
 
 import type { ScenePresentation } from "@/domain/document/scene-view-input"
@@ -17,15 +15,6 @@ import { loadDeviceAnimationTexture } from "./device-animation-texture-loader"
 
 import {
   DeviceAnimationTextureCache,
-  // AI-REMOVED 2026-09-13:
-  // Reason: 不再读取默认驻留预算。
-  // Trigger: 用户要求任一动画触发全阶段全帧驻留，最后同类实例离屏超过 20 秒才回收。
-  // Evidence: 原软预算会裁剪阶段，5 秒离屏策略提前取消队列。
-  // Replacement: DeviceAnimationTextureCache 全量策略
-  // Risk: 全量驻留提高内存与显存占用。
-  // Human Review: Required
-  // Original code:
-  // DEFAULT_ANIMATION_RESIDENCY_BYTES,
   type DeviceAnimationTextures,
   type DeviceAnimationTextureStats,
 } from "./device-animation-textures"
@@ -56,8 +45,6 @@ export function isFallbackTexture(texture: Texture): boolean {
 /**
  * TextureActions 是 src/renderer/texture 对外唯一出口。
  * 目录外代码不得 import texture 目录下其他任何东西。
- * AI-CORRECTION 2026-09-05: 动画结果类型通过 texture/index.ts 公开；运行时加载仍统一由 TextureActions 提供。
- * AI-CORRECTION 2026-09-12: texture/index.ts 额外公开诊断收集器，由 TextureActions 持有并交给主渲染诊断使用。
  */
 interface TextureActions {
   readonly performanceDiagnostics: TexturePerfDiagnostics;
@@ -111,15 +98,6 @@ class TextureActionsImpl implements TextureActions {
     })
     this.syncTextureConfigState(this.textureConfig)
     this.deviceAnimations = new DeviceAnimationTextureCache({
-      // AI-REMOVED 2026-09-13:
-      // Reason: 遗留 localStorage 预算不能缩减整套驻留。
-      // Trigger: 用户要求任一动画触发全阶段全帧驻留，最后同类实例离屏超过 20 秒才回收。
-      // Evidence: 原软预算会裁剪阶段，5 秒离屏策略提前取消队列。
-      // Replacement: DeviceAnimationTextureCache 全量策略
-      // Risk: 全量驻留提高内存与显存占用。
-      // Human Review: Required
-      // Original code:
-      // budgetBytes: readAnimationResidencyBudget(this.app?.state.settings?.debugMode === true),
       uploadTexture: (texture) => {
         const startedAt = performance.now()
         let failed = true
@@ -157,56 +135,11 @@ class TextureActionsImpl implements TextureActions {
       },
     })
 
-    // AI-REMOVED 2026-11-12:
-    // Reason: 纹理管理器只读取 ScenePresentation，不持有 AppContract。
-    // Trigger: REQ-048 D5；Evidence: 多视图具有独立 DPR 和显示投影。
-    // Replacement: presentation.subscribe
-    // Risk: Low；Human Review: Required
-    //     this.disposeResolutionReaction = this.app === null
-    //       ? null
-    //       : reaction(
-    //         () => resolveRenderResolutionFromPresentation(
-    //           this.app,
-    //           this.textureConfig.renderResolution,
-    //         ),
-    //         (resolution) => {
-    //           this.syncResolution(resolution)
-    //         },
-    //       )
     this.disposeResolutionReaction = this.presentation.subscribe((presentation) => {
       this.syncResolution(resolveRenderResolutionFromPresentation(presentation, this.textureConfig.renderResolution))
     })
   }
 
-// AI-REMOVED 2026-11-12:
-// Reason: 直接 Assets 加载绕过视图的资源租约和异步刷新。
-// Trigger: REQ-048 按需绘制及多视图资源释放。
-// Evidence: Sprite 存在三个直接加载入口；缓存消费者需重新通知所属 View。
-// Replacement: TextureActions.getTexture，optional 保留装饰失败降级。
-// Risk: Low；不改变必要纹理失败策略。
-// Human Review: Required
-// Original code:
-//   public getTexture(unifiedResourceKey: string): Promise<Texture> {
-//     const existing = this.texturePromisesByKey.get(unifiedResourceKey)
-//     if (existing !== undefined) {
-//       return existing
-//     }
-//
-//     const promise = this.resolveTexture(unifiedResourceKey).catch((error) => {
-//       if (!this.loggedTextureFailures.has(unifiedResourceKey)) {
-//         this.loggedTextureFailures.add(unifiedResourceKey)
-//         console.warn("Texture path resolution failed; retrying while visible", { key: unifiedResourceKey, error })
-//       }
-//       return this.createFallbackTexture()
-//     })
-//     this.resources.track(promise.then((texture) => {
-//       if (isFallbackTexture(texture)) throw new Error(`Required texture unavailable: ${unifiedResourceKey}`)
-//       return texture
-//     }))
-//     this.texturePromisesByKey.set(unifiedResourceKey, promise)
-//     return promise
-//   }
-//
   public getTexture(unifiedResourceKey: string, requirement: "required" | "optional" = "required"): Promise<Texture> {
     let promise = this.texturePromisesByKey.get(unifiedResourceKey)
     if (promise === undefined) {
@@ -356,7 +289,6 @@ class TextureActionsImpl implements TextureActions {
         return applyBitmapTextureConfig(texture, this.textureConfig)
       } catch (error) {
         // Try next candidate
-        // AI-CORRECTION 2026-08-31: published raster 已收敛为单一 WebP 候选；失败后直接进入既有 fallback texture。
         if (!this.loggedTextureFailures.has(key)) {
           this.loggedTextureFailures.add(key)
           console.warn("Texture load failed; retrying while visible", { key, path, error })
@@ -422,49 +354,16 @@ class TextureActionsImpl implements TextureActions {
 
     if (key.startsWith(PREFIX_TEXTURE)) {
       const id = key.slice(PREFIX_TEXTURE.length)
-      // AI-REMOVED 2026-08-31:
-      // Reason: public 发布位图已统一为 WebP，PNG 不再是有效运行时资源。
-      // Trigger: 用户要求删除 PNG 回退，避免 PWA 下载重复素材并让缺失 WebP fail-fast。
-      // Evidence: 当前浏览器目标支持 WebP；public raster policy 要求非 WebP 位图为 0。
-      // Replacement: 下方 WebP-only candidate。
-      // Risk: WebP 缺失时直接返回既有红色 fallback texture，不再静默加载旧 PNG。
-      // Human Review: Required
-      //
-      // Original code:
-      // return [createPublicAssetUrl(`textures/${id}.webp`), createPublicAssetUrl(`textures/${id}.png`)]
       return [createPublicAssetUrl(`textures/${id}.webp`)]
     }
 
     if (key.startsWith(PREFIX_DEVICE_MASKS)) {
       const id = await this.resolveBodySpriteId(key.slice(PREFIX_DEVICE_MASKS.length))
-      // AI-REMOVED 2026-08-31:
-      // Reason: top-view mask 已完成 WebP-only 迁移，同名 PNG 不是 active WebP 的等价回退。
-      // Trigger: 用户要求删除 PNG 回退并移除 PWA 重复下载。
-      // Evidence: 34 组 paired mask 解码像素均不同；8 个 PNG-only mask 已迁移为 lossless WebP。
-      // Replacement: 下方 WebP-only candidate。
-      // Risk: WebP 发布遗漏会显式进入 fallback texture，便于暴露产物错误。
-      // Human Review: Required
-      //
-      // Original code:
-      // return [
-      //   createPublicAssetUrl(`${TOP_VIEW_ASSET_ROOT}/sprite-masks/${id}.webp`),
-      //   createPublicAssetUrl(`${TOP_VIEW_ASSET_ROOT}/sprite-masks/${id}.png`),
-      // ]
       return [createPublicAssetUrl(`${TOP_VIEW_ASSET_ROOT}/sprite-masks/${id}.webp`)]
     }
 
     if (key.startsWith(PREFIX_ITEM_ICON)) {
       const id = key.slice(PREFIX_ITEM_ICON.length)
-      // AI-REMOVED 2026-08-31:
-      // Reason: item icon 发布边界只允许 WebP，不再维护不存在的 PNG 候选。
-      // Trigger: 用户要求全部 public 位图统一 WebP 并删除 PNG fallback。
-      // Evidence: public/item-icons 当前全部为 WebP，目标浏览器均支持 WebP。
-      // Replacement: 下方 WebP-only candidate。
-      // Risk: 缺失 WebP 时进入既有 fallback texture。
-      // Human Review: Required
-      //
-      // Original code:
-      // return [createPublicAssetUrl(`item-icons/${id}.webp`), createPublicAssetUrl(`item-icons/${id}.png`)]
       return [createPublicAssetUrl(`item-icons/${id}.webp`)]
     }
 
@@ -491,10 +390,6 @@ class TextureActionsImpl implements TextureActions {
 /**
  * 工厂函数，是 src/renderer/texture 对目录外唯一的公开入口。
  * 返回的 TextureActions 只有 getTexture 与 destroy 两个方法。
- * AI-CORRECTION 2026-09-05: 增加 getDeviceAnimation，按 spriteId 共享完整四阶段纹理与并集遮罩。
- * AI-CORRECTION 2026-09-06: 增加动画分页驻留统计；getDeviceAnimation 改为按实例返回页级纹理会话。
- * AI-CORRECTION 2026-09-10: 增加物流静态图集、可释放的动态材质会话及驻留统计。
- * AI-CORRECTION 2026-09-12: 增加只读 performanceDiagnostics，采集动画生命周期及实际 WebGL 上传。
  * textureConfig 作为内部状态由 render host 持有，不额外 export。
  */
 export function createTextureActions(options: {
@@ -506,24 +401,3 @@ export function createTextureActions(options: {
   return new TextureActionsImpl(options)
 }
 
-// AI-REMOVED 2026-09-13:
-// Reason: 取消调试预算开关，整套与 20 秒规则始终生效。
-// Trigger: 用户要求任一动画触发全阶段全帧驻留，最后同类实例离屏超过 20 秒才回收。
-// Evidence: 原软预算会裁剪阶段，5 秒离屏策略提前取消队列。
-// Replacement: DeviceAnimationTextureCache.reconcileResidency
-// Risk: 全量驻留提高内存与显存占用。
-// Human Review: Required
-// Original code:
-// /** 仅调试实验覆盖软预算；不推测设备显存，不新增产品设置。 */
-// function readAnimationResidencyBudget(debug: boolean): number {
-//   if (debug) {
-//     try {
-//       const raw = localStorage.getItem("industrial-planner:animation-residency-mib")
-//       const mib = raw === null || raw.trim() === "" ? NaN : Number(raw)
-//       if (Number.isFinite(mib) && mib >= 0 && mib <= 4096) return mib * 1024 * 1024
-//     } catch {
-//       // 存储不可用时使用实验默认预算。
-//     }
-//   }
-//   return DEFAULT_ANIMATION_RESIDENCY_BYTES
-// }

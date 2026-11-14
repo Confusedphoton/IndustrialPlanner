@@ -27,19 +27,15 @@ import type { EntityDefinition } from "@/domain/registry/types/entity-definition
 import { collapseEntityVariantDefinitions } from "@/shared/entity-variants";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GridPoint, GridRect, GridRotation } from "@/domain/shared/grid";
+import type { LogisticsRole } from "@/domain/shared/logistics";
+import {
+  resolveLogisticsDeviceIdForRole,
+  resolveSingleSelectedLogisticsDevice,
+  swapLogisticsDeviceRole,
+} from "@/app/logistics-role-swap";
 import { runInAction } from "mobx";
 
 import type { GestureHandleResult, GestureMappingModule, ShortcutActionRoute } from "../types";
-// AI-REMOVED 2026-09-10:
-// Reason: 操作模式总开关已废弃，不再保留关闭分支
-// Trigger: 用户要求彻底移除 hypergryphOperationMode。
-// Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-// Replacement: gesture-action-router.ts 的默认启用语义
-// Risk: 历史 false 设置统一使用当前操作行为。
-// Human Review: Required
-//
-// Original code:
-// import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 import {
   didPreviewRectChange,
   isPreviewBoundingBoxAtClientPoint,
@@ -57,19 +53,39 @@ type PendingPlacementEnter = {
   initialMousePosition: GesturePosition | null;
 };
 
-// AI-REMOVED 2026-11-12:
-// Reason: 模块全局桥接值会串扰多张画布。
-// Trigger: REQ-048 画布交互隔离。
-// Evidence: 两个 Router 共用此模块作用域。
-// Replacement: CanvasInteractionController.pendingPlacementEnter
-// Risk: 需验证连续放置及工具切换顺序。
-// Human Review: Required
-// Original code:
-// let pendingPlacementEnter: PendingPlacementEnter | null = null;
 
 
 // 2026-05-19 订正：将进入参数从 state.runtime 中收回，改为手势模块私有闭包变量。
 // 触发点只写此变量 + setActiveTool，on-enter 执行业务（创建 draft / 同步 UI）。
+// ─── 2026-11-13：物流设备快捷插入 ───
+
+const TRANSPORT_INSERT_SHORTCUTS: readonly { readonly shortcutId: ShortcutKeyId; readonly role: LogisticsRole }[] = [
+  { shortcutId: SHORTCUT_KEY.INSERT_SPLITTER, role: "splitter" },
+  { shortcutId: SHORTCUT_KEY.INSERT_CONVERGER, role: "converger" },
+  { shortcutId: SHORTCUT_KEY.INSERT_CONNECTOR, role: "connector" },
+  { shortcutId: SHORTCUT_KEY.INSERT_ADMISSION, role: "admission" },
+];
+
+/**
+ * 按光标下的设备（或正在绘制的物流类型）判定传送带/管道族，返回对应角色的物流设备 ID。
+ * 光标不在管道族上时默认传送带族。
+ */
+function resolveTransportInsertDeviceId(
+  canvas: CanvasInteractionController,
+  editor: EditorContract,
+  role: LogisticsRole,
+): string | null {
+  const queries = canvas.registry.queries;
+  const hoveredDefinitionId = editor.state.hoverTarget?.entity?.definitionId ?? null;
+  const drawingKind = canvas.state.activeTool === "logistics-placement"
+    ? canvas.state.runtime.logisticsPlacement.kind
+    : null;
+  const usePipe = hoveredDefinitionId !== null
+    ? queries.isPipeFamily(hoveredDefinitionId)
+    : drawingKind === "pipe";
+  return resolveLogisticsDeviceIdForRole(canvas.registry, usePipe ? "pipe" : "belt", role);
+}
+
 export function setPendingSinglePlacementEnter(canvas: CanvasInteractionController, data: PendingPlacementEnter): void {
   canvas.pendingPlacementEnter = data;
 }
@@ -249,16 +265,6 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
 
   return {
     id: "hypergryph-single-placement-gesture",
-    // AI-REMOVED 2026-09-10:
-    // Reason: 操作模式总开关已废弃，不再保留关闭分支
-    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-    // Replacement: gesture-action-router.ts 的默认启用语义
-    // Risk: 历史 false 设置统一使用当前操作行为。
-    // Human Review: Required
-    //
-    // Original code:
-    // when: isHypergryphGestureEnabled,
     shortcutRoutes: [
       ...(Object.entries(PLACEMENT_GROUP_SHORTCUTS) as Array<[PlacementGroup, ShortcutKeyId]>)
         .filter(([group]) => group !== "beltLogistics" && group !== "pipeLogistics")
@@ -274,6 +280,59 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           },
           handle: (_event, context) => handleSelectPlacementGroup(context.canvas, group),
         })),
+      ...TRANSPORT_INSERT_SHORTCUTS.map<ShortcutActionRoute<AppHost>>(({ shortcutId, role }) => ({
+        id: `transport-insert.${role}`,
+        operation: "confirm-placement",
+        actionId: shortcutId,
+        binding: { kind: "configurable", shortcutId },
+        scope: {
+          inputLayers: ["canvas"] as const,
+          activeTools: ["select", "single-placement", "logistics-placement"] as const,
+        },
+        triggerPolicy: { kind: "exact" as const },
+        handle: (_event, context) => {
+          const editor = context.canvas.editor;
+          if (editor === null) {
+            return { status: "ignored" };
+          }
+          // 选择工具下恰好选中一个物流设备时，快捷键改为原位切换其类型。
+          if (context.canvas.state.activeTool === "select") {
+            const selected = resolveSingleSelectedLogisticsDevice(editor, context.canvas.registry);
+            if (selected !== null) {
+              swapLogisticsDeviceRole({ editor, registry: context.canvas.registry, entityId: selected.entityId, role });
+              return { status: "handled" };
+            }
+          }
+          const deviceId = resolveTransportInsertDeviceId(context.canvas, editor, role);
+          if (deviceId === null) {
+            return { status: "ignored" };
+          }
+          // 光标在同族传送带/管道上时沿用其朝向，单击即可替换该格完成插入。
+          const hovered = editor.state.hoverTarget?.entity ?? null;
+          const queries = context.canvas.registry.queries;
+          const alignedRotation = hovered !== null
+            && (queries.isBeltFamily(hovered.definitionId) || queries.isPipeFamily(hovered.definitionId))
+            ? hovered.rotation
+            : null;
+          const applyRuntime = () => runInAction(() => {
+            context.canvas.state.runtime.singlePlacementRotation = alignedRotation;
+            context.canvas.state.runtime.singlePlacementConfig = null;
+          });
+          applyRuntime();
+          const result = handlePlacementEntryButtonTap({
+            canvas: context.canvas,
+            editor,
+            deviceId,
+            source: "mouse",
+            allowFromAnyTool: true,
+            initialMousePosition: lastMousePosition,
+          });
+          if (context.canvas.state.runtime.singlePlacementDeviceId === deviceId) {
+            applyRuntime();
+          }
+          return result;
+        },
+      })),
       ...PLACEMENT_DEVICE_SHORTCUT_KEYS.map<ShortcutActionRoute<AppHost>>((shortcut, shortcutIndex) => ({
         id: `placement-device.${shortcutIndex}`,
         operation: "confirm-placement",
@@ -425,15 +484,6 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
         lastMousePosition = event.position;
       }
 
-      // AI-REMOVED 2026-08-30:
-      // Reason: select 下的 7 个放置分组与 10 个固定数字键已迁入独立 Route。
-      // Trigger: ST2-RQ-020 要求固定 Action 与可配置 Action 一起参与输入层关系。
-      // Evidence: placement-group.* 与 placement-device.* Route 均限定 canvas/select。
-      // Replacement: shortcutRoutes in createHypergryphSinglePlacementGestureModule
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
       /*
       if (
         event.type === "key down"
@@ -508,15 +558,6 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
         case "tap-long-press-ready":
           return { status: "handled" };
 
-        // AI-REMOVED 2026-08-30:
-        // Reason: 单体放置的 Tab 与 R 已迁入同 Action 的模式 Route。
-        // Trigger: ST2-RQ-020 操作模式 modifier 语义统一。
-        // Evidence: single-placement.switch-device-mode/current-operation.rotate-single-placement。
-        // Replacement: shortcutRoutes in createHypergryphSinglePlacementGestureModule
-        // Risk: Low
-        // Human Review: Required
-        //
-        // Original code:
         /*
         case "key down":
           if (isSwitchDeviceModeShortcut({
@@ -763,29 +804,6 @@ function handlePlacementEntryButtonTap(options: {
   });
 }
 
-// AI-REMOVED 2026-08-30:
-// Reason: Route 已确定放置分组，handler 不再重复解析按键。
-// Trigger: ST2-RQ-020 可执行 Route 单一事实源。
-// Evidence: placement-group.* Route 直接把 group 传入替代函数。
-// Replacement: handleSelectPlacementGroup in this file
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// function handleSelectPlacementGroupShortcut(options: {
-//   appHost: AppHost;
-//   code: string | null;
-//   key: string | null;
-//   modifiers: { alt: boolean; ctrl: boolean; meta: boolean };
-// }): GestureHandleResult {
-//   const group = resolvePlacementGroupByShortcut(options);
-//   if (group === null) return { status: "ignored" };
-//   if (!hasPlaceableEntityDefinitionInCurrentBase(options.appHost, group)) {
-//     return { status: "ignored" };
-//   }
-//   options.appHost.internalState.runtime.selectingPlacementGroup = group;
-//   return { status: "handled" };
-// }
 function handleSelectPlacementGroup(canvas: CanvasInteractionController, group: PlacementGroup): GestureHandleResult {
   if (!canvas.canUseWorkbenchActions || !canvas.isOperationEnabled("confirm-placement")
     || !hasPlaceableEntityDefinitionInCurrentBase(canvas, group)) {
@@ -796,33 +814,6 @@ function handleSelectPlacementGroup(canvas: CanvasInteractionController, group: 
   return { status: "handled" };
 }
 
-// AI-REMOVED 2026-08-30:
-// Reason: 固定数字键 Route 已解析 shortcutIndex，handler 不再重复解析键盘事件。
-// Trigger: ST2-RQ-020 固定 Action 路由统一。
-// Evidence: placement-device.* Route 直接携带 shortcutIndex。
-// Replacement: handleSelectPlacementDeviceShortcutIndex below
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// function handleSelectPlacementDeviceShortcut(options: {
-//   appHost: AppHost;
-//   editor: EditorContract;
-//   registry: RegistryContract;
-//   lastMousePosition: GesturePosition | null;
-//   code: string | null;
-//   key: string | null;
-//   modifiers: {
-//     alt: boolean;
-//     ctrl: boolean;
-//     meta: boolean;
-//     shift: boolean;
-//   };
-// }): GestureHandleResult {
-//   const shortcutIndex = resolveDeviceShortcutIndex(options);
-//   if (shortcutIndex === null) {
-//     return { status: "ignored" };
-//   }
 function handleSelectPlacementDeviceShortcutIndex(options: {
   canvas: CanvasInteractionController;
   editor: EditorContract | null;
@@ -1276,6 +1267,8 @@ function clearPlacementUi(canvas: CanvasInteractionController): void {
   runInAction(() => {
     canvas.state.runtime.placementAnchor = null;
     canvas.state.runtime.singlePlacementDeviceId = null;
+    canvas.state.runtime.singlePlacementConfig = null;
+    canvas.state.runtime.singlePlacementRotation = null;
     canvas.state.runtime.singlePlacementPointerMode = null;
     canvas.state.runtime.singlePlacementContinuous = false;
   });
@@ -1562,7 +1555,6 @@ function continuePlacementOperation(
   }
 
   // 连续放置复用刚提交的实际位置；鼠标移动后 placementAnchor 仍是首次创建 draft 的锚点。
-  // AI-CORRECTION 2026-09-23: 鼠标移动现同步 placementAnchor；鼠标连续放置用绝对指针位置回正，原位置仅供触控或无画布指针时恢复。
   if (
     continuation.pointerMode === "mouse"
     && currentMousePosition !== null
@@ -1674,7 +1666,7 @@ function isClientPointInsideViewport(
     && position.y <= clientRect.top + clientRect.height;
 }
 
-// 2026-06-23: mouse 模式延迟创建 placement draft。
+// mouse 模式延迟创建 placement draft。
 // 鼠标滑入 canvas 时才首次创建 draft，而非点击按钮时立即出现。
 function ensurePlacementDraftForMouse(
   canvas: CanvasInteractionController,
@@ -1717,15 +1709,6 @@ function areGridRectsEqual(left: GridRect, right: GridRect): boolean {
     && left.height === right.height;
 }
 
-// AI-REMOVED 2026-08-30:
-// Reason: 旧辅助函数自行解释 modifier 和模式，形成与可执行 Shortcut Route 并列的第二套作用域真相。
-// Trigger: ST2-RQ-020 要求运行时执行与设置冲突判定共用同一条 Action Route。
-// Evidence: 全仓调用检索仅命中这些定义；实际键盘入口已迁移到本模块 shortcutRoutes。
-// Replacement: createHypergryphSinglePlacementGestureModule().shortcutRoutes
-// Risk: 若仓库外部曾直接导入两个 export helper，需要同步改为查询 GestureActionRouter。
-// Human Review: Required
-//
-// Original code:
 /*
 function isRotatePlacementShortcut(options: {
   appHost: AppHost;
@@ -1737,134 +1720,7 @@ function isRotatePlacementShortcut(options: {
     meta: boolean;
   };
 }): boolean {
-  // AI-REMOVED 2026-08-02:
-  // Reason: 放置模式快捷键不再拒绝修饰键组合
-  // Trigger: Ctrl 连续放置时按 R 误触 Ctrl+R 旋转画布；用户要求放置/移动模式快捷键可与任意 modifier 组合
-  // Evidence: 事件路由按注册顺序分发，本模块消费 key down 后 viewport-rotation 模块不再收到
-  // Replacement: 移除 modifier 检查，isShortcutFor 未传 modifiers 时仅匹配主键
-  // Risk: 放置模式下 Ctrl+R 不再旋转画布（预期）；浏览器级组合键可能同时触发系统行为（如 Ctrl+F 查找）
-  // Human Review: Required
-  //
-  // if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
-  //   return false;
-  // }
-
-  return options.appHost.internalActions.isShortcutFor(
-    SHORTCUT_KEY.ROTATE,
-    options.code,
-    options.key,
-  );
-}
-
-function isSwitchDeviceModeShortcut(options: {
-  appHost: AppHost;
-  code: string | null;
-  key: string | null;
-  modifiers: {
-    alt: boolean;
-    ctrl: boolean;
-    meta: boolean;
-  };
-}): boolean {
-  // AI-REMOVED 2026-08-02:
-  // Reason: 放置模式快捷键不再拒绝修饰键组合
-  // Trigger: Ctrl 连续放置时按快捷键无响应；用户要求放置/移动模式快捷键可与任意 modifier 组合
-  // Evidence: 事件路由按注册顺序分发，本模块消费 key down 后后续模块不再收到
-  // Replacement: 移除 modifier 检查，isShortcutFor 未传 modifiers 时仅匹配主键
-  // Risk: 放置模式下 Ctrl+Tab 同时触发切换设备变体与浏览器标签行为（浏览器组合键无法被 JS 完全拦截）
-  // Human Review: Required
-  //
-  // if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
-  //   return false;
-  // }
-
-  return options.appHost.internalActions.isShortcutFor(
-    SHORTCUT_KEY.SWITCH_DEVICE_MODE,
-    options.code,
-    options.key,
-  );
-}
-
-export function resolvePlacementGroupByShortcut(options: {
-  appHost: AppHost;
-  code: string | null;
-  key: string | null;
-  modifiers: {
-    alt: boolean;
-    ctrl: boolean;
-    meta: boolean;
-  };
-  // 2026-08-02 新增：放置模式调用方传 true 以允许修饰键组合；select 模式默认仍拒绝。
-  allowModifierKeys?: boolean;
-}): PlacementGroup | null {
-  // AI-CORRECTION 2026-08-02:
-  // 原逻辑：带 alt/ctrl/meta 一律拒绝。
-  // 新行为：allowModifierKeys=true（物流放置模式）时不再拒绝；select 模式默认仍拒绝。
-  if (
-    options.allowModifierKeys !== true
-    && (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta)
-  ) {
-    return null;
-  }
-
-  for (const [group, shortcutKeyId] of Object.entries(PLACEMENT_GROUP_SHORTCUTS)) {
-    if (options.appHost.internalActions.isShortcutFor(shortcutKeyId, options.code, options.key)) {
-      return group as PlacementGroup;
-    }
-  }
-
-  return null;
-}
-
-export function resolveDeviceShortcutIndex(options: {
-  code: string | null;
-  key: string | null;
-  modifiers: {
-    alt: boolean;
-    ctrl: boolean;
-    meta: boolean;
-    shift: boolean;
-  };
-  // 2026-08-02 新增：放置模式调用方传 true 以允许修饰键组合；select 模式默认仍拒绝。
-  allowModifierKeys?: boolean;
-}): number | null {
-  // AI-CORRECTION 2026-08-02:
-  // 原逻辑：带 alt/ctrl/meta/shift 一律拒绝。
-  // 新行为：allowModifierKeys=true（物流放置模式）时不再拒绝；select 模式默认仍拒绝。
-  if (
-    options.allowModifierKeys !== true
-    && (
-      options.modifiers.alt
-      || options.modifiers.ctrl
-      || options.modifiers.meta
-      || options.modifiers.shift
-    )
-  ) {
-    return null;
-  }
-
-  const key = options.key?.trim() ?? "";
-  const shortcut = PLACEMENT_DEVICE_SHORTCUT_KEYS.find((candidate) => candidate === key)
-    ?? resolveDeviceShortcutFromCode(options.code);
-
-  if (shortcut === undefined) {
-    return null;
-  }
-
-  const index = PLACEMENT_DEVICE_SHORTCUT_KEYS.indexOf(shortcut);
-  return index >= 0 ? index : null;
-}
-
-function resolveDeviceShortcutFromCode(code: string | null): typeof PLACEMENT_DEVICE_SHORTCUT_KEYS[number] | undefined {
-  const match = code?.match(/^(?:Digit|Numpad)([0-9])$/);
-  const digit = match?.[1];
-  if (digit === undefined) {
-    return undefined;
-  }
-
-  return PLACEMENT_DEVICE_SHORTCUT_KEYS.find((shortcut) => shortcut === digit);
-}
-*/
+  */
 
 export function resolveDeviceIdForPlacementGroupShortcut(options: {
   registry: RegistryContract;
@@ -1893,33 +1749,6 @@ export function resolveDeviceIdForPlacementGroupShortcut(options: {
   return visibleEntities[options.shortcutIndex]?.id ?? null;
 }
 
-// AI-REMOVED 2026-07-11:
-// Reason: 触控拖动吸附设备时，footprint 可能只在某个轴跟随手指，另一个轴被吸附锁定；旧函数的全量匹配会阻止 anchor 局部更新并放大后续位移。
-// Trigger: 用户反馈移动端净水节点吸附后，手指只移动一小截设备就飞出屏幕。
-// Evidence: drivePlacementPreviewWithPerf / drivePlacementPreview 已改用 resolveTouchDragAnchorAfterPreviewMove 按轴更新 anchor。
-// Replacement: src/app/input/gesture/actions/hypergryph/mobile-preview-bounds.ts resolveTouchDragAnchorAfterPreviewMove
-// Risk: Low；普通非吸附拖动在两个轴上仍会得到相同 anchor 更新结果。
-// Human Review: Required
-//
-// Original code:
-// function didRectMoveByGridVector(options: {
-//   beforeRect: GridRect;
-//   afterRect: GridRect;
-//   startGridPoint: GridPoint;
-//   endGridPoint: GridPoint;
-// }): boolean {
-//   const vector = {
-//     x: options.endGridPoint.x - options.startGridPoint.x,
-//     y: options.endGridPoint.y - options.startGridPoint.y,
-//   };
-//
-//   return (
-//     options.afterRect.x === options.beforeRect.x + vector.x
-//     && options.afterRect.y === options.beforeRect.y + vector.y
-//     && options.afterRect.width === options.beforeRect.width
-//     && options.afterRect.height === options.beforeRect.height
-//   );
-// }
 
 function areGridPointsEqual(left: GridPoint, right: GridPoint): boolean {
   return left.x === right.x && left.y === right.y;

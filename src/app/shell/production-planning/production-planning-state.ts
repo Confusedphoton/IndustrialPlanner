@@ -17,7 +17,7 @@ export class ProductionPlanningInputStore {
   displayMode: ProductionPlanningDisplayMode = "item";
   viewMode: ProductionPlanningViewMode = "tree";
   useModules = false;
-  /** 2026-08-29：字段名沿用持久化键，值现为带命名空间的生产候选 ID。 */
+  /** 字段名沿用持久化键，值现为带命名空间的生产候选 ID。 */
   recipeChoices: Record<string, string> = {};
   sourceConfig: ProductionPlanningSourceConfig = {
     waterPolicy: "use-byproduct",
@@ -53,7 +53,6 @@ export class ProductionPlanningInputStore {
   }
 
   /** 新建仅重置任务内容，沿用已恢复的配方偏好、来源策略与显示设置。 */
-  // AI-CORRECTION 2026-10-30：新建会清空全部目标，因此同步清空配方偏好；来源策略与显示设置保留。
   startNewSession(): void {
     this.targets = [];
     this.recipeChoices = {};

@@ -22,16 +22,6 @@ import {
 } from "./v2-migration-keys";
 
 const LEGACY_SYSTEM_RECIPE_MODULE_ID_PREFIX = "system_recipe:";
-// AI-REMOVED 2026-09-01:
-// Reason: 模块图标不再接受设备 ID，磨碎机不能继续作为迁移默认图标。
-// Trigger: 模块图标升级为 1～4 个物品 ID。
-// Evidence: ModuleBalancingCustomModule.iconItemIds 的成员只能由物品图标解析。
-// Replacement: DEFAULT_MIGRATED_MODULE_ICON_ITEM_ID
-// Risk: 无端口的历史空模块会改用稳定物品占位图标，需要人工复核其业务含义。
-// Human Review: Required
-//
-// Original code:
-// const DEFAULT_MIGRATED_MODULE_ICON_ID = "grinder_1";
 const DEFAULT_MIGRATED_MODULE_ICON_ITEM_ID = "item_iron_ore";
 const DEFAULT_WAREHOUSE_CAPACITY = 68000;
 const MODULE_COLOR_BY_LEGACY_KEY: Readonly<Record<string, string>> = {

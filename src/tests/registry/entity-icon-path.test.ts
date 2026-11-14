@@ -12,7 +12,6 @@ describe("entity icon paths", () => {
     for (const definition of definitions) {
       expect(definition.iconPath).not.toMatch(/^(?:\/|[a-z][a-z\d+\-.]*:)/i);
       expect(definition.iconPath.split("/")).not.toContain("..");
-      // AI-CORRECTION 2026-10-15: 用户允许缘缘庄新田块暂缺列表图标，保留独立路径并使用既有UI占位符。
       if (definition.id.startsWith("soil_corp_")) {
         expect(definition.iconPath).toBe(`device-icons/item_port_${definition.id}.webp`);
       } else {

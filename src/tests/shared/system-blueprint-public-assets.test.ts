@@ -70,7 +70,7 @@ describe("system-blueprint public assets", () => {
       },
     });
     expect(valley4FolderDirectory.blueprints[0]?.entityOrder).toHaveLength(227);
-    // 2026-06-10: 蓝图导入后取货口的 warehouse link 写入 slotLinks，不再为空。
+    // 蓝图导入后取货口的 warehouse link 写入 slotLinks，不再为空。
     expect(valley4FolderDirectory.blueprints[0]?.slotLinks.length).toBeGreaterThan(0);
     expect(valley4FolderDirectory.blueprints[0]?.entities.legacy_429609a4_0082).toMatchObject({
       definitionId: "belt_turn_cw_1x1",
@@ -93,7 +93,7 @@ describe("system-blueprint public assets", () => {
       },
     });
     expect(wulingFolderDirectory.blueprints[0]?.entityOrder).toHaveLength(148);
-    // 2026-06-10: dual-oven-xiranite 没有取货口，但迁移后 dudpipe_unloader 的 warehouse link 也在 slotLinks 中。
+    // dual-oven-xiranite 没有取货口，但迁移后 dudpipe_unloader 的 warehouse link 也在 slotLinks 中。
     expect(wulingFolderDirectory.blueprints[0]?.slotLinks.length).toBeGreaterThanOrEqual(0);
     expect(wulingFolderDirectory.blueprints[0]?.entities.legacy_c96944de_0009).toMatchObject({
       definitionId: "belt_turn_cw_1x1",
@@ -111,7 +111,7 @@ describe("system-blueprint public assets", () => {
       sourcePath: "wuling-battery-line.json",
     });
     expect(wulingFolderDirectory.blueprints[1]?.entityOrder).toHaveLength(338);
-    // 2026-06-10: 蓝图导入后取货口的 warehouse link 写入 slotLinks。
+    // 蓝图导入后取货口的 warehouse link 写入 slotLinks。
     expect(wulingFolderDirectory.blueprints[1]?.slotLinks.length).toBeGreaterThan(0);
 
     const chishiFolderDirectory = listSystemBlueprintDirectory(
@@ -130,7 +130,7 @@ describe("system-blueprint public assets", () => {
       },
     });
     expect(chishiFolderDirectory.blueprints[0]?.entityOrder).toHaveLength(188);
-    // 2026-06-10: 蓝图导入后取货口的 warehouse link 写入 slotLinks。
+    // 蓝图导入后取货口的 warehouse link 写入 slotLinks。
     expect(chishiFolderDirectory.blueprints[0]?.slotLinks.length).toBeGreaterThan(0);
     expect(chishiFolderDirectory.blueprints[0]?.entities.legacy_f00abb80_0014).toMatchObject({
       definitionId: "belt_turn_cw_1x1",

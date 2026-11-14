@@ -1,14 +1,8 @@
 import { act } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { BlueprintPlannerDialog } from "@/app/shell/blueprint-planner-dialog";
-import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
-import separator from "../blueprint-planner/fixtures/separator-core.json";
 import { ProductionPlanningPanel } from "@/app/shell/production-planning/production-planning-panel";
 import { createProductionPlanningRecipeCandidateId } from "@/app/shell/production-planning/production-planning-candidate";
 import { ToolboxDialog } from "@/app/shell/dialogs/toolbox-dialog";
-import { LeftToolbar } from "@/app/shell/layout/left-toolbar";
-import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
-import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { TOOLBOX_DIALOG_TAB_IDS } from "@/app/state/state-impl";
 import { createDefaultPlannerSessionState, loadPlannerState, savePlannerState, type PlannerPersistedState } from "@/shared/storage/planner-storage";
 import { createAppTestWorkspace } from "../helpers/app-test-workspace";
@@ -18,7 +12,7 @@ import { createFakeIndexedDbFactory } from "../shared/fake-indexed-db";
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
-  // 2026-10-29：新建用例组合真实规划任务面板；沿用 options 测试的 jsdom 接口补齐，不提供虚构尺寸。
+  // 新建用例组合真实规划任务面板；沿用 options 测试的 jsdom 接口补齐，不提供虚构尺寸。
   vi.stubGlobal("ResizeObserver", class {
     observe() {}
     unobserve() {}
@@ -26,33 +20,6 @@ beforeEach(() => {
   });
 });
 afterEach(() => { localStorage.clear(); vi.unstubAllGlobals(); });
-
-it.each([true, false])("错误循环统一提示并禁止自动规划，植物回流可继续，错误=%s", async invalid => {
-  const { app, workspace } = createAppTestWorkspace();
-  const planner = createBlueprintPlannerHost(workspace, { storage: { load: async () => [], save: async () => {}, delete: async () => {} } });
-  workspace.blueprintPlanner = planner;
-  await planner.whenSettled();
-  await savePlannerState(initialState({
-    targets: [{ id: "target", itemId: invalid ? "item_gas_copper" : "item_plant_grass_powder_2", perMinute: 30 }],
-    supplies: [{ id: "gas", itemId: "item_gas_xiranite", perMinute: 60, isInfinite: true }],
-    recipeChoices: invalid ? { item_gas_copper: "liquid_transmuter_2_gas_gas_copper_1",
-      item_copper_nugget: "liquid_transmuter_2_solid_copper_nugget_1" } : {},
-  }));
-  const view = await mountTestComponent(<ProductionPlanningPanel appHost={app} isTouch={false} onOpenGeneratedModuleEditor={() => {}} />);
-  try {
-    await vi.waitFor(async () => { await settleTestDom(); expect(buttonWithText(view.container, "计算").disabled).toBe(false); });
-    await clickTestElement(buttonWithText(view.container, "计算"));
-    expect(buttonWithText(view.container, "自动规划该产线").disabled).toBe(invalid);
-    if (invalid) {
-      expect(view.container.querySelector('[role="alert"]')?.textContent).toMatch(/错误循环.*气态赤铜/);
-      expect(view.container.querySelector('[class*="is-error-cycle"]')).not.toBeNull();
-      for (const mode of ["树表", "流程图"]) {
-        await clickTestElement(buttonWithText(view.container, mode));
-        expect(view.container.querySelector('[role="alert"]')?.textContent).toContain("错误循环");
-      }
-    } else expect(view.container.querySelector('[role="alert"]')).toBeNull();
-  } finally { await view.unmount(); planner.dispose(); await planner.whenSettled(); app.dispose(); }
-});
 
 function initialState(patch: Partial<PlannerPersistedState>): PlannerPersistedState {
   return {
@@ -111,14 +78,6 @@ it("输入态配置模块和计算，结果态只展示视图与产线操作，�
     expect(toggle.closest("label")?.textContent).toContain("使用模块");
     expect(toolbar.contains(buttonWithText(view.container, "计算"))).toBe(true);
     expect(view.container.querySelector(".production-planning-input-footer")).toBeNull();
-    // AI-REMOVED 2026-10-26:
-    // Reason: 引导从文字标签改为实际界面示意，不再要求标签文字直接相邻。
-    // Trigger: 用户要求突出两个视图中的按钮位置。
-    // Evidence: 新引导以 role=img 分别描述树表详情和工序图弹窗。
-    // Replacement: 下方两幅带位置说明的界面示意断言。Risk: Low。Human Review: Required
-    // Original code:
-    // expect(view.container.querySelector(".production-planning-material-guide")?.textContent)
-    //   .toContain("树表设为原料工序图设为原料");
     const guide = view.container.querySelector(".production-planning-material-guide")!;
     expect([...guide.querySelectorAll('figure > [role="img"]')].map(image => image.getAttribute("aria-label")))
       .toEqual(["树表 · 右侧详情", "工序图 · 点击节点后的弹窗"]);
@@ -126,10 +85,8 @@ it("输入态配置模块和计算，结果态只展示视图与产线操作，�
     expect(buttonWithText(view.container, "选择原料")).toBeDefined();
     await clickTestElement(buttonWithText(view.container, "计算"));
     expect(view.container.querySelector('[class*="process-graph-canvas"]')).not.toBeNull();
-    expect(toolbar.contains(buttonWithText(view.container, "自动规划该产线"))).toBe(true);
     expect([...toolbar.querySelectorAll("button")].some(button => button.textContent?.trim() === "计算")).toBe(false);
     expect(toolbar.querySelector('input[role="switch"]')).toBeNull();
-    expect(toolbar.querySelector(".production-planning-toolbar-controls")?.lastElementChild?.textContent).toBe("自动规划该产线");
     await clickTestElement(buttonWithText(view.container, "树表"));
     expect(view.container.querySelector(".production-planning-tree-table")).not.toBeNull();
     await clickTestElement(buttonWithText(view.container, "修改"));
@@ -256,37 +213,6 @@ it.each([false, true])("自然资源和农作物默认显示数量，可在各�
   } finally { await view.unmount(); app.dispose(); }
 });
 
-it.each([null, false, true])("EDA 工具栏和产线入口默认可用，不受旧开关值 %s 影响", async legacyEnabled => {
-  if (legacyEnabled !== null) localStorage.setItem("industrial-planner.experimental.eda", JSON.stringify(legacyEnabled));
-  localStorage.setItem("v3-user-settings-dialog", JSON.stringify({ values: {
-    "other-experimental-features": false,
-    "experimental-blueprint-planner": legacyEnabled,
-  } }));
-  const { app, workspace } = createAppTestWorkspace();
-  const editor = createEditorTestHost(workspace, { persistence: "memory" });
-  const planner = createBlueprintPlannerHost(workspace);
-  await savePlannerState(initialState({ targets: [{ id: "target", itemId: "item_xiranite_powder", perMinute: 30 }] }));
-  const view = await mountTestComponent(<>
-    <LeftToolbar appHost={app} />
-    <ProductionPlanningPanel appHost={app} isTouch={false} onOpenGeneratedModuleEditor={() => {}} />
-  </>);
-  try {
-    await clickTestElement(buttonWithText(view.container, app.actions.translate("eda.toolbar")));
-    expect(app.blueprintPlannerDialog.dialogState.visible).toBe(true);
-    await act(async () => app.blueprintPlannerDialog.close());
-    await vi.waitFor(async () => { await settleTestDom(); expect(buttonWithText(view.container, "计算").disabled).toBe(false); });
-    await clickTestElement(buttonWithText(view.container, "计算"));
-    const planButton = () => buttonWithText(view.container, app.actions.translate("eda.planThisLine"));
-    await vi.waitFor(async () => { await settleTestDom(); expect(planButton().disabled).toBe(false); });
-    await clickTestElement(planButton());
-    expect(app.blueprintPlannerDialog.dialogState.visible).toBe(true);
-    expect(app.blueprintPlannerDialog.plan?.targets).toEqual(expect.arrayContaining([
-      expect.objectContaining({ itemId: "item_xiranite_powder", perMinute: 30 }),
-    ]));
-    expect(localStorage.getItem("industrial-planner.experimental.eda")).toBe(legacyEnabled === null ? null : JSON.stringify(legacyEnabled));
-  } finally { await view.unmount(); planner.dispose(); editor.dispose(); app.dispose(); }
-});
-
 it.each([false, true])("自然资源无限切换保留有限速率，恢复后影响真实计算，触控布局=%s", async isTouch => {
   const { app } = createAppTestWorkspace();
   const natural = app.workspace.registry.itemDefinitions.filter(item => item.tags.includes("自然资源")).map(item => item.id);
@@ -349,17 +275,12 @@ it("转为模块先打开编辑草稿，保存后写入真实模块库并成为�
     const modules = app.internalState.workbench.toolbox.moduleBalancing.customModules;
     expect(modules).toHaveLength(1);
     expect(modules[0]).toMatchObject({ name: "息壤产线模块", outputs: [{ itemId: "item_xiranite_powder", perMinute: 30 }] });
-    // 2026-10-16：原木配方禁止自动选择后，锦草种植闭环额外消耗 15/min 清水，与息壤加工的 30/min 合计 45/min。
+    // 原木配方禁止自动选择后，锦草种植闭环额外消耗 15/min 清水，与息壤加工的 30/min 合计 45/min。
     expect(modules[0]!.inputs).toEqual(expect.arrayContaining([{ itemId: "item_liquid_water", perMinute: 45 }]));
     await act(async () => { app.internalActions.setDialogTab("toolbox", TOOLBOX_DIALOG_TAB_IDS[1]); });
     await clickTestElement(buttonWithText(view.container, "树表"));
     await vi.waitFor(async () => { await settleTestDom(); expect(view.container.textContent).toContain("自定义模块 · 由 息壤产线模块 产出"); });
     expect([...view.container.querySelectorAll("option")].filter(option => option.textContent === "息壤产线模块 · 自定义模块")).toHaveLength(1);
-    // AI-REMOVED 2026-10-29:
-    // Reason: 已确认的两态流程不再在结果页显示模块开关。Trigger: 本轮操作栏需求。
-    // Evidence: 浏览器三屏验证及该断言的 null.checked 错误。
-    // Replacement: 下方先确认结果页无开关，再返回输入页检查偏好。Risk: Low。Human Review: Required
-    // Original code: expect(view.container.querySelector<HTMLInputElement>('input[type="checkbox"]')!.checked).toBe(true);
     expect(view.container.querySelector('input[role="switch"]')).toBeNull();
     await clickTestElement(buttonWithText(view.container, "修改"));
     expect(view.container.querySelector<HTMLInputElement>('input[role="switch"]')!.checked).toBe(true);
@@ -402,158 +323,3 @@ it.each([false, true])("单线芽针以植物循环展示，回流详情可跳�
   }
 });
 
-// AI-REMOVED 2026-10-29:
-// Reason: 两态顶栏不再允许结果页直接计算或切换模块。
-// Trigger: 用户确认新交互。Evidence: ProductionPlanningPanel 两态分组。
-// Replacement: 本文件输入态／结果态测试。Risk: Low。Human Review: Required
-// Original code:
-// it("两页共用顶栏 Switch 和计算入口，原料为空时展示视图引导，每次计算默认打开工序图", async () => {
-//   const { app } = createAppTestWorkspace();
-//   await savePlannerState(initialState({ targets: [{ id: "target", itemId: "item_xiranite_powder", perMinute: 30 }] }));
-//   const view = await mountTestComponent(<ProductionPlanningPanel appHost={app} isTouch={false} onOpenGeneratedModuleEditor={() => {}} />);
-//   try {
-//     await vi.waitFor(async () => { await settleTestDom(); expect(buttonWithText(view.container, "计算").disabled).toBe(false); });
-//     const toolbar = view.container.querySelector(".production-planning-toolbar")!;
-//     const toggle = toolbar.querySelector<HTMLInputElement>('input[role="switch"]')!;
-//     expect(toggle.closest("label")?.textContent).toContain("使用模块");
-//     expect(toolbar.contains(buttonWithText(view.container, "计算"))).toBe(true);
-//     expect(view.container.querySelector(".production-planning-input-footer")).toBeNull();
-//     // AI-REMOVED 2026-10-26:
-//     // Reason: 引导从文字标签改为实际界面示意，不再要求标签文字直接相邻。
-//     // Trigger: 用户要求突出两个视图中的按钮位置。
-//     // Evidence: 新引导以 role=img 分别描述树表详情和工序图弹窗。
-//     // Replacement: 下方两幅带位置说明的界面示意断言。Risk: Low。Human Review: Required
-//     // Original code:
-//     // expect(view.container.querySelector(".production-planning-material-guide")?.textContent)
-//     //   .toContain("树表设为原料工序图设为原料");
-//     const guide = view.container.querySelector(".production-planning-material-guide")!;
-//     expect([...guide.querySelectorAll('figure > [role="img"]')].map(image => image.getAttribute("aria-label")))
-//       .toEqual(["树表 · 右侧详情", "工序图 · 点击节点后的弹窗"]);
-//     expect(guide.querySelectorAll("figure")).toHaveLength(2);
-//     expect(buttonWithText(view.container, "选择原料")).toBeDefined();
-//     await clickTestElement(buttonWithText(view.container, "计算"));
-//     expect(view.container.querySelector('[class*="process-graph-canvas"]')).not.toBeNull();
-//     expect(toolbar.contains(buttonWithText(view.container, "自动规划该产线"))).toBe(true);
-//     await clickTestElement(buttonWithText(view.container, "树表"));
-//     expect(view.container.querySelector(".production-planning-tree-table")).not.toBeNull();
-//     await clickTestElement(buttonWithText(view.container, "计算"));
-//     expect(view.container.querySelector('[class*="process-graph-canvas"]')).not.toBeNull();
-//     await clickTestElement(buttonWithText(view.container, "修改"));
-//     expect(view.container.querySelector('input[role="switch"]')).toBe(toggle);
-//     expect(view.container.querySelectorAll('input[role="switch"]')).toHaveLength(1);
-//   } finally { await view.unmount(); app.dispose(); }
-// });
-
-it.each([false, true])("新建清空任务内容和配方偏好并持久化空白，保留历史任务，挂载前新建=%s", async beforeMount => {
-  const { app, workspace } = createAppTestWorkspace();
-  const planner = createBlueprintPlannerHost(workspace);
-  await planner.whenSettled();
-  const plan = (separator.request as BlueprintPlannerRequest).plan;
-  await app.blueprintPlannerDialog.open(plan);
-  const taskId = app.blueprintPlannerDialog.viewTaskId!;
-  // AI-REMOVED 2026-10-29:
-  // Reason: 新建回归应使用当前持久化格式的候选 ID，旧式裸 ID 会在读取时自动补 recipe: 前缀。
-  // Trigger: 用户确认仅修正这两项测试夹具，保留所有断言。
-  // Evidence: run-kaLzqT 的两项失败及 planner-storage.ts normalizeRecipeChoices。
-  // Replacement: 下方 createProductionPlanningRecipeCandidateId 构造的输入。
-  // Risk: Low；旧 ID 迁移行为未修改。Human Review: Required
-  // Original code: const recipeChoices = { item_xiranite_powder: "xiranite_oven_xiranite_powder_2" };
-  const recipeChoices = { item_xiranite_powder: createProductionPlanningRecipeCandidateId("xiranite_oven_xiranite_powder_2") };
-  await savePlannerState(initialState({
-    targets: [{ id: "old", itemId: "item_xiranite_powder", perMinute: 30 }],
-    supplies: [{ id: "old-supply", itemId: "item_liquid_water", perMinute: 30 }], recipeChoices,
-    session: { ...createDefaultPlannerSessionState(), activeScreen: "result", treeScrollTop: 120,
-      processViewport: { x: 100, y: 100, scale: 2 } },
-  }));
-  if (beforeMount) app.internalActions.startNewProductionPlanning();
-  let view = await mountTestComponent(<>
-    <ProductionPlanningPanel appHost={app} isTouch={false} onOpenGeneratedModuleEditor={() => {}} />
-    <BlueprintPlannerDialog appHost={app} />
-  </>);
-  try {
-    if (!beforeMount) {
-      await vi.waitFor(async () => { await settleTestDom(); expect(view.container.querySelector(".is-result-screen")).not.toBeNull(); });
-      await clickTestElement(buttonWithText(view.container, "返回任务列表"));
-      const home = view.container.querySelector('main[aria-label="任务列表"]')!;
-      expect(home).not.toBeNull();
-      await clickTestElement(buttonWithText(home, "＋ 新建产线计算"));
-    }
-    await vi.waitFor(async () => {
-      await settleTestDom();
-      const saved = await loadPlannerState();
-      expect(saved?.targets).toEqual([]);
-      expect(saved?.supplies).toEqual([]);
-      expect(saved?.session).toEqual(createDefaultPlannerSessionState());
-      // AI-CORRECTION 2026-10-30：用户要求全部目标删除后清空偏好；历史任务仍独立保留。
-      expect(saved?.recipeChoices).toEqual({});
-    });
-    expect(buttonWithText(view.container, "计算").disabled).toBe(true);
-    expect(view.container.querySelector(".is-input-screen")).not.toBeNull();
-    expect(app.internalState.runtime.productionPlanningNewSessionRequested).toBe(false);
-    expect(planner.queries.getTask(taskId)).not.toBeNull();
-    await view.unmount();
-    view = await mountTestComponent(<ProductionPlanningPanel appHost={app} isTouch={false} onOpenGeneratedModuleEditor={() => {}} />);
-    await settleTestDom();
-    expect(buttonWithText(view.container, "计算").disabled).toBe(true);
-  } finally { await view.unmount(); planner.dispose(); app.dispose(); }
-});
-
-
-// AI-REMOVED 2026-11-11:
-// Reason: 新建产线入口迁到任务首页，测试先返回首页再新建；清空与持久化断言保持。
-// Trigger: 用户明确授权按新向导同步旧 UI 回归测试。
-// Evidence: REQ-047 UI 试做后的 7 项旧页面断言失败；业务接口与检查点语义未变化。
-// Replacement: 本文件新建清空任务内容测试。
-// Risk: Low；保留真实主机、数据隔离、暂停、复制及保存断言。
-// Human Review: Required
-// Original code:
-// it.each([false, true])("新建清空任务内容和配方偏好并持久化空白，保留历史任务，挂载前新建=%s", async beforeMount => {
-//   const { app, workspace } = createAppTestWorkspace();
-//   const planner = createBlueprintPlannerHost(workspace);
-//   await planner.whenSettled();
-//   const plan = (separator.request as BlueprintPlannerRequest).plan;
-//   await app.blueprintPlannerDialog.open(plan);
-//   const taskId = app.blueprintPlannerDialog.viewTaskId!;
-//   // AI-REMOVED 2026-10-29:
-//   // Reason: 新建回归应使用当前持久化格式的候选 ID，旧式裸 ID 会在读取时自动补 recipe: 前缀。
-//   // Trigger: 用户确认仅修正这两项测试夹具，保留所有断言。
-//   // Evidence: run-kaLzqT 的两项失败及 planner-storage.ts normalizeRecipeChoices。
-//   // Replacement: 下方 createProductionPlanningRecipeCandidateId 构造的输入。
-//   // Risk: Low；旧 ID 迁移行为未修改。Human Review: Required
-//   // Original code: const recipeChoices = { item_xiranite_powder: "xiranite_oven_xiranite_powder_2" };
-//   const recipeChoices = { item_xiranite_powder: createProductionPlanningRecipeCandidateId("xiranite_oven_xiranite_powder_2") };
-//   await savePlannerState(initialState({
-//     targets: [{ id: "old", itemId: "item_xiranite_powder", perMinute: 30 }],
-//     supplies: [{ id: "old-supply", itemId: "item_liquid_water", perMinute: 30 }], recipeChoices,
-//     session: { ...createDefaultPlannerSessionState(), activeScreen: "result", treeScrollTop: 120,
-//       processViewport: { x: 100, y: 100, scale: 2 } },
-//   }));
-//   if (beforeMount) app.internalActions.startNewProductionPlanning();
-//   let view = await mountTestComponent(<>
-//     <ProductionPlanningPanel appHost={app} isTouch={false} onOpenGeneratedModuleEditor={() => {}} />
-//     <BlueprintPlannerDialog appHost={app} />
-//   </>);
-//   try {
-//     if (!beforeMount) {
-//       await vi.waitFor(async () => { await settleTestDom(); expect(view.container.querySelector(".is-result-screen")).not.toBeNull(); });
-//       await clickTestElement(buttonWithText(view.container, "新建产线计算"));
-//     }
-//     await vi.waitFor(async () => {
-//       await settleTestDom();
-//       const saved = await loadPlannerState();
-//       expect(saved?.targets).toEqual([]);
-//       expect(saved?.supplies).toEqual([]);
-//       expect(saved?.session).toEqual(createDefaultPlannerSessionState());
-//       // AI-CORRECTION 2026-10-30：用户要求全部目标删除后清空偏好；历史任务仍独立保留。
-//       expect(saved?.recipeChoices).toEqual({});
-//     });
-//     expect(buttonWithText(view.container, "计算").disabled).toBe(true);
-//     expect(view.container.querySelector(".is-input-screen")).not.toBeNull();
-//     expect(app.internalState.runtime.productionPlanningNewSessionRequested).toBe(false);
-//     expect(planner.queries.getTask(taskId)).not.toBeNull();
-//     await view.unmount();
-//     view = await mountTestComponent(<ProductionPlanningPanel appHost={app} isTouch={false} onOpenGeneratedModuleEditor={() => {}} />);
-//     await settleTestDom();
-//     expect(buttonWithText(view.container, "计算").disabled).toBe(true);
-//   } finally { await view.unmount(); planner.dispose(); app.dispose(); }
-// });

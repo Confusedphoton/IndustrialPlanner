@@ -9,16 +9,6 @@ import { ENTITY_DEFINITIONS } from "@/registry/entity-definition";
 import { normalizeDeviceSpriteAnimationDefinition } from "@/shared/device-sprite-animation";
 // @ts-expect-error 发布配置为 Node mjs；测试直接核对实际配置。
 import { BUILDING_ASSET_PUBLISH_RESOLUTIONS } from "../../scripts/building-asset-publish-config.mjs";
-// AI-REMOVED 2026-09-11:
-// Reason: 此辅助函数只有测试调用，未参与真实发布；时长断言仅与自身比较，不能验证需求。
-// Trigger: 统一验证实际 publisher 的逐帧反射、排序、时长与遮罩行为。
-// Evidence: 全仓引用仅在此测试；真实发布使用 copyFrameToPage/mergeFrameAlpha/extractFrame。
-// Replacement: src/tests/scripts/device-sprite-animation.test.ts 中实际文件发布回归测试。
-// Risk: Low；正式发布入口的覆盖已由实际产物断言补齐。
-// Human Review: Required
-//
-// Original code:
-// import { transformRgbaFrameRows } from "@/scripts/device-sprite-animation-publisher.mjs";
 
 interface ImportedBuilding {
   entityId: string;
@@ -88,29 +78,6 @@ describe("v1.5 建筑素材发布", () => {
     expect(ENTITY_DEFINITIONS.find((definition) => definition.id === "filling_pd_mc_1_liquid")?.spriteAnimation)
       .toEqual({ closeIdleMode: "hold-last" });
   });
-// AI-REMOVED 2026-09-11:
-// Reason: 此辅助函数只有测试调用，未参与真实发布；时长断言仅与自身比较，不能验证需求。
-// Trigger: 统一验证实际 publisher 的逐帧反射、排序、时长与遮罩行为。
-// Evidence: 全仓引用仅在此测试；真实发布使用 copyFrameToPage/mergeFrameAlpha/extractFrame。
-// Replacement: src/tests/scripts/device-sprite-animation.test.ts 中实际文件发布回归测试。
-// Risk: Low；正式发布入口的覆盖已由实际产物断言补齐。
-// Human Review: Required
-//
-// Original code:
-//   it("逐帧上下变换保持帧序、时长，并与 alpha union 同步", () => {
-//     const width = 1; const height = 2;
-//     const frameA = Buffer.from([255, 0, 0, 255, 0, 0, 0, 0]);
-//     const frameB = Buffer.from([0, 255, 0, 255, 0, 0, 0, 0]);
-//     const published = [frameA, frameB].map((frame) => transformRgbaFrameRows(frame, width, height, "flip-top-bottom"));
-//     expect(published[0][3]).toBe(0);
-//     expect(published[0][7]).toBe(255);
-//     expect(published[1][1]).toBe(0);
-//     expect(published[1][5]).toBe(255);
-//     expect([33, 67]).toEqual([33, 67]);
-//     const union = Buffer.from(published[0].map((value, index) => index % 4 === 3 ? Math.max(value, published[1][index]) : 0));
-//     expect(union[3]).toBe(0);
-//     expect(union[7]).toBe(255);
-//   });
 
   it.each(collection.entries)("$entityId 的注册表、静态首帧、遮罩和分页尺寸一致", async (entry) => {
     const entity = ENTITY_DEFINITIONS.find((candidate) => candidate.id === entry.entityId);
@@ -166,13 +133,7 @@ describe("v1.5 建筑素材发布", () => {
   it("注册完整且不重复的建筑素材集合", () => {
     const ids = collection.entries.map((entry) => entry.entityId);
     expect(new Set(ids).size).toBe(ids.length);
-    // AI-CORRECTION 2026-10-12: 在已有 52 个映射上新增 10 种普通田块静态成株，动画设备仍为 37 个。
-    // AI-CORRECTION 2026-10-13: 新增洒水机静态首帧，总映射为 63，动画设备仍为 37 个。
-    // AI-CORRECTION 2026-10-15: 新增十二种缘缘庄田块共用芽针素材的映射，总映射75，动画设备仍为37个。
-    // AI-CORRECTION 2026-10-28: 新增自动农植机默认静态外观，总映射为 76。
     expect(collection.entries).toHaveLength(76);
-    // AI-CORRECTION 2026-10-15: 洒水机由静态素材切换为状态动画，动画设备数增至 38。
-    // AI-CORRECTION 2026-10-16: 22 种田块均接入状态动画，总映射仍为 75，动画设备数增至 60。
     expect(collection.entries.filter((entry) => entry.animated)).toHaveLength(60);
     expect(ids).toEqual(expect.arrayContaining([
       "filling_pd_mc_1",
@@ -210,16 +171,6 @@ describe("v1.5 建筑素材发布", () => {
     expect(collection.entries.some((entry) => entry.sourceMetadata.sourceSite.indexSha256
       === collection.sourceSite.indexSha256)).toBe(true);
     for (const entry of collection.entries) {
-      // AI-REMOVED 2026-10-12:
-      // Reason: 局部导入保留未选素材原来源，集合摘要只表示最近发布，不能覆盖每项来源。
-      // Trigger: 用户要求只更新 10 种普通田块成株素材。
-      // Evidence: import-building-assets retainWebsiteEffects 保留未选文件；本批应用后 172 项文件摘要一致。
-      // Replacement: 下方逐项来源格式/包路径校验；上方动画 manifest 继续与各自实体来源严格对账。
-      // Risk: Low；源字节和逐像素对账由导入批次 validate 与独立验收执行。
-      // Human Review: Required
-      // Original code:
-      // expect(entry.sourceMetadata.sourceSite.indexSha256).toBe(collection.sourceSite.indexSha256);
-      // expect(entry.sourceMetadata.sourceSite.releaseId).toBe(collection.sourceSite.releaseId);
       const source = entry.sourceMetadata.sourceSite;
       expect(source.indexSha256).toMatch(/^[a-f0-9]{64}$/);
       expect(source.releaseId).toMatch(/^v[\w.-]+-cst$/);

@@ -5,7 +5,6 @@ import { RegistryContract } from "../registry/registry-contract";
 import { RenderContract } from "../renderer/render-contract";
 import { SimulationContract } from "../simulation/simulation-contract";
 import type { SyncContract } from "../sync/sync-contract";
-import type { BlueprintPlannerContract } from "../blueprint-planner/blueprint-planner-contract";
 import type { AudioContract } from "../audio";
 
 
@@ -18,5 +17,4 @@ export interface WorkspaceContract {
     render: RenderContract | null;
     simulation: SimulationContract | null;
     sync: SyncContract | null;
-    blueprintPlanner: BlueprintPlannerContract | null;
 }

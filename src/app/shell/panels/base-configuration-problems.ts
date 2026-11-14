@@ -23,28 +23,10 @@ const IMPOSSIBLE_INFINITE_RESOURCE_PROBLEM = "设置了不可能实现的无限�
 /**
  * 游戏对管道准入口每分钟准入量的硬性上限。
  *
- * AI-CORRECTION 2026-09-23: 用户确认该值由游戏规定，超过它的限速不会生效。
  * Inspector 的可调上限仍是 120/分钟，这里只用于标记无效配置。
  */
 const PIPE_ADMISSION_RATE_MAX_PER_MINUTE = 60;
 
-// AI-REMOVED 2026-08-19:
-// Reason: 两类资源泵不再声明 warehouseItemLink inspector，也不再允许以仓库链接配置无限资源。
-// Trigger: 新版泵改为手选配方真实生产。
-// Evidence: Registry 中 gas_pump_1/water_pump_1 的仓库链接 inspector 与 placementDefaults 已移除。
-// Replacement: 泵的 recipeChannels.default；非法旧产物由 schema 5 迁移为作弊设备。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// const GAS_PUMP_INFINITE_ITEM_IDS = new Set([
-//   "item_gas_inert",
-//   "item_gas_xiranite",
-// ]);
-// const WATER_PUMP_INFINITE_ITEM_IDS = new Set([
-//   "item_liquid_acid",
-//   "item_liquid_water",
-// ]);
 
 export interface BaseConfigurationProblem {
   readonly message: string;
@@ -61,7 +43,7 @@ interface CollectBaseConfigurationProblemsOptions {
   readonly multiBaseEnabled: boolean;
   readonly runtimeInfiniteStorageEntityIds?: ReadonlySet<string>;
   readonly registryQueries: RegistryQuery;
-  /** 2026-11-13：界面翻译函数；省略时保留中文原文（测试与无界面调用）。 */
+  /** 界面翻译函数；省略时保留中文原文（测试与无界面调用）。 */
   readonly translate?: (key: string) => string;
 }
 
@@ -182,7 +164,6 @@ function createAdmissionRateProblem(
   entityId: string,
   translate?: (key: string) => string,
 ): BaseConfigurationProblem {
-  // AI-CORRECTION 2026-11-13：提供 translate 时使用 i18n 模板（{rate}/{max} 占位），否则保留原中文文案。
   const max = String(PIPE_ADMISSION_RATE_MAX_PER_MINUTE);
   if (translate !== undefined) {
     return {
@@ -284,21 +265,6 @@ function isAllowedSingleBaseInfiniteResource(
     return item?.tags.includes("自然资源") === true
       && item.tags.includes("矿石");
   }
-  // AI-REMOVED 2026-08-19:
-  // Reason: 新版资源泵不再属于仓库无限资源白名单。
-  // Trigger: 新版泵彻底移除 warehouseItemLink inspector。
-  // Evidence: collectWarehouseSlotRefs 已无法从两类泵定义中得到任何仓库槽位。
-  // Replacement: 泵的手选配方 channel。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // if (definitionId === "gas_pump_1") {
-  //   return GAS_PUMP_INFINITE_ITEM_IDS.has(itemId);
-  // }
-  // if (definitionId === "water_pump_1") {
-  //   return WATER_PUMP_INFINITE_ITEM_IDS.has(itemId);
-  // }
   return false;
 }
 

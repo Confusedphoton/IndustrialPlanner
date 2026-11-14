@@ -22,32 +22,6 @@ export function createToolboxOpenGestureModule(): GestureMappingModule<AppHost> 
         return { status: "handled", consume: true };
       },
     }],
-    // AI-REMOVED 2026-08-30:
-    // Reason: 工具箱快捷键改由同模块的可执行 Shortcut Route 匹配和执行，避免运行时与冲突检查双真相。
-    // Trigger: ST2-RQ-020 Action 路由统一。
-    // Evidence: open-toolbox.canvas 同时声明作用域、触发策略和 handler。
-    // Replacement: shortcutRoutes[open-toolbox.canvas] in this module
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // handle(event, context) {
-    //   if (event.type !== "key down") {
-    //     return { status: "ignored" };
-    //   }
-    //   const internalActions = context.appHost.internalActions;
-    //   const matches = internalActions.isShortcutFor(
-    //     SHORTCUT_KEY.OPEN_TOOLBOX,
-    //     event.code,
-    //     event.key?.trim() ?? null,
-    //     event.modifiers,
-    //   );
-    //   if (!matches) {
-    //     return { status: "ignored" };
-    //   }
-    //   context.appHost.internalActions.openDialog("toolbox");
-    //   return { status: "handled", consume: true };
-    // },
     handle() {
       return { status: "ignored" };
     },

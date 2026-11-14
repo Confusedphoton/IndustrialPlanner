@@ -16,16 +16,6 @@ import {
   type StorageMigration,
 } from "@/shared/storage/migration";
 import type { IndexedDbStorageLocation } from "@/shared/storage/browser-storage";
-// AI-REMOVED 2026-08-08:
-// Reason: 模块墓碑已从全局 localStorage 迁入按 provider/target 隔离的 IndexedDB store。
-// Trigger: 用户要求同步数据不得混入业务存储或跨同步目标共享。
-// Evidence: 新实现只通过 sync-tombstone-storage 读写墓碑。
-// Replacement: 下方 sync-tombstone-storage import。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-// import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage/browser-storage";
 import {
   emitStorageChange,
   type StorageWriteOptions,
@@ -55,16 +45,6 @@ export async function prepareModuleBalancingMigration(version?: string) {
     emitStorageChange({ assetType: "custom-module", assetId: "all", origin: "local", timestamp: Date.now() });
   } })) };
 }
-// AI-REMOVED 2026-08-08:
-// Reason: 模块墓碑不应跨 Cloudflare/WebDAV 目标共享，也不应留在全局 localStorage。
-// Trigger: 用户要求同步属性和缓存全部收归对应同步存储。
-// Evidence: 原 key 没有 provider、后端地址、owner 或空间名称维度。
-// Replacement: src/shared/storage/sync-tombstone-storage.ts。
-// Risk: Low；实验性旧墓碑不迁移。
-// Human Review: Required
-//
-// Original code:
-// const MODULE_BALANCING_TOMBSTONE_LOCAL_STORAGE_KEY = "v3-module-balancing-tombstones";
 const MIGRATIONS: StorageMigration<ModuleBalancingStateReadWrite>[] = [
   {
     version: 1,
@@ -554,32 +534,6 @@ function normalizeTombstoneList<TValue>(
   }));
 }
 
-// AI-REMOVED 2026-08-08:
-// Reason: 新墓碑 store 已返回结构化列表，不再读取全局 localStorage 的嵌套 record。
-// Trigger: 模块删除状态需要按 provider 和远端目标隔离。
-// Evidence: readModuleBalancingTombstones 现在调用 listActiveSyncTombstones。
-// Replacement: 上方 normalizeTombstoneList。
-// Risk: Low；旧实验性 localStorage 墓碑不迁移。
-// Human Review: Required
-//
-// Original code:
-// function normalizeTombstoneRecord<TValue>(
-//   value: unknown,
-//   normalizeValue: (value: unknown) => TValue | undefined,
-// ): Record<string, { readonly value: TValue; readonly deletedAt: string }> {
-//   if (!isRecord(value)) {
-//     return {};
-//   }
-//
-//   return Object.fromEntries(Object.entries(value).flatMap(([id, entry]) => {
-//     if (!isRecord(entry) || typeof entry.deletedAt !== "string") {
-//       return [];
-//     }
-//
-//     const normalizedValue = normalizeValue(entry.value);
-//     return normalizedValue === undefined ? [] : [[id, { value: normalizedValue, deletedAt: entry.deletedAt }]];
-//   }));
-// }
 
 async function writeModuleBalancingTombstone<TKey extends keyof ModuleBalancingTombstoneState>(
   key: TKey,

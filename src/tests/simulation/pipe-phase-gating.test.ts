@@ -12,20 +12,6 @@ import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/contracts/tick-rate"
 import type { CompiledSimulationTopology } from "@/simulation/contracts/types";
 import { compileSimulationTopology } from "@/simulation/topology/compiler";
 import { SimulationWorkerRuntime } from "@/simulation/legacy/worker-runtime";
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/pipe-phase-gating/index.json
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// import {
-//   createBlueprint,
-//   createEntity,
-//   createWorldDocumentFromBlueprint,
-//   resolveFirstTickNumberAtSimulationMilliseconds,
-// } from "./blueprint-test-helpers";
 import { createWorldDocumentFromBlueprint, resolveFirstTickNumberAtSimulationMilliseconds } from "./blueprint-test-helpers";
 import { describeSimulationEngineMatrix } from "./simulation-engine-matrix";
 
@@ -67,29 +53,6 @@ describeSimulationEngineMatrix("pipe phase gating host contract", (engineKind) =
       );
       expect((await host.internalActions.syncToTick(halfSecondTick)).status).toBe("ready");
       expect(hasHostTransfer(host, "device:source", "device:pipe")).toBe(true);
-      // AI-REMOVED 2026-09-08:
-      // Reason: internal refresh 只刷新拓扑，不会把 Host runningState 切到 start，随后 patchRuntimeSlot 会被忽略。
-      // Trigger: Legacy 与 Dense Host 门禁用例均未观察到运行时补货。
-      // Evidence: 两个 Host 的 patchRuntimeSlot 都在 runningState === "stop" 时直接返回。
-      // Replacement: host.actions.start() 后 pause，再按毫秒相位同步。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // const started = await host.internalActions.refreshFromCurrentDocument();
-      // expect(started.status).toBe("started");
-      //
-      // AI-REMOVED 2026-09-08:
-      // Reason: 公共 start() 返回 Promise<void>，不存在可读取的 status 字段。
-      // Trigger: Host 门禁用例运行时报 Cannot read properties of undefined。
-      // Evidence: SimulationContract.actions.start 的返回契约为 void。
-      // Replacement: await host.actions.start()；启动成功由随后存在 topology 和 ready tick 共同验证。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // const started = await host.actions.start();
-      // expect(started.status).toBe("started");
     } finally {
       host.dispose();
     }
@@ -110,16 +73,6 @@ describeSimulationEngineMatrix("pipe phase gating host contract", (engineKind) =
  * 在非门禁时刻 tick 5 注入液体，验证管道要等到 10 tick 相位点 tick 11 才接收。
  */
 describe("管道相位门禁（液体版）", () => {
-  // AI-REMOVED 2026-09-08:
-  // Reason: 用例名称暴露 Legacy 的 10 tick 实现坐标，没有表达跨实现业务时间。
-  // Trigger: 用户要求固定 tick 1/41 一类设置统一改为毫秒数。
-  // Evidence: Legacy 的 10 tick 周期等价于 500ms。
-  // Replacement: 下方 500ms 门禁相位标题。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // it("非门禁时刻放入的液体，管道要等到 10 tick 相位点才第一次接到", () => {
   it("非门禁时刻放入的液体，要等到 500ms 门禁相位才第一次接到（Legacy 内部）", () => {
     const registry = createRegistryContract();
     const runtime = new SimulationWorkerRuntime(registry);
@@ -135,7 +88,6 @@ describe("管道相位门禁（液体版）", () => {
     const collectThroughThreeSecondsTick = resolveLegacyFirstTick(3_000);
 
     // 源槽位初始为空（管道空闲）；推进到 tick 5（非门禁，5-1=4 非 10 倍数）。
-    // AI-CORRECTION 2026-09-08: 下方 tick 5/6/11/61 分别由 200/250/500/3000ms 换算。
     runtime.advanceToTick(patchAtTwoHundredMillisecondsTick);
     runtime.handleRequest({
       type: "get-tick-snapshot",
@@ -172,22 +124,6 @@ describe("管道相位门禁（液体版）", () => {
 
 function createLiquidPhaseGatingTopology(registry: RegistryContract): CompiledSimulationTopology {
   const document = createWorldDocumentFromBlueprint(createLiquidPhaseGatingBlueprint());
-  // AI-REMOVED 2026-09-08:
-  // Reason: Host 契约测试与 Legacy Worker 实现测试应复用同一最小蓝图，避免场景漂移。
-  // Trigger: 用户要求门禁测试改为 Host 行为矩阵。
-  // Evidence: 原先内联设备与 Host 用例需要的设备完全相同。
-  // Replacement: createLiquidPhaseGatingBlueprint。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // const document = createWorldDocumentFromBlueprint(
-  //   createBlueprint("pipe-phase-gating", [
-  //     createEntity("source", "liquid_storager_1", 0, 0, 180),
-  //     createEntity("pipe", "pipe_straight_1x1", 3, 1),
-  //     createEntity("sink", "liquid_storager_1", 4, 0, 180),
-  //   ]),
-  // );
   return compileSimulationTopology({
     document,
     registry,
@@ -197,19 +133,6 @@ function createLiquidPhaseGatingTopology(registry: RegistryContract): CompiledSi
 }
 
 function createLiquidPhaseGatingBlueprint() {
-  // AI-REMOVED 2026-09-14:
-  // Reason: 场景构造已批量固化为带版本的蓝图文件。
-  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-  // Replacement: src/tests/fixtures/blueprints/simulation/pipe-phase-gating/index.json
-  // Risk: Low；断言与被测动作不变。
-  // Human Review: Required
-  // Original code:
-  // createBlueprint("pipe-phase-gating", [
-  //     createEntity("source", "liquid_storager_1", 0, 0, 180),
-  //     createEntity("pipe", "pipe_straight_1x1", 3, 1),
-  //     createEntity("sink", "liquid_storager_1", 4, 0, 180),
-  //   ])
   return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/pipe-phase-gating/scene-01-pipe-phase-gating-c9ec427f.schema7.json");
 }
 
@@ -267,7 +190,6 @@ function createHostWorkspace(
     simulation: null,
     sync: null,
     audio: null,
-    blueprintPlanner: null,
   };
 }
 

@@ -241,34 +241,6 @@
   }
 }
 
-// FPS panel — positioned top-left, reuses gesture panel CSS variables
-// AI-CORRECTION 2026-07-29: 保存提示改为独立画布 overlay；FPS 恢复固定右上角，不参与提示布局。
-// AI-REMOVED 2026-07-29:
-// Reason: 保存提示、FPS 与折叠顶栏控件改为彼此独立的绝对定位浮层。
-// Trigger: 用户要求保存图标不再受 FPS 面板布局影响。
-// Evidence: 纵向 stack 会随 FPS 高度改变保存图标位置。
-// Replacement: canvas-fps、canvas-webdav-save-indicator 与
-//   workbench-floating-top-bar-controls-in-canvas 各自定位。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-// .canvas-top-right-overlay-stack {
-//   position: absolute;
-//   top: 12px;
-//   right: 12px;
-//   z-index: 5;
-//   display: flex;
-//   align-items: flex-end;
-//   flex-direction: column;
-//   gap: 8px;
-//   max-width: calc(100% - 24px);
-//   pointer-events: none;
-// }
-//
-// .canvas-top-right-overlay-stack > * {
-//   pointer-events: auto;
-// }
 
 .canvas-fps {
   position: absolute;
@@ -536,7 +508,7 @@
   display: grid;
   justify-items: stretch;
   gap: 6px;
-  max-width: calc(100% - var(--left-toolbar-width, 68px) - var(--left-dock-width, 0px) - var(--right-dock-width, 0px) - 28px);
+  max-width: calc(100% - var(--left-toolbar-width, 68px) - var(--left-dock-width, 0px) - var(--right-dock-width, 0px) - var(--recipe-dock-width, 0px) - 28px);
   pointer-events: auto;
 }
 
@@ -625,7 +597,7 @@
     var(--top-bar-height, 48px)
     + (100% - var(--top-bar-height, 48px) - var(--canvas-bottom-obstruction-height, var(--bottom-bar-height, 28px))) / 2
   );
-  right: calc(var(--right-dock-width, 0px) + 12px);
+  right: calc(var(--right-dock-width, 0px) + var(--recipe-dock-width, 0px) + 12px);
   z-index: 4;
   display: grid;
   justify-items: end;
@@ -656,18 +628,6 @@
   align-items: center;
   justify-content: flex-start;
   gap: 8px;
-  // AI-REMOVED 2026-09-24:
-  // Reason: 参考图是沿文字和图标轮廓扩散的暗影，不是矩形卡片。
-  // Trigger: 用户要求复刻游戏衬底，明确否定矩形背景。
-  // Evidence: 游戏截图右侧提示无硬边；本轮矩形衬底偏离参考样式。
-  // Replacement: 下方按钮与快捷键行共用的 drop-shadow。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // padding: 4px 8px;
-  // border-radius: 4px;
-  // background: var(--in-canvas-toolbar-button-bg);
   color: var(--in-canvas-toolbar-button-text);
   pointer-events: none;
 }
@@ -762,20 +722,6 @@
 
 // ── 快捷键模式 ──
 
-// AI-REMOVED 2026-08-22:
-// Reason: 工具列不再存在全局快捷键模式；只有纯快捷键项穿透点击，按钮加快捷键仍可点击。
-// Trigger: 用户要求同一工具列混排纯快捷键、按钮加快捷键和纯按钮。
-// Evidence: .canvas-right-dock-toolbar-shortcut 仅作用于无按钮的快捷键项。
-// Replacement: .canvas-right-dock-toolbar-shortcut。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// .canvas-right-dock-toolbar--shortcut {
-//   pointer-events: none;
-// }
-// AI-CORRECTION 2026-08-22: 容器统一穿透输入，只有真实 button 恢复 pointer-events，
-// 从而保证纯快捷键行和混排工具列的非按钮区域不会阻断画布点击与滚轮。
 
 // 快捷键按键徽章
 .canvas-right-dock-toolbar-shortcut-key {
@@ -807,7 +753,6 @@
 }
 
 // 快捷键模式下的标签外发光
-// AI-CORRECTION 2026-09-24: 草地上的同色外发光会模糊字形，改用主题阴影色衬托文字。
 .canvas-right-dock-toolbar-label--glow {
   min-width: 0;
   white-space: nowrap;
@@ -958,38 +903,103 @@
   }
 }
 
-// AI-REMOVED 2026-05-21:
-// Reason: renderer canvas 与视口发光样式已迁移到 renderer 模块，app shell 只保留宿主槽位。
-// Trigger: 用户要求 renderer 对外暴露 div container，并让 renderer 内部实现 CSS glow。
-// Evidence: RenderContract.container 与 src/renderer/renderer-host.css 接管 active renderer DOM 样式。
-// Replacement: src/renderer/renderer-host.css
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// .renderer-canvas {
-//   border: none;
-//   box-shadow: none;
-// }
-//
-// .canvas-placement-glow-overlay {
-//   position: absolute;
-//   inset: 0;
-//   pointer-events: none;
-//   z-index: 2;
-//   box-shadow:
-//     inset 0 0 10px 5px rgba(255, 213, 74, 0.24),
-//     inset 0 0 30px 15px rgba(255, 213, 74, 0.12);
-//   animation: canvas-placement-glow-pulse 2s ease-in-out infinite;
-// }
-//
-// @keyframes canvas-placement-glow-pulse {
-//   0%,
-//   100% {
-//     opacity: 0.6;
-//   }
-//
-//   50% {
-//     opacity: 1;
-//   }
-// }
+
+// 选中设备的就地操作卡（DevicePopup）。
+.device-popup {
+  position: fixed;
+  z-index: 7;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  overflow-y: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface-1);
+  box-shadow: 0 12px 30px var(--shadow-floating-control);
+  color: var(--text-0);
+}
+
+.device-popup-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.device-popup-header img {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.device-popup-header strong {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.92rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.device-popup-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-1);
+}
+
+.device-popup-icon-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.device-popup-problem {
+  margin: 0;
+  padding: 4px 8px;
+  border-left: 3px solid var(--danger);
+  border-radius: 4px;
+  background: var(--surface-2);
+  color: var(--danger);
+  font-size: 0.75rem;
+}
+
+.device-popup-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.device-popup-item img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.device-popup-recipes {
+  max-height: 230px;
+  overflow-y: auto;
+}
+
+.device-popup-item span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.device-popup-item svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--text-2);
+}

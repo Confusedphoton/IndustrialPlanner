@@ -157,15 +157,6 @@ vi.mock("pixi.js", () => {
 
 import { AYU_LIGHT_THEME } from "@/app/theme"
 import { EntityCollectionType } from "@/domain/editor/types/editor-types"
-// AI-REMOVED 2026-11-12:
-// Reason: 物流装饰输入改为 SceneViewInput，退出假 Workspace 与集合。
-// Trigger: REQ-048 渲染契约迁移。
-// Evidence: 正式实现读取 source/presentation；已有版本化场景可直接组合真实会话。
-// Replacement: createRenderTestScene；原几何、颜色、缓存断言保留。
-// Risk: Low；绘制记录不替代浏览器像素验证。
-// Human Review: Required
-// Original code:
-// import { createRegistryContract } from "@/registry"
 
 import {
   createBeltFlowDecoration,
@@ -244,28 +235,7 @@ describe("BeltFlowDecoration", () => {
   })
 
   it("reuses belt topology and masks while only advancing the animation phase", () => {
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       createEntity("belt-a", "belt_straight_1x1", { x: 0, y: 0 }),
-    //       createEntity("belt-b", "belt_straight_1x1", { x: 1, y: 0 }),
-    //     ]
     const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-01-variant-1.schema7.json"))
-// AI-REMOVED 2026-11-12:
-// Reason: 物流装饰输入改为 SceneViewInput，退出假 Workspace 与集合。
-// Trigger: REQ-048 渲染契约迁移。
-// Evidence: 正式实现读取 source/presentation；已有版本化场景可直接组合真实会话。
-// Replacement: createRenderTestScene；原几何、颜色、缓存断言保留。
-// Risk: Low；绘制记录不替代浏览器像素验证。
-// Human Review: Required
-// Original code:
-//     const listEntities = vi.fn(() => entities)
 
     const versions = {
       document: 1,
@@ -276,28 +246,10 @@ describe("BeltFlowDecoration", () => {
     }
     const decoration = createBeltFlowDecoration()
 
-// AI-REMOVED 2026-11-12:
-// Reason: 物流装饰输入改为 SceneViewInput，退出假 Workspace 与集合。
-// Trigger: REQ-048 渲染契约迁移。
-// Evidence: 正式实现读取 source/presentation；已有版本化场景可直接组合真实会话。
-// Replacement: createRenderTestScene；原几何、颜色、缓存断言保留。
-// Risk: Low；绘制记录不替代浏览器像素验证。
-// Human Review: Required
-// Original code:
-//     decoration.sync(createFlowContext({ nowMs: 0, listEntities, versions }) as never)
     const ctx = createFlowContext({ nowMs: 0, entities, versions });
     const listEntities = vi.spyOn(ctx.renderHost.input.source.queries, "listEntities");
     decoration.sync(ctx as never);
     const firstTopologyReadCount = listEntities.mock.calls.length
-// AI-REMOVED 2026-11-12:
-// Reason: 物流装饰输入改为 SceneViewInput，退出假 Workspace 与集合。
-// Trigger: REQ-048 渲染契约迁移。
-// Evidence: 正式实现读取 source/presentation；已有版本化场景可直接组合真实会话。
-// Replacement: createRenderTestScene；原几何、颜色、缓存断言保留。
-// Risk: Low；绘制记录不替代浏览器像素验证。
-// Human Review: Required
-// Original code:
-//     decoration.sync(createFlowContext({ nowMs: 500, listEntities, versions }) as never)
     ctx.nowMs = 500;
     decoration.sync(ctx as never);
 
@@ -312,47 +264,14 @@ describe("BeltFlowDecoration", () => {
   })
 
   it("keeps chain-end arrows alive while the mask still contains part of the arrow", () => {
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [createEntity("belt-a", "belt_straight_1x1", { x: 0, y: 0 })]
     const emptyEndMarks = resolveBeltFlowMarks(createFlowContext({
       nowMs: 250,
       entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-02-variant-1.schema7.json")),
     }) as never)
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //         createEntity("belt-a", "belt_straight_1x1", { x: 0, y: 0 }),
-    //         createEntity("target-storager", "storager_1", { x: 1, y: -1 }, 270),
-    //       ]
     const admissionEndMarks = resolveBeltFlowMarks(createFlowContext({
       nowMs: 500,
       entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-03-variant-1.schema7.json")),
     }) as never)
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //         createEntity("belt-a", "belt_straight_1x1", { x: 0, y: 0 }),
-    //         createEntity("target-connector", "log_connector", { x: 1, y: 0 }),
-    //       ]
     const generalLogisticsEndMarks = resolveBeltFlowMarks(createFlowContext({
       nowMs: 250,
       entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-04-variant-1.schema7.json")),
@@ -371,32 +290,6 @@ describe("BeltFlowDecoration", () => {
 
   it("extends the arrow mask into device insertion segments but not into general logistics devices", () => {
     const admissionDecoration = createBeltFlowDecoration()
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //         {
-    //           id: "belt-a",
-    //           definitionId: "belt_straight_1x1",
-    //           position: { x: 0, y: 0 },
-    //           rotation: 0,
-    //           config: {},
-    //           tags: [],
-    //         },
-    //         {
-    //           id: "target-storager",
-    //           definitionId: "storager_1",
-    //           position: { x: 1, y: -1 },
-    //           rotation: 270,
-    //           config: {},
-    //           tags: [],
-    //         },
-    //       ]
     admissionDecoration.sync(createFlowContext({
       nowMs: 0,
       entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-05-variant-1.schema7.json")),
@@ -416,32 +309,6 @@ describe("BeltFlowDecoration", () => {
     admissionDecoration.destroy()
 
     const logisticsDecoration = createBeltFlowDecoration()
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //         {
-    //           id: "belt-a",
-    //           definitionId: "belt_straight_1x1",
-    //           position: { x: 0, y: 0 },
-    //           rotation: 0,
-    //           config: {},
-    //           tags: [],
-    //         },
-    //         {
-    //           id: "target-connector",
-    //           definitionId: "log_connector",
-    //           position: { x: 1, y: 0 },
-    //           rotation: 0,
-    //           config: {},
-    //           tags: [],
-    //         },
-    //       ]
     logisticsDecoration.sync(createFlowContext({
       nowMs: 0,
       entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-06-variant-1.schema7.json")),
@@ -482,24 +349,6 @@ describe("BeltFlowDecoration", () => {
   })
 
   it("draws flow arrows on turn belts", () => {
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //         {
-    //           id: "belt-turn",
-    //           definitionId: "belt_turn_cw_1x1",
-    //           position: { x: 0, y: 0 },
-    //           rotation: 0,
-    //           config: {},
-    //           tags: [],
-    //         },
-    //       ]
     const marks = resolveBeltFlowMarks(createFlowContext({
       nowMs: 0,
       entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-07-variant-1.schema7.json")),
@@ -627,131 +476,6 @@ describe("BeltFlowDecoration", () => {
   })
 })
 
-// AI-REMOVED 2026-11-12:
-// Reason: 物流装饰输入改为 SceneViewInput，退出假 Workspace 与集合。
-// Trigger: REQ-048 渲染契约迁移。
-// Evidence: 正式实现读取 source/presentation；已有版本化场景可直接组合真实会话。
-// Replacement: createRenderTestScene；原几何、颜色、缓存断言保留。
-// Risk: Low；绘制记录不替代浏览器像素验证。
-// Human Review: Required
-// Original code:
-// function createFlowContext(options: {
-//   nowMs: number;
-//   simplifiedDeviceIcons?: boolean;
-//   getTexture?: (key: string) => Promise<unknown>;
-//   selectionIds?: readonly string[];
-//   listEntities?: () => WorldEntity[];
-//   versions?: {
-//     document: number;
-//     viewport: number;
-//     collections: number;
-//     presentation: number;
-//     simulation: number;
-//   };
-//   // AI-REMOVED 2026-09-14:
-//   // Reason: 场景构造已批量固化为带版本的蓝图文件。
-//   // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-//   // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-//   // Replacement: WorldEntity[]；使用蓝图实体的真实 config/tags 类型
-//   // Risk: Low；断言与被测动作不变。
-//   // Human Review: Required
-//   // Original code:
-//   // entities?: Array<{
-//   //     id: string;
-//   //     definitionId: string;
-//   //     position: { x: number; y: number };
-//   //     rotation: number;
-//   //     config: Record<string, never>;
-//   //     tags: string[];
-//   //   }>;
-//   entities?: WorldEntity[];
-//   recordSample?: (name: string, value: number) => void;
-// }) {
-//   const registry = createRegistryContract()
-//
-//   // AI-REMOVED 2026-09-14:
-//   // Reason: 场景构造已批量固化为带版本的蓝图文件。
-//   // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-//   // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-//   // Replacement: src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/index.json
-//   // Risk: Low；断言与被测动作不变。
-//   // Human Review: Required
-//   // Original code:
-//   // [
-//   //               {
-//   //                 id: "belt-a",
-//   //                 definitionId: "belt_straight_1x1",
-//   //                 position: { x: 0, y: 0 },
-//   //                 rotation: 0,
-//   //                 config: {},
-//   //                 tags: [],
-//   //               },
-//   //               {
-//   //                 id: "belt-b",
-//   //                 definitionId: "belt_straight_1x1",
-//   //                 position: { x: 1, y: 0 },
-//   //                 rotation: 0,
-//   //                 config: {},
-//   //                 tags: [],
-//   //               },
-//   //             ]
-//   return {
-//     viewportState: {
-//       width: 400,
-//       height: 200,
-//       resolution: 1,
-//       centerX: 1,
-//       centerY: 0.5,
-//       gridCellPixelSize: 100,
-//     },
-//     viewportBounds: {
-//       left: 0,
-//       top: 0,
-//       width: 400,
-//       height: 200,
-//     },
-//     theme: AYU_LIGHT_THEME,
-//     renderHost: {
-//       workspace: {
-//         state: {} as never,
-//         app: {
-//           state: {
-//             theme: AYU_LIGHT_THEME,
-//             settings: {
-//               gameUseBlueprintStyleDeviceImages: options.simplifiedDeviceIcons ?? false,
-//             },
-//           },
-//         },
-//         registry: {
-//           ...registry,
-//         },
-//         render: {},
-//         simulation: null,
-//         editor: {
-//           state: {
-//             collections: {
-//               [EntityCollectionType.selection]: createCollectionStub(options.selectionIds ?? []),
-//             },
-//           },
-//           queries: {
-//             listEntities: options.listEntities ?? (() => options.entities ?? getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-08-variant-1.schema7.json"))),
-//           },
-//         },
-//       } as never,
-//       textureManager: {
-//         getTexture: options.getTexture ?? (async () => ({ width: 32, height: 32 })),
-//       } as never,
-//     } as never,
-//     nowMs: options.nowMs,
-//     versions: options.versions,
-//     profiler: options.recordSample === undefined
-//       ? undefined
-//       : {
-//           count: options.recordSample,
-//           measure: <T>(_stage: string, callback: () => T): T => callback(),
-//         },
-//   }
-// }
 function createFlowContext(options: {
   nowMs: number; simplifiedDeviceIcons?: boolean; getTexture?: (key: string) => Promise<unknown>;
   selectionIds?: readonly string[]; entities?: WorldEntity[];
@@ -775,44 +499,7 @@ function createFlowContext(options: {
   };
 }
 
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/belt-flow-decoration/index.json
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// function createEntity(
-//   id: string,
-//   definitionId: string,
-//   position: { x: number; y: number },
-//   rotation = 0,
-// ) {
-//   return {
-//     id,
-//     definitionId,
-//     position,
-//     rotation,
-//     config: {},
-//     tags: [],
-//   }
-// }
 
-// AI-REMOVED 2026-11-12:
-// Reason: 物流装饰输入改为 SceneViewInput，退出假 Workspace 与集合。
-// Trigger: REQ-048 渲染契约迁移。
-// Evidence: 正式实现读取 source/presentation；已有版本化场景可直接组合真实会话。
-// Replacement: createRenderTestScene；原几何、颜色、缓存断言保留。
-// Risk: Low；绘制记录不替代浏览器像素验证。
-// Human Review: Required
-// Original code:
-// function createCollectionStub(ids: readonly string[]) {
-//   return {
-//     length: ids.length,
-//     contains: (entityId: string) => ids.includes(entityId),
-//   }
-// }
 
 
 async function flushMicrotasks(iterations = 4): Promise<void> {

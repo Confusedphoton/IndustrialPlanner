@@ -1,6 +1,5 @@
 // Cloudflare cf-sync-v2 远端实现。
 // 协议版本：cf-sync-v2，直接 HTTP fetch，不使用 Web Worker。
-// AI-CORRECTION 2026-08-12: 本文件已退出生产入口，仅作为旧主线程实现保留；
 // 当前实现位于 cloudflare-v2-remote.ts 与 cloudflare-v2-worker-runtime.ts。
 //
 // 协议流程：
@@ -85,13 +84,6 @@ interface CfLocalState {
   revision: string; // 当前已同步的远端 revision（字符串，仅比较相等性）
 }
 
-// AI-CORRECTION 2026-08-10: spaceEpoch 与 generation 已移除。
-// Reason: epoch 是服务端内部概念，客户端不应持久化；generation 的唯一作用是
-// 在 epoch 变更时作废本地缓存，但 epoch 每次 commit 都变，导致 foreground sync
-// 的 checkCollections(204) 短路永远无法生效。
-// Replacement: createAssetStorageKey 直接使用 assetKey，getRemoteEtag 使用
-// CF_STATE_STORE 独立存储 collection 级 revision。
-// Risk: Low；空间重置时 revision 不连续，adapters 的 hash 比对仍能检测差异。
 
 interface CfAssetState {
   assetKey: string;
@@ -101,7 +93,6 @@ interface CfAssetState {
   remoteAdapterContentHash: string | null;
 }
 
-// AI-CORRECTION 2026-08-10: collection 级 etag（用来给 checkCollections 传 knownRevision）。
 // 存储在 CF_STATE_STORE 下，不受 generation/epoch 影响。
 const CF_COLLECTION_ETAG_PREFIX = "col-etag";
 
@@ -120,12 +111,6 @@ function defaultState(spaceId: string): CfLocalState {
 class CloudflareSyncLocalState implements SyncLocalState {
   private readonly stateLocation: IndexedDbStorageLocation;
   private cachedState: CfLocalState | null = null;
-  // AI-CORRECTION 2026-08-10: pendingAdapterHashStorageKeys 已移除。
-  // Reason: 其唯一清空时机是 epoch 变更，epoch 已从客户端移除。
-  // Replacement: noteRemoteHashMapping 中 pendingAdapterHashStorageKeys 逻辑替换为直接比较。
-  // Risk: Low。
-  // AI-CORRECTION 2026-08-11: 远端协议 hash 与适配器 hash 算法不同，下载后仍需等待
-  // setLastSyncedHash 提供归一化后的适配器 hash，才能建立可比较映射。
   private readonly pendingAdapterHashStorageKeys = new Set<string>();
 
   public constructor(
@@ -176,10 +161,8 @@ class CloudflareSyncLocalState implements SyncLocalState {
         remoteRevision: existing?.remoteRevision ?? null,
         lastSyncedContentHash: hash,
         remoteProtocolContentHash: existing?.remoteProtocolContentHash ?? null,
-        // AI-CORRECTION 2026-08-10: pendingAdapterHashStorageKeys 已移除。
         // 原逻辑：pendingAdapterHashStorageKeys 中有 storageKey 时用 hash填充 remoteAdapterContentHash。
         // 新逻辑：lastSyncedContentHash 正常更新，remoteAdapterContentHash 不在此处设置（由 noteRemoteHashMapping 负责）。
-        // AI-CORRECTION 2026-08-11: noteRemoteHashMapping 无法独立计算适配器归一化 hash；
         // 下载后的首次 setLastSyncedHash 必须完成协议 hash → 适配器 hash 映射。
         remoteAdapterContentHash: this.pendingAdapterHashStorageKeys.has(storageKey)
           ? hash
@@ -331,9 +314,6 @@ class CloudflareSyncLocalState implements SyncLocalState {
   }
 
   private async createAssetStorageKey(assetKey: string): Promise<string> {
-    // AI-CORRECTION 2026-08-10: generation 前缀已移除。
-    // Reason: generation 在 epoch 变更时重新生成，导致所有旧缓存 key 变孤儿。
-    // Replacement: assetKey 直接作为存储 key，不再需要 generation 作用域。
     return assetKey;
   }
 
@@ -348,7 +328,6 @@ class CloudflareSyncLocalState implements SyncLocalState {
 function normalizeState(value: unknown, spaceId: string): CfLocalState | null {
   if (typeof value !== "object" || value === null) return null;
   const candidate = value as Partial<CfLocalState>;
-  // AI-CORRECTION 2026-08-10: spaceEpoch 和 generation 校验已移除，revision 改为 string 校验。
   if (
     candidate.schemaVersion !== 3
     || candidate.spaceId !== spaceId
@@ -508,20 +487,6 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
       `/v1/sync/spaces/${encodeURIComponent(state.spaceId)}/plan`,
     );
     this.planCache = plan;
-    // AI-CORRECTION 2026-08-10: epoch 比较已移除，revision 改为字符串相等性比较。
-    // AI-REMOVED 2026-08-11:
-    // Reason: plan 只表示已观察到远端版本，不表示所有资产已经成功应用到本地。
-    // Trigger: 提前推进 revision 会让后续 /check 返回 204，从而跳过尚未下载的远端更新。
-    // Evidence: isRemoteIndexUnchangedForCleanLocalEntries 在 prefetchIndexes 后调用 checkCollections。
-    // Replacement: complete() 在整次同步成功后推进 plan revision；成功 commit 则立即推进 commit revision。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // const planRevision = String(plan.revision);
-    // if (planRevision !== state.revision) {
-    //   await this.localState.advanceToRevision(planRevision);
-    // }
   }
 
   public async refreshIndexes(collections: readonly SyncRemoteCollection[]): Promise<void> {
@@ -535,16 +500,6 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
     const plan = this.planCache;
     if (plan === null) return { revision: 0, entries: {}, committedAt: null };
 
-    // AI-REMOVED 2026-08-22:
-    // Reason: legacy Cloudflare session 同样只按 assetType 枚举，会跨 adapter 暴露共享 planner-state 资源。
-    // Trigger: regional-settings 与 production-planning 的远端键碰撞审计。
-    // Evidence: SyncRemoteAssetIdCodec 现已声明 acceptsRemoteAssetId 作为 collection 归属边界。
-    // Replacement: 下方同时按 assetType 与 codec 归属过滤。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // const assets = plan.assets.filter((a) => a.assetType === collection.assetType);
     const assets = plan.assets.filter((asset) =>
       asset.assetType === collection.assetType
       && (collection.assetIdCodec.acceptsRemoteAssetId?.(asset.assetId) ?? true)
@@ -674,7 +629,6 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
         result.collectionRevision,
       );
     }
-    // AI-CORRECTION 2026-08-10: 补充 setRemoteEtag 调用，确保 collection 级 etag
     // 在每次同步完成后写入 CF_STATE_STORE，供下次 foreground sync 的
     // isRemoteIndexUnchangedForCleanLocalEntries 使用。
     if (result.collectionEtag !== undefined) {
@@ -695,13 +649,10 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
   }
 
   public async complete(options?: SyncRemoteCompleteOptions): Promise<void> {
-    // AI-CORRECTION 2026-09-01: 未来业务 schema 未被理解时保留旧 applied revision，等待客户端升级后重读。
     if (options?.advanceAppliedRevision === false) return;
     if (this.context.reason === "local-change" || this.planCache === null) return;
     const state = await this.localState.readState();
-    // AI-CORRECTION 2026-08-10: Math.max → 直接使用 planCache.revision，
     // epoch 参数已移除。revision 仅比较相等性，不存在大小关系。
-    // AI-CORRECTION 2026-08-11: 本会话发生提交时，planCache 仍是提交前快照；
     // complete 必须保留 commit 返回的新 revision，不能回退到旧 plan revision。
     const targetRevision = String(
       this.latestCommittedRevision ?? this.planCache.revision,
@@ -718,8 +669,6 @@ class CloudflareSyncRemoteSession implements SyncRemoteSession {
   // -- 供 CloudflareSyncWriteBatch 使用 -- //
 
   public registerCommittedRevision(revision: number): void {
-    // AI-CORRECTION 2026-08-10: Math.max → 直接赋值。
-    // Reason: revision 仅比较相等性，不存在大小关系。
     this.latestCommittedRevision = revision;
   }
 
@@ -797,18 +746,6 @@ class CloudflareSyncWriteBatch implements SyncRemoteWriteBatch {
 
     // 分片提交：后端限制每批最多 32 条
     const writes: RemoteWriteResult[] = [];
-    // AI-CORRECTION 2026-08-12: 写入必须以本会话已观测并用于冲突判定的 plan revision 为基线。
-    // localState.revision 只表示上一次完整应用的远端版本，初次 use-local 冲突时它仍可能是 0。
-    // AI-REMOVED 2026-08-12:
-    // Reason: 仅使用 localState.revision 会让初次 use-local 以过期 revision 提交。
-    // Trigger: 独立 use-local Cloudflare E2E 稳定返回“space revision 已变化”。
-    // Evidence: 冲突判定使用 plan revision=1，localState.revision 仍为 0。
-    // Replacement: 下方 getObservedRemoteRevision() 优先，未 prefetch 时才回退本地 revision。
-    // Risk: 若 plan 后远端再发生并发写入，后端仍会正常以 409 拒绝过期 plan。
-    // Human Review: Required
-    //
-    // Original code:
-    // const baseRev = Number(state.revision);
     const baseRev = this.session.getObservedRemoteRevision()
       ?? Number(state.revision);
     let latestRevision = baseRev;
@@ -821,8 +758,6 @@ class CloudflareSyncWriteBatch implements SyncRemoteWriteBatch {
       );
     }
 
-    // AI-CORRECTION 2026-08-10: > 0 → !== baseRev。
-    // Reason: revision 现在是字符串，且不需要比较大小，只需判断是否发生了提交。
     if (latestRevision !== baseRev) {
       this.session.registerCommittedRevision(latestRevision);
     }
@@ -848,7 +783,6 @@ class CloudflareSyncWriteBatch implements SyncRemoteWriteBatch {
         const content = JSON.stringify(m.value);
         const contentBytes = new TextEncoder().encode(content);
         // blobHash 必须是原始内容字节的 SHA-256 hex（不含 "sha256:" 前缀）
-        // AI-CORRECTION 2026-08-11: contentHash 是适配器的规范化比较 hash，可能来自
         // canonical JSON；上传协议 hash 必须始终对实际传输字节重新计算。
         const blobHash = (await createSha256Hash(contentBytes)).slice(7);
         objects.push({
@@ -925,7 +859,6 @@ class CloudflareSyncWriteBatch implements SyncRemoteWriteBatch {
       const result = await commitPreparedBatch(apiBase, spaceId, prepare);
 
       // 更新本地状态
-      // AI-CORRECTION 2026-08-10: epoch 比较已移除，revision 仅比较相等性。
       const currentState = await this.session.localState.readState();
       const resultRevision = String(result.revision);
       if (resultRevision !== currentState.revision) {
@@ -1018,7 +951,6 @@ export class CloudflareSyncRemote implements SyncRemote {
   public async resetRemote(): Promise<void> {
     const state = await this.localState.readState();
     // 远端 reset：尝试创建新空间（若已存在则忽略），然后本地重置状态
-    // AI-CORRECTION 2026-08-11: cf-sync-v2 没有 reset 路由；清除远端必须把 plan
     // 中的全部资产按 deletion 事务分批提交，确保 D1/R2 都走服务端删除状态机。
     let plan: CfV2PlanResponse;
     try {
@@ -1144,18 +1076,3 @@ function translateWriteError(error: unknown): unknown {
   return error;
 }
 
-// ============================================================================
-// AI-REMOVED 2026-08-09:
-// Reason: 旧 cf-sync-v1 协议使用 Web Worker 进行 epoch/appliedHead 游标同步，
-//         后端已完全重构为 cf-sync-v2 协议（revision + 两阶段提交）。
-// Trigger: 后端 cf-sync-v2 上线后，v1 协议已不可用。
-// Evidence: 后端 packages/sync/src/ 中 space_http.ts 使用 SPACE_PROTOCOL_VERSION="cf-sync-v2"，
-//          space_service.ts 中使用 prepareSpaceUpload/commitSpaceUpload/planSpace/checkSpaceRevision。
-// Replacement: 本文件 — 直接 HTTP fetch，使用 revision 游标 + prepare/upload/commit 两阶段提交。
-// Risk: Medium；旧 epoch/appliedHead 状态与 v2 的 revision/epoch 不兼容，
-//       首次同步会把远端视为全新版本。
-// Human Review: Required
-//
-// 旧 cloudflare-remote.ts 基于 Web Worker 的 cf-sync-v1 实现已被完全替换。
-// 归档原始代码可在 git history 中查看（commit 之前版本的 cloudflare-remote.ts）。
-// ============================================================================

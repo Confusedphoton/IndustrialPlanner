@@ -62,7 +62,6 @@ export class LogisticsPipeReflectionScene {
           void main() {
             vec4 scene = texture(uTexture, vTextureCoord), optics = texture(uOptics, vSceneUV);
             vec3 radiance = optics.rgb / max(optics.a, .00001) / uReflectionScale;
-            // AI-CORRECTION 2026-09-23: 透明场景的透射底色来自主题；管壁覆盖不依赖下方场景 alpha。
             vec3 backdrop = scene.rgb + uCanvasBackground * (1. - scene.a);
             vec3 color = toDisplay(toLinear(backdrop) * uGlassTint + radiance);
             finalColor = vec4(mix(scene.rgb, color, optics.a), scene.a + optics.a * (1. - scene.a));

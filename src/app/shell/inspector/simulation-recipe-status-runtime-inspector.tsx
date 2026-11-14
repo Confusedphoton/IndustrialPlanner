@@ -25,7 +25,6 @@ import type { InspectorRuntimeSample } from "./selection-inspector-model";
 export const SIMULATION_RECIPE_STATUS_RUNTIME_INSPECTOR_KEY =
   "simulation-recipe-status-runtime-inspector";
 
-// AI-CORRECTION 2026-05-29: 新增 channel 级别的进度计算。
 function resolveChannelProgressPercent(
   channelStatus: SimulationDeviceRuntimeChannelRecipeStatus | null,
   presentedProgressSeconds = channelStatus?.progressSeconds ?? null,
@@ -39,27 +38,6 @@ function resolveChannelProgressPercent(
   return Math.max(0, Math.min(100, pct));
 }
 
-// AI-REMOVED 2026-05-30:
-// Reason: SimulationDeviceRuntimeStatusReadModel 的 recipeId/progressSeconds/desiredSeconds 字段已删除，
-//   该函数的输入类型不再拥有所需字段，且无外部调用方。
-// Trigger: 接口字段迁移到 channelRecipes。
-// Evidence: grep_search 确认无外部 import 该函数。
-// Replacement: resolveChannelProgressPercent（已存在，使用 channelRecipes）
-// Risk: Low
-// Human Review: Not Required
-//
-// Original code:
-// // AI-CORRECTION 2026-05-29: 保留旧函数兼容现有调用方。
-// export function resolveSimulationRuntimeProgressPercent(
-//   runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null,
-// ): number | null {
-//   if (runtimeStatus === null) return null;
-//   const { desiredSeconds, progressSeconds } = runtimeStatus;
-//   if (progressSeconds === null || desiredSeconds === null || desiredSeconds <= 0) return null;
-//   const progressPercent = progressSeconds / desiredSeconds * 100;
-//   if (!Number.isFinite(progressPercent)) return null;
-//   return Math.max(0, Math.min(100, progressPercent));
-// }
 
 export interface SimulationRecipeStatusRuntimeInspectorProps {
   /** 所有 recipe channel ID 列表 */
@@ -75,7 +53,6 @@ export interface SimulationRecipeStatusRuntimeInspectorProps {
   definition?: EntityDefinition;
 }
 
-// AI-CORRECTION 2026-05-29: 重写组件，按 auto/manual 分区展示多 channel 配方状态。
 export function SimulationRecipeStatusRuntimeInspector({
   channelIds,
   channels,
@@ -113,17 +90,6 @@ export function SimulationRecipeStatusRuntimeInspector({
     }
     if (!needsGasEnv) return null;
 
-    // 通过 SimulationQuery 获取设备当前完全处于的气体
-    // AI-CORRECTION 2026-09-24: 气体结果现在由父层在同一次运行态采样中取得，此处只读取采样值。
-    // AI-REMOVED 2026-09-24:
-    // Reason: Inspector 气体状态必须与设备配方状态来自同一次运行态采样。
-    // Trigger: 修复多个 Inspector 分别读取仿真投影造成的时序不一致。
-    // Evidence: SelectionInspectorSlot 已在一次采样中收集 activeGasItemIds。
-    // Replacement: runtimeSample.activeGasItemIds。
-    // Risk: Low
-    // Human Review: Required
-    // Original code:
-    // const gasItemIds = appHost.workspace.simulation?.queries.getDeviceActiveGasItemIds(entity.id) ?? null;
     const gasItemIds = runtimeSample?.activeGasItemIds ?? null;
     const isInGas = gasItemIds !== null && gasItemIds.length > 0;
     const gasNames = gasItemIds?.map((itemId) => {
@@ -139,7 +105,6 @@ export function SimulationRecipeStatusRuntimeInspector({
           isInGas ? "recipe-gas-env-tag--in-gas" : "recipe-gas-env-tag--no-gas",
         )}
       >
-        {/* AI-CORRECTION 2026-11-13：文案改走 i18n，原硬编码为“当前所处气体环境: …”/“未处于气体环境”。 */}
         {isInGas
           ? `${t("inspector.recipeStatus.inGas")}${gasNames.join(", ")}`
           : t("inspector.recipeStatus.noGas")}
@@ -174,7 +139,7 @@ export function SimulationRecipeStatusRuntimeInspector({
   // 运行时 channel 配方状态
   const channelRecipeStatus = runtimeStatus?.channelRecipes ?? {};
 
-  // 2026-11-13：设备可执行的生产配方，供单击磁贴选择。自动配方设备写入的 channelRecipes 与
+  // 设备可执行的生产配方，供单击磁贴选择。自动配方设备写入的 channelRecipes 与
   // 自动规划（EDA）产出一致，仅作为计划配方与画布标签，不改变仿真的自动匹配。
   const machineRecipes = definition === undefined
     ? []
@@ -204,7 +169,6 @@ export function SimulationRecipeStatusRuntimeInspector({
     editor.actions.patchEntityConfig(entity.id, { channelRecipes: next });
   };
 
-  // AI-CORRECTION 2026-11-13：未运行仿真时，自动配方设备也显示计划配方磁贴，不再整体隐藏。
   if (runtimeStatus === null && !hasManual && !modeSwitchable && !showPlannedPicker) {
     return null;
   }
@@ -483,7 +447,6 @@ function ManualRecipeSection({
           />
         );
       })()}
-      {/* AI-CORRECTION 2026-11-13：“添加配方 → 配方选择对话框”入口仅在设备没有可平铺的配方时作为兜底保留。 */}
       {unfilledChannels.length > 0 && machineRecipes.length === 0 && (() => {
         const nextChannel = unfilledChannels[0]!;
         return (
@@ -497,19 +460,6 @@ function ManualRecipeSection({
               <LucidePlus className={cm(styles, "recipe-add-icon")} aria-hidden="true" />
               <span>{t("productionPlanning.addRecipe")}</span>
             </span>
-            {/* AI-REMOVED 2026-06-01:
-                Reason: 添加配方按钮按用户要求去掉说明文案，并让入口高度接近配方行。
-                Trigger: 用户要求“把添加配方按钮下面的说明去掉，让添加按钮的行高和配方行一致或稍矮”。
-                Evidence: 设计稿收敛为低矮操作入口；说明文本会增加真实 tablet inspector 高度。
-                Replacement: recipe-add-button-primary 单行按钮内容
-                Risk: Low
-                Human Review: Required
-
-                Original code:
-                <span className={cm(styles, "recipe-add-button-hint")}>
-                  {t("productionPlanning.recipeStatusEmptyHint")}
-                </span>
-            */}
           </button>
         );
       })()}
@@ -517,38 +467,9 @@ function ManualRecipeSection({
   );
 }
 
-// ---------------------------------------------------------------------------
-// 进度条
-// ---------------------------------------------------------------------------
-// AI-REMOVED 2026-06-01:
-// Reason: 配方状态面板按 inspector-panel3 设计稿改为内嵌在 RecipeDisplay 中的环形/横向进度视觉，
-//   不再使用独立百分比文字进度条。
-// Trigger: 用户要求 1:1 更新 recipeStatus 配方展示 UI。
-// Evidence: SimulationRecipeStatusRuntimeInspector 已将 progressPercent / progressKind 传入 RecipeDisplay。
-// Replacement: RecipeDisplay variant="inspectorStatus"
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// function ProgressBar({ percent }: { percent: number }) {
-//   return (
-//     <div className={cm(styles, "progress-bar")}>
-//       <div className={cm(styles, "progress-track")}>
-//         <div
-//           className={cm(styles, "progress-fill")}
-//           style={{ width: `${percent}%` }}
-//         />
-//       </div>
-//       <span className={cm(styles, "progress-percent")}>
-//         {Number.isInteger(percent) ? String(percent) : percent.toFixed(1)}
-//         %
-//       </span>
-//     </div>
-//   );
-// }
 
-/** 2026-11-13：设备可平铺选择的生产配方（排除工具箱隐藏配方与运行消耗配方）。 */
-function resolveMachineRecipes(index: ProductionPlanningIndex, machineId: string): RecipeDefinition[] {
+/** 设备可平铺选择的生产配方（排除工具箱隐藏配方与运行消耗配方）。 */
+export function resolveMachineRecipes(index: ProductionPlanningIndex, machineId: string): RecipeDefinition[] {
   const recipes: RecipeDefinition[] = [];
   for (const recipe of index.recipeById.values()) {
     if (

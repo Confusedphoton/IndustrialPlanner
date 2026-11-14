@@ -27,7 +27,6 @@ const CROSS_MOBILE_LINES = [
 
 const STROKE_WIDTH = 2;
 const STROKE_COLOR = { r: 255, g: 0, b: 0 };
-// AI-CORRECTION 2026-06-18: 实机移动端叉号是粗圆头实体标记，原 2px 无抗锯齿线条与目标视觉不符。
 const MOBILE_STROKE_WIDTH = 10;
 
 // =============================================================================

@@ -3,15 +3,6 @@ import { createSimulationHost } from "@/simulation/simulation-host";
 import { loadBlueprintFromFile, createWorldDocumentFromBlueprint } from "@/tests/simulation/blueprint-test-helpers";
 const cleanups: Array<() => void> = [];
 afterEach(() => { for (const dispose of cleanups.splice(0).reverse()) dispose(); vi.restoreAllMocks(); });
-// AI-REMOVED 2026-11-12:
-// Reason: 旧 Workspace 与手写 Simulation 查询不属于有效场景输入。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-// import { loadBlueprintFromFile, getBlueprintEntityArray } from "@/tests/simulation/blueprint-test-helpers";
 
 import { afterEach, describe, expect, it, vi } from "vitest"
 
@@ -216,78 +207,12 @@ import {
   resolveBeltCargoBoxSize,
 } from "@/renderer/scene/decorations/BeltCargoDecoration"
 import { ITEM_ICON_TEXTURE_INSET_PX } from "@/renderer/texture"
-// AI-REMOVED 2026-11-12:
-// Reason: 旧 Workspace 与手写 Simulation 查询不属于有效场景输入。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-// import { createRegistryContract } from "@/registry"
 
 
 describe("createBeltCargoDecoration", () => {
   it("presents recipe progress continuously and resets the phase after pause", async () => {
     const decoration = createBeltCargoDecoration()
-    // AI-REMOVED 2026-11-12:
-// Reason: 文档身份与稳定缓存来自真实 Source，不再传空对象。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-// const documentSnapshot = {}
 
-    // AI-REMOVED 2026-11-12:
-// Reason: 旧 Workspace 与手写 Simulation 查询不属于有效场景输入。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-// const ctx = createContext({
-//       getTexture: vi.fn().mockResolvedValue({ id: "unused" }),
-//       documentSnapshot,
-//       nowMs: 1000,
-//       documentRuntimeStatus: {
-//         tickNumber: 7,
-//         standardTickRate: 2,
-//         tickRate: 2,
-//         totalPowerDemand: 0,
-//         currentPowerGeneration: 0,
-//         isPowerOutage: false,
-//       },
-//       entries: [{
-//         beltShape: "straight",
-//         position: { x: 0, y: 0 },
-//         rotation: 0,
-//         itemId: "item_iron_ore",
-//         progress: 0.25,
-//         runtimeStatus: {
-//           channelRecipes: {
-//             default: {
-//               recipeId: "belt_1:dynamic-belt-transfer",
-//               progressSeconds: 0.25,
-//               desiredSeconds: 1,
-//               isProgressing: true,
-//               state: "running",
-//             },
-//           },
-//           slotItems: [{
-//             slotType: "ingredient",
-//             storageGroupId: "item_buffer",
-//             slotId: "input_slot_1",
-//             viewRole: "input-view",
-//             itemType: "item_iron_ore",
-//             count: 1,
-//             reserved: 1,
-//           }],
-//         },
-//       }],
-//     })
 const ctx = await createContext({ getTexture: vi.fn().mockResolvedValue({ id: "unused" }), fixture: "cargo-01", tick: 11, nowMs: 1000 });
 
     decoration.sync(ctx as never)
@@ -298,39 +223,11 @@ const ctx = await createContext({ getTexture: vi.fn().mockResolvedValue({ id: "u
     decoration.sync(ctx as never)
     expect(cargoRoot.x).toBeGreaterThan(authorityX)
 
-// AI-REMOVED 2026-11-12:
-// Reason: 暂停通过真实 SimulationAction，不能直接覆写 state。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-//     const simulationState = (ctx as unknown as {
-//       renderHost: {
-//         workspace: {
-//           simulation: {
-//             state: { runningState: "start" | "pause" };
-//           };
-//         };
-//       };
-//     }).renderHost.workspace.simulation.state
-//     simulationState.runningState = "pause"
-//
     ctx.simulation.actions.pause();
     ctx.nowMs = 3000
     decoration.sync(ctx as never)
     expect(cargoRoot.x).toBeCloseTo(authorityX)
 
-// AI-REMOVED 2026-11-12:
-// Reason: 恢复通过真实 SimulationAction。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-//     simulationState.runningState = "start"
     ctx.simulation.actions.resume();
     ctx.nowMs = 5000
     decoration.sync(ctx as never)
@@ -346,15 +243,6 @@ const ctx = await createContext({ getTexture: vi.fn().mockResolvedValue({ id: "u
     const getTexture = vi.fn(async (key: string) => (
       key === "belt-cargo-box" ? publishedBoxTexture : iconTexture
     ))
-    // AI-REMOVED 2026-11-12:
-// Reason: 旧 Workspace 与手写 Simulation 查询不属于有效场景输入。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-// const ctx = createContext({ getTexture })
 const ctx = await createContext({ getTexture: getTexture, fixture: "cargo-02", tick: 21 });
 
     decoration.sync(ctx as never)
@@ -479,30 +367,7 @@ const ctx = await createContext({ getTexture: getTexture, fixture: "cargo-02", t
     const getTexture = vi.fn(async (key: string) => (
       key === "belt-cargo-box" ? publishedBoxTexture : createIconTexture(32, 32)
     ))
-    // AI-REMOVED 2026-11-12:
-// Reason: 旧 Workspace 与手写 Simulation 查询不属于有效场景输入。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-// const ctx = createContext({ getTexture, simplifiedDeviceIcons: true })
 const ctx = await createContext({ getTexture: getTexture, fixture: "cargo-03", tick: 21, simplifiedDeviceIcons: true });
-// AI-REMOVED 2026-11-12:
-// Reason: 旧 Workspace 与手写 Simulation 查询不属于有效场景输入。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-//     const settings = (ctx as unknown as {
-//       renderHost: { workspace: { app: { state: { settings: {
-//         gameUseBlueprintStyleDeviceImages: boolean;
-//       } } } } };
-//     }).renderHost.workspace.app.state.settings
-//
     const settings = ctx.scene.app.internalState.settings;
     decoration.sync(ctx as never)
     expect(getTexture).not.toHaveBeenCalledWith("belt-cargo-box")
@@ -528,33 +393,6 @@ const ctx = await createContext({ getTexture: getTexture, fixture: "cargo-03", t
   it("draws every running belt reported by device runtime status", async () => {
     const decoration = createBeltCargoDecoration()
     const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
-    // AI-REMOVED 2026-11-12:
-// Reason: 旧 Workspace 与手写 Simulation 查询不属于有效场景输入。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-// const ctx = createContext({
-//       getTexture,
-//       entries: [
-//         {
-//           beltShape: "straight",
-//           position: { x: 0, y: 0 },
-//           rotation: 0,
-//           itemId: "item_iron_ore",
-//           progress: 0.25,
-//         },
-//         {
-//           beltShape: "straight",
-//           position: { x: 1, y: 0 },
-//           rotation: 90,
-//           itemId: "item_iron_ore",
-//           progress: 0.75,
-//         },
-//       ],
-//     })
 const ctx = await createContext({ getTexture: getTexture, fixture: "cargo-04", tick: 11 });
 
     decoration.sync(ctx as never)
@@ -588,18 +426,6 @@ const ctx = await createContext({ getTexture: getTexture, fixture: "cargo-04", t
     for (const testCase of cases) {
       const decoration = createBeltCargoDecoration()
       const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
-      // AI-REMOVED 2026-11-12:
-// Reason: 旧 Workspace 与手写 Simulation 查询不属于有效场景输入。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-// const ctx = createContext({
-//         getTexture,
-//         beltShape: testCase.beltShape,
-//       })
 const ctx = await createContext({ getTexture: getTexture, fixture: `cargo-05-${testCase.beltShape}`, tick: 21 });
 
       decoration.sync(ctx as never)
@@ -636,36 +462,6 @@ const ctx = await createContext({ getTexture: getTexture, fixture: `cargo-05-${t
   it("shows stationary ingredient cargo at the belt start", async () => {
     const decoration = createBeltCargoDecoration()
     const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
-    // AI-REMOVED 2026-11-12:
-// Reason: 旧 Workspace 与手写 Simulation 查询不属于有效场景输入。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-// const ctx = createContext({
-//       getTexture,
-//       entries: [{
-//         beltShape: "straight",
-//         position: { x: 0, y: 0 },
-//         rotation: 0,
-//         itemId: "item_iron_ore",
-//         progress: 0.5,
-//         runtimeStatus: {
-//           channelRecipes: {},
-//           slotItems: [{
-//             slotType: "ingredient",
-//             storageGroupId: "item_buffer",
-//             slotId: "slot_1",
-//             viewRole: "input-view",
-//             itemType: "item_iron_ore",
-//             count: 1,
-//             reserved: 0,
-//           }],
-//         },
-//       }],
-//     })
 const ctx = await createContext({ getTexture: getTexture, fixture: "cargo-06", tick: 0 });
 
     decoration.sync(ctx as never)
@@ -680,36 +476,6 @@ const ctx = await createContext({ getTexture: getTexture, fixture: "cargo-06", t
   it("shows stationary product cargo at the belt end", async () => {
     const decoration = createBeltCargoDecoration()
     const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
-    // AI-REMOVED 2026-11-12:
-// Reason: 旧 Workspace 与手写 Simulation 查询不属于有效场景输入。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-// const ctx = createContext({
-//       getTexture,
-//       entries: [{
-//         beltShape: "straight",
-//         position: { x: 0, y: 0 },
-//         rotation: 0,
-//         itemId: "item_iron_ore",
-//         progress: 0.5,
-//         runtimeStatus: {
-//           channelRecipes: {},
-//           slotItems: [{
-//             slotType: "product",
-//             storageGroupId: "item_buffer",
-//             slotId: "slot_1",
-//             viewRole: "output-view",
-//             itemType: "item_iron_ore",
-//             count: 1,
-//             reserved: 0,
-//           }],
-//         },
-//       }],
-//     })
 const ctx = await createContext({ getTexture: getTexture, fixture: "cargo-07", tick: 21 });
 
     decoration.sync(ctx as never)
@@ -724,18 +490,6 @@ const ctx = await createContext({ getTexture: getTexture, fixture: "cargo-07", t
   it("stays hidden when the running belt has no matching reserved item", async () => {
     const decoration = createBeltCargoDecoration()
     const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
-    // AI-REMOVED 2026-11-12:
-// Reason: 旧 Workspace 与手写 Simulation 查询不属于有效场景输入。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-// const ctx = createContext({
-//       getTexture,
-//       entries: [],
-//     })
 const ctx = await createContext({ getTexture: getTexture, fixture: "cargo-08", tick: 11 });
 
     decoration.sync(ctx as never)
@@ -749,26 +503,6 @@ const ctx = await createContext({ getTexture: getTexture, fixture: "cargo-08", t
   it("clips moving cargo to the belt insertion segment when it overlaps a target device", async () => {
     const decoration = createBeltCargoDecoration()
     const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
-    // AI-REMOVED 2026-11-12:
-// Reason: 旧 Workspace 与手写 Simulation 查询不属于有效场景输入。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-// const ctx = createContext({
-//       getTexture,
-//       includeInsertionTarget: true,
-//       nowMs: 1000,
-//       entries: [{
-//         beltShape: "straight",
-//         position: { x: 0, y: 0 },
-//         rotation: 0,
-//         itemId: "item_iron_ore",
-//         progress: 0.95,
-//       }],
-//     })
 const ctx = await createContext({ getTexture: getTexture, fixture: "cargo-09", tick: 39, nowMs: 1000 });
 
     decoration.sync(ctx as never)
@@ -803,27 +537,6 @@ const ctx = await createContext({ getTexture: getTexture, fixture: "cargo-09", t
       points: [25, 50, 50, 50, 50, 150, 25, 150],
     })
 
-    // AI-REMOVED 2026-11-12:
-// Reason: 旧 Workspace 与手写 Simulation 查询不属于有效场景输入。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-// const emptyFrame = createContext({
-//       getTexture,
-//       includeInsertionTarget: true,
-//       nowMs: 1200,
-//       entries: [{
-//         beltShape: "straight",
-//         position: { x: 0, y: 0 },
-//         rotation: 0,
-//         itemId: "item_iron_ore",
-//         progress: 0.95,
-//         runtimeStatus: createEmptyBeltRuntimeStatus(),
-//       }],
-//     })
 const emptyFrame = await createContext({ getTexture: getTexture, fixture: "cargo-10", tick: 20, nowMs: 1200 });
 
     decoration.sync(emptyFrame as never)
@@ -836,25 +549,6 @@ const emptyFrame = await createContext({ getTexture: getTexture, fixture: "cargo
   it("clips cargo to the belt protrusion segment when it starts from a source device", async () => {
     const decoration = createBeltCargoDecoration()
     const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
-    // AI-REMOVED 2026-11-12:
-// Reason: 旧 Workspace 与手写 Simulation 查询不属于有效场景输入。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-// const ctx = createContext({
-//       getTexture,
-//       includeOutputSource: true,
-//       entries: [{
-//         beltShape: "straight",
-//         position: { x: 0, y: 0 },
-//         rotation: 0,
-//         itemId: "item_iron_ore",
-//         progress: 0.05,
-//       }],
-//     })
 const ctx = await createContext({ getTexture: getTexture, fixture: "cargo-11", tick: 3 });
 
     decoration.sync(ctx as never)
@@ -888,26 +582,6 @@ const ctx = await createContext({ getTexture: getTexture, fixture: "cargo-11", t
   it("reopens a disconnected belt end after the target device is removed", async () => {
     const decoration = createBeltCargoDecoration()
     const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
-    // AI-REMOVED 2026-11-12:
-// Reason: 旧 Workspace 与手写 Simulation 查询不属于有效场景输入。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-// const connectedFrame = createContext({
-//       getTexture,
-//       includeOutputSource: true,
-//       includeInsertionTarget: true,
-//       entries: [{
-//         beltShape: "straight",
-//         position: { x: 0, y: 0 },
-//         rotation: 0,
-//         itemId: "item_iron_ore",
-//         progress: 1,
-//       }],
-//     })
 const connectedFrame = await createContext({ getTexture: getTexture, fixture: "cargo-12", tick: 41 });
 
     decoration.sync(connectedFrame as never)
@@ -916,25 +590,6 @@ const connectedFrame = await createContext({ getTexture: getTexture, fixture: "c
       points: [150, 50, 170, 50, 170, 150, 150, 150],
     })
 
-    // AI-REMOVED 2026-11-12:
-// Reason: 旧 Workspace 与手写 Simulation 查询不属于有效场景输入。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-// const disconnectedFrame = createContext({
-//       getTexture,
-//       includeOutputSource: true,
-//       entries: [{
-//         beltShape: "straight",
-//         position: { x: 0, y: 0 },
-//         rotation: 0,
-//         itemId: "item_iron_ore",
-//         progress: 1,
-//       }],
-//     })
 const disconnectedFrame = await createContext({ getTexture: getTexture, fixture: "cargo-13", tick: 41 });
 
     decoration.sync(disconnectedFrame as never)
@@ -949,26 +604,6 @@ const disconnectedFrame = await createContext({ getTexture: getTexture, fixture:
   it("reopens a disconnected belt start after the source device is removed", async () => {
     const decoration = createBeltCargoDecoration()
     const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
-    // AI-REMOVED 2026-11-12:
-// Reason: 旧 Workspace 与手写 Simulation 查询不属于有效场景输入。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-// const connectedFrame = createContext({
-//       getTexture,
-//       includeOutputSource: true,
-//       includeInsertionTarget: true,
-//       entries: [{
-//         beltShape: "straight",
-//         position: { x: 0, y: 0 },
-//         rotation: 0,
-//         itemId: "item_iron_ore",
-//         progress: 0,
-//       }],
-//     })
 const connectedFrame = await createContext({ getTexture: getTexture, fixture: "cargo-14", tick: 1 });
 
     decoration.sync(connectedFrame as never)
@@ -977,25 +612,6 @@ const connectedFrame = await createContext({ getTexture: getTexture, fixture: "c
       points: [30, 50, 50, 50, 50, 150, 30, 150],
     })
 
-    // AI-REMOVED 2026-11-12:
-// Reason: 旧 Workspace 与手写 Simulation 查询不属于有效场景输入。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-// const disconnectedFrame = createContext({
-//       getTexture,
-//       includeInsertionTarget: true,
-//       entries: [{
-//         beltShape: "straight",
-//         position: { x: 0, y: 0 },
-//         rotation: 0,
-//         itemId: "item_iron_ore",
-//         progress: 0,
-//       }],
-//     })
 const disconnectedFrame = await createContext({ getTexture: getTexture, fixture: "cargo-15", tick: 1 });
 
     decoration.sync(disconnectedFrame as never)
@@ -1010,35 +626,6 @@ const disconnectedFrame = await createContext({ getTexture: getTexture, fixture:
   it("keeps cargo visible when a device-port belt continues into another belt", async () => {
     const decoration = createBeltCargoDecoration()
     const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/renderer/belt-cargo-decoration/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [createEntity("next-belt", "belt_straight_1x1", { x: 1, y: 0 }, 0)]
-    // AI-REMOVED 2026-11-12:
-// Reason: 旧 Workspace 与手写 Simulation 查询不属于有效场景输入。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-// const ctx = createContext({
-//       getTexture,
-//       includeOutputSource: true,
-//       extraEntities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-cargo-decoration/scene-01-variant-1.schema7.json")),
-//       entries: [{
-//         beltShape: "straight",
-//         position: { x: 0, y: 0 },
-//         rotation: 0,
-//         itemId: "item_iron_ore",
-//         progress: 0.95,
-//       }],
-//     })
 const ctx = await createContext({ getTexture: getTexture, fixture: "cargo-16", tick: 39 });
 
     decoration.sync(ctx as never)
@@ -1053,31 +640,6 @@ const ctx = await createContext({ getTexture: getTexture, fixture: "cargo-16", t
   it("builds the shared bitmap mask from all visible belt cells", async () => {
     const decoration = createBeltCargoDecoration()
     const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/renderer/belt-cargo-decoration/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //         createEntity("right-belt", "belt_straight_1x1", { x: 1, y: 0 }, 0),
-    //         createEntity("bottom-belt", "belt_straight_1x1", { x: 0, y: 1 }, 0),
-    //         createEntity("diagonal-belt", "belt_straight_1x1", { x: 1, y: 1 }, 0),
-    //       ]
-    // AI-REMOVED 2026-11-12:
-// Reason: 旧 Workspace 与手写 Simulation 查询不属于有效场景输入。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-// const ctx = createContext({
-//       getTexture,
-//       extraEntities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-cargo-decoration/scene-02-variant-1.schema7.json")),
-//     })
 const ctx = await createContext({ getTexture: getTexture, fixture: "cargo-17", tick: 21 });
 
     decoration.sync(ctx as never)
@@ -1111,28 +673,7 @@ const ctx = await createContext({ getTexture: getTexture, fixture: "cargo-17", t
   it("reuses an unchanged cargo mask instead of rebuilding its graphics commands", async () => {
     const decoration = createBeltCargoDecoration()
     const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
-    // AI-REMOVED 2026-11-12:
-// Reason: 文档身份与稳定缓存来自真实 Source，不再传空对象。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-// const documentSnapshot = {}
 
-    // AI-REMOVED 2026-11-12:
-// Reason: 旧 Workspace 与手写 Simulation 查询不属于有效场景输入。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-// const ctx = createContext({
-//       getTexture,
-//       documentSnapshot,
-//     })
 const ctx = await createContext({ getTexture: getTexture, fixture: "cargo-18", tick: 21 });
 
     decoration.sync(ctx as never)
@@ -1156,27 +697,6 @@ const ctx = await createContext({ getTexture: getTexture, fixture: "cargo-18", t
   it("does not apply device-overlap masks in simplified blueprint-style display", async () => {
     const decoration = createBeltCargoDecoration()
     const getTexture = vi.fn().mockResolvedValue({ id: "unused" })
-    // AI-REMOVED 2026-11-12:
-// Reason: 旧 Workspace 与手写 Simulation 查询不属于有效场景输入。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-// const ctx = createContext({
-//       getTexture,
-//       includeInsertionTarget: true,
-//       simplifiedDeviceIcons: true,
-//       nowMs: 1000,
-//       entries: [{
-//         beltShape: "straight",
-//         position: { x: 0, y: 0 },
-//         rotation: 0,
-//         itemId: "item_iron_ore",
-//         progress: 0.95,
-//       }],
-//     })
 const ctx = await createContext({ getTexture: getTexture, fixture: "cargo-19", tick: 39, simplifiedDeviceIcons: true, nowMs: 1000 });
 
     decoration.sync(ctx as never)
@@ -1189,223 +709,6 @@ const ctx = await createContext({ getTexture: getTexture, fixture: "cargo-19", t
   })
 })
 
-// AI-REMOVED 2026-11-12:
-// Reason: 旧 Workspace 与手写 Simulation 查询不属于有效场景输入。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-// function createContext(options: {
-//   getTexture: (key: string) => Promise<unknown>;
-//   entries?: readonly {
-//     beltShape: "straight" | "turn-cw" | "turn-ccw";
-//     position: { x: number; y: number };
-//     rotation: 0 | 90 | 180 | 270;
-//     itemId: string;
-//     progress: number;
-//     runtimeStatus?: {
-//       channelRecipes?: Record<string, {
-//         recipeId: string | null;
-//         progressSeconds: number | null;
-//         desiredSeconds: number | null;
-//         isProgressing?: boolean;
-//         state?: "running" | "waiting-output" | null;
-//       } | null>;
-//       slotItems: Array<{
-//         slotType: "ingredient" | "product" | "universal";
-//         storageGroupId: string;
-//         slotId: string;
-//         viewRole: "single-view" | "input-view" | "output-view";
-//         itemType: string | null;
-//         count: number;
-//         reserved: number;
-//       }>;
-//     };
-//   }[];
-//   beltShape?: "straight" | "turn-cw" | "turn-ccw";
-//   includeInsertionTarget?: boolean;
-//   includeOutputSource?: boolean;
-//   extraEntities?: Array<{
-//     id: string;
-//     definitionId: string;
-//     position: { x: number; y: number };
-//     rotation: 0 | 90 | 180 | 270;
-//     config: Record<string, unknown>;
-//     tags: string[];
-//   }>;
-//   simplifiedDeviceIcons?: boolean;
-//   nowMs?: number;
-//   documentSnapshot?: object;
-//   documentRuntimeStatus?: {
-//     tickNumber: number | null;
-//     standardTickRate: number;
-//     tickRate: number;
-//     totalPowerDemand: number | null;
-//     currentPowerGeneration: number | null;
-//     isPowerOutage: boolean;
-//   };
-// }) {
-//   const registry = createRegistryContract()
-//   const entries = options.entries ?? [{
-//     beltShape: options.beltShape ?? "straight",
-//     position: { x: 0, y: 0 },
-//     rotation: 0 as const,
-//     itemId: "item_iron_ore",
-//     progress: 0.5,
-//   }]
-//   const runtimeEntries = entries.map((entry, index) => ({
-//     ...entry,
-//     id: `belt-${index + 1}`,
-//     definitionId: resolveBeltDefinitionId(entry.beltShape),
-//   }))
-//   const entriesByEntityId = new Map(
-//     runtimeEntries.map((entry) => [entry.id, entry]),
-//   )
-//   const entities: Array<{
-//     id: string;
-//     definitionId: string;
-//     position: { x: number; y: number };
-//     rotation: 0 | 90 | 180 | 270;
-//     config: Record<string, unknown>;
-//     tags: string[];
-//   }> = runtimeEntries.map((entry) => ({
-//     id: entry.id,
-//     definitionId: entry.definitionId,
-//     position: entry.position,
-//     rotation: entry.rotation,
-//     config: {},
-//     tags: [],
-//   }))
-//   if (options.includeInsertionTarget === true) {
-//     entities.push({
-//       id: "target-storager",
-//       definitionId: "storager_1",
-//       position: { x: 1, y: -1 },
-//       // AI-CORRECTION 2026-09-11: preserve the historical world-facing
-//       // belt connection after the storager registry orientation correction.
-//       rotation: 270,
-//       config: {},
-//       tags: [],
-//     })
-//   }
-//   if (options.includeOutputSource === true) {
-//     entities.push({
-//       id: "source-storager",
-//       definitionId: "storager_1",
-//       position: { x: -3, y: 0 },
-//       // AI-CORRECTION 2026-09-11: preserve the historical world-facing
-//       // belt connection after the storager registry orientation correction.
-//       rotation: 270,
-//       config: {},
-//       tags: [],
-//     })
-//   }
-//   entities.push(...(options.extraEntities ?? []))
-//
-//   return {
-//     viewportState: {
-//       width: 200,
-//       height: 200,
-//       resolution: 1,
-//       centerX: 0.5,
-//       centerY: 0.5,
-//       gridCellPixelSize: 100,
-//     },
-//     viewportBounds: {
-//       left: 0,
-//       top: 0,
-//       width: 200,
-//       height: 200,
-//     },
-//     renderHost: {
-//       app: {
-//         renderer: {
-//           render: vi.fn(),
-//           generateTexture: vi.fn().mockImplementation((source: { clearCalls: number; drawCommands: unknown[] }) => {
-//             // 返回一个带有 drawCommands 的伪纹理，便于测试验证 box 烘焙结果
-//             return new Texture({
-//               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-//               source: { width: 100, height: 100 } as any,
-//               frame: new Rectangle(0, 0, 100, 100),
-//               orig: new Rectangle(0, 0, 100, 100),
-//               label: `generated-box-${source.drawCommands.length}`,
-//             })
-//           }),
-//         },
-//       },
-//       workspace: {
-//         app: {
-//           state: {
-//             settings: {
-//               gameUseBlueprintStyleDeviceImages: options.simplifiedDeviceIcons ?? false,
-//             },
-//           },
-//         },
-//         registry: {
-//           ...registry,
-//         },
-//         render: {},
-//         simulation: {
-//           state: {
-//             runningState: "start",
-//             simulationSpeed: 1,
-//             bufferSize: 0,
-//             timeline: { isSeeking: false },
-//           },
-//           queries: {
-//             getCurrentTickItemTransfers: () => [],
-//             getDocumentRuntimeStatus: () => options.documentRuntimeStatus ?? null,
-//             getDeviceRuntimeStatus: (entityId: string) => {
-//               const entry = entriesByEntityId.get(entityId)
-//               if (entry === undefined) {
-//                 return null
-//               }
-//
-//                 return entry.runtimeStatus ?? {
-//                 channelRecipes: {
-//                   default: {
-//                     recipeId: `${entry.definitionId}:dynamic-belt-transfer`,
-//                     progressSeconds: entry.progress,
-//                     desiredSeconds: 1,
-//                     isProgressing: true,
-//                     state: "running",
-//                   },
-//                 },
-//                 slotItems: [{
-//                     slotType: "ingredient",
-//                     storageGroupId: "item_buffer",
-//                   slotId: "input_slot_1",
-//                     viewRole: "input-view",
-//                   itemType: entry.itemId,
-//                   count: 1,
-//                   reserved: 1,
-//                 }],
-//                 }
-//             },
-//           },
-//         },
-//         editor: {
-//           document: options.documentSnapshot === undefined
-//             ? undefined
-//             : {
-//                 getSnapshot: () => options.documentSnapshot,
-//               },
-//           queries: {
-//             listEntities: () => entities,
-//           },
-//         },
-//       } as never,
-//       textureManager: {
-//         getTexture: options.getTexture ?? (async () => ({ width: 32, height: 32 })),
-//       } as never,
-//     } as never,
-//     nowMs: options.nowMs ?? 1000,
-//   }
-// }
-// 2026-11-12：真实 Legacy 快照在 tick 1 开始、每 tick 推进 0.05 秒，运输 desiredSeconds=2。
-// 几何断言沿用原进度，布景按 tick=1+40×progress 推进；初始输入／产物用例保持独立。
 async function createContext(options: {
   getTexture: (key: string) => Promise<unknown>;
   fixture: string;
@@ -1444,65 +747,9 @@ async function createContext(options: {
 }
 
 
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/belt-cargo-decoration/index.json
-// AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections/renderer/belt-cargo-decoration/index.json。
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// function createEntity(
-//   id: string,
-//   definitionId: string,
-//   position: { x: number; y: number },
-//   rotation: 0 | 90 | 180 | 270,
-// ) {
-//   return {
-//     id,
-//     definitionId,
-//     position,
-//     rotation,
-//     config: {},
-//     tags: [],
-//   }
-// }
-
-// AI-REMOVED 2026-11-12:
-// Reason: 旧 Workspace 与手写 Simulation 查询不属于有效场景输入。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-// function resolveBeltDefinitionId(beltShape: "straight" | "turn-cw" | "turn-ccw"): string {
-//   switch (beltShape) {
-//     case "turn-cw":
-//       return "belt_turn_cw_1x1"
-//     case "turn-ccw":
-//       return "belt_turn_ccw_1x1"
-//     default:
-//       return "belt_straight_1x1"
-//   }
-// }
 
 
-// AI-REMOVED 2026-11-12:
-// Reason: 旧 Workspace 与手写 Simulation 查询不属于有效场景输入。
-// Trigger: REQ-048 SceneViewInput 迁移。
-// Evidence: 货物装饰需要真实文档、仿真公开快照与显示设置。
-// Replacement: 版本化完整场景 + createRenderTestScene + 真实 SimulationHost 推进；原几何和纹理断言保留。
-// Risk: 命令记录不代表真实像素表现，浏览器另行验收。
-// Human Review: Required
-// Original code:
-// function createEmptyBeltRuntimeStatus() {
-//   return {
-//     channelRecipes: {},
-//     slotItems: [],
-//   }
-// }
+
 
 
 async function flushMicrotasks(iterations = 4): Promise<void> {

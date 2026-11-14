@@ -1,14 +1,4 @@
 import { FullscreenToggleButton } from "@/app/shell/layout/fullscreen-toggle-button";
-// AI-REMOVED 2026-07-29:
-// Reason: 保存提示改为独立悬浮在画布右上角，不再属于顶栏内容。
-// Trigger: 用户要求 PC 与移动隐藏顶栏模式都使用画布悬浮图标。
-// Evidence: 顶栏内提示无法在隐藏顶栏时保持统一位置。
-// Replacement: CanvasPanel 内的 WebDavSaveIndicator。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-// import { WebDavSaveIndicator } from "@/app/shell/layout/webdav-save-indicator";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { AppHost } from "@/app/host/app-host";
@@ -21,43 +11,12 @@ import { useEffect, useId, useRef, useState } from "react";
 import {
   isTouchLandscapeScreenProfile,
 } from "@/shared/browser/screen-profile";
-// AI-REMOVED 2026-08-19:
-// Reason: 顶栏不再提供返回旧版入口，因此不再需要生成旧版公共路径。
-// Trigger: 用户要求从下个版本开始界面不再显示“返回旧版”。
-// Evidence: createPublicAssetUrl 在本文件中仅用于构造 ../v2/ 链接。
-// Replacement: None
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
-// AI-REMOVED 2026-08-19:
-// Reason: 顶栏直接读取 SimulationState.simulationMode，不再读取 App 层模式副本。
-// Trigger: SimulationMode 单一事实源改造。
-// Evidence: 模式必须在停止态和运行态保持同一可观察来源。
-// Replacement: SIMULATION_MODE + appHost.workspace.simulation.state.simulationMode。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import { regionalSimulationUiState } from "@/app/state/regional-simulation-ui-state";
-import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 import {
   ACTIVITY_DEFINITIONS,
   resolveOngoingActivityDefinitions,
 } from "@/shared/registry/activity-availability";
-// AI-REMOVED 2026-09-22:
-// Reason: 多基地模式不再使用独立倍率白名单，顶栏始终提供完整速度档位。
-// Trigger: 用户撤销“多基地隐藏 x4/x16”需求，并要求所有模式均可使用完整速度。
-// Evidence: SIMULATION_SPEED_OPTIONS 已包含 x0.25/x1/x2/x4/x16，仿真层同步撤销区域倍率过滤。
-// Replacement: SimulationSpeedButtons 直接遍历 SIMULATION_SPEED_OPTIONS。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import { isRegionalSimulationSpeed } from "@/shared/regional-simulation-speed";
 
 const ACTIVITY_STATUS_REFRESH_INTERVAL_MS = 60_000;
 const SIMULATION_CONTROL_BUTTON_ID = "top-bar-simulation-control";
@@ -153,22 +112,6 @@ export const SimulationControlButton = observer(function SimulationControlButton
   );
 });
 
-// AI-REMOVED 2026-06-19:
-// Reason: 速度控制从逐级循环切换改为平铺直选按钮组（x0.25/x1/x2/x4/x16/停止）。
-// Trigger: 用户需求 — topbar 展开时直接展示所有速度选项。
-// Evidence: SimulationSecondaryButton 仅在 TopBar 内使用，已替换为 SimulationSpeedButtons。
-// Replacement: SimulationSpeedButtons
-// Risk: Low
-// Human Review: Not Required
-//
-// Original code:
-// export const SimulationSecondaryButton = observer(function SimulationSecondaryButton({
-//   appHost,
-// }: {
-//   appHost: AppHost;
-// }) {
-//   ...
-// });
 
 export const SimulationSpeedButtons = observer(function SimulationSpeedButtons({
   appHost,
@@ -179,23 +122,6 @@ export const SimulationSpeedButtons = observer(function SimulationSpeedButtons({
   const currentSpeed = simulation?.state.simulationSpeed ?? 1;
   const isStarting = simulation?.state.runningState === "starting";
   const t = appHost.actions.translate;
-  // AI-REMOVED 2026-09-22:
-  // Reason: 多基地模式不再隐藏或禁止 x4/x16，速度按钮无需按会话模式筛选。
-  // Trigger: 用户撤销区域模式倍率限制，要求所有模式显示并使用完整速度档位。
-  // Evidence: Dense Host 已支持 x4 及以上的动态 standard tick rate，区域合图会话复用同一路径。
-  // Replacement: 下方直接遍历 SIMULATION_SPEED_OPTIONS。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // // AI-CORRECTION 2026-09-20: 停止态预览下一次会话时读取 AppSettings；运行态只反映已经固化的会话模式。
-  // const regionalMultiBaseEnabled = simulation?.engineKind === "dense-v2"
-  //   && (simulation.state.runningState === "stop"
-  //     ? appHost.state.settings.regionalMultiBaseEnabled
-  //     : simulation.state.simulationMode === SIMULATION_MODE.regionalMultiBase);
-  // const visibleSpeedOptions = regionalMultiBaseEnabled
-  //   ? SIMULATION_SPEED_OPTIONS.filter(isRegionalSimulationSpeed)
-  //   : SIMULATION_SPEED_OPTIONS;
 
   const handleSpeedClick = (speed: number) => {
     if (simulation === null) return;
@@ -253,12 +179,6 @@ export const TimelineButton = observer(function TimelineButton({
 }) {
   const label = appHost.actions.translate("timelineDialog.title");
   const active = appHost.internalState.workbench.dialogState.timeline.visible;
-  const simulation = appHost.workspace.simulation;
-  // AI-CORRECTION 2026-09-20: 停止态时间轴入口属于下一次会话配置，不能读取上一次会话的 SimulationMode。
-  const disabled = simulation?.engineKind === "dense-v2"
-    && (simulation.state.runningState === "stop"
-      ? appHost.state.settings.regionalMultiBaseEnabled
-      : simulation.state.simulationMode === SIMULATION_MODE.regionalMultiBase);
 
   return (
     <button
@@ -266,12 +186,7 @@ export const TimelineButton = observer(function TimelineButton({
       aria-pressed={active}
       className={cm(styles, className)}
       data-ui-button-id="top-bar-timeline"
-      disabled={disabled}
-      onClick={() => {
-        if (!disabled) {
-          appHost.internalActions.openDialog("timeline");
-        }
-      }}
+      onClick={() => appHost.internalActions.openDialog("timeline")}
       title={label}
       type="button"
     >
@@ -384,33 +299,12 @@ export const TopBar = observer(function TopBar({
     : null;
   const isMobile = screenProfile.deviceClass === "mobile";
 
-    // Reason: The right dock toggle controls were removed from TopBar.
-  // Trigger: ESLint reported unused vars in TopBar.
-  // Evidence: npm run lint flagged toggleRightDock, rightPanelLabel, and rightPanelIconKind.
-  // Replacement: None.
-  // Risk: Low.
-  // Human Review: Required.
-  //
-  // Original code:
-  // const toggleRightDock = () => {
-  //   appHost.internalActions.toggleRightDock();
-  // };
   const toggleTopBarCollapsed = () => {
     appHost.internalActions.toggleTopBarCollapsed();
   };
   const isTouchLandscape = isTouchLandscapeScreenProfile(screenProfile);
   const collapseActionKey = isTouchLandscape && topBarCollapsed ? "action.expand" : "action.collapse";
   const collapseButtonLabel = `${t(collapseActionKey)} ${t("topBar.controls")}`;
-    // Reason: Right dock button label and icon state are no longer rendered by TopBar.
-  // Trigger: ESLint reported unused vars after the layout toggle buttons were removed.
-  // Evidence: npm run lint flagged rightPanelLabel and rightPanelIconKind.
-  // Replacement: None.
-  // Risk: Low.
-  // Human Review: Required.
-  //
-  // Original code:
-  // const rightPanelLabel = `${t(rightDockOpen ? "action.close" : "action.open")} ${t("topBar.rightPanel")}`;
-  // const rightPanelIconKind = rightDockOpen ? "panel-right-close" : "panel-right-open";
 
   if (isTouchLandscape && topBarCollapsed) {
     return null;
@@ -437,23 +331,6 @@ export const TopBar = observer(function TopBar({
         {ongoingActivityLabel !== null && isMobile ? (
           <MobileOngoingActivityStatus label={ongoingActivityLabel} />
         ) : null}
-        {/*
-          AI-REMOVED 2026-08-19:
-          Reason: 旧版从产品界面退出，不再向用户暴露返回入口。
-          Trigger: 用户要求从下个版本开始界面不再显示“返回旧版”。
-          Evidence: 该链接是运行时唯一引用 topBar.switchToOldVersion 和 ../v2/ 的界面入口。
-          Replacement: None
-          Risk: Low
-          Human Review: Required
-
-          Original code:
-          <a
-            className={cm(styles, "top-bar-old-version-link")}
-            href={createPublicAssetUrl("../v2/")}
-          >
-            {t("topBar.switchToOldVersion")}
-          </a>
-        */}
       </div>
       <div className={cm(styles, "toolbar-group top-bar-controls")}>
         <SimulationControlButton
@@ -485,21 +362,6 @@ export const TopBar = observer(function TopBar({
             <span className={cm(styles, "sr-only")}>{t("action.collapse")}</span>
           </button>
         ) : null}
-        {/* AI-REMOVED 2026-07-29:
-            Reason: 保存提示从顶栏迁移到画布独立 overlay。
-            Trigger: 用户要求 PC 端固定画布右上角。
-            Evidence: 顶栏提示会随顶栏布局移动。
-            Replacement: CanvasPanel 内的 WebDavSaveIndicator。
-            Risk: Low。
-            Human Review: Required
-
-            Original code:
-            {appHost.workspace.sync !== null ? (
-              <WebDavSaveIndicator
-                syncState={appHost.workspace.sync.state}
-                translate={appHost.actions.translate}
-              />
-            ) : null} */}
       </div>
     </header>
   );

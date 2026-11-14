@@ -73,14 +73,6 @@ function createTexture(width: number, height: number, resolution = 1): Texture {
 }
 
 function createCache(options: {
-  // AI-REMOVED 2026-09-13:
-  // Reason: 测试契约从预算选择/即时回收改为全量驻留与 20 秒离屏期限。
-  // Trigger: 用户明确调整动画驻留规则，执行测试前同步原行为断言。
-  // Evidence: DeviceAnimationTextureCache 已取消预算与 5 秒回收。
-  // Replacement: 下方测试加载器选项
-  // Risk: Low; Human Review: Required
-  // Original code:
-  // failName?: string; maxSize?: number; resolution?: number; budgetBytes?: number;
   failName?: string; maxSize?: number; resolution?: number;
   uploadFailName?: string; beforeLoad?: (path: string) => Promise<void>;
   sharedAnimationId?: string;
@@ -91,14 +83,6 @@ function createCache(options: {
   const configured: Texture[] = [];
   const uploads: string[] = [];
   const cache = new DeviceAnimationTextureCache({
-    // AI-REMOVED 2026-09-13:
-    // Reason: 测试契约从预算选择/即时回收改为全量驻留与 20 秒离屏期限。
-    // Trigger: 用户明确调整动画驻留规则，执行测试前同步原行为断言。
-    // Evidence: DeviceAnimationTextureCache 已取消预算与 5 秒回收。
-    // Replacement: 缓存默认全量驻留，无预算输入
-    // Risk: Low; Human Review: Required
-    // Original code:
-    // budgetBytes: options.budgetBytes,
     uploadTexture: (texture) => {
       uploads.push(texture.source.label);
       if (texture.source.label.endsWith(`/${options.uploadFailName}`)) throw new Error("GPU upload failed");
@@ -250,28 +234,6 @@ describe("device animation textures", () => {
     } finally { context.dispose(); }
   });
 
-  // AI-REMOVED 2026-09-13:
-  // Reason: 测试契约从预算选择/即时回收改为全量驻留与 20 秒离屏期限。
-  // Trigger: 用户明确调整动画驻留规则，执行测试前同步原行为断言。
-  // Evidence: DeviceAnimationTextureCache 已取消预算与 5 秒回收。
-  // Replacement: 任一阶段首次请求都触发全部页面与全部帧测试
-  // Risk: Low; Human Review: Required
-  // Original code:
-  // it("预算不足时限制推测预热，保护当前与相邻页并报告超出软预算", async () => {
-  //   const context = createCache({ budgetBytes: 40 });
-  //   try {
-  //     const animation = (await context.cache.get("budget", definition))!;
-  //     animation.setVisible(true);
-  //     const frame = await animation.prepareFrame("open", 0);
-  //     await waitForPreparedPages(context.cache);
-  //     expect(frame).not.toBeNull();
-  //     expect(animation.commitFrame("open", 0)).toBe(frame);
-  //     expect(context.uploads).toHaveLength(2);
-  //     expect(context.cache.getStats().residency).toMatchObject({ budgetBytes: 40, reservedBytes: 80, overBudgetBytes: 40 });
-  //     expect(frame!.source.destroyed).toBe(false);
-  //     expect(context.unloads).toHaveLength(0);
-  //   } finally { context.dispose(); }
-  // });
 
   it.each(DEVICE_SPRITE_ANIMATION_PHASES)("首次只请求 %s 也加载全部阶段全部帧，长时间停留不回收", async (firstPhase) => {
     vi.useFakeTimers();

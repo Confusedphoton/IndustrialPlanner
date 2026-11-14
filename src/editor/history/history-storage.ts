@@ -11,8 +11,6 @@ import {
 
 const DOCUMENT_DATABASE_NAME = "v3-industrial-planner";
 const EDITOR_HISTORY_STORE_NAME = "editorhistory";
-// AI-CORRECTION 2026-08-20: schema 2 标记历史快照已执行一次设备方向迁移，避免每次读取重复旋转。
-// AI-CORRECTION 2026-09-09: schema 3 标记 record 已升级为 schema 2 并显式携带区域差量。
 const EDITOR_HISTORY_STORAGE_SCHEMA_VERSION = 3;
 
 export interface PersistedEditorHistoryState {
@@ -36,21 +34,6 @@ export async function readEditorHistoryState(
   const normalizedState = normalizePersistedEditorHistoryState(persistedState, documentKey, document);
   if (persistedState !== null && normalizedState === null) throw new Error("Invalid editor history; original records were preserved.");
 
-// AI-REMOVED 2026-10-08:
-// Reason: 历史读取不再独立写回，写入归全局迁移提交。
-// Trigger: REQ-041 全局迁移。
-// Evidence: 启动、读取与同步调用链审查。
-// Replacement: src/editor/data-migration.ts
-// Risk: 需验证全库迁移与中断恢复。
-// Human Review: Required
-// Original code:
-//   if (
-//     normalizedState !== null
-//     && isRecord(persistedState)
-//     && persistedState.documentSchemaVersion !== BLUEPRINT_SCHEMA_VERSION
-//   ) {
-//     await writeEditorHistoryState(normalizedState);
-//   }
 
 
   return normalizedState;
@@ -147,26 +130,6 @@ export function normalizePersistedEditorHistoryState(
       retained: retainedRecords.length,
     });
   }
-  // AI-REMOVED 2026-09-28:
-  // Reason: 整批迁移会让单条不可恢复的旧历史阻断当前蓝图的全部撤销记录，并误报为本地存储故障。
-  // Trigger: v1.5.1-beta1 实际数据中的旧连接缺少两端实体，历史迁移拒绝加载。
-  // Evidence: 日志报错 Cannot migrate history links without their entities；逐条迁移可保留当前游标所在连续区间。
-  // Replacement: 上方 migrationResults、retainedStart、retainedEnd 与下方重新编号后的返回值。
-  // Risk: 无法跨越的历史断点及其外侧记录会被截断；当前文档正文不受影响。
-  // Human Review: Required
-  //
-  // Original code:
-  // return {
-  //   schemaVersion: EDITOR_HISTORY_STORAGE_SCHEMA_VERSION,
-  //   documentSchemaVersion: BLUEPRINT_SCHEMA_VERSION,
-  //   documentKey: value.documentKey,
-  //   cursorSequence: Math.max(0, Math.floor(value.cursorSequence)),
-  //   records: value.records.map(record => normalizeEditorHistoryRecord(
-  //     sourceSchema < BLUEPRINT_SCHEMA_VERSION
-  //       ? migrateEditorHistoryRecordDeviceIds(record, sourceSchema, context, document?.baseId)
-  //       : record,
-  //   )),
-  // };
   return {
     schemaVersion: EDITOR_HISTORY_STORAGE_SCHEMA_VERSION,
     documentSchemaVersion: BLUEPRINT_SCHEMA_VERSION,
@@ -180,7 +143,7 @@ function migrateEditorHistoryRecordDeviceIds(
   record: Record<string, unknown>, sourceSchema: number,
   context: Record<string, WorldEntity>, baseId?: string,
 ): Record<string, unknown> {
-  // 2026-10-08：6→7 是空步骤，不需要解析历史连接端点，也不能因此截断原本有效的历史。
+  // 6→7 是空步骤，不需要解析历史连接端点，也不能因此截断原本有效的历史。
   if (sourceSchema === 6 && BLUEPRINT_SCHEMA_VERSION === 7) return record;
   const typedRecord = record as unknown as EditorHistoryRecord;
   return {
@@ -272,27 +235,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-// AI-REMOVED 2026-09-28:
-// Reason: 包装版本不能代替正文版本；过滤损坏记录会静默丢失历史。
-// Trigger: schema 2 历史重放把 schema 5 实体写回 schema 6 文档。
-// Evidence: 读取后撤销复现旧 ID 与旧朝向。
-// Replacement: normalizePersistedEditorHistoryState 的显式 documentSchemaVersion 和严格校验。
-// Risk: 无法读取时停止历史加载，保留原件。
-// Human Review: Required
-// Original code:
-//   return {
-//     schemaVersion: EDITOR_HISTORY_STORAGE_SCHEMA_VERSION,
-//     documentKey: value.documentKey,
-//     cursorSequence: Math.max(0, Math.floor(value.cursorSequence)),
-//     records: value.records
-//       .filter(isEditorHistoryRecordLike)
-//       .map((record) => normalizeEditorHistoryRecord(
-//         value.schemaVersion === 1
-//           ? migrateEditorHistoryRecordDeviceIds(record)
-//           : record,
-//       )),
-//   };
-// }
 
 function migrateHistoryLinks(
   links: Readonly<WorldDocument["slotLinks"]>, context: Record<string, WorldEntity>, sourceSchema: number, baseId?: string,

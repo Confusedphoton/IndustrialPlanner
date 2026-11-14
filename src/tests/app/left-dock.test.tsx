@@ -52,48 +52,9 @@ function createWorkspace(): WorkspaceContract {
     simulation: null,
     sync: null,
     audio: null,
-    blueprintPlanner: null,
   };
 }
 
-// AI-REMOVED 2026-11-12:
-// Reason: 旧预览渲染及滚轮测试替身不再对应有效接口
-// Trigger: REQ-048 静态预览及 Canvas 所有权迁移。
-// Evidence: useReadonlyCanvas 固定采样，预览 Renderer 专用接口已退出。
-// Replacement: renderer/blueprint-preview-manager.test.ts 与真实浏览器预览验证
-// Risk: DOM 用例不证明 Canvas 像素；真实浏览器另行验证。
-// Human Review: Required
-// Original code:
-// function createBlueprintPreviewRenderStub() {
-//   const previewCanvas = document.createElement("canvas");
-//   const mountBlueprintPreview = vi.fn(async () => "preview-handle");
-//   const updateBlueprintPreviewViewport = vi.fn();
-//   const resizeBlueprintPreview = vi.fn();
-//   const disposeBlueprintPreview = vi.fn();
-//
-//   return {
-//     previewCanvas,
-//     mountBlueprintPreview,
-//     updateBlueprintPreviewViewport,
-//     resizeBlueprintPreview,
-//     disposeBlueprintPreview,
-//     render: {
-//       container: document.createElement("div"),
-//       queries: {
-//         getBlueprintPreviewCanvas: vi.fn(() => previewCanvas),
-//         blueprintPreviewScreenToGrid: () => null,
-//       },
-//       actions: {
-//         mountBlueprintPreview,
-//         updateBlueprintPreviewScene: () => {},
-//         updateBlueprintPreviewViewport,
-//         resizeBlueprintPreview,
-//         disposeBlueprintPreview,
-//       },
-//       destroy: vi.fn(),
-//     } satisfies NonNullable<WorkspaceContract["render"]>,
-//   };
-// }
 
 
 function queryVisibleLeftDockPanel(container: HTMLDivElement): HTMLDivElement | null {
@@ -151,27 +112,6 @@ function dispatchInputEvent(
   return event;
 }
 
-// AI-REMOVED 2026-11-12:
-// Reason: 旧预览渲染及滚轮测试替身不再对应有效接口
-// Trigger: REQ-048 静态预览及 Canvas 所有权迁移。
-// Evidence: useReadonlyCanvas 固定采样，预览 Renderer 专用接口已退出。
-// Replacement: renderer/blueprint-preview-manager.test.ts 与真实浏览器预览验证
-// Risk: DOM 用例不证明 Canvas 像素；真实浏览器另行验证。
-// Human Review: Required
-// Original code:
-// function dispatchWheelEvent(
-//   target: Element,
-//   deltaY: number,
-// ): Event {
-//   const event = new Event("wheel", { bubbles: true, cancelable: true });
-//
-//   Object.defineProperties(event, {
-//     deltaY: { value: deltaY },
-//   });
-//
-//   target.dispatchEvent(event);
-//   return event;
-// }
 
 
 function stubNavigatorClipboard(options: {
@@ -315,9 +255,7 @@ describe("Left dock panel switching", () => {
     const visiblePanel = queryVisibleLeftDockPanel(container);
 
     expect(primaryButtons).toHaveLength(4);
-    // 2026-10-14：EDA 转为正式功能，默认增加一个规划入口。
-    // AI-CORRECTION 2026-11-13：新增配方树浮层开关，工具组按钮由 5 个变为 6 个。
-    expect(utilityButtons).toHaveLength(6);
+    expect(utilityButtons).toHaveLength(5);
     expect(container.textContent).toContain("放置模式");
     expect(toolbarGroups[0]?.textContent).not.toContain("区域");
     expect(visiblePanel).not.toBeNull();
@@ -385,18 +323,6 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel.querySelectorAll(".placement-panel-group-shortcut")).toHaveLength(7);
     expect(visiblePanel.querySelector('[data-ui-button-id="placement-tool-select"]')?.classList.contains("is-active")).toBe(true);
     expect(visiblePanel.querySelector('[data-ui-button-id="placement-tool-marquee"]')?.classList.contains("is-active")).toBe(false);
-    // AI-REMOVED 2026-08-03:
-    // Reason: 快捷键提示已从文字改为 public/input-prompts 图片。
-    // Trigger: ST2-RQ-002 图片化快捷键展示。
-    // Evidence: KeyboardShortcutPrompt 在 img[data-key-token] 上保留语义 token。
-    // Replacement: 下方图片 token 断言。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // expect(visiblePanel.textContent).toContain("Esc");
-    // expect(visiblePanel.textContent).toContain("X");
-    // expect(visiblePanel.textContent).toContain("G");
     expect(visiblePanel.querySelector('img[data-key-token="Esc"]')).not.toBeNull();
     expect(visiblePanel.querySelector('img[data-key-token="X"]')).not.toBeNull();
     expect(visiblePanel.querySelector('img[data-key-token="G"]')).not.toBeNull();
@@ -641,8 +567,7 @@ describe("Left dock panel switching", () => {
       utilityGroup?.querySelectorAll(".rail-button") ?? [],
     ).map((button) => button.getAttribute("title"));
 
-    // AI-CORRECTION 2026-11-13：配方树开关位于规划入口之后，原期望为 ["蓝图规划任务", "工具箱", "帮助", "问题反馈", "设置"]。
-    expect(utilityTitlesBefore).toEqual(["蓝图规划任务", "配方树", "工具箱", "帮助", "问题反馈", "设置"]);
+    expect(utilityTitlesBefore).toEqual(["配方树", "工具箱", "帮助", "问题反馈", "设置"]);
 
     act(() => {
       runInAction(() => {
@@ -654,8 +579,7 @@ describe("Left dock panel switching", () => {
       utilityGroup?.querySelectorAll(".rail-button") ?? [],
     ).map((button) => button.getAttribute("title"));
 
-    // AI-CORRECTION 2026-11-13：配方树开关位于规划入口之后，原期望为 ["蓝图规划任务", "调试日志", "工具箱", "帮助", "问题反馈", "设置"]。
-    expect(utilityTitlesAfter).toEqual(["蓝图规划任务", "配方树", "调试日志", "工具箱", "帮助", "问题反馈", "设置"]);
+    expect(utilityTitlesAfter).toEqual(["配方树", "调试日志", "工具箱", "帮助", "问题反馈", "设置"]);
   });
 
   it("frames the selected placement group and shows number shortcuts only inside it", async () => {
@@ -704,18 +628,6 @@ describe("Left dock panel switching", () => {
       appHost.internalState.settings.gameShowHotkeys = true;
     });
 
-    // AI-REMOVED 2026-09-10:
-    // Reason: 操作模式总开关已废弃，不再保留关闭分支
-    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-    // Replacement: 测试直接使用唯一操作行为
-    // Risk: 历史 false 设置统一使用当前操作行为。
-    // Human Review: Required
-    //
-    // Original code:
-    // runInAction(() => {
-    //   appHost.internalState.settings.hypergryphOperationMode = false;
-    // });
 
     act(() => {
       root.render(
@@ -906,16 +818,6 @@ describe("Left dock panel switching", () => {
     expect(historyButton.getAttribute("aria-pressed")).toBe("true");
     expect(placementPanelBeforeSwitch?.hidden).toBe(true);
     expect(historyPanel?.getAttribute("data-panel-id")).toBe("history");
-    // AI-REMOVED 2026-05-10:
-    // Reason: 历史面板已不再提供“清空历史”按钮，旧断言与当前实现不符。
-    // Trigger: 针对左侧 dock 的窄测试暴露出陈旧断言。
-    // Evidence: HistoryPanel 当前只渲染撤销与重做两个操作按钮。
-    // Replacement: 当前的撤销/重做文案断言。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // expect(historyPanel?.textContent).toContain("清空历史");
     expect(historyPanel?.textContent).toContain("撤销");
     expect(historyPanel?.textContent).toContain("重做");
     expect(historyPanel?.textContent).toContain("历史记录");
@@ -933,23 +835,6 @@ describe("Left dock panel switching", () => {
     expect(blueprintPanel?.querySelector('[data-ui-button-id="blueprint-folder-create-toggle"]')).not.toBeNull();
     expect(blueprintPanel?.querySelector('[data-ui-button-id="blueprint-folder-create-toggle"]')?.textContent?.trim()).toBe("新建");
 
-    // AI-REMOVED 2026-05-10:
-    // Reason: 左侧删除模式和删除面板已废弃，测试不再验证其可见性和切换行为。
-    // Trigger: 产品要求移除左侧“删除模式”和整个删除面板。
-    // Evidence: LeftToolbar 与 LeftDock 的 delete 注册已移除，ActivePanel 也不再接受 delete。
-    // Replacement: 当前的不存在断言。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // const deleteButton = clickTab("删除模式");
-    // const deletePanel = queryVisibleLeftDockPanel(container);
-    //
-    // expect(appHost.internalState.runtime.activePanel).toBe("delete");
-    // expect(deleteButton.getAttribute("aria-pressed")).toBe("true");
-    // expect(deletePanel?.getAttribute("data-panel-id")).toBe("delete");
-    // expect(deletePanel?.textContent).toContain("单点删除");
-    // expect(deletePanel?.textContent).toContain("恢复最近");
     const deleteButton = container.querySelector('button[title="删除模式"]');
     const deletePanel = container.querySelector('.left-dock-panel[data-panel-id="delete"]');
 
@@ -999,7 +884,7 @@ describe("Left dock panel switching", () => {
     expect(placementPanelAfterSwitch?.hidden).toBe(false);
   });
 
-  it("opens a grouped base selection dialog from the current base button", async () => {
+  it("lists bases grouped by region inline in the base panel", async () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
@@ -1028,27 +913,14 @@ describe("Left dock panel switching", () => {
     });
 
     const basePanel = queryVisibleLeftDockPanel(container);
-    const currentBaseButton = basePanel?.querySelector(
-      '[data-ui-button-id="base-current-select"]',
-    ) as HTMLButtonElement | null;
+    const picker = basePanel?.querySelector('[data-ui-button-id="base-current-select"]') as HTMLElement | null;
 
-    expect(currentBaseButton).not.toBeNull();
-    expect(currentBaseButton?.textContent).toContain("协议核心区");
-    expect(currentBaseButton?.querySelector('[data-workbench-icon="edit"]')).not.toBeNull();
-
-    await act(async () => {
-      currentBaseButton?.click();
-      await flushAsyncEffects();
-    });
-
-    const dialog = container.querySelector(".base-select-dialog") as HTMLElement | null;
-
-    expect(dialog).not.toBeNull();
-    expect(dialog?.textContent).toContain("四号谷地");
-    expect(dialog?.textContent).toContain("武陵");
-    expect(dialog?.textContent).toContain("1 台设备");
-    expect(dialog?.querySelector('[data-base-id="valley4_protocol_core"]')?.getAttribute("aria-pressed")).toBe("true");
-    expect(dialog?.querySelector('[data-base-id="wuling_protocol_core"]')).not.toBeNull();
+    expect(picker).not.toBeNull();
+    expect(picker?.textContent).toContain("四号谷地");
+    expect(picker?.textContent).toContain("武陵");
+    expect(picker?.textContent).toContain("70×70");
+    expect(picker?.querySelector('[data-base-id="valley4_protocol_core"]')?.getAttribute("aria-pressed")).toBe("true");
+    expect(picker?.querySelector('[data-base-id="wuling_protocol_core"]')?.getAttribute("aria-pressed")).toBe("false");
   });
 
   it("reopens the left dock and switches to the clicked panel when the dock is closed", () => {
@@ -1095,16 +967,6 @@ describe("Left dock panel switching", () => {
     const historyPanel = queryVisibleLeftDockPanel(container);
 
     expect(historyPanel?.getAttribute("data-panel-id")).toBe("history");
-    // AI-REMOVED 2026-05-10:
-    // Reason: 历史面板已不再提供“清空历史”按钮，旧断言与当前实现不符。
-    // Trigger: 针对左侧 dock 的窄测试暴露出陈旧断言。
-    // Evidence: HistoryPanel 当前只渲染撤销与重做两个操作按钮。
-    // Replacement: 当前的撤销/重做文案断言。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // expect(historyPanel?.textContent).toContain("清空历史");
     expect(historyPanel?.textContent).toContain("撤销");
     expect(historyPanel?.textContent).toContain("重做");
   });
@@ -1172,7 +1034,7 @@ describe("Left dock panel switching", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    // 2026-11-12：jsdom 没有布局，显式装配 View 测量后验证侧栏状态。
+    // jsdom 没有布局，显式装配 View 测量后验证侧栏状态。
     appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 711, height: 500 });
     const dockBeforeSuppression = container.querySelector(".dock-left") as HTMLElement | null;
     const dockShell = container.querySelector(".dock-shell-left") as HTMLElement | null;
@@ -1262,7 +1124,7 @@ describe("Left dock panel switching", () => {
     expect(operationGroup?.querySelectorAll(".placement-button-hotkey")).toHaveLength(0);
     expect(operationGroup?.querySelectorAll(".placement-action-button .button-icon-image")).toHaveLength(4);
     expect(operationGroup?.querySelector('[data-ui-button-id="placement-tool-select"]')?.getAttribute("aria-label")).toBe("选择");
-    expect(visiblePanel?.querySelector(".placement-button-list")?.classList.contains("is-single-column")).toBe(true);
+    expect(visiblePanel?.querySelector(".placement-button-list")?.classList.contains("is-tile-grid")).toBe(true);
     expect(visiblePanel?.querySelectorAll(".placement-button-hotkey")).toHaveLength(0);
     expect(visiblePanel?.querySelectorAll(".placement-panel-group-shortcut")).toHaveLength(0);
   });
@@ -1300,7 +1162,7 @@ describe("Left dock panel switching", () => {
     expect(operationGroup?.querySelector(".placement-panel-group-header")).toBeNull();
     expect(operationButtonList?.classList.contains("is-mobile-icon-grid")).toBe(true);
     expect(operationGroup?.querySelectorAll(".placement-action-button")).toHaveLength(4);
-    expect(visiblePanel?.querySelector(".placement-button-list")?.classList.contains("is-single-column")).toBe(true);
+    expect(visiblePanel?.querySelector(".placement-button-list")?.classList.contains("is-tile-grid")).toBe(true);
     expect(visiblePanel?.querySelectorAll(".placement-button-hotkey")).toHaveLength(0);
     expect(visiblePanel?.querySelectorAll(".placement-panel-group-shortcut")).toHaveLength(0);
   });
@@ -1997,25 +1859,7 @@ describe("Left dock panel switching", () => {
     }));
 
     const workspace = createWorkspace();
-    // AI-REMOVED 2026-11-12:
-// Reason: 普通 DOM 测试不构造假 Renderer
-// Trigger: REQ-048 静态预览迁移。
-// Evidence: useReadonlyCanvas 固定采样；专用 Renderer 预览接口已退出。
-// Replacement: renderer/blueprint-preview-manager.test.ts；真实浏览器预览验证。
-// Risk: 不以 DOM 检查代替 Canvas 像素验证。
-// Human Review: Required
-// Original code:
-// const renderStub = createBlueprintPreviewRenderStub();
 
-    // AI-REMOVED 2026-11-12:
-// Reason: 退出旧渲染接口断言；保留本用例业务结果
-// Trigger: REQ-048 静态预览迁移。
-// Evidence: useReadonlyCanvas 固定采样；专用 Renderer 预览接口已退出。
-// Replacement: renderer/blueprint-preview-manager.test.ts；真实浏览器预览验证。
-// Risk: 不以 DOM 检查代替 Canvas 像素验证。
-// Human Review: Required
-// Original code:
-// workspace.render = renderStub.render;
 
     const appHost = createAppTestHost(workspace);
 
@@ -2052,35 +1896,8 @@ describe("Left dock panel switching", () => {
     expect(previewDialog?.querySelector('[data-ui-button-id="blueprint-preview-place-button"]')).not.toBeNull();
     expect(previewDialog?.querySelector('[data-ui-button-id="blueprint-preview-export-file-button"]')).not.toBeNull();
     expect(previewDialog?.querySelector('[data-ui-button-id="blueprint-preview-copy-clipboard-button"]')).not.toBeNull();
-    // AI-REMOVED 2026-11-12:
-// Reason: 退出旧渲染接口断言；保留本用例业务结果
-// Trigger: REQ-048 静态预览迁移。
-// Evidence: useReadonlyCanvas 固定采样；专用 Renderer 预览接口已退出。
-// Replacement: renderer/blueprint-preview-manager.test.ts；真实浏览器预览验证。
-// Risk: 不以 DOM 检查代替 Canvas 像素验证。
-// Human Review: Required
-// Original code:
-// expect(renderStub.mountBlueprintPreview).toHaveBeenCalledTimes(1);
 
-    // AI-REMOVED 2026-11-12:
-// Reason: 退出旧渲染接口断言；保留本用例业务结果
-// Trigger: REQ-048 静态预览迁移。
-// Evidence: useReadonlyCanvas 固定采样；专用 Renderer 预览接口已退出。
-// Replacement: renderer/blueprint-preview-manager.test.ts；真实浏览器预览验证。
-// Risk: 不以 DOM 检查代替 Canvas 像素验证。
-// Human Review: Required
-// Original code:
-// expect(renderStub.updateBlueprintPreviewViewport).toHaveBeenCalled();
 
-    // AI-REMOVED 2026-11-12:
-// Reason: 退出旧渲染接口断言；保留本用例业务结果
-// Trigger: REQ-048 静态预览迁移。
-// Evidence: useReadonlyCanvas 固定采样；专用 Renderer 预览接口已退出。
-// Replacement: renderer/blueprint-preview-manager.test.ts；真实浏览器预览验证。
-// Risk: 不以 DOM 检查代替 Canvas 像素验证。
-// Human Review: Required
-// Original code:
-// expect(previewDialog?.querySelector('[data-blueprint-preview-canvas="true"]')).toBe(renderStub.previewCanvas);
 
   });
 
@@ -2101,25 +1918,7 @@ describe("Left dock panel switching", () => {
       }),
     });
     const workspace = createWorkspace();
-    // AI-REMOVED 2026-11-12:
-// Reason: 普通 DOM 测试不构造假 Renderer
-// Trigger: REQ-048 静态预览迁移。
-// Evidence: useReadonlyCanvas 固定采样；专用 Renderer 预览接口已退出。
-// Replacement: renderer/blueprint-preview-manager.test.ts；真实浏览器预览验证。
-// Risk: 不以 DOM 检查代替 Canvas 像素验证。
-// Human Review: Required
-// Original code:
-// const renderStub = createBlueprintPreviewRenderStub();
 
-    // AI-REMOVED 2026-11-12:
-// Reason: 退出旧渲染接口断言；保留本用例业务结果
-// Trigger: REQ-048 静态预览迁移。
-// Evidence: useReadonlyCanvas 固定采样；专用 Renderer 预览接口已退出。
-// Replacement: renderer/blueprint-preview-manager.test.ts；真实浏览器预览验证。
-// Risk: 不以 DOM 检查代替 Canvas 像素验证。
-// Human Review: Required
-// Original code:
-// workspace.render = renderStub.render;
 
     const appHost = createAppTestHost(workspace);
 
@@ -2185,25 +1984,7 @@ describe("Left dock panel switching", () => {
     });
 
     const workspace = createWorkspace();
-    // AI-REMOVED 2026-11-12:
-// Reason: 普通 DOM 测试不构造假 Renderer
-// Trigger: REQ-048 静态预览迁移。
-// Evidence: useReadonlyCanvas 固定采样；专用 Renderer 预览接口已退出。
-// Replacement: renderer/blueprint-preview-manager.test.ts；真实浏览器预览验证。
-// Risk: 不以 DOM 检查代替 Canvas 像素验证。
-// Human Review: Required
-// Original code:
-// const renderStub = createBlueprintPreviewRenderStub();
 
-    // AI-REMOVED 2026-11-12:
-// Reason: 退出旧渲染接口断言；保留本用例业务结果
-// Trigger: REQ-048 静态预览迁移。
-// Evidence: useReadonlyCanvas 固定采样；专用 Renderer 预览接口已退出。
-// Replacement: renderer/blueprint-preview-manager.test.ts；真实浏览器预览验证。
-// Risk: 不以 DOM 检查代替 Canvas 像素验证。
-// Human Review: Required
-// Original code:
-// workspace.render = renderStub.render;
 
     const appHost = createAppTestHost(workspace);
 
@@ -2291,25 +2072,7 @@ describe("Left dock panel switching", () => {
   it("copies the previewed blueprint to the clipboard as a portable document", async () => {
     const clipboard = stubNavigatorClipboard();
     const workspace = createWorkspace();
-    // AI-REMOVED 2026-11-12:
-// Reason: 普通 DOM 测试不构造假 Renderer
-// Trigger: REQ-048 静态预览迁移。
-// Evidence: useReadonlyCanvas 固定采样；专用 Renderer 预览接口已退出。
-// Replacement: renderer/blueprint-preview-manager.test.ts；真实浏览器预览验证。
-// Risk: 不以 DOM 检查代替 Canvas 像素验证。
-// Human Review: Required
-// Original code:
-// const renderStub = createBlueprintPreviewRenderStub();
 
-    // AI-REMOVED 2026-11-12:
-// Reason: 退出旧渲染接口断言；保留本用例业务结果
-// Trigger: REQ-048 静态预览迁移。
-// Evidence: useReadonlyCanvas 固定采样；专用 Renderer 预览接口已退出。
-// Replacement: renderer/blueprint-preview-manager.test.ts；真实浏览器预览验证。
-// Risk: 不以 DOM 检查代替 Canvas 像素验证。
-// Human Review: Required
-// Original code:
-// workspace.render = renderStub.render;
 
     const appHost = createAppTestHost(workspace);
 
@@ -2356,25 +2119,7 @@ describe("Left dock panel switching", () => {
     });
 
     const workspace = createWorkspace();
-    // AI-REMOVED 2026-11-12:
-// Reason: 普通 DOM 测试不构造假 Renderer
-// Trigger: REQ-048 静态预览迁移。
-// Evidence: useReadonlyCanvas 固定采样；专用 Renderer 预览接口已退出。
-// Replacement: renderer/blueprint-preview-manager.test.ts；真实浏览器预览验证。
-// Risk: 不以 DOM 检查代替 Canvas 像素验证。
-// Human Review: Required
-// Original code:
-// const renderStub = createBlueprintPreviewRenderStub();
 
-    // AI-REMOVED 2026-11-12:
-// Reason: 退出旧渲染接口断言；保留本用例业务结果
-// Trigger: REQ-048 静态预览迁移。
-// Evidence: useReadonlyCanvas 固定采样；专用 Renderer 预览接口已退出。
-// Replacement: renderer/blueprint-preview-manager.test.ts；真实浏览器预览验证。
-// Risk: 不以 DOM 检查代替 Canvas 像素验证。
-// Human Review: Required
-// Original code:
-// workspace.render = renderStub.render;
 
     const appHost = createAppTestHost(workspace);
 
@@ -2413,212 +2158,10 @@ describe("Left dock panel switching", () => {
     clickSpy.mockRestore();
   });
 
-  // AI-REMOVED 2026-11-12:
-// Reason: 明确取消预览相机手势，原用例已不对应产品行为
-// Trigger: REQ-048 静态预览迁移。
-// Evidence: useReadonlyCanvas 固定采样；专用 Renderer 预览接口已退出。
-// Replacement: renderer/blueprint-preview-manager.test.ts；真实浏览器预览验证。
-// Risk: 不以 DOM 检查代替 Canvas 像素验证。
-// Human Review: Required
-// Original code:
-// it("forwards preview zoom gestures to render actions", async () => {
-//     const workspace = createWorkspace();
-//     const renderStub = createBlueprintPreviewRenderStub();
-//     workspace.render = renderStub.render;
-//     const appHost = createAppTestHost(workspace);
-//
-//     appHost.blueprintPreview.open({
-//       ...createTestBlueprint({
-//         name: "缩放预览蓝图",
-//       }),
-//       parentFolderId: null,
-//     });
-//
-//     await act(async () => {
-//       root.render(<BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />);
-//       await flushAsyncEffects();
-//     });
-//
-//     renderStub.updateBlueprintPreviewViewport.mockClear();
-//     const previewSurface = container.querySelector(".blueprint-preview-canvas") as HTMLDivElement | null;
-//
-//     expect(previewSurface).not.toBeNull();
-//
-//     await act(async () => {
-//       if (previewSurface !== null) {
-//         dispatchWheelEvent(previewSurface, -120);
-//       }
-//       await flushAsyncEffects();
-//     });
-//
-//     expect(renderStub.updateBlueprintPreviewViewport).toHaveBeenLastCalledWith(
-//       "preview-handle",
-//       expect.objectContaining({
-//         zoom: 1.12,
-//         offsetX: 0,
-//         offsetY: 0,
-//       }),
-//     );
-//   });
 
 
-  // AI-REMOVED 2026-11-12:
-// Reason: 明确取消预览相机手势，原用例已不对应产品行为
-// Trigger: REQ-048 静态预览迁移。
-// Evidence: useReadonlyCanvas 固定采样；专用 Renderer 预览接口已退出。
-// Replacement: renderer/blueprint-preview-manager.test.ts；真实浏览器预览验证。
-// Risk: 不以 DOM 检查代替 Canvas 像素验证。
-// Human Review: Required
-// Original code:
-// it("forwards preview pinch zoom gestures to render actions on touch", async () => {
-//     const workspace = createWorkspace();
-//     const renderStub = createBlueprintPreviewRenderStub();
-//     workspace.render = renderStub.render;
-//     const appHost = createAppTestHost(workspace);
-//
-//     appHost.blueprintPreview.open({
-//       ...createTestBlueprint({
-//         name: "触控缩放预览蓝图",
-//       }),
-//       parentFolderId: null,
-//     });
-//
-//     await act(async () => {
-//       root.render(<BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />);
-//       await flushAsyncEffects();
-//     });
-//
-//     renderStub.updateBlueprintPreviewViewport.mockClear();
-//     const previewSurface = container.querySelector(".blueprint-preview-canvas") as HTMLDivElement | null;
-//
-//     expect(previewSurface).not.toBeNull();
-//
-//     await act(async () => {
-//       if (previewSurface !== null) {
-//         dispatchPointerEvent(previewSurface, "pointerdown", {
-//           pointerId: 1,
-//           pointerType: "touch",
-//           clientX: 100,
-//           clientY: 120,
-//           button: 0,
-//           buttons: 1,
-//         });
-//         dispatchPointerEvent(previewSurface, "pointerdown", {
-//           pointerId: 2,
-//           pointerType: "touch",
-//           clientX: 160,
-//           clientY: 120,
-//           button: 0,
-//           buttons: 1,
-//         });
-//         dispatchPointerEvent(previewSurface, "pointermove", {
-//           pointerId: 2,
-//           pointerType: "touch",
-//           clientX: 220,
-//           clientY: 120,
-//           button: 0,
-//           buttons: 1,
-//         });
-//         dispatchPointerEvent(previewSurface, "pointerup", {
-//           pointerId: 1,
-//           pointerType: "touch",
-//           clientX: 100,
-//           clientY: 120,
-//           button: 0,
-//           buttons: 0,
-//         });
-//         dispatchPointerEvent(previewSurface, "pointerup", {
-//           pointerId: 2,
-//           pointerType: "touch",
-//           clientX: 220,
-//           clientY: 120,
-//           button: 0,
-//           buttons: 0,
-//         });
-//       }
-//       await flushAsyncEffects();
-//     });
-//
-//     const lastCall = renderStub.updateBlueprintPreviewViewport.mock.calls.at(-1);
-//
-//     expect(lastCall).toBeDefined();
-//     expect(lastCall?.[0]).toBe("preview-handle");
-//     expect(lastCall?.[1].offsetX).toBe(0);
-//     expect(lastCall?.[1].offsetY).toBe(0);
-//     expect(lastCall?.[1].zoom).toBeCloseTo(2, 5);
-//   });
 
 
-  // AI-REMOVED 2026-11-12:
-// Reason: 明确取消预览相机手势，原用例已不对应产品行为
-// Trigger: REQ-048 静态预览迁移。
-// Evidence: useReadonlyCanvas 固定采样；专用 Renderer 预览接口已退出。
-// Replacement: renderer/blueprint-preview-manager.test.ts；真实浏览器预览验证。
-// Risk: 不以 DOM 检查代替 Canvas 像素验证。
-// Human Review: Required
-// Original code:
-// it("forwards preview pan gestures to render actions", async () => {
-//     const workspace = createWorkspace();
-//     const renderStub = createBlueprintPreviewRenderStub();
-//     workspace.render = renderStub.render;
-//     const appHost = createAppTestHost(workspace);
-//
-//     appHost.blueprintPreview.open({
-//       ...createTestBlueprint({
-//         name: "平移预览蓝图",
-//       }),
-//       parentFolderId: null,
-//     });
-//
-//     await act(async () => {
-//       root.render(<BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />);
-//       await flushAsyncEffects();
-//     });
-//
-//     renderStub.updateBlueprintPreviewViewport.mockClear();
-//     const previewSurface = container.querySelector(".blueprint-preview-canvas") as HTMLDivElement | null;
-//
-//     expect(previewSurface).not.toBeNull();
-//
-//     await act(async () => {
-//       if (previewSurface !== null) {
-//         dispatchPointerEvent(previewSurface, "pointerdown", {
-//           pointerId: 1,
-//           pointerType: "mouse",
-//           clientX: 100,
-//           clientY: 100,
-//           button: 0,
-//           buttons: 1,
-//         });
-//         dispatchPointerEvent(previewSurface, "pointermove", {
-//           pointerId: 1,
-//           pointerType: "mouse",
-//           clientX: 132,
-//           clientY: 118,
-//           button: 0,
-//           buttons: 1,
-//         });
-//         dispatchPointerEvent(previewSurface, "pointerup", {
-//           pointerId: 1,
-//           pointerType: "mouse",
-//           clientX: 132,
-//           clientY: 118,
-//           button: 0,
-//           buttons: 0,
-//         });
-//       }
-//       await flushAsyncEffects();
-//     });
-//
-//     expect(renderStub.updateBlueprintPreviewViewport).toHaveBeenCalledWith(
-//       "preview-handle",
-//       expect.objectContaining({
-//         zoom: 1,
-//         offsetX: 32,
-//         offsetY: 18,
-//       }),
-//     );
-//   });
 
 
   it("uses the preview dialog place action instead of rendering a dock detail inspector", async () => {
@@ -2630,25 +2173,7 @@ describe("Left dock panel switching", () => {
     }));
 
     const workspace = createWorkspace();
-    // AI-REMOVED 2026-11-12:
-// Reason: 普通 DOM 测试不构造假 Renderer
-// Trigger: REQ-048 静态预览迁移。
-// Evidence: useReadonlyCanvas 固定采样；专用 Renderer 预览接口已退出。
-// Replacement: renderer/blueprint-preview-manager.test.ts；真实浏览器预览验证。
-// Risk: 不以 DOM 检查代替 Canvas 像素验证。
-// Human Review: Required
-// Original code:
-// const renderStub = createBlueprintPreviewRenderStub();
 
-    // AI-REMOVED 2026-11-12:
-// Reason: 退出旧渲染接口断言；保留本用例业务结果
-// Trigger: REQ-048 静态预览迁移。
-// Evidence: useReadonlyCanvas 固定采样；专用 Renderer 预览接口已退出。
-// Replacement: renderer/blueprint-preview-manager.test.ts；真实浏览器预览验证。
-// Risk: 不以 DOM 检查代替 Canvas 像素验证。
-// Human Review: Required
-// Original code:
-// workspace.render = renderStub.render;
 
     const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
@@ -2687,15 +2212,6 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel?.querySelector(".blueprint-detail-card")).toBeNull();
     expect(previewDialog).not.toBeNull();
     expect(placeButton).not.toBeNull();
-    // AI-REMOVED 2026-11-12:
-// Reason: 退出旧渲染接口断言；保留本用例业务结果
-// Trigger: REQ-048 静态预览迁移。
-// Evidence: useReadonlyCanvas 固定采样；专用 Renderer 预览接口已退出。
-// Replacement: renderer/blueprint-preview-manager.test.ts；真实浏览器预览验证。
-// Risk: 不以 DOM 检查代替 Canvas 像素验证。
-// Human Review: Required
-// Original code:
-// expect(renderStub.mountBlueprintPreview).toHaveBeenCalledTimes(1);
 
 
     await act(async () => {
@@ -2719,25 +2235,7 @@ describe("Left dock panel switching", () => {
     await saveBlueprintDocument(blueprint);
 
     const workspace = createWorkspace();
-    // AI-REMOVED 2026-11-12:
-// Reason: 普通 DOM 测试不构造假 Renderer
-// Trigger: REQ-048 静态预览迁移。
-// Evidence: useReadonlyCanvas 固定采样；专用 Renderer 预览接口已退出。
-// Replacement: renderer/blueprint-preview-manager.test.ts；真实浏览器预览验证。
-// Risk: 不以 DOM 检查代替 Canvas 像素验证。
-// Human Review: Required
-// Original code:
-// const renderStub = createBlueprintPreviewRenderStub();
 
-    // AI-REMOVED 2026-11-12:
-// Reason: 退出旧渲染接口断言；保留本用例业务结果
-// Trigger: REQ-048 静态预览迁移。
-// Evidence: useReadonlyCanvas 固定采样；专用 Renderer 预览接口已退出。
-// Replacement: renderer/blueprint-preview-manager.test.ts；真实浏览器预览验证。
-// Risk: 不以 DOM 检查代替 Canvas 像素验证。
-// Human Review: Required
-// Original code:
-// workspace.render = renderStub.render;
 
     const appHost = createAppTestHost(workspace);
 
@@ -2816,25 +2314,7 @@ describe("Left dock panel switching", () => {
     await saveBlueprintDocument(blueprint);
 
     const workspace = createWorkspace();
-    // AI-REMOVED 2026-11-12:
-// Reason: 普通 DOM 测试不构造假 Renderer
-// Trigger: REQ-048 静态预览迁移。
-// Evidence: useReadonlyCanvas 固定采样；专用 Renderer 预览接口已退出。
-// Replacement: renderer/blueprint-preview-manager.test.ts；真实浏览器预览验证。
-// Risk: 不以 DOM 检查代替 Canvas 像素验证。
-// Human Review: Required
-// Original code:
-// const renderStub = createBlueprintPreviewRenderStub();
 
-    // AI-REMOVED 2026-11-12:
-// Reason: 退出旧渲染接口断言；保留本用例业务结果
-// Trigger: REQ-048 静态预览迁移。
-// Evidence: useReadonlyCanvas 固定采样；专用 Renderer 预览接口已退出。
-// Replacement: renderer/blueprint-preview-manager.test.ts；真实浏览器预览验证。
-// Risk: 不以 DOM 检查代替 Canvas 像素验证。
-// Human Review: Required
-// Original code:
-// workspace.render = renderStub.render;
 
     const appHost = createAppTestHost(workspace);
 
@@ -3100,19 +2580,6 @@ describe("Base panel power bar", () => {
 
       workspace.simulation = {
         state: {
-          // AI-REMOVED 2026-09-12:
-          // Reason: 电池测试数据改由文档运行时 Query 提供，不再放入 SimulationState.statistics。
-          // Trigger: 用户确认移除 SimulationState.statistics。
-          // Evidence: 上方 getDocumentRuntimeStatus 已包含 battery fields。
-          // Replacement: getDocumentRuntimeStatus 测试桩。
-          // Risk: Low。
-          // Human Review: Required
-          //
-          // Original code:
-          // statistics: {
-          //   baseBatteryJoules: simulationStatus.batteryJoules ?? 0,
-          //   baseBatteryCapacity: simulationStatus.batteryCapacity ?? 0,
-          // },
         },
         queries: {
           getStatusRuntimeJson: vi.fn(() => "{}"),
@@ -3196,19 +2663,6 @@ describe("Base panel power bar", () => {
 
     workspace.simulation = {
       state: {
-        // AI-REMOVED 2026-09-12:
-        // Reason: null 文档运行时状态已足以表达无电池读数，不再构造已退役 statistics。
-        // Trigger: 用户确认移除 SimulationState.statistics。
-        // Evidence: getDocumentRuntimeStatus 测试桩明确返回 null。
-        // Replacement: queries.getDocumentRuntimeStatus。
-        // Risk: Low。
-        // Human Review: Required
-        //
-        // Original code:
-        // statistics: {
-        //   baseBatteryJoules: 0,
-        //   baseBatteryCapacity: 0,
-        // },
       },
       queries: {
         getStatusRuntimeJson: vi.fn(() => "{}"),
@@ -3291,37 +2745,6 @@ async function flushAsyncEffects() {
   await Promise.resolve();
 }
 
-// AI-REMOVED 2026-11-12:
-// Reason: 旧 assembler 不在生产 Registry，统一 SceneSource 必须接收真实设备
-// Trigger: REQ-048 静态预览及 Canvas 所有权迁移。
-// Evidence: useReadonlyCanvas 固定采样，预览 Renderer 专用接口已退出。
-// Replacement: 版本化 left-dock-preview.schema7.json
-// Risk: DOM 用例不证明 Canvas 像素；真实浏览器另行验证。
-// Human Review: Required
-// Original code:
-// function createTestBlueprint(
-//   overrides: Partial<ReturnType<typeof createBlueprintDocument>> = {},
-// ) {
-//   return createBlueprintDocument({
-//     name: "蓝图样例",
-//     description: "",
-//     baseId: "wuling_protocol_core",
-//     initialGridPoint: { x: 10, y: 12 },
-//     entities: {
-//       assembler_1: {
-//         id: "assembler_1",
-//         definitionId: "assembler",
-//         position: { x: 10, y: 12 },
-//         rotation: 0,
-//         config: {},
-//         tags: [],
-//       },
-//     },
-//     entityOrder: ["assembler_1"],
-//     slotLinks: [],
-//     ...overrides,
-//   });
-// }
 function createTestBlueprint(overrides: Partial<ReturnType<typeof createBlueprintDocument>> = {}) {
   return createBlueprintDocument({ ...loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/req048/left-dock-preview.schema7.json"), blueprintId: undefined, ...overrides });
 }

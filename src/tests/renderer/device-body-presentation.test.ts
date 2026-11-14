@@ -32,7 +32,6 @@ describe("resolveDeviceBodyPresentation", () => {
       simulation: null,
       sync: null,
       audio: null,
-      blueprintPlanner: null,
     });
     presentationSource = createScenePresentation({ app, readTools: () => app.mainCanvas.state, showBaseBoundary: true });
     staticDefinition = {

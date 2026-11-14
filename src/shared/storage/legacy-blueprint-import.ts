@@ -12,16 +12,6 @@ import {
 import type { SlotLinkDefinition } from "@/domain/document/world-document";
 import { migrateBlueprintDocumentState } from "@/shared/blueprint-device-id-migration";
 
-// AI-REMOVED 2026-07-19:
-// Reason: 旧版导入不得把历史设备 ID 直接压平到最新版本，否则会跳过 schema 1→2→3 的正式迁移链。
-// Trigger: 用户要求从任意版本逐阶段迁移，并在每一步断言。
-// Evidence: resolveLatestBlueprintDeviceId 已由逐版本实体迁移执行器替代。
-// Replacement: migrateBlueprintEntityDeviceIds
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import { resolveLatestBlueprintDeviceId } from "@/shared/blueprint-device-id-migration";
 
 const LEGACY_BLUEPRINT_SCHEMA = "industrial-planner-blueprint";
 const LEGACY_BLUEPRINT_ID_PATTERN = /([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i;
@@ -35,28 +25,6 @@ const LEGACY_DEVICE_REMAPPERS: Readonly<Record<string, {
   readonly definitionId: string;
   readonly rotationOffset: GridRotation;
 }>> = {
-  // AI-REMOVED 2026-05-10:
-  // Reason: Blanket warehouse-unloader rotation remap is incorrect for the current
-  //   legacy blueprint corpus.
-  // Trigger: Rechecking the current two system blueprints showed their legacy
-  //   sources already use the same functional direction as the migrated public
-  //   assets.
-  // Evidence: The premium capsule legacy source places item_port_unloader_1 at
-  //   y=0 with rotation=180, and the migrated public asset preserves rotation=180
-  //   while feeding belts at y=1 directly below; applying +180 here would flip
-  //   those unloaders to 0 and break the topology.
-  // Replacement: None
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // item_port_unloader_1: {
-  //   definitionId: "item_port_unloader_1",
-  //   rotationOffset: 180,
-  // },
-  // AI-CORRECTION 2026-05-10: item_port_unloader_1 在当前 registry 中已改为
-  //   rotation=0 时端口朝南，因此旧版蓝图导入需要重新补回 +180 度，才能保留
-  //   旧资产的功能流向。
   item_port_unloader_1: {
     definitionId: "item_port_unloader_1",
     rotationOffset: 180,
@@ -85,9 +53,6 @@ const LEGACY_DEVICE_REMAPPERS: Readonly<Record<string, {
     definitionId: "pipe_turn_cw_1x1",
     rotationOffset: 270,
   },
-  // AI-CORRECTION 2026-05-18: 分流器/汇流器默认方向变更。
-  //   - 分流器: 原 input=E → 现 input=N，需补 +90° 使旧 v2 蓝图的拓扑等价。
-  //   - 汇流器: 原 output=W → 现 output=S，需补 +90° 使旧 v2 蓝图的拓扑等价。
   item_log_splitter: {
     definitionId: "item_log_splitter",
     rotationOffset: 90,
@@ -108,7 +73,6 @@ const LEGACY_DEVICE_REMAPPERS: Readonly<Record<string, {
 const WAREHOUSE_SUBMIT_CHANNEL_ID = "warehouse_submit";
 const WAREHOUSE_SUBMIT_RECIPE_ID = "r_warehouse_submit";
 const DARK_PIPE_INLET_STORAGE_GROUP_ID = "loader_buffer";
-// AI-CORRECTION 2026-09-18: 旧版暗管关系导入后指向出口隐藏原料槽，真实输出缓存不再与入口瞬时共享。
 const DARK_PIPE_OUTLET_STORAGE_GROUP_ID = "transport_input";
 const DARK_PIPE_SLOT_ID = "slot_1";
 const DARK_PIPE_LINK_ID_PREFIX = "dark-pipe-link:";
@@ -167,18 +131,6 @@ export function convertLegacyBlueprintJson(
 ): BlueprintDocument | null {
   const legacyBlueprint = normalizeLegacyBlueprintJson(value);
 
-  // AI-REMOVED 2026-06-12:
-  // Reason: v2 → v3 迁移要求当前地图与用户蓝图都复用蓝图迁移脚本，暗管链接必须在这里统一迁移。
-  // Trigger: 用户明确要求“链接和未链接的暗管逻辑不同，都要放都要测”，并要求地图也通过蓝图迁移脚本复制粘贴式迁移。
-  // Evidence: LegacyBlueprintJson 已有 links 字段，v3 文档使用 slotLinks 表达暗管链接。
-  // Replacement: 下方 appendLegacyDarkPipeLinks 解析 links 并生成 v3 dark-pipe slotLink。
-  // Risk: Medium - 旧蓝图中无效链接会被跳过，而不再让整个导入失败。
-  // Human Review: Required
-  //
-  // Original code:
-  // if (legacyBlueprint === null || (legacyBlueprint.links?.length ?? 0) > 0) {
-  //   return null;
-  // }
   if (legacyBlueprint === null) {
     return null;
   }
@@ -277,13 +229,10 @@ export function convertLegacyBlueprintJson(
  *   darkPipeOutletMode === "generate" → ignoreStock: true
  *   链接模式由 LegacyBlueprintJson.links 统一迁移为 dark-pipe slotLink，并清空入口 / 出口本地 config。
  *
- * AI-CORRECTION 2026-06-09: EntityDefinition.links 已移除，旧蓝图导入改为产出 document.slotLinks。
  *
  * 存储箱（item_port_storager_1）：
  *   旧：submitToWarehouse = true
  *   新：channelRecipes.warehouse_submit = "r_warehouse_submit"
- *   AI-CORRECTION 2026-06-06: v2 旧 UI / 初始 config 将 submitToWarehouse 缺省视为 true；
- *     迁移时仅 submitToWarehouse === false 表示关闭配方交货。
  *
  * 协议核心（item_port_sp_hub_1）：
  *   旧：protocolHubOutputs[{ portId, itemId, ignoreInventory }]
@@ -294,16 +243,10 @@ export function convertLegacyBlueprintJson(
  *   新：无交货 config，运行时由 WarehouseSink 动态入仓
  *
  * 反应池 / 扩容反应池（item_port_mix_pool_1 / item_port_mix_pool_large_1）：
- *   AI-CORRECTION 2026-07-11: 扩容反应池当前最新设备 id 为 item_port_mix_pool_2，
- *     item_port_mix_pool_large_1 仅作为历史蓝图 id 通过迁移表解析。
- *   旧：reactorPool.selectedRecipeIds / solidOutputItemId / liquidOutputItemIdA / liquidOutputItemIdB
- *   新：channelRecipes + portGroups[N].ports[M].acceptRule
  *
  * 通用预置物品（preloadInputs）：
  *   旧：preloadInputs: [{ slotIndex, itemId, amount }]
  *   新：storageSlotGroups[0].slots[slotIndex].initialItemType / initialCount
- *   AI-CORRECTION 2026-06-12: v2 单槽预置字段 preloadInputItemId/preloadInputAmount
- *     也需要迁移到 storageSlotGroups[0].slots[0].initialItemType / initialCount。
  */
 function convertLegacyDeviceConfig(options: {
   definitionId: string;
@@ -435,8 +378,6 @@ function convertLegacyAcceptRule(value: unknown): unknown {
 /**
  * 扩容反应池旧配方 ID → 新版 _large 配方 ID 映射。
  * 仅当迁移定义目标是 item_port_mix_pool_large_1 时应用。
- * AI-CORRECTION 2026-07-11: 扩容反应池当前最新设备 id 为 item_port_mix_pool_2，
- *   item_port_mix_pool_large_1 仅作为历史蓝图 id 通过迁移表解析。
  */
 const LARGE_REACTOR_RECIPE_ID_BY_LEGACY_ID: Record<string, string> = {
   "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic":
@@ -451,13 +392,6 @@ const LARGE_REACTOR_RECIPE_ID_BY_LEGACY_ID: Record<string, string> = {
  * 将旧版反应池 config.reactorPool 转换为新版 channelRecipes + acceptRule。
  *
  * 反应池 / 扩容反应池（item_port_mix_pool_1 / item_port_mix_pool_large_1）：
- *   AI-CORRECTION 2026-07-11: 扩容反应池当前最新设备 id 为 item_port_mix_pool_2，
- *     item_port_mix_pool_large_1 仅作为历史蓝图 id 通过迁移表解析。
- *   旧格式 config.reactorPool：
- *     selectedRecipeIds: string[]  → channelRecipes: { ch1, ch2, ... }
- *     solidOutputItemId: string    → portGroups[0].ports[*].acceptRule（item_output）
- *     liquidOutputItemIdA: string  → portGroups[2].ports[0].acceptRule（fluid_output_a）
- *     liquidOutputItemIdB: string  → portGroups[3].ports[0].acceptRule（fluid_output_b）
  *
  * 扩容反应池的旧配方 ID 不带 _large 后缀，迁移时通过 LARGE_REACTOR_RECIPE_ID_BY_LEGACY_ID 映射。
  */
@@ -504,7 +438,6 @@ function convertLegacyReactorPoolConfig(
   // 2. 固体输出：solidOutputItemId → portGroups[0] = item_output
   //    item_port_mix_pool_1: 2 ports（out_n_1, out_n_3）
   //    item_port_mix_pool_large_1: 4 ports（out_n_1..out_n_4）
-  //    AI-CORRECTION 2026-07-11: item_port_mix_pool_2 是扩容反应池最新 id，仍为 4 ports。
   const solidOutputItemId = reactorPool.solidOutputItemId;
   if (typeof solidOutputItemId === "string" && solidOutputItemId.trim().length > 0) {
     const portCount = isLarge ? 4 : 2;
@@ -713,7 +646,6 @@ function convertLegacyUnloaderConfig(
   delete nextConfig.pickupItemId;
   delete nextConfig.pickupIgnoreInventory;
   delete nextConfig.protocolHubOutputs;
-  // AI-CORRECTION 2026-06-09: 旧 links[N] config key 已废弃，改为产出 slotLinks。
   delete nextConfig.links;
 
   nextConfig["storageSlotGroups[0].slots[0].ignoreStock"] = ignoreStock;
@@ -744,7 +676,6 @@ function convertLegacyDarkPipeUnloaderConfig(
   delete nextConfig.pumpOutputItemId;
   delete nextConfig.darkPipeInletMode;
   delete nextConfig.darkPipeOutletMode;
-  // AI-CORRECTION 2026-06-09: 旧 links[N] config key 已废弃，改为产出 slotLinks。
   delete nextConfig.links;
 
   const itemId = config.pumpOutputItemId;
@@ -803,35 +734,10 @@ function convertLegacyStoragerConfig(
   delete nextConfig.storagePreloadInputs;
   delete nextConfig.storageSlots;
 
-  // AI-REMOVED 2026-06-06:
-  // Reason: v2 协议存储箱的 submitToWarehouse 缺省语义为 true，旧判断会让缺省配置迁移后不交货。
-  // Trigger: 用户要求 submit mode 删除后，协议存储箱统一改为配方交货。
-  // Evidence: v2 initialDeviceConfigForType("item_port_storager_1") 写入 true，RightPanel 读取时使用 ?? true。
-  // Replacement: 仅 submitToWarehouse === false 关闭 r_warehouse_submit。
-  // Risk: Medium - 极少数手写旧蓝图若省略 submitToWarehouse 且期望不交货，会按 v2 运行时缺省改为交货。
-  // Human Review: Required
-  //
-  // Original code:
-  // if (config.submitToWarehouse !== true) {
-  //   return config;
-  // }
   if (!shouldSubmitToWarehouse) {
     return nextConfig;
   }
 
-  // AI-REMOVED 2026-06-06:
-  // Reason: submitMode 机制已删除，旧存储箱自动提交应迁移为配方驱动提交。
-  // Trigger: 用户要求 submit mode 机制彻底删除，未来都用 warehouse sink 或配方交货。
-  // Evidence: RUN_ID 20260606-041337-509040 中旧 every-tick 配置被全局 submit 扫描误消费。
-  // Replacement: channelRecipes.warehouse_submit = "r_warehouse_submit"。
-  // Risk: Medium - 旧蓝图会从每 tick 提交语义变为当前产品定义的 10 秒配方提交语义。
-  // Human Review: Required
-  //
-  // Original code:
-  // // 存储箱有 6 个单槽储存组，全部设为 every-tick 提交
-  // for (let groupIndex = 0; groupIndex < 6; groupIndex += 1) {
-  //   nextConfig[`storageSlotGroups[${groupIndex}].slots[0].submitMode`] = "every-tick";
-  // }
   nextConfig.channelRecipes = {
     ...asStringRecord(nextConfig.channelRecipes),
     [WAREHOUSE_SUBMIT_CHANNEL_ID]: WAREHOUSE_SUBMIT_RECIPE_ID,
@@ -845,7 +751,6 @@ function convertLegacyProtocolCoreConfig(
   entityId: string,
 ): { config: Record<string, unknown>; slotLinks: SlotLinkDefinition[] } {
   const nextConfig: Record<string, unknown> = { ...config };
-  // AI-CORRECTION 2026-06-09: 旧 links[N] config key 已废弃，改为产出 slotLinks。
   delete nextConfig.links;
   const outputs = Array.isArray(config.protocolHubOutputs) ? config.protocolHubOutputs : [];
   delete nextConfig.protocolHubOutputs;
@@ -968,18 +873,6 @@ function convertLegacyStorageSlotsIntoGroups(
       continue;
     }
 
-    // AI-REMOVED 2026-06-12:
-    // Reason: v2 的存储槽位锁定在本次迁移中明确放弃，不迁移到 v3。
-    // Trigger: 用户补充说明“v2 功能里有一个存储槽位锁定，那个我们放弃了不迁移”。
-    // Evidence: v3 迁移仍需保留 preloadItemId / preloadAmount，但不能写入 lock 字段。
-    // Replacement: 下方 writeStoragerInitialSlotConfig 仅迁移预置物品与数量。
-    // Risk: Medium - 依赖锁定槽位筛选的旧存储箱迁移后需要用户手动重新配置。
-    // Human Review: Required
-    //
-    // Original code:
-    // if (entry.mode === "pinned" && typeof entry.pinnedItemId === "string" && entry.pinnedItemId !== "") {
-    //   config[`storageSlotGroups[${slotIndex}].slots[0].lock`] = entry.pinnedItemId;
-    // }
 
     writeStoragerInitialSlotConfig({
       config,
@@ -1131,7 +1024,6 @@ function appendLegacyDarkPipeLinks(options: {
 
     removeSlotLinksForEntity(options.slotLinks, inletEntityId);
     removeSlotLinksForEntity(options.slotLinks, outletEntityId);
-    // AI-CORRECTION 2026-08-19: 暗管入口销毁 channel 已退出；迁移直连时直接清空旧模式配置，不再生成 manualRecipeOnly。
     inletEntity.config = {};
     outletEntity.config = {};
 
@@ -1177,33 +1069,6 @@ function createLegacyDarkPipeSlotLink(options: {
   };
 }
 
-// AI-REMOVED 2026-08-19:
-// Reason: 旧暗管直连迁移不再需要为入口销毁 channel 设置 manualRecipeOnly。
-// Trigger: 用户要求暗管入口在所有仿真模式下提交仓库并抛弃销毁机制。
-// Evidence: udpipe_loader_1/2 的 recipeChannels 已为空，迁移入口 config 统一清空。
-// Replacement: migrateLegacyDarkPipeLinks 中的 inletEntity.config = {}。
-// Risk: 旧蓝图迁移结果不再包含无效 recipeChannels 配置键。
-// Human Review: Required
-//
-// Original code:
-// function createLegacyDarkPipeInletLinkedConfig(
-//   definitionId: string,
-// ): Record<string, true> {
-//   if (definitionId === "item_port_udpipe_loader_2") {
-//     return {
-//       "recipeChannels[0].manualRecipeOnly": true,
-//       "recipeChannels[1].manualRecipeOnly": true,
-//     };
-//   }
-//
-//   if (definitionId === "item_port_udpipe_loader_1") {
-//     return {
-//       "recipeChannels[0].manualRecipeOnly": true,
-//     };
-//   }
-//
-//   return {};
-// }
 
 function resolveLegacyDarkPipeRole(definitionId: string): "inlet" | "outlet" | null {
   if (definitionId === "item_port_udpipe_loader_1" || definitionId === "item_port_udpipe_loader_2") {

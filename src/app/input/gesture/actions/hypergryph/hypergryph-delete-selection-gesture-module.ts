@@ -5,16 +5,6 @@ import type { EditorContract } from "@/domain/editor/editor-contract";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
-// AI-REMOVED 2026-09-10:
-// Reason: 操作模式总开关已废弃，不再保留关闭分支
-// Trigger: 用户要求彻底移除 hypergryphOperationMode。
-// Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-// Replacement: gesture-action-router.ts 的默认启用语义
-// Risk: 历史 false 设置统一使用当前操作行为。
-// Human Review: Required
-//
-// Original code:
-// import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 import { showMarqueeRightDockToolbar } from "./hypergryph-marquee-gesture-module";
 
 const FLOATING_DELETE_BUTTON_ID = "canvas-floating-toolbar-button-delete";
@@ -26,16 +16,6 @@ const RIGHT_DOCK_DELETE_BUTTON_ID = "canvas-right-dock-toolbar-button-delete";
 export function createHypergryphDeleteSelectionGestureModule(): GestureMappingModule<AppHost> {
   return {
     id: "hypergryph-delete-selection-gesture",
-    // AI-REMOVED 2026-09-10:
-    // Reason: 操作模式总开关已废弃，不再保留关闭分支
-    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-    // Replacement: gesture-action-router.ts 的默认启用语义
-    // Risk: 历史 false 设置统一使用当前操作行为。
-    // Human Review: Required
-    //
-    // Original code:
-    // when: isHypergryphGestureEnabled,
     shortcutRoutes: [{
       id: "delete-selection.selection",
       operation: "delete",
@@ -64,25 +44,6 @@ export function createHypergryphDeleteSelectionGestureModule(): GestureMappingMo
       }
 
       switch (event.type) {
-        // AI-REMOVED 2026-08-30:
-        // Reason: 选择删除快捷键已迁入包含 canvas/inspector-dialog 的可执行 Route。
-        // Trigger: ST2-RQ-020 输入层与冲突判断统一。
-        // Evidence: delete-selection.selection Route 直接调用 deleteSelection。
-        // Replacement: shortcutRoutes[delete-selection.selection] in this module
-        // Risk: Low
-        // Human Review: Required
-        //
-        // Original code:
-        // case "key down":
-        //   if (!context.appHost.internalActions.isShortcutFor(
-        //     SHORTCUT_KEY.DELETE_DEVICE,
-        //     event.code,
-        //     event.key,
-        //     event.modifiers,
-        //   )) {
-        //     return { status: "ignored" };
-        //   }
-        //   return deleteSelection(context.appHost, editor, activeTool);
 
         case "ui-button-touch-tap":
           if (event.uiButtonId === FLOATING_DELETE_UPSTREAM_BUTTON_ID) {

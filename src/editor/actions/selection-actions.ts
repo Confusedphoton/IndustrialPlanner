@@ -278,43 +278,6 @@ export function createEditorSelectionActions({
     const nextDrafts = state.drafts.map((draft) => resolvedDraftMap.get(draft.id) ?? draft);
     const didUpdateDrafts = movedDraftMap.size > 0;
 
-    /*
-      AI-REMOVED 2026-08-23:
-      Reason: 对 preview 中每个设备分别吸附会破坏蓝图和框选移动集合的相对位置。
-      Trigger: 含抽水泵等受限设备的蓝图移动时，抽水泵卡在边缘而其他设备继续移动。
-      Evidence: 原循环逐 draft 调用 snapPlacementToOuterRingEdge，吸附修正没有传播到集合其他成员。
-      Replacement: movedDraftMap + resolveRigidOuterRingMoveDraftMap；共同约束无解时保留统一原始位移进入自由态。
-      Risk: Medium；共同约束求解可能整体旋转 preview，但只使用现有四向旋转和放置校验语义。
-      Human Review: Required
-
-      Original code:
-      let didUpdateDrafts = false;
-      const nextDrafts = state.drafts.map((entity) => {
-        if (!targetEntityIds.has(entity.id) || currentDocument.entities[entity.id] !== undefined) {
-          return entity;
-        }
-
-        didUpdateDrafts = true;
-        const movedEntity = moveEntityByGridVector(entity, gridVector);
-        const definition = entityDefinitionMap.get(movedEntity.definitionId);
-        if (collectionType !== EntityCollectionType.preview || definition === undefined) {
-          return movedEntity;
-        }
-
-        const snappedPlacement = snapPlacementToOuterRingEdge({
-          definition,
-          baseDefinition,
-          position: movedEntity.position,
-          rotation: movedEntity.rotation,
-        });
-
-        return {
-          ...movedEntity,
-          position: snappedPlacement.position,
-          rotation: snappedPlacement.rotation,
-        };
-      });
-    */
 
     if (didUpdateDrafts) {
       syncPlacementPreviewForDraftTransformation({
@@ -409,44 +372,6 @@ export function createEditorSelectionActions({
       return;
     }
 
-    /*
-      AI-REMOVED 2026-07-22:
-      Reason: 鼠标中心移动的向量计算需要同时供 RotateToSnapOnBuilding 的真实 R 候选预演使用，避免候选位置与实际旋转后的鼠标回正位置不一致。
-      Trigger: 新增 RotateToSnapOnBuilding，要求候选必须复用系统现有完整旋转语义。
-      Evidence: moveCollectionCenterPointTo 原先内联计算 worldPoint、nextTopLeft 和 gridVector，候选预演无法调用同一实现。
-      Replacement: resolveCollectionCenterMoveGridVector
-      Risk: Low；原逻辑逐行迁移到同一闭包内的纯计算函数，并由现有 action 与候选预演共同调用。
-      Human Review: Required
-
-      Original code:
-      const worldPoint = resolveWorldPointFromViewportPoint({
-        viewportPoint: clientPixelPoint,
-        viewportBounds: state.viewport.clientRect,
-        viewportCenter: state.viewport.center,
-        gridCellPixelSize: state.viewport.gridCellPixelSize,
-        displayRotation: state.viewport.displayRotation,
-      });
-
-      if (worldPoint === null) {
-        return;
-      }
-
-      const nextTopLeft = {
-        x: snapTopLeftToNearestInteger(
-          worldPoint.x - geometry.boundingBox.width / 2,
-        ),
-        y: snapTopLeftToNearestInteger(
-          worldPoint.y - geometry.boundingBox.height / 2,
-        ),
-      };
-      const gridVector = resolveGridVector({
-        startGridPoint: {
-          x: geometry.boundingBox.x,
-          y: geometry.boundingBox.y,
-        },
-        endGridPoint: nextTopLeft,
-      });
-    */
     const gridVector = resolveCollectionCenterMoveGridVector({
       geometry,
       clientPixelPoint,
@@ -590,17 +515,6 @@ export function createEditorSelectionActions({
       return false;
     }
 
-    // AI-REMOVED 2026-11-12:
-    // Reason: 场景空间由会话提供。
-    // Trigger: REQ-048 内存场景资格独立。
-    // Evidence: 吸附入口已接收 resolveEditorPlacementGeometry。
-    // Replacement: 下方统一场景几何。
-    // Risk: Low
-    // Human Review: Required
-    // Original code:
-    // const baseDefinition = workspace.registry.baseDefinitions.find((candidate) =>
-    // candidate.id === options.currentDocument.baseId,
-    // ) ?? null;
     const rotatedPlacement = rotateOuterRingEdgeSnappedPlacement({
       definition,
       ...resolveEditorPlacementGeometry(workspace, options.currentDocument, entity),
@@ -907,46 +821,6 @@ export function createEditorSelectionActions({
     if (geometry === null) {
       return;
     }
-    /*
-      AI-REMOVED 2026-07-22:
-      Reason: 集合旋转结果计算需要同时供现有旋转 action 与 RotateToSnapOnBuilding 的逐次真实 R 候选预演使用。
-      Trigger: 新增 RotateToSnapOnBuilding，禁止通过直接修改 rotation 代替系统旋转。
-      Evidence: 原实现内联生成 rotatedEntityMap，无法在不修改编辑器状态的前提下预演连续四个 R 状态。
-      Replacement: resolveRotatedEntityMap
-      Risk: Low；原有 center/pivot-cell、bbox 对齐和逐实体旋转逻辑保持不变。
-      Human Review: Required
-
-      Original code:
-      const rotationCenter = pivotMode === "center"
-        ? geometry.centerPoint
-        : resolvePivotCellRotationPoint(geometry.pivotCell);
-      const rotatedBoundingBox = pivotMode === "center"
-        ? alignRotatedBoundingBoxToGrid(
-          rotateGridRectAroundPoint({
-            gridRect: geometry.boundingBox,
-            point: rotationCenter,
-            angle: rotationAngle,
-          }),
-        )
-        : normalizeGridRect(
-          rotateGridRectAroundPoint({
-            gridRect: geometry.boundingBox,
-            point: rotationCenter,
-            angle: rotationAngle,
-          }),
-        );
-      const rotatedEntityMap = new Map(
-        geometry.entries.map((entry) => [
-          entry.entity.id,
-          rotateEntityAroundCollectionBoundingBox({
-            entry,
-            sourceBoundingBox: geometry.boundingBox,
-            targetBoundingBox: rotatedBoundingBox,
-            angle: rotationAngle,
-          }),
-        ]),
-      );
-    */
     const rotatedEntityMap = resolveRotatedEntityMap({
       geometry,
       angle: rotationAngle,
@@ -1036,17 +910,6 @@ export function createEditorSelectionActions({
       return movedEntity;
     }
 
-    // AI-REMOVED 2026-11-12:
-    // Reason: 场景空间由会话提供。
-    // Trigger: REQ-048 内存场景资格独立。
-    // Evidence: 吸附入口已接收 resolveEditorPlacementGeometry。
-    // Replacement: 下方统一场景几何。
-    // Risk: Low
-    // Human Review: Required
-    // Original code:
-    // const baseDefinition = workspace.registry.baseDefinitions.find((candidate) =>
-    // candidate.id === options.currentDocument.baseId,
-    // ) ?? null;
     const snappedPlacement = snapPlacementToOuterRingEdge({
       definition,
       ...resolveEditorPlacementGeometry(workspace, options.currentDocument, movedEntity),
@@ -1073,17 +936,6 @@ export function createEditorSelectionActions({
       return options.entity;
     }
 
-    // AI-REMOVED 2026-11-12:
-    // Reason: 场景空间由会话提供。
-    // Trigger: REQ-048 内存场景资格独立。
-    // Evidence: 吸附入口已接收 resolveEditorPlacementGeometry。
-    // Replacement: 下方统一场景几何。
-    // Risk: Low
-    // Human Review: Required
-    // Original code:
-    // const baseDefinition = workspace.registry.baseDefinitions.find((candidate) =>
-    // candidate.id === options.currentDocument.baseId,
-    // ) ?? null;
     const outerRingPlacement = rotateOuterRingEdgeSnappedPlacement({
       definition,
       ...resolveEditorPlacementGeometry(workspace, options.currentDocument, options.entity),
@@ -1334,7 +1186,6 @@ export function createEditorSelectionActions({
         }
 
         // 协议核心不可删除
-        // AI-CORRECTION 2026-10-11: 草稿箱中的协议核心允许删除，其他基地继续保护核心。
         if (workspace.registry.queries.isProtocolCore(entity.definitionId)
           && !allowsFreeProtocolCorePlacement(currentDocument.baseId, workspace.registry.baseDefinitions)) {
           continue;
@@ -1376,11 +1227,10 @@ export function createEditorSelectionActions({
           update: (documentSnapshot) => ({
             ...documentSnapshot,
             entities: nextEntities,
-            // 2026-07-23: 删除实体时同步清理 entityOrder，否则残留 ID 导致计数虚高。
+            // 删除实体时同步清理 entityOrder，否则残留 ID 导致计数虚高。
             entityOrder: documentSnapshot.entityOrder.filter(
               (entityId) => !deletedEntityIds.has(entityId),
             ),
-            // AI-CORRECTION 2026-06-10: 删除实体时同步清理关联的 slotLinks，
             // 否则同名新设备会被旧链接自动连上。
             // 订正（2026-09-25）：只清理当前基地端点；远端同名实体不属于此次删除。
             slotLinks: documentSnapshot.slotLinks.filter(
@@ -1779,177 +1629,7 @@ function normalizeZero(value: number): number {
   return Object.is(value, -0) ? 0 : value;
 }
 
-// AI-REMOVED 2026-06-09:
-// Reason: 旧旋转实现围绕偏左/偏上的 rotationAnchorCell 逐实体重算，无法表达“bbox 绕 center point / pivot cell 旋转，并保持 entity 在 bbox 相对坐标系中的位置关系”的新需求。
-// Trigger: 用户要求完全重构移动和旋转，新增 rotateCollectionAroundCenterPoint / rotateCollectionAroundPivotCell，并区分鼠标中心旋转与触控 pivot 旋转。
-// Evidence: 新需求明确要求先记录 collection 内 entity 相对 bbox 的 offset，再旋转 bbox，最后按旋转后的 bbox 重算所有 entity；旧 resolveGridRectRotationAnchorCell / rotateGridAnchorCellClockwise 只处理 anchor cell。
-// Replacement: normalizeRotationAngle / rotateGridRectAroundPoint / rotateRelativeGridRect / rotateEntityAroundCollectionBoundingBox
-// Risk: Medium，集合旋转语义改变会影响既有绝对坐标断言；已通过新增回归测试覆盖边界。
-// Human Review: Required
-//
-// Original code:
-// interface RotatableCollectionEntity<EntityT extends WorldEntity = WorldEntity> {
-//   entity: EntityT;
-//   definition: EntityDefinition;
-// }
-//
-// function resolveRotatableCollectionEntities(options: {
-//   collection: readonly string[];
-//   document: EditorActionsContext["document"] extends { getSnapshot(): infer Snapshot }
-//     ? Snapshot
-//     : never;
-//   drafts: readonly WorldEntity[];
-//   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
-// }): RotatableCollectionEntity[] {
-//   const entries: RotatableCollectionEntity[] = [];
-//
-//   for (const entityId of options.collection) {
-//     const entity = resolveEntityById({
-//       entityId,
-//       document: options.document,
-//       drafts: options.drafts,
-//     });
-//
-//     if (entity === null) {
-//       continue;
-//     }
-//
-//     const definition = options.entityDefinitionMap.get(entity.definitionId);
-//
-//     if (definition === undefined) {
-//       continue;
-//     }
-//
-//     entries.push({
-//       entity,
-//       definition,
-//     });
-//   }
-//
-//   return entries;
-// }
-//
-// function resolveCollectionRotationAnchorCell(
-//   entries: readonly RotatableCollectionEntity[],
-// ): {
-//   x: number;
-//   y: number;
-// } | null {
-//   const bounds = getGridBoundingBox(
-//     entries.map(({ definition, entity }) => ({
-//       position: entity.position,
-//       footprint: getRotatedGridFootprint(definition.footprint, entity.rotation),
-//     })),
-//   );
-//
-//   if (bounds === null) {
-//     return null;
-//   }
-//
-//   return resolveGridRectRotationAnchorCell({
-//     x: bounds.left,
-//     y: bounds.top,
-//     width: bounds.width,
-//     height: bounds.height,
-//   });
-// }
-//
-// function rotateEntityClockwise<EntityT extends WorldEntity>(options: {
-//   entity: EntityT;
-//   footprint: EntityDefinition["footprint"];
-//   rotationAnchorCell: {
-//     x: number;
-//     y: number;
-//   };
-// }): EntityT {
-//   const nextRotation = rotateGridRotationClockwise(options.entity.rotation);
-//   const currentFootprint = getRotatedGridFootprint(
-//     options.footprint,
-//     options.entity.rotation,
-//   );
-//   const nextFootprint = getRotatedGridFootprint(options.footprint, nextRotation);
-//   const rotatedAnchorCell = rotateGridAnchorCellClockwise({
-//     anchorCell: resolveGridRectRotationAnchorCell({
-//       x: options.entity.position.x,
-//       y: options.entity.position.y,
-//       width: currentFootprint.width,
-//       height: currentFootprint.height,
-//     }),
-//     rotationAnchorCell: options.rotationAnchorCell,
-//   });
-//
-//   return {
-//     ...options.entity,
-//     position: resolveAnchoredGridPointWithoutClamp(
-//       rotatedAnchorCell,
-//       nextFootprint,
-//     ),
-//     rotation: nextRotation,
-//   } as EntityT;
-// }
-//
-// function resolveGridRectRotationAnchorCell(
-//   gridRect: GridRect,
-// ): GridPoint {
-//   return {
-//     x: gridRect.x + Math.floor((gridRect.width - 1) / 2),
-//     y: gridRect.y + Math.floor((gridRect.height - 1) / 2),
-//   };
-// }
-//
-// function rotateGridAnchorCellClockwise(options: {
-//   anchorCell: {
-//     x: number;
-//     y: number;
-//   };
-//   rotationAnchorCell: {
-//     x: number;
-//     y: number;
-//   };
-// }): GridPoint {
-//   const relativeX = options.anchorCell.x - options.rotationAnchorCell.x;
-//   const relativeY = options.anchorCell.y - options.rotationAnchorCell.y;
-//
-//   return {
-//     x: options.rotationAnchorCell.x - relativeY,
-//     y: options.rotationAnchorCell.y + relativeX,
-//   };
-// }
-//
-// function resolveAnchoredGridPointWithoutClamp(
-//   anchorCell: {
-//     x: number;
-//     y: number;
-//   },
-//   footprint: GridRectSize,
-// ): GridPoint {
-//   return {
-//     x: anchorCell.x - Math.floor((footprint.width - 1) / 2),
-//     y: anchorCell.y - Math.floor((footprint.height - 1) / 2),
-//   };
-// }
 
-// AI-REMOVED 2026-06-05:
-// Reason: 连续几何中心 + Math.round 不能让 6×5 这类奇偶混合 footprint 四次旋转闭合，会导致扩容反应池按 R 越转越靠下。
-// Trigger: 用户反馈“扩容反应池按 R 旋转不幂等，越转越靠下”。
-// Evidence: item_port_mix_pool_large_1 footprint 为 6×5；旧算法从 (10,10) 连续四次旋转会漂移到 (12,12)。
-// Replacement: resolveGridRectRotationAnchorCell / rotateGridAnchorCellClockwise / resolveAnchoredGridPointWithoutClamp
-// Risk: Low，旋转锚点改用项目已有的偏左 / 偏上中心格规则；仍需回归覆盖集合旋转。
-// Human Review: Required
-//
-// Original code:
-// function resolveCenteredGridPointWithoutClamp(
-//   centerCells: {
-//     x: number;
-//     y: number;
-//   },
-//   footprint: GridRectSize,
-// ): GridPoint {
-//   return {
-//     x: Math.round(centerCells.x - footprint.width / 2),
-//     y: Math.round(centerCells.y - footprint.height / 2),
-//   };
-// }
 
 function resolveRigidMoveCandidateScore(options: {
   movedDraftMap: ReadonlyMap<string, DraftEntity>;

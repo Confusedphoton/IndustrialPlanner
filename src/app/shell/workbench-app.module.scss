@@ -5,17 +5,18 @@
     var(--left-toolbar-width, 68px)
     var(--left-dock-width, 375px)
     minmax(0, 1fr)
-    var(--right-dock-width, 340px);
+    var(--right-dock-width, 340px)
+    var(--recipe-dock-width, 0px);
   grid-template-rows:
     var(--top-bar-height, 48px)
     minmax(0, 1fr)
     var(--toolbox-bottom-dock-height, 0px)
     var(--bottom-bar-height, 28px);
   grid-template-areas:
-    "toolbar toolbar toolbar toolbar"
-    "tools left canvas right"
-    "tools left toolbox-bottom right"
-    "bottom bottom bottom bottom";
+    "toolbar toolbar toolbar toolbar toolbar"
+    "tools left canvas right recipe"
+    "tools left toolbox-bottom right recipe"
+    "bottom bottom bottom bottom bottom";
   height: 100%;
   row-gap: 0;
   column-gap: 0;
@@ -42,28 +43,13 @@
 .workbench-floating-top-bar-controls {
   position: absolute;
   top: 10px;
-  right: calc(var(--right-dock-width, 0px) + 12px);
+  right: calc(var(--right-dock-width, 0px) + var(--recipe-dock-width, 0px) + 12px);
   z-index: 5;
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
 
-// AI-REMOVED 2026-08-05:
-// Reason: 折叠顶栏控件不再作为 CanvasPanel 后代，不需要覆盖 workbench 级右侧定位。
-// Trigger: CanvasPanel 内部 overlay 被画布 pointer capture 与触摸 click 拦截接管。
-// Evidence: workbench-floating-top-bar-controls 已通过 right-dock-width 对齐实际画布右边缘。
-// Replacement: workbench-floating-top-bar-controls。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// .workbench-floating-top-bar-controls-in-canvas {
-//   // AI-CORRECTION 2026-07-29: FPS 与控件不再共用 stack，折叠顶栏按钮恢复画布右上角第一排绝对定位。
-//   position: absolute;
-//   top: 10px;
-//   right: 12px;
-// }
 
 .workbench-floating-top-bar-button {
   display: inline-flex;

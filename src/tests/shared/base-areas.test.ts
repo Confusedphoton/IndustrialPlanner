@@ -56,19 +56,6 @@ describe("base areas", () => {
         placeableBounds: { minX: 0, maxX: 320, minY: 0, maxY: 320 },
         outerBounds: { minX: -20, maxX: 340, minY: -20, maxY: 340 },
       },
-      // AI-REMOVED 2026-09-28:
-      // Reason: 草稿箱取消左上角独立外环区。
-      // Trigger: 用户要求删除该区域并更新对应测试。
-      // Evidence: draft_box 改为仅保留主区域。
-      // Replacement: 仅保留 draft_box 主区域的期望。
-      // Risk: 原独立区域内已有设备将判定为越界。
-      // Human Review: Required
-      // Original code:
-      // {
-      //   id: "draft_box_upper_left",
-      //   placeableRect: { x: -60, y: -60, width: 0, height: 0 },
-      //   outerRect: { x: -80, y: -80, width: 40, height: 40 },
-      // },
     ]);
     expect(resolveBaseOuterBounds(draftBox)).toEqual({
       minX: -20, maxX: 340, minY: -20, maxY: 340,

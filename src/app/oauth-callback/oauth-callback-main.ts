@@ -6,19 +6,6 @@ import {
   parseCloudflareOAuthCallbackFragment,
 } from "@/shared/storage/cloudflare-oauth-browser-flow";
 
-// AI-REMOVED 2026-08-24:
-// Reason: callback 页不再跳转后端 callback，也不得兑换 session 或写入持久登录态。
-// Trigger: 后端改为固定 Provider callback，并通过 fragment 把一次性 code 返回前端完成页。
-// Evidence: 新协议要求原业务标签页负责 ACK、session 兑换和 localStorage 持久化。
-// Replacement: cloudflare-oauth-browser-flow 的 fragment 解析与 BroadcastChannel 协议。
-// Risk: 旧 query callback 不再可用；用户明确要求不兼容未上线版本。
-// Human Review: Required
-//
-// Original code:
-// import {
-//   completeCloudflareOAuthLogin,
-//   createCloudflareOAuthBackendCallbackUrl,
-// } from "@/shared/storage/cloudflare-oauth-session";
 
 import "./oauth-callback.scss";
 
@@ -104,18 +91,6 @@ function clearCallbackLocation(url: URL): void {
   globalThis.history.replaceState(null, "", url.pathname);
 }
 
-// AI-REMOVED 2026-08-24:
-// Reason: 新回调敏感参数位于 fragment，必须立即移除 fragment；旧函数反而保留了 fragment。
-// Trigger: 后端 callback 输出切换为 #code / #error + oauth_channel。
-// Evidence: OAuth 登录流程要求完成页读取 fragment 后立即 history.replaceState 清理地址栏。
-// Replacement: clearCallbackLocation。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// function clearCallbackQuery(url: URL): void {
-//   globalThis.history.replaceState(null, "", `${url.pathname}${url.hash}`);
-// }
 
 function renderCallbackPage(
   container: HTMLElement,

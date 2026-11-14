@@ -3,15 +3,6 @@ import type { AppHost } from "@/app/host/app-host";
 // @vitest-environment jsdom
 
 import { runInAction } from "mobx";
-// AI-REMOVED 2026-11-12:
-// Reason: 接口已迁移到独立 Canvas，测试组合真实工作台与相机。
-// Trigger: REQ-048 输入上下文迁移与测试架构规则。
-// Evidence: 旧 fixture 只有伪造 workspace/internalState，不能验证当前归属。
-// Replacement: 真实 AppHost observable state
-// Risk: 路由优先级与匹配断言保持；真实浏览器另行验证。
-// Human Review: Required
-// Original code:
-// import { observable } from "mobx";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createGestureAdapter, type GestureAdapter, type GestureEvent } from "@/app/input/gesture/adapter";
@@ -25,61 +16,7 @@ import {
 import { SHORTCUT_KEY } from "@/app/actions";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { ActiveTool } from "@/domain/app/types/app-types";
-// AI-REMOVED 2026-11-12:
-// Reason: 接口已迁移到独立 Canvas，测试组合真实工作台与相机。
-// Trigger: REQ-048 输入上下文迁移与测试架构规则。
-// Evidence: 旧 fixture 只有伪造 workspace/internalState，不能验证当前归属。
-// Replacement: createAppTestWorkspace
-// Risk: 路由优先级与匹配断言保持；真实浏览器另行验证。
-// Human Review: Required
-// Original code:
-// import { createWorkspaceState } from "@/domain/document/workspace-state";
-// AI-REMOVED 2026-11-12:
-// Reason: 接口已迁移到独立 Canvas，测试组合真实工作台与相机。
-// Trigger: REQ-048 输入上下文迁移与测试架构规则。
-// Evidence: 旧 fixture 只有伪造 workspace/internalState，不能验证当前归属。
-// Replacement: createAppTestWorkspace
-// Risk: 路由优先级与匹配断言保持；真实浏览器另行验证。
-// Human Review: Required
-// Original code:
-// import { createRegistryContract } from "@/registry";
 
-// AI-REMOVED 2026-11-12:
-// Reason: 接口已迁移到独立 Canvas，测试组合真实工作台与相机。
-// Trigger: REQ-048 输入上下文迁移与测试架构规则。
-// Evidence: 旧 fixture 只有伪造 workspace/internalState，不能验证当前归属。
-// Replacement: createAppTestWorkspace / createAdapterHost
-// Risk: 路由优先级与匹配断言保持；真实浏览器另行验证。
-// Human Review: Required
-// Original code:
-// interface FakeAppHost {
-//   readonly id: string;
-// }
-//
-// function createAdapterHost(activeTool: ActiveTool = "select") {
-//   return {
-//     workspace: {
-//       editor: null,
-//     },
-//     internalState: observable({
-//       activeTool,
-//     }),
-//   };
-// }
-//
-// function createWorkspace(): WorkspaceContract {
-//   return {
-//     state: createWorkspaceState(),
-//     registry: createRegistryContract(),
-//     app: null,
-//     editor: null,
-//     render: null,
-//     simulation: null,
-//     sync: null,
-//     audio: null,
-//     blueprintPlanner: null,
-//   };
-// }
 let fixture: ReturnType<typeof createAppTestWorkspace>;
 const adapters: GestureAdapter[] = [];
 beforeEach(() => { fixture = createAppTestWorkspace(); });

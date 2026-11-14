@@ -116,7 +116,7 @@ describe("independent editor views", () => {
       expect(view.state.center).toEqual({ x: -12, y: 22 });
       view.actions.focusOnBounds({ x: 1000, y: -1000, width: 2, height: 2 }, { durationMs: 0 });
       expect(view.state.center).toEqual({ x: 1001, y: -999 });
-      // 2026-11-12：空内容是合法蓝图，负尺寸才是无效边界。
+      // 空内容是合法蓝图，负尺寸才是无效边界。
       expect(() => view.actions.setBoundsPolicy({ kind: "content", content: { x: 0, y: 0, width: -1, height: 2 }, padding: 0, maxAutoZoom: 1 })).toThrow();
       expect(view.state.center).toEqual({ x: 1001, y: -999 });
       view.actions.focusOnBounds({ x: 0, y: 0, width: 2, height: 2 });

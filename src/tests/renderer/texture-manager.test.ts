@@ -1,15 +1,6 @@
 import { createRenderTestScene } from "@/tests/helpers/render-test-scene";
 import { RenderResourceScope } from "@/renderer/texture";
 const scenes: ReturnType<typeof createRenderTestScene>[] = [];
-// AI-REMOVED 2026-11-12:
-// Reason: Renderer 纹理设置改由 ScenePresentation 投影提供。
-// Trigger: REQ-048 D5 去除 AppContract 隐式依赖。
-// Evidence: createTextureActions 现在要求 presentation 和 resources。
-// Replacement: 真实 App ScreenProfile 动作
-// Risk: 只迁移装配，原资源与采样断言保留。
-// Human Review: Required
-// Original code:
-// import { makeAutoObservable, runInAction } from "mobx"
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -41,21 +32,6 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-// AI-REMOVED 2026-11-12:
-// Reason: Renderer 纹理设置改由 ScenePresentation 投影提供。
-// Trigger: REQ-048 D5 去除 AppContract 隐式依赖。
-// Evidence: createTextureActions 现在要求 presentation 和 resources。
-// Replacement: createTextureTestOptions / App.internalActions.setScreenProfile
-// Risk: 只迁移装配，原资源与采样断言保留。
-// Human Review: Required
-// Original code:
-// class ScreenProfileState {
-//   public devicePixelRatio = 2
-//
-//   public constructor() {
-//     makeAutoObservable(this, {}, { autoBind: true })
-//   }
-// }
 
 
 describe("TextureActions", () => {
@@ -323,19 +299,6 @@ describe("TextureActions", () => {
 
     const manager = createTextureActions({
       renderer: {} as never,
-// AI-REMOVED 2026-11-12:
-// Reason: Renderer 纹理设置改由 ScenePresentation 投影提供。
-// Trigger: REQ-048 D5 去除 AppContract 隐式依赖。
-// Evidence: createTextureActions 现在要求 presentation 和 resources。
-// Replacement: scene.input.presentation
-// Risk: 只迁移装配，原资源与采样断言保留。
-// Human Review: Required
-// Original code:
-//       app: {
-//         state: {
-//           screenProfile,
-//         },
-//       } as never,
       presentation: scene.input.presentation,
       resources: scene.resources,
       syncTextureConfigState: (textureConfig) => {

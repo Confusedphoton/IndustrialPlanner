@@ -7,8 +7,6 @@ import { expandSceneBounds, validateSceneSpace } from "@/shared/geometry/scene-s
 import { resolveCompensatedViewportCenter, resolveWorldVectorFromViewportVector } from "@/shared/geometry/viewport-transform";
 import { resolveClientRectForGridCell, resolveGridCellAtClientPixelPoint } from "./queries/viewport-geometry";
 import {
-  // AI-REMOVED 2026-11-12: owner 自动取景允许小于手动缩放下限；REQ-048 静态全图；Replacement: 有限正数 gridSize；Risk: 用户缩放仍沿用原档位；Human Review: Required
-  // clampViewportGridSize,
   resolveContentBoundedViewport,
   resolveViewportGridCellPixelSize, resolveViewportGridSizeAfterZoom,
 } from "./viewport-settings";

@@ -148,7 +148,6 @@ export class CloudflareV2WorkerClient implements CloudflareV2WorkerBridge {
         const worker = this.ensureWorker();
         worker.postMessage(queued.request);
       } catch (error) {
-        // AI-CORRECTION 2026-08-13: 克隆失败时递归探测并输出全部不可克隆字段路径。
         const unclonablePaths = findUnclonablePaths(queued.request);
         logger.debug(
           `postMessage failed for requestId=${queued.request.requestId} ` +
@@ -284,7 +283,6 @@ function isJsonSerializable(value: unknown): boolean {
 /**
  * 递归找出所有无法被结构化克隆（postMessage）的字段路径。
  *
- * AI-CORRECTION 2026-08-13: 真机曾报 “#<Object> could not be cloned” 但无字段路径，
  * 无法定位世界文档中哪个字段携带了运行时对象；此函数用于补齐诊断信息。
  */
 function findUnclonablePaths(

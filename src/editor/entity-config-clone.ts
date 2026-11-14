@@ -1,7 +1,6 @@
 /**
  * 深拷贝实体 config，并净化其中可能被 MobX observable 化的对象。
  *
- * AI-CORRECTION 2026-08-13: 实体 draft 经 `state.drafts`（MobX deep observable）持有后，
  * 与文档快照共享引用的 config 嵌套对象会被原位 observable 化；此前多处
  * `{ ...entity.config }` 浅拷贝会把 observable 对象写回快照或继续共享引用，
  * 导致世界文档同步时 structuredClone 失败（"#<Object> could not be cloned"）。

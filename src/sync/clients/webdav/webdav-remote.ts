@@ -271,9 +271,7 @@ class WebDavSyncRemoteSession implements SyncRemoteSession {
   }
 
   public async markApplied(result: RemoteApplyResult): Promise<void> {
-    // AI-CORRECTION 2026-08-22: 局部 scope 只推进资产级 touch，不得把整个 collection
     // 的 revision/ETag 标记为已处理，否则其他基地的远端变化会被小检查短路吞掉。
-    // AI-CORRECTION 2026-08-24: 上述“小检查”现统一称为“更新检查”。
     if (!result.scopeComplete) {
       return;
     }
@@ -705,7 +703,6 @@ async function readRemoteTextAsset(
 
   return {
     revision,
-    // AI-CORRECTION 2026-08-12: Remote 内容边界已改为值语义；WebDAV 在 provider 边界解析 JSON。
     value: parseJsonContent(file.content, remotePath),
     contentHash: createRemoteContentHash(file.content),
     committedAt: committedAt ?? normalizeRemoteTimestamp(file.lastModified),
@@ -1206,22 +1203,10 @@ async function writeRevisionJournalState<TValue extends { readonly revision: num
     `rev-${value.revision.toString().padStart(12, "0")}.json`,
   );
 
-  // 2026-09-28: 必须先确认修订占位成功，再更新 canonical；并行写会让失败竞争者覆盖胜者索引。
+  // 必须先确认修订占位成功，再更新 canonical；并行写会让失败竞争者覆盖胜者索引。
   const reserved = await client.writeTextFile(revisionPath, serializedValue, writeOptions);
   if (!reserved) throw new RemoteWriteConflictError([]);
   if (!await client.writeTextFile(canonicalPath, serializedValue)) throw new Error("Failed to publish WebDAV revision metadata.");
-  // AI-REMOVED 2026-09-28:
-  // Reason: canonical 更新先于条件写结果会丢失其他客户端已提交的索引。
-  // Trigger: 回滚后的“使用我的”必须尊重远端并发版本。
-  // Evidence: Promise.all 同时发送有条件修订写和无条件 canonical 写。
-  // Replacement: 上方顺序提交并检查 writeTextFile 结果。
-  // Risk: Low；保留协议与路径。
-  // Human Review: Required
-  // Original code:
-  // await Promise.all([
-  //   client.writeTextFile(revisionPath, serializedValue, writeOptions),
-  //   client.writeTextFile(canonicalPath, serializedValue),
-  // ]);
 }
 
 function addWebDavBindingDirectoryPaths(

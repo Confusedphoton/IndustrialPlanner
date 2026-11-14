@@ -89,33 +89,6 @@ export function subscribeToCloudflareOAuthSessionChanges(
   };
 }
 
-// AI-REMOVED 2026-08-24:
-// Reason: OAuth 浏览器握手已改由 cloudflare-oauth-browser-flow 统一携带前端 callback 与随机频道；session 模块只负责 token 交换和持久化。
-// Trigger: 后端上线固定 Provider callback + frontend_redirect_uri + fragment code + BroadcastChannel ACK 协议，且用户明确要求不兼容未上线旧版。
-// Evidence: 后端 OAuth 登录流程文档与 beta /v1/oauth/authorize 参数校验均确认新协议；旧入口缺少两个必填参数，旧 callback 转发也不再成立。
-// Replacement: src/shared/storage/cloudflare-oauth-browser-flow.ts
-// Risk: 旧前端产物无法再使用新版后端登录；该版本从未上线，无兼容要求。
-// Human Review: Required
-//
-// Original code:
-// export function createCloudflareOAuthAuthorizeUrl(
-//   apiBaseUrl = resolveBackendApiBaseUrl(),
-// ): string {
-//   return `${normalizeBackendApiBaseUrl(apiBaseUrl)}/v1/oauth/authorize`;
-// }
-//
-// export function createCloudflareOAuthBackendCallbackUrl(
-//   browserCallbackUrl: string,
-//   apiBaseUrl = resolveBackendApiBaseUrl(),
-// ): string {
-//   const source = new URL(browserCallbackUrl);
-//   const target = new URL(
-//     "/v1/oauth/callback",
-//     `${normalizeBackendApiBaseUrl(apiBaseUrl)}/`,
-//   );
-//   target.search = source.search;
-//   return target.href;
-// }
 
 export async function completeCloudflareOAuthLogin(
   callbackCode: string,

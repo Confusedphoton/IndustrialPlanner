@@ -108,33 +108,6 @@
   opacity: 0.7;
 }
 
-/*
- * AI-REMOVED 2026-08-19:
- * Reason: 顶栏旧版入口已退出，专用样式不再参与构建。
- * Trigger: 用户要求从下个版本开始界面不再显示“返回旧版”。
- * Evidence: top-bar-old-version-link 仅由已停用的顶栏旧版链接引用。
- * Replacement: None
- * Risk: Low
- * Human Review: Required
- *
- * Original code:
- * // AI-GENERATED 2026-06-12: 旧版切换链接，紧跟标题后在标题块右侧显示。
- * .top-bar-old-version-link {
- *   margin-left: 12px;
- *   font-size: 0.72rem;
- *   font-weight: 400;
- *   color: var(--text-dim);
- *   text-decoration: none;
- *   white-space: nowrap;
- *   opacity: 0.7;
- *   transition: opacity 0.15s;
- *
- *   &:hover {
- *     opacity: 1;
- *     color: var(--text-accent);
- *   }
- * }
- */
 
 .toolbar-group,
 .toolbar-meta,
@@ -235,19 +208,6 @@
   height: 30px;
   flex: 0 0 30px;
   box-sizing: border-box;
-  // AI-REMOVED 2026-07-29:
-  // Reason: 保存提示改为无纯色背景底的画布悬浮图标。
-  // Trigger: 用户要求移除圆形底板、边框和实体阴影。
-  // Evidence: 原样式在画布上表现为独立圆形按钮。
-  // Replacement: transparent background + icon drop-shadow。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // border: 1px solid var(--line);
-  // border-radius: 999px;
-  // background: color-mix(in srgb, var(--surface-2) 88%, transparent);
-  // box-shadow: 0 4px 12px color-mix(in srgb, var(--text-0) 12%, transparent);
   border: 0;
   background: transparent;
   filter: drop-shadow(0 1px 2px color-mix(in srgb, var(--text-0) 28%, transparent));
@@ -502,43 +462,6 @@
 
 .rail-button-utility {
   min-height: calc(54px * var(--left-toolbar-button-scale, 1));
-}
-
-.eda-task-running svg {
-  animation: eda-search-scan 1.8s ease-in-out infinite;
-  transform-origin: center;
-}
-
-@keyframes eda-search-scan {
-  0%, 100% { transform: translate(-8%, 4%) rotate(-12deg); }
-  25% { transform: translate(5%, -6%) rotate(8deg); }
-  50% { transform: translate(8%, 5%) rotate(12deg); }
-  75% { transform: translate(-5%, -5%) rotate(-8deg); }
-}
-
-.rail-button.eda-task-indicator {
-  position: relative;
-  color: var(--accent-strong);
-}
-
-.eda-task-indicator::after {
-  content: "";
-  position: absolute;
-  inset: 1px;
-  border: 2px solid var(--accent-strong);
-  border-radius: inherit;
-  pointer-events: none;
-  animation: eda-task-pulse 1.6s ease-in-out infinite;
-}
-
-@keyframes eda-task-pulse {
-  0%, 100% { opacity: 0.25; }
-  50% { opacity: 1; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .eda-task-running svg { animation: none; }
-  .eda-task-indicator::after { animation: none; opacity: 1; }
 }
 
 .toolbar-meta {

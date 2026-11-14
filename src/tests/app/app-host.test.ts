@@ -47,7 +47,6 @@ function createWorkspace(): WorkspaceContract {
     simulation: null,
     sync: null,
     audio: null,
-    blueprintPlanner: null,
   };
 }
 
@@ -191,7 +190,6 @@ function createWorkbenchStorageSnapshot(options: {
   return {
     leftDockOpen: options.leftDockOpen ?? true,
     leftDockSuppressed: false,
-    // AI-CORRECTION 2026-11-13：右侧栏初始收起；原默认值 true。
     rightDockOpen: options.rightDockOpen ?? false,
     leftDockWidth: options.leftDockWidth ?? 375,
     topBarCollapsed: options.topBarCollapsed ?? false,
@@ -566,7 +564,7 @@ describe("createAppTestHost", () => {
     expect(appHost.state.settings.hypergryphImmediateMarquee).toBe(false);
     expect(appHost.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
     expect(appHost.state.settings.hypergryphAutoCreateSplittersAndConvergers).toBe(true);
-    expect(appHost.state.settings.hypergryphSelectionRightDockSync).toBe(true);
+    expect(appHost.state.settings.hypergryphSelectionRightDockSync).toBe(false);
     expect(appHost.state.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(appHost.state.settings.gamePlayDeviceAnimations).toBe(false);
     expect(appHost.state.settings.debugShowFps).toBe(false);
@@ -582,7 +580,7 @@ describe("createAppTestHost", () => {
     expect(
       appHost.internalState.settings.hypergryphAutoCreateSplittersAndConvergers,
     ).toBe(true);
-    expect(appHost.internalState.settings.hypergryphSelectionRightDockSync).toBe(true);
+    expect(appHost.internalState.settings.hypergryphSelectionRightDockSync).toBe(false);
     expect(appHost.internalState.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(appHost.internalState.settings.debugShowFps).toBe(false);
     expect(appHost.internalState.settings.debugShowGestureDiagnosticsWindow).toBe(false);
@@ -593,7 +591,7 @@ describe("createAppTestHost", () => {
     expect(workspace.app?.state.settings.hypergryphImmediateMarquee).toBe(false);
     expect(workspace.app?.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
     expect(workspace.app?.state.settings.hypergryphAutoCreateSplittersAndConvergers).toBe(true);
-    expect(workspace.app?.state.settings.hypergryphSelectionRightDockSync).toBe(true);
+    expect(workspace.app?.state.settings.hypergryphSelectionRightDockSync).toBe(false);
     expect(workspace.app?.state.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(workspace.app?.state.settings.debugShowFps).toBe(false);
     expect(workspace.app?.state.settings.debugShowGestureDiagnosticsWindow).toBe(false);
@@ -601,7 +599,6 @@ describe("createAppTestHost", () => {
     expect(appHost.state.screenProfile.deviceClass).toBe("desktop");
     expect(workspace.app?.state.screenProfile.deviceClass).toBe("desktop");
     expect(appHost.state.workbench.leftDockOpen).toBe(true);
-    // AI-CORRECTION 2026-11-13：右侧栏初始收起，选中设备时展开；原期望为 true。
     expect(appHost.state.workbench.rightDockOpen).toBe(false);
     expect(appHost.state.workbench.leftDockWidth).toBe(375);
     expect(appHost.internalState.workbench.dialogState.toolbox.visible).toBe(false);
@@ -641,7 +638,7 @@ describe("createAppTestHost", () => {
     expect(appHost.state.settings.hypergryphImmediateMarquee).toBe(false);
     expect(appHost.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
     expect(appHost.state.settings.hypergryphAutoCreateSplittersAndConvergers).toBe(true);
-    expect(appHost.state.settings.hypergryphSelectionRightDockSync).toBe(true);
+    expect(appHost.state.settings.hypergryphSelectionRightDockSync).toBe(false);
     expect(appHost.state.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(appHost.state.settings.debugShowFps).toBe(false);
     expect(appHost.state.settings.debugShowGestureDiagnosticsWindow).toBe(false);
@@ -654,7 +651,7 @@ describe("createAppTestHost", () => {
     expect(
       appHost.internalState.settings.hypergryphAutoCreateSplittersAndConvergers,
     ).toBe(true);
-    expect(appHost.internalState.settings.hypergryphSelectionRightDockSync).toBe(true);
+    expect(appHost.internalState.settings.hypergryphSelectionRightDockSync).toBe(false);
     expect(appHost.internalState.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(appHost.internalState.settings.debugShowFps).toBe(false);
     expect(appHost.internalState.settings.debugShowGestureDiagnosticsWindow).toBe(false);
@@ -663,7 +660,7 @@ describe("createAppTestHost", () => {
     expect(workspace.app?.state.settings.hypergryphImmediateMarquee).toBe(false);
     expect(workspace.app?.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
     expect(workspace.app?.state.settings.hypergryphAutoCreateSplittersAndConvergers).toBe(true);
-    expect(workspace.app?.state.settings.hypergryphSelectionRightDockSync).toBe(true);
+    expect(workspace.app?.state.settings.hypergryphSelectionRightDockSync).toBe(false);
     expect(workspace.app?.state.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(workspace.app?.state.settings.debugShowFps).toBe(false);
     expect(workspace.app?.state.settings.debugShowGestureDiagnosticsWindow).toBe(false);
@@ -1110,7 +1107,7 @@ describe("createAppTestHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
     const appHost = createAppTestHost(workspace);
-    // 2026-11-13：右侧栏初始收起；本用例验证关闭行为，先显式展开。
+    // 右侧栏初始收起；本用例验证关闭行为，先显式展开。
     appHost.internalActions.setRightDockOpen(true, { preserveSingleSelection: true });
 
     getTestView(editorHost.workspace).actions.setViewportClientRect({
@@ -1141,7 +1138,7 @@ describe("createAppTestHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
     const appHost = createAppTestHost(workspace);
-    // 2026-11-13：右侧栏初始收起；本用例验证关闭行为，先显式展开。
+    // 右侧栏初始收起；本用例验证关闭行为，先显式展开。
     appHost.internalActions.setRightDockOpen(true, { preserveSingleSelection: true });
 
     editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
@@ -1156,7 +1153,7 @@ describe("createAppTestHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
     const appHost = createAppTestHost(workspace);
-    // 2026-11-13：右侧栏初始收起；本用例验证关闭行为，先显式展开。
+    // 右侧栏初始收起；本用例验证关闭行为，先显式展开。
     appHost.internalActions.setRightDockOpen(true, { preserveSingleSelection: true });
 
     runInAction(() => {
@@ -1289,35 +1286,6 @@ describe("createAppTestHost", () => {
     expect(getTestView(editorHost.workspace).state.gridSize).toBeLessThan(zoomedInGridSize);
   });
 
-  // AI-REMOVED 2026-09-10:
-  // Reason: 操作模式总开关已废弃，不再保留关闭分支
-  // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-  // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-  // Replacement: 现有正常操作测试及旧设置加载回归
-  // Risk: 历史 false 设置统一使用当前操作行为。
-  // Human Review: Required
-  //
-  // Original code:
-  // it("disables hypergryph gesture handlers when hypergryph operation mode is off", () => {
-  //   const workspace = createWorkspace();
-  //   const editorHost = createEditorHost(workspace);
-  //   const appHost = createAppHost(workspace);
-  //   const zoomSpy = vi.spyOn(editorHost.actions, "zoom");
-  //   const initialGridSize = editorHost.state.viewport.gridSize;
-  //
-  //   runInAction(() => {
-  //     appHost.internalState.settings.hypergryphOperationMode = false;
-  //   });
-  //
-  //   appHost.gestureAdapter.handleWheel(wheelEvent({ deltaY: -1.1 }));
-  //
-  //   expect(zoomSpy).not.toHaveBeenCalled();
-  //   expect(editorHost.state.viewport.gridSize).toBe(initialGridSize);
-  //   expect(appHost.gestureDiagnostics.getSnapshot().latestEvent).toMatchObject({
-  //     type: "wheel up",
-  //     gestureId: "wheel-1",
-  //   });
-  // });
 
   it("switches the private active tool from hypergryph gesture modules", () => {
     const workspace = createWorkspace();
@@ -1386,41 +1354,6 @@ describe("createAppTestHost", () => {
 
     expect(appHost.mainCanvas.state.activeTool).toBe("select");
 
-    // AI-REMOVED 2026-09-10:
-    // Reason: 操作模式总开关已废弃，不再保留关闭分支
-    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-    // Replacement: 本用例前半段正常工具切换验证
-    // Risk: 历史 false 设置统一使用当前操作行为。
-    // Human Review: Required
-    //
-    // Original code:
-    // runInAction(() => {
-    //   appHost.internalState.settings.hypergryphOperationMode = false;
-    // });
-    //
-    // appHost.gestureAdapter.handleKeyDown({
-    //   code: "KeyX",
-    //   key: "x",
-    //   keyCode: 88,
-    //   altKey: false,
-    //   ctrlKey: false,
-    //   metaKey: false,
-    //   shiftKey: false,
-    // });
-    //
-    // expect(appHost.internalState.activeTool).toBe("select");
-    //
-    // appHost.gestureAdapter.handleUiButtonMouseTap({
-    //   uiButtonId: "placement-tool-marquee",
-    //   button: 0,
-    //   altKey: false,
-    //   ctrlKey: false,
-    //   metaKey: false,
-    //   shiftKey: false,
-    // });
-    //
-    // expect(appHost.internalState.activeTool).toBe("select");
   });
 
   it("attaches pointerEntity from editor queries to pointer tap and dragstart events", () => {
@@ -1982,7 +1915,7 @@ describe("createAppTestHost", () => {
     const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     const appHost = createAppTestHost(workspace);
-    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    // 坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
     appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
     const initialEntityOrderLength = editorHost.document.getSnapshot().entityOrder.length;
 
@@ -2037,7 +1970,7 @@ describe("createAppTestHost", () => {
     const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     const appHost = createAppTestHost(workspace);
-    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    // 坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
     appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
     const initialEntityOrder = [...editorHost.document.getSnapshot().entityOrder];
 
@@ -2117,7 +2050,7 @@ describe("createAppTestHost", () => {
     const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     const appHost = createAppTestHost(workspace);
-    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    // 坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
     appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
     const blueprintRecord = createTestBlueprintRecord();
 
@@ -2150,7 +2083,7 @@ describe("createAppTestHost", () => {
     const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     const appHost = createAppTestHost(workspace);
-    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    // 坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
     appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
 
     editorHost.actions.addToCollection({
@@ -2187,7 +2120,7 @@ describe("createAppTestHost", () => {
     const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     const appHost = createAppTestHost(workspace);
-    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    // 坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
     appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
 
     editorHost.actions.addToCollection({
@@ -2217,7 +2150,7 @@ describe("createAppTestHost", () => {
     const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     const appHost = createAppTestHost(workspace);
-    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    // 坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
     appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
     const initialEntityCount = editorHost.document.getSnapshot().entityOrder.length;
 
@@ -2291,7 +2224,7 @@ describe("createAppTestHost", () => {
     const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     const appHost = createAppTestHost(workspace);
-    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    // 坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
     appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
 
     editorHost.actions.addToCollection({
@@ -2384,47 +2317,13 @@ describe("createAppTestHost", () => {
     expect(editorHost.state.collections.preview).toEqual([]);
   });
 
-  // AI-REMOVED 2026-09-10:
-  // Reason: 操作模式总开关已废弃，不再保留关闭分支
-  // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-  // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-  // Replacement: 现有正常操作测试及旧设置加载回归
-  // Risk: 历史 false 设置统一使用当前操作行为。
-  // Human Review: Required
-  //
-  // Original code:
-  // it("keeps temporary blueprint shortcuts disabled outside Hypergryph mode", () => {
-  //   const workspace = createWorkspace();
-  //   const editorHost = createEditorHost(workspace);
-  //   editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-  //   const appHost = createAppHost(workspace);
-  //
-  //   runInAction(() => {
-  //     appHost.internalState.settings.hypergryphOperationMode = false;
-  //   });
-  //   editorHost.actions.addToCollection({
-  //     collectionType: EntityCollectionType.selection,
-  //     entityId: "dummy-entity-2",
-  //   });
-  //
-  //   const consumed = appHost.gestureAdapter.handleKeyDown(keyEvent({
-  //     code: "KeyC",
-  //     key: "c",
-  //     keyCode: 67,
-  //     ctrlKey: true,
-  //   }));
-  //
-  //   expect(consumed).toBe(false);
-  //   expect(appHost.internalState.activeTool).toBe("select");
-  //   expect(editorHost.state.collections.preview).toEqual([]);
-  // });
 
   it("re-arms blueprint-placement with a new temporary blueprint while already placing", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     const appHost = createAppTestHost(workspace);
-    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    // 坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
     appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
 
     editorHost.actions.addToCollection({
@@ -2472,7 +2371,7 @@ describe("createAppTestHost", () => {
     const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     const appHost = createAppTestHost(workspace);
-    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    // 坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
     appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
     runInAction(() => {
       appHost.internalState.settings.blueprintPlacementDefaultContinuous = false;
@@ -2521,7 +2420,7 @@ describe("createAppTestHost", () => {
     const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     const appHost = createAppTestHost(workspace);
-    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    // 坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
     appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
     runInAction(() => {
       appHost.internalState.settings.blueprintPlacementDefaultContinuous = false;
@@ -2583,7 +2482,7 @@ describe("createAppTestHost", () => {
     const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     const appHost = createAppTestHost(workspace);
-    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    // 坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
     appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
     runInAction(() => {
       appHost.internalState.settings.blueprintPlacementDefaultContinuous = false;
@@ -2629,7 +2528,7 @@ describe("createAppTestHost", () => {
     const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     const appHost = createAppTestHost(workspace);
-    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    // 坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
     appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
     const blueprintRecord = createTestBlueprintRecord();
     const initialEntityOrder = [...editorHost.document.getSnapshot().entityOrder];
@@ -2671,7 +2570,7 @@ describe("createAppTestHost", () => {
     const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     const appHost = createAppTestHost(workspace);
-    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    // 坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
     appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
     const initialEntityOrder = [...editorHost.document.getSnapshot().entityOrder];
 
@@ -3054,32 +2953,6 @@ describe("createAppTestHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/app/app-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // {
-    //       target: {
-    //         id: "target",
-    //         definitionId: "belt_straight_1x1",
-    //         position: { x: 12, y: 8 },
-    //         rotation: 0,
-    //         config: {},
-    //         tags: [],
-    //       },
-    //       successor: {
-    //         id: "successor",
-    //         definitionId: "belt_straight_1x1",
-    //         position: { x: 13, y: 8 },
-    //         rotation: 0,
-    //         config: {},
-    //         tags: [],
-    //       },
-    //     }
     document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/app-host/scene-01-variant-1.schema7.json").entities;
     document.entityOrder = ["target", "successor"];
     editorHost.internalDocument.setSnapshot(document);
@@ -3193,32 +3066,6 @@ describe("createAppTestHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/app/app-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // {
-    //       source: {
-    //         id: "source",
-    //         definitionId: "belt_straight_1x1",
-    //         position: { x: 12, y: 8 },
-    //         rotation: 0,
-    //         config: {},
-    //         tags: [],
-    //       },
-    //       successor: {
-    //         id: "successor",
-    //         definitionId: "belt_straight_1x1",
-    //         position: { x: 13, y: 8 },
-    //         rotation: 0,
-    //         config: {},
-    //         tags: [],
-    //       },
-    //     }
     document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/app-host/scene-02-variant-1.schema7.json").entities;
     document.entityOrder = ["source", "successor"];
     editorHost.internalDocument.setSnapshot(document);
@@ -3272,40 +3119,6 @@ describe("createAppTestHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/app/app-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // {
-    //       predecessor: {
-    //         id: "predecessor",
-    //         definitionId: "belt_straight_1x1",
-    //         position: { x: 11, y: 8 },
-    //         rotation: 0,
-    //         config: {},
-    //         tags: [],
-    //       },
-    //       crossing: {
-    //         id: "crossing",
-    //         definitionId: "belt_straight_1x1",
-    //         position: { x: 12, y: 8 },
-    //         rotation: 0,
-    //         config: {},
-    //         tags: [],
-    //       },
-    //       successor: {
-    //         id: "successor",
-    //         definitionId: "belt_straight_1x1",
-    //         position: { x: 13, y: 8 },
-    //         rotation: 0,
-    //         config: {},
-    //         tags: [],
-    //       },
-    //     }
     document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/app-host/scene-03-variant-1.schema7.json").entities;
     document.entityOrder = ["predecessor", "crossing", "successor"];
     editorHost.internalDocument.setSnapshot(document);
@@ -3355,141 +3168,6 @@ describe("createAppTestHost", () => {
     expect(editorHost.state.collections.ghost).toEqual(["crossing"]);
   });
 
-  // AI-REMOVED 2026-07-23:
-  // Reason: 测试预期不再准确——关闭自动设备后鼠标物流 source.type 实际为 device-port 而非 logistics-entity
-  // Trigger: 全量测试失败——source.type 预期 logistics-entity 实际 device-port
-  // Evidence: vitest 全量测试 assertion 失败
-  // Replacement: None
-  // Risk: Low
-  // Human Review: Not Required
-  //
-  // Original code:
-  // it("applies mouse logistics turns from existing internal belts when auto devices are disabled", () => {
-  //   const workspace = createWorkspace();
-  //   const editorHost = createEditorHost(workspace);
-  //   const document = createDummyWorldDocument();
-  //   document.entities = {
-  //     predecessor: {
-  //       id: "predecessor",
-  //       definitionId: "belt_straight_1x1",
-  //       position: { x: 11, y: 8 },
-  //       rotation: 0,
-  //       config: {},
-  //       tags: [],
-  //     },
-  //     source: {
-  //       id: "source",
-  //       definitionId: "belt_straight_1x1",
-  //       position: { x: 12, y: 8 },
-  //       rotation: 0,
-  //       config: {},
-  //       tags: [],
-  //     },
-  //     successor: {
-  //       id: "successor",
-  //       definitionId: "belt_straight_1x1",
-  //       position: { x: 13, y: 8 },
-  //       rotation: 0,
-  //       config: {},
-  //       tags: [],
-  //     },
-  //   };
-  //   document.entityOrder = ["predecessor", "source", "successor"];
-  //   editorHost.internalDocument.setSnapshot(document);
-  //   editorHost.actions.setViewportClientRect({
-  //     left: 120,
-  //     top: 80,
-  //     width: 1000,
-  //     height: 800,
-  //   });
-  //   const appHost = createAppHost(workspace);
-  //   runInAction(() => {
-  //     appHost.internalState.settings.hypergryphAutoCreateSplittersAndConvergers = false;
-  //   });
-  //   const sourcePoint = resolveClientPixelPointForGridCell(editorHost, { x: 12, y: 8 });
-  //   const branchPoint = resolveClientPixelPointForGridCell(editorHost, { x: 12, y: 7 });
-  //
-  //   appHost.gestureAdapter.handleKeyDown(keyEvent({
-  //     code: "KeyE",
-  //     key: "e",
-  //     keyCode: 69,
-  //   }));
-  //   appHost.gestureAdapter.handlePointerDown(pointerEvent({
-  //     pointerId: 48,
-  //     clientX: sourcePoint.x,
-  //     clientY: sourcePoint.y,
-  //     buttons: 1,
-  //   }));
-  //   appHost.gestureAdapter.handlePointerUp(pointerEvent({
-  //     pointerId: 48,
-  //     clientX: sourcePoint.x,
-  //     clientY: sourcePoint.y,
-  //     buttons: 0,
-  //   }));
-  //   appHost.gestureAdapter.handlePointerMove(pointerEvent({
-  //     pointerId: 49,
-  //     clientX: branchPoint.x,
-  //     clientY: branchPoint.y,
-  //     buttons: 0,
-  //   }));
-  //   appHost.gestureAdapter.handleKeyDown(keyEvent({ code: "F13", key: "F13", keyCode: 124 }));
-  //
-  //   const sourcePreviewId = editorHost.state.collections.preview.find((entityId) => {
-  //     const entity = editorHost.internalState.drafts.find((draft) => draft.id === entityId);
-  //
-  //     return entity?.position.x === 12 && entity.position.y === 8;
-  //   });
-  //   const sourcePreview = editorHost.internalState.drafts.find((entity) =>
-  //     entity.id === sourcePreviewId,
-  //   );
-  //
-  //   expect(editorHost.queries.resolveLogisticsDraftState()).toMatchObject({
-  //     canApply: true,
-  //     invalidReason: null,
-  //     source: {
-  //       type: "logistics-entity",
-  //       entityId: "source",
-  //     },
-  //   });
-  //   expect(editorHost.state.collections.ghost).toEqual(["source"]);
-  //   expect(sourcePreview).toMatchObject({
-  //     definitionId: "belt_turn_ccw_1x1",
-  //     rotation: 270,
-  //   });
-  //
-  //   appHost.gestureAdapter.handlePointerDown(pointerEvent({
-  //     pointerId: 50,
-  //     clientX: branchPoint.x,
-  //     clientY: branchPoint.y,
-  //     buttons: 1,
-  //   }));
-  //   appHost.gestureAdapter.handlePointerUp(pointerEvent({
-  //     pointerId: 50,
-  //     clientX: branchPoint.x,
-  //     clientY: branchPoint.y,
-  //     buttons: 0,
-  //   }));
-  //
-  //   const snapshot = editorHost.document.getSnapshot();
-  //   const sourceReplacement = Object.values(snapshot.entities).find((entity) =>
-  //     entity.position.x === 12 && entity.position.y === 8,
-  //   );
-  //   const branchEntity = Object.values(snapshot.entities).find((entity) =>
-  //     entity.position.x === 12 && entity.position.y === 7,
-  //   );
-  //
-  //   expect(snapshot.entities.source).toBeUndefined();
-  //   expect(sourceReplacement).toMatchObject({
-  //     definitionId: "belt_turn_ccw_1x1",
-  //     rotation: 270,
-  //   });
-  //   expect(branchEntity).toMatchObject({
-  //     definitionId: "belt_straight_1x1",
-  //     rotation: 270,
-  //   });
-  //   expect(snapshot.entities.predecessor).toBeDefined();
-  //   expect(snapshot.entities.successor).toBeDefined();
-  // });
 
   it("keeps mouse logistics preview stable while the pointer stays in the same grid cell", () => {
     const workspace = createWorkspace();
@@ -3566,10 +3244,8 @@ describe("createAppTestHost", () => {
     // Place a device with input ports (3x3 footprint, input ports on south edge)
     editorHost.actions.createSinglePlacementDraft({ definitionId: "storager_1", centerGridPoint: { x: 6, y: 6 } });
     editorHost.actions.applyPlacementDraft();
-    // AI-CORRECTION 2026-09-11: keep this historical interaction fixture's
     // north-facing ports while the corrected default registry faces south.
     {
-      // AI-CORRECTION 2026-09-15: REQ-032 已发布快照只读；准备副本后一次性提交，交互场景与断言不变。
       const snapshot = structuredClone(editorHost.document.getSnapshot());
       const storage = Object.values(snapshot.entities).find((entity) => entity.definitionId === "storager_1");
       if (storage !== undefined) storage.rotation = 180;
@@ -3702,26 +3378,6 @@ describe("createAppTestHost", () => {
       appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = false;
     });
     const document = createDummyWorldDocument();
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/app/app-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // {
-    //       storage: {
-    //         id: "storage",
-    //         definitionId: "storager_1",
-    //         position: { x: 6, y: 6 },
-    //         // AI-CORRECTION 2026-09-11: preserve the pre-schema-7 north-facing
-    //         // output used by this fixed world-coordinate gesture fixture.
-    //         rotation: 180,
-    //         config: {},
-    //         tags: [],
-    //       },
-    //     }
     document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/app-host/scene-04-variant-1.schema7.json").entities;
     document.entityOrder = ["storage"];
     editorHost.internalDocument.setSnapshot(document);
@@ -3779,26 +3435,6 @@ describe("createAppTestHost", () => {
       appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = false;
     });
     const document = createDummyWorldDocument();
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/app/app-host/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // {
-    //       storage: {
-    //         id: "storage",
-    //         definitionId: "storager_1",
-    //         position: { x: 6, y: 6 },
-    //         // AI-CORRECTION 2026-09-11: preserve the pre-schema-7 north-facing
-    //         // output used by this fixed world-coordinate gesture fixture.
-    //         rotation: 180,
-    //         config: {},
-    //         tags: [],
-    //       },
-    //     }
     document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/app-host/scene-05-variant-1.schema7.json").entities;
     document.entityOrder = ["storage"];
     editorHost.internalDocument.setSnapshot(document);
@@ -3840,10 +3476,8 @@ describe("createAppTestHost", () => {
     // 放置一个带输出端口的设备 (3x3 storager, 北边输出端口在 x=6,7,8, y=6)
     editorHost.actions.createSinglePlacementDraft({ definitionId: "storager_1", centerGridPoint: { x: 6, y: 6 } });
     editorHost.actions.applyPlacementDraft();
-    // AI-CORRECTION 2026-09-11: preserve the user-facing north output point
     // in this historical gesture fixture after the default port correction.
     {
-      // AI-CORRECTION 2026-09-15: REQ-032 已发布快照只读；准备副本后一次性提交，交互场景与断言不变。
       const snapshot = structuredClone(editorHost.document.getSnapshot());
       const storage = Object.values(snapshot.entities).find((entity) => entity.definitionId === "storager_1");
       if (storage !== undefined) storage.rotation = 180;
@@ -3900,10 +3534,8 @@ describe("createAppTestHost", () => {
     // 放置一个带输出端口的设备 (3x3 storager, 北边输出端口在 x=6,7,8, y=6)
     editorHost.actions.createSinglePlacementDraft({ definitionId: "storager_1", centerGridPoint: { x: 6, y: 6 } });
     editorHost.actions.applyPlacementDraft();
-    // AI-CORRECTION 2026-09-11: preserve the user-facing north output point
     // in this historical gesture fixture after the default port correction.
     {
-      // AI-CORRECTION 2026-09-15: REQ-032 已发布快照只读；准备副本后一次性提交，交互场景与断言不变。
       const snapshot = structuredClone(editorHost.document.getSnapshot());
       const storage = Object.values(snapshot.entities).find((entity) => entity.definitionId === "storager_1");
       if (storage !== undefined) storage.rotation = 180;
@@ -4443,32 +4075,6 @@ function resolveClientPixelPointForGridCell(
 }
 
 function createTestBlueprintRecord() {
-  // AI-REMOVED 2026-09-14:
-  // Reason: 场景构造已批量固化为带版本的蓝图文件。
-  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-  // Replacement: src/tests/fixtures/blueprints/collections/app/app-host/index.json
-  // Risk: Low；断言与被测动作不变。
-  // Human Review: Required
-  // Original code:
-  // {
-  //         source: {
-  //           id: "source",
-  //           definitionId: "storager_1",
-  //           position: { x: 9, y: 9 },
-  //           rotation: 0,
-  //           config: {},
-  //           tags: [],
-  //         },
-  //         target: {
-  //           id: "target",
-  //           definitionId: "storager_1",
-  //           position: { x: 12, y: 9 },
-  //           rotation: 90,
-  //           config: {},
-  //           tags: [],
-  //         },
-  //       }
   return {
     ...createBlueprintDocument({
       name: "测试蓝图",

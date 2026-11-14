@@ -496,10 +496,6 @@ export const DialogShell = observer(function DialogShell({
             <div className={cm(styles, "dialog-shell-header-copy", `${classPrefix}-header-copy`)}>
               <h2 id={titleId}>{title}</h2>
             </div>
-            {/* AI-CORRECTION 2026-05-09:
-                Archived note below记录的是“标题旁直接塞 tab 按钮”的旧失败方案。
-                当前有效实现改为固定高度的 tab 轨道，仍与标题同行，但不会把 tab 渲染成右上角按钮组。
-            */}
             {tabs.length > 0 ? (
               <div
                 className={cm(styles, "dialog-shell-tab-strip", `${classPrefix}-tab-strip`)}
@@ -575,22 +571,6 @@ export const DialogShell = observer(function DialogShell({
             </section>
           )}
         </div>
-        {/* AI-REMOVED 2026-07-14:
-            Reason: 右下角单点 resize grip 与用户要求的 Windows 式八方向边缘 resize 冲突。
-            Trigger: 用户要求移除右下角句柄绘制，并改为窗口边缘八个方向调整。
-            Evidence: DialogShell 当前统一负责浮窗尺寸交互，替代实现已在下方按 direction 渲染边缘热区。
-            Replacement: DialogShell resizeDirections.map(...) in this file.
-            Risk: Low
-            Human Review: Required
-
-            Original code:
-            {isResizable ? (
-              <div
-                className={cm(styles, "dialog-shell-resize-grip")}
-                onPointerDown={handleResizePointerDown}
-              />
-            ) : null}
-        */}
         {resizeDirections.map((direction) => {
           const axes = resolveDialogShellResizeAxes({
             direction,

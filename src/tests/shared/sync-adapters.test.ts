@@ -152,7 +152,6 @@ async function createAdapterRun(
     for (const [assetKey, contentHash] of stagedTouches) {
       await session.localState.setLastSyncedHash(assetKey, contentHash);
     }
-    // AI-CORRECTION 2026-08-13: 与引擎一致，终局推进 markApplied（含 collection ETag），
     // 使后续同步的远端无变化快路径可用。
     if (result.remoteStateIncomplete !== true) {
       await session.markApplied({
@@ -180,7 +179,6 @@ async function syncAdapter(
   scope?: SyncAdapterScope,
 ): Promise<SyncAdapterResult> {
   const run = await createAdapterRun(adapter, client, scope);
-  // AI-CORRECTION 2026-08-13: 与引擎的无弹框纯上传流程一致——
   // upload 条目按“用我的”登记上传；download 已落地；conflict 保留不自动决议。
   for (const item of run.outcome.items) {
     if (item.kind === "upload") {
@@ -292,7 +290,6 @@ describe("sync-adapters", () => {
     localValue = { count: 2 };
     client.files.set("assets/conflict-use-local.json", JSON.stringify({ count: 3 }));
 
-    // AI-CORRECTION 2026-08-13: 冲突登记为 SyncPlanItem，由引擎按决议执行。
     const run = await createAdapterRun(adapter, client);
     expect(run.outcome.items).toHaveLength(1);
     expect(run.outcome.items[0]).toMatchObject({ kind: "conflict" });
@@ -319,7 +316,6 @@ describe("sync-adapters", () => {
     localValue = { count: 2 };
     client.files.set("assets/conflict-use-remote.json", JSON.stringify({ count: 3 }));
 
-    // AI-CORRECTION 2026-08-13: 冲突登记为 SyncPlanItem，由引擎按决议执行。
     const run = await createAdapterRun(adapter, client);
     expect(run.outcome.items).toHaveLength(1);
     expect(run.outcome.items[0]).toMatchObject({ kind: "conflict" });
@@ -579,99 +575,6 @@ describe("sync-adapters", () => {
     expect(readAsset).not.toHaveBeenCalled();
   });
 
-  // AI-REMOVED 2026-09-09:
-  // Reason: 此测试覆盖基于错误根因引入的 hash 开关；真实浏览器证据表明同步根本没有激活。
-  // Trigger: Cloudflare migration E2E 夹具只写旧 provider key，现代激活状态保持 disabled。
-  // Evidence: lastResults 为空且任务计数为 0；改用 activateSyncProvider 才会进入既有同步流程。
-  // Replacement: src/tests/e2e/cloudflare-migration-sync.spec.ts 的原迁移断言继续覆盖端到端行为。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // it("rehashes clean collection assets when local reads may migrate their schema", async () => {
-  //   const legacyValue = { schemaVersion: 4, name: "legacy" };
-  //   const migratedValue = { schemaVersion: 5, name: "legacy" };
-  //   const legacyHash = createStableJsonHash(legacyValue);
-  //   const recordedItems: SyncPlanItem[] = [];
-  //   const adapter = createFullWithRevisionAdapter({
-  //     id: "read-migrated-assets",
-  //     indexPath: "assets/read-migrated/index.json",
-  //     entryPath: (id) => `assets/read-migrated/${id}.json`,
-  //     listLocal: async () => [{
-  //       id: "asset-a",
-  //       value: migratedValue,
-  //       deletedAt: null,
-  //     }],
-  //     writeLocal: async () => undefined,
-  //     reuseLastSyncedHashForCleanEntries: false,
-  //   });
-  //   const computeContentHashes = vi.fn<SyncRemoteSession["computeContentHashes"]>(
-  //     async (requests) => requests.map((request) => createStableJsonHash(request.value)),
-  //   );
-  //   const readAsset = vi.fn<SyncRemoteSession["readAsset"]>(async () => ({
-  //     revision: 1,
-  //     value: legacyValue,
-  //     contentHash: legacyHash,
-  //     committedAt: null,
-  //   }));
-  //   const session: SyncRemoteSession = {
-  //     localState: {
-  //       getLastSyncedHash: async () => legacyHash,
-  //       setLastSyncedHash: async () => undefined,
-  //       getRemoteRevision: async () => null,
-  //       setRemoteRevision: async () => undefined,
-  //       getRemoteEtag: async () => null,
-  //       setRemoteEtag: async () => undefined,
-  //     },
-  //     computeContentHashes,
-  //     prefetchIndexes: async () => undefined,
-  //     readIndex: async () => ({
-  //       revision: 1,
-  //       entries: {
-  //         "asset-a": {
-  //           revision: 1,
-  //           contentHash: legacyHash,
-  //           deletedAt: null,
-  //           committedAt: null,
-  //         },
-  //       },
-  //       committedAt: null,
-  //     }),
-  //     readAsset,
-  //     checkCollections: async () => ({ changedCollections: [] }),
-  //     beginWriteBatch: () => ({
-  //       putAsset: () => undefined,
-  //       putTombstone: () => undefined,
-  //       commit: async () => ({ writes: [] }),
-  //       discard: async () => undefined,
-  //     }),
-  //     markApplied: async () => undefined,
-  //   };
-  //   const transaction: SyncEngineTransaction = {
-  //     writeBatch: session.beginWriteBatch(),
-  //     stageTouch: () => undefined,
-  //     stageDeletion: () => undefined,
-  //     recordItem: (item) => {
-  //       recordedItems.push(item);
-  //     },
-  //     recordUpload: () => undefined,
-  //     assertDownloadAllowed: async () => undefined,
-  //     getLocalChangeState: () => "clean",
-  //   };
-  //
-  //   await expect(adapter.sync(session, { transaction })).resolves.toMatchObject({
-  //     status: "uploaded",
-  //     changedAssetIds: ["asset-a"],
-  //   });
-  //
-  //   expect(computeContentHashes).toHaveBeenCalledWith([{
-  //     algorithm: adapter.collection.hashAlgorithm,
-  //     value: migratedValue,
-  //   }]);
-  //   expect(readAsset).toHaveBeenCalledTimes(1);
-  //   expect(recordedItems).toHaveLength(1);
-  //   expect(recordedItems[0]?.kind).toBe("upload");
-  // });
 
   it("does not advance lastSyncedHash when a collection batch fails", async () => {
     const setLastSyncedHash = vi.fn(async () => undefined);
@@ -707,7 +610,6 @@ describe("sync-adapters", () => {
       markApplied: async () => undefined,
     };
 
-    // AI-CORRECTION 2026-08-13: 上传 commit 由引擎统一执行（先下载、后上传、单次 commit）；
     // 这里用同一 session 的事务模拟引擎终局，验证 commit 失败时 touch 不落盘。
     const transaction: SyncEngineTransaction = {
       writeBatch: session.beginWriteBatch(),
@@ -781,7 +683,6 @@ describe("sync-adapters", () => {
       markApplied: async () => undefined,
     };
 
-    // AI-CORRECTION 2026-08-13: 上传登记由引擎通过 SyncPlanItem.applyUpload →
     // transaction.recordUpload 写入共享批次；这里模拟引擎的纯上传决议。
     const writeBatch = session.beginWriteBatch();
     let recordedItem: SyncPlanItem | undefined;
@@ -852,7 +753,6 @@ describe("sync-adapters", () => {
     }));
     const filesBeforeInspection = new Map(client.files);
 
-    // AI-CORRECTION 2026-08-13: 冲突不再由 inspectConflicts 事后探测，
     // 而是同步时登记为 SyncPlanItem（kind="conflict"），由引擎弹框决议。
     const run = await createAdapterRun(adapter, client, {
       includeAssetIds: ["blueprint-a"],
@@ -940,18 +840,6 @@ describe("sync-adapters", () => {
     client.readPaths.length = 0;
     await expect(syncAdapter(adapter, client)).resolves.toMatchObject({ status: "idle" });
     expect(client.readPaths).toContain("assets/module-canvases/index.json");
-    // AI-REMOVED 2026-07-29:
-    // Reason: 未变化同步不再探测不存在的 next revision，测试应验证没有这次额外 GET。
-    // Trigger: 真实 OwnCloud 相同画布检查被 404 revision 请求增加尾延迟。
-    // Evidence: canonical index 自带 revision，成功同步后已经是完整权威快照。
-    // Replacement: 下方 not.toContain 断言。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // expect(client.readPaths).toContain(
-    //   "assets/module-canvases/index-revisions/rev-000000000002.json",
-    // );
     expect(client.readPaths).not.toContain(
       "assets/module-canvases/index-revisions/rev-000000000002.json",
     );
@@ -976,7 +864,6 @@ describe("sync-adapters", () => {
   });
 
   it("discards a local-only asset via applyDiscardLocal with two-phase deletion", async () => {
-    // AI-CORRECTION 2026-08-14: 上传条目（本地有、远端没有）被决议为“用远端”时
     // 走 applyDiscardLocal：登记二段删除与 touch 清空；commit 成功后才真正删除本地。
     const client = new MemoryStorageClient();
     type DiscardEntry = {
@@ -1147,29 +1034,6 @@ describe("sync-adapters", () => {
       status: "idle",
     });
 
-    // AI-REMOVED 2026-08-25:
-    // Reason: adapter 级 WebDAV ETag 短路已被完整 plan 分类取代，是否 stat canonical index
-    //   不再是公共同步引擎的行为契约。
-    // Trigger: CF 每轮必须消费同一份完整 plan，WebDAV 本轮不作为兼容约束。
-    // Evidence: 回归目标改为不读取未变化资产正文，避免把 provider 探测细节固化进 adapter 测试。
-    // Replacement: 下方 readPaths 数量断言。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // expect(client.stat).toHaveBeenCalledWith("documents/index.json");
-    // AI-CORRECTION 2026-08-25: 完整 plan 分类需要读取一次 canonical index；
-    // 回归约束是只读 index、不读取任何未变化资产正文。
-    // AI-REMOVED 2026-08-25:
-    // Reason: 完整分类会新增一次 index 读取，readPaths 总数不变不再成立。
-    // Trigger: adapter 级 ETag 短路移除。
-    // Evidence: 实际新增读取仅为 documents/index.json，没有 canvas 正文路径。
-    // Replacement: 下方 newReadPaths 精确断言。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // expect(client.readPaths).toHaveLength(readCountAfterCacheWarmup);
     const newReadPaths = client.readPaths.slice(readCountAfterCacheWarmup);
     expect(newReadPaths).toEqual(["documents/index.json"]);
   });
@@ -1311,7 +1175,6 @@ describe("sync-adapters", () => {
       },
     }));
 
-    // AI-CORRECTION 2026-08-13: 冲突登记为 SyncPlanItem，由引擎按决议执行；
     // adapter 不再消费 options.resolveConflict。
     const run = await createAdapterRun(adapter, client);
     expect(run.outcome.items).toHaveLength(1);
@@ -1374,7 +1237,6 @@ describe("sync-adapters", () => {
       },
     }));
 
-    // AI-CORRECTION 2026-08-13: 冲突登记为 SyncPlanItem；“用远端”由引擎调 applyDownload。
     const run = await createAdapterRun(adapter, client);
     expect(run.outcome.items).toHaveLength(1);
     expect(run.outcome.items[0]).toMatchObject({
@@ -1423,7 +1285,6 @@ describe("sync-adapters", () => {
       },
     }));
 
-    // AI-CORRECTION 2026-08-13: 冲突登记为 SyncPlanItem；“用远端”= 二段删除。
     const run = await createAdapterRun(adapter, client);
     expect(run.outcome.items).toHaveLength(1);
     expect(run.outcome.items[0]).toMatchObject({
@@ -1486,7 +1347,6 @@ describe("sync-adapters", () => {
       },
     }));
 
-    // AI-CORRECTION 2026-08-13: 冲突登记为 SyncPlanItem；“用我的”= 墓碑上传。
     const run = await createAdapterRun(adapter, client);
     expect(run.outcome.items).toHaveLength(1);
     expect(run.outcome.items[0]).toMatchObject({ kind: "conflict" });

@@ -12,22 +12,6 @@ const logger = createLogger("webdav-client");
 const DEFAULT_ROOT_PATH = "/industrial-planner";
 const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
 
-// AI-CORRECTION 2026-07-30: 类型已迁移到通用 ../types，以下别名保持向后兼容。
-// AI-REMOVED 2026-08-13:
-// Reason: 旧别名已无消费者，全部引用改回通用 ../types 类型。
-// Trigger: 用户要求删除带 WebDAV 字样但实为公共内容的命名。
-// Evidence: 全库引用点（worker-client、worker-runtime、测试）均已迁移到 Sync* 通用类型。
-// Replacement: 直接导入 ../types 的 SyncClientOptions / SyncWriteOptions / SyncReadOptions / SyncTextFile / SyncResourceStat / SyncStorageClient。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-// export type WebDavClientOptions = SyncClientOptions;
-// export type WebDavWriteOptions = SyncWriteOptions;
-// export type WebDavReadOptions = SyncReadOptions;
-// export type WebDavTextFile = SyncTextFile;
-// export type WebDavResourceStat = SyncResourceStat;
-// export type WebDavStorageClient = SyncStorageClient;
 
 export function createWebDavStorageClient(options: SyncClientOptions): SyncStorageClient {
   const client = createClient(options.baseUrl, {
@@ -73,19 +57,6 @@ export function createWebDavStorageClient(options: SyncClientOptions): SyncStora
         }
         logger.debug(`MKCOL ${fullPath} → already exists`);
       }
-      // AI-REMOVED 2026-07-29:
-      // Reason: 并行资源首次上传会并发创建相同父目录，OwnCloud 对后到请求返回 405。
-      // Trigger: 真实双资源批量冲突验证在并发创建验证根目录时失败。
-      // Evidence: 405 后对相同路径执行 PROPFIND，目标已经是 directory。
-      // Replacement: 上方仅在确认目标目录已存在时接受 405 的幂等流程。
-      // Risk: Low；非目录或其他错误仍原样抛出。
-      // Human Review: Required
-      //
-      // Original code:
-      // await runWithRequestTimeout(
-      //   requestTimeoutMs,
-      //   async (signal) => await client.createDirectory(fullPath, { recursive: true, signal }),
-      // );
     },
     listDirectory: async (relativePath) => {
       const entries = await runWithRequestTimeout(

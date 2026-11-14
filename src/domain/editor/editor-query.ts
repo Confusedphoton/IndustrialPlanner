@@ -2,9 +2,6 @@ import type { CanvasOperationAvailability, CanvasOperationId } from "./types/edi
 import type { WorldDocument, WorldEntity } from "../document/world-document";
 import type {
 	ClientPixelPoint,
-// AI-REMOVED 2026-11-12: Reason: 相机移至 View；Trigger: REQ-048 D4；Evidence: 旧 viewport 已退役；Replacement: EditorView；Risk: 消费者待迁移；Human Review: Required
-// Original code:
-// 	ClientPixelRect,
 } from "../shared/client-pixel";
 import type {
 	GridPoint,
@@ -43,29 +40,6 @@ export interface EditorQuery {
 		collectionType: EntityCollectionType,
 	): EntityCollectionGeometry | null;
 	getEntityPlacementValidation(entityId: string): EntityPlacementValidationResult;
-	// AI-REMOVED 2026-11-12:
-// Reason: 相机属于独立 View，Editor 不再持有或驱动视口。
-// Trigger: REQ-048 已确认 D4 契约。
-// Evidence: 同源多视图需要独立相机，无头会话不创建动画驱动。
-// Replacement: EditorViewQuery
-// Risk: 全部坐标、聚焦、持久化消费者需要迁移。
-// Human Review: Required
-// Original code:
-// findGridCellForClientPixelPoint(
-// 		clientPixelPoint: ClientPixelPoint,
-// 	): GridPoint | null;
-	// AI-REMOVED 2026-11-12:
-// Reason: 相机属于独立 View，Editor 不再持有或驱动视口。
-// Trigger: REQ-048 已确认 D4 契约。
-// Evidence: 同源多视图需要独立相机，无头会话不创建动画驱动。
-// Replacement: EditorViewQuery
-// Risk: 全部坐标、聚焦、持久化消费者需要迁移。
-// Human Review: Required
-// Original code:
-// findClientRectForGridCell(gridCell: {
-// 		x: number;
-// 		y: number;
-// 	}): ClientPixelRect | null;
 
 	resolveLogisticsDraftState(): LogisticsDraftReadonlyState | null;
 	findLogisticsDraftEndpointAtGridPoint(
@@ -73,6 +47,13 @@ export interface EditorQuery {
 		kind: LogisticsKind,
 	): LogisticsDraftEndpoint | null;
 	canCreateLogisticsDraftStartHere(gridPoint: GridPoint, kind: LogisticsKind): boolean;
+	/** 该格上指定族的传送带节/管道节；没有时返回 null。 */
+	findTransportLineAtGridPoint(gridPoint: GridPoint, kind: LogisticsKind): WorldEntity | null;
+	/** 位于端口内侧格的设备端口（输入或输出，传送带或管道族）；非端口格返回 null。 */
+	findDevicePortAtGridPoint(gridPoint: GridPoint): {
+		readonly kind: LogisticsKind;
+		readonly endpoint: Extract<LogisticsDraftEndpoint, { readonly type: "device-port" }>;
+	} | null;
 	listBaseDocumentSummaries(): Promise<readonly EditorBaseDocumentSummary[]>;
 /**
  * 读取指定基地的最新持久化世界文档。当前内存文档不在此查询范围内；

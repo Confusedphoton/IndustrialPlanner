@@ -33,31 +33,6 @@ export function createCanvasRenderDiagnosticSession(options: {
   } | null = null;
   let destroyed = false;
 
-// AI-REMOVED 2026-11-12:
-// Reason: 诊断的相机与仿真写动作归 App owner，Renderer 只提供图层和帧观测。
-// Trigger: REQ-048 D5/D6/A3。
-// Evidence: 只读 SceneViewInput 无 Simulation.actions，预览不得控制主会话。
-// Replacement: channel.getSurface().setCondition
-// Risk: 诊断 owner 必须由装配层显式连接；Human Review: Required
-// Original code:
-//   const restoreLayer = (): void => {
-//     if (active?.hidden) {
-//       active.hidden.target.renderable = active.hidden.renderable;
-//       active.hidden = null;
-//     }
-//   };
-//   const applyCondition = (): void => {
-//     if (!active) return;
-//     restoreLayer();
-//     const condition = active.run.condition;
-//     if (condition !== "full") {
-//       const target = options.layers[condition];
-//       active.hidden = { target, renderable: target.renderable };
-//       // 保留 visible 及全部同步逻辑，仅持续禁止该根节点绘制，避免每帧切换制造结构失效。
-//       target.renderable = false;
-//     }
-//   };
-// 
   const restoreLayer = (): void => { active?.restoreLayer?.(); if (active) active.restoreLayer = null; };
   const applyCondition = (): void => {
     if (!active) return;

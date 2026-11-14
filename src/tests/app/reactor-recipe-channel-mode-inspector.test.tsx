@@ -24,7 +24,6 @@ function createWorkspace(): WorkspaceContract {
     simulation: null,
     sync: null,
     audio: null,
-    blueprintPlanner: null,
   };
 }
 
@@ -60,7 +59,6 @@ describe("反应池配方 Channel 模式开关", () => {
     );
     expect(modeSwitch?.checked).toBe(false);
     expect(container.textContent).toContain("inspector.recipeChannelMode.manual");
-    // AI-CORRECTION 2026-11-13：手动模式未填写频道内嵌配方磁贴，原断言为“添加配方”按钮文本。
     expect(container.querySelector("[data-recipe-id]")).not.toBeNull();
 
     act(() => {
@@ -113,7 +111,6 @@ describe("反应池配方 Channel 模式开关", () => {
       root,
     });
 
-    // AI-CORRECTION 2026-11-13：未填写频道内嵌配方磁贴，单击磁贴即写入；原流程为“添加配方”按钮 + 配方选择对话框。
     const recipeTile = container.querySelector<HTMLButtonElement>(`[data-recipe-id='${recipeId}']`);
     await act(async () => {
       recipeTile?.click();

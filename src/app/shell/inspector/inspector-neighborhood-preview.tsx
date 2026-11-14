@@ -2,28 +2,10 @@ import { useReadonlyCanvas } from "@/app/canvas";
 import { selectDocumentContent, sameDocumentContent } from "@/shared/snapshot/world-document-selection";
 import { useEditorDocumentSnapshot } from "../hooks";
 import {
-// AI-REMOVED 2026-11-12:
-// Reason: 统一场景迁移后旧对象没有有效调用。
-// Trigger: REQ-048 P6 与 ESLint unused 审计。
-// Evidence: 当前调用由 Canvas 或 SceneViewInput 提供，原引用仅存于审计注释。
-// Replacement: CanvasActionImpl / SceneViewInput / 通用只读场景
-// Risk: Low
-// Human Review: Required
-// Original code:
-//   useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  // AI-REMOVED 2026-09-15:
-  // Reason: React 原始订阅由共享 hook 接管。
-  // Trigger: REQ-032 视口写回触发无关预览重建。
-  // Evidence: 本文件原先以整份文档根作为 getSnapshot 返回值。
-  // Replacement: useEditorDocumentSnapshot
-  // Risk: Low
-  // Human Review: Required
-  // Original code:
-  // useSyncExternalStore,
   type CSSProperties,
 } from "react";
 import { observer } from "mobx-react-lite";
@@ -33,6 +15,7 @@ import {
   resolveInspectorNeighborhoodPreviewModel,
 } from "@/app/shell/inspector/inspector-neighborhood-preview-model";
 import {
+  resolveOutputPortSideLabels,
   resolveSharedOutputGroupRows,
   resolvePortTone,
   type OutputGroupRow,
@@ -41,51 +24,16 @@ import {
   resolvePortPriorityCalloutRows,
   type PortPriorityGroupPortRow,
 } from "@/app/shell/inspector/port-priority-group-model";
-// AI-REMOVED 2026-11-12:
-// Reason: 统一场景迁移后旧对象没有有效调用。
-// Trigger: REQ-048 P6 与 ESLint unused 审计。
-// Evidence: 当前调用由 Canvas 或 SceneViewInput 提供，原引用仅存于审计注释。
-// Replacement: CanvasActionImpl / SceneViewInput / 通用只读场景
-// Risk: Low
-// Human Review: Required
-// Original code:
-// import type { BlueprintDocument } from "@/domain/document/blueprint-document";
-// AI-REMOVED 2026-11-12:
-// Reason: 统一场景迁移后旧对象没有有效调用。
-// Trigger: REQ-048 P6 与 ESLint unused 审计。
-// Evidence: 当前调用由 Canvas 或 SceneViewInput 提供，原引用仅存于审计注释。
-// Replacement: CanvasActionImpl / SceneViewInput / 通用只读场景
-// Risk: Low
-// Human Review: Required
-// Original code:
-// import { createBlueprintDocument } from "@/domain/document/blueprint-document";
 import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { DefaultPortPriority } from "@/domain/registry/types/default-port-priority";
 import type { GridEdge } from "@/domain/shared/grid";
 import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
-// AI-REMOVED 2026-11-12:
-// Reason: Inspector 使用完整文档的固定场景，避免裁切邻域丢失画外供电者。
-// Trigger: REQ-048 D5/D6。
-// Evidence: 原邻域蓝图仅携带局部实体；共用 SceneSource 可保留真实供电。
-// Replacement: useReadonlyCanvas / 完整文档投影
-// Risk: callout 必须与同一 View bounds 对齐；Human Review: Required
-// Original code:
-// import type { BlueprintPreviewHandle } from "@/domain/renderer";
 
 import { resolveRotatedPortGeometry } from "@/shared/geometry/port";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
-// AI-REMOVED 2026-09-15:
-// Reason: 空订阅改由共享 hook 管理。
-// Trigger: REQ-032 内容订阅隔离。
-// Evidence: 此常量只有原 useSyncExternalStore 使用。
-// Replacement: useEditorDocumentSnapshot
-// Risk: Low
-// Human Review: Required
-// Original code:
-// const EMPTY_DOCUMENT_SUBSCRIPTION = () => undefined;
 
 interface InspectorNeighborhoodPreviewHostSize {
   width: number;
@@ -116,43 +64,11 @@ export const InspectorNeighborhoodPreview = observer(function InspectorNeighborh
 }) {
   const frameRef = useRef<HTMLDivElement | null>(null);
   const canvasHostRef = useRef<HTMLDivElement | null>(null);
-  // AI-REMOVED 2026-11-12:
-// Reason: Inspector 使用完整文档的固定场景，避免裁切邻域丢失画外供电者。
-// Trigger: REQ-048 D5/D6。
-// Evidence: 原邻域蓝图仅携带局部实体；共用 SceneSource 可保留真实供电。
-// Replacement: useReadonlyCanvas / 完整文档投影
-// Risk: callout 必须与同一 View bounds 对齐；Human Review: Required
-// Original code:
-// const previewHandleRef = useRef<BlueprintPreviewHandle | null>(null);
 
-  // AI-REMOVED 2026-11-12:
-// Reason: Inspector 使用完整文档的固定场景，避免裁切邻域丢失画外供电者。
-// Trigger: REQ-048 D5/D6。
-// Evidence: 原邻域蓝图仅携带局部实体；共用 SceneSource 可保留真实供电。
-// Replacement: useReadonlyCanvas / 完整文档投影
-// Risk: callout 必须与同一 View bounds 对齐；Human Review: Required
-// Original code:
-// const hostSizeRef = useRef<InspectorNeighborhoodPreviewHostSize | null>(null);
 
   const [hostSize, setHostSize] = useState<InspectorNeighborhoodPreviewHostSize | null>(null);
   const editor = appHost.workspace.editor;
-  // AI-REMOVED 2026-11-12:
-// Reason: Inspector 使用完整文档的固定场景，避免裁切邻域丢失画外供电者。
-// Trigger: REQ-048 D5/D6。
-// Evidence: 原邻域蓝图仅携带局部实体；共用 SceneSource 可保留真实供电。
-// Replacement: useReadonlyCanvas / 完整文档投影
-// Risk: callout 必须与同一 View bounds 对齐；Human Review: Required
-// Original code:
-// const renderHost = appHost.workspace.render;
 
-  // AI-REMOVED 2026-11-12:
-// Reason: Inspector 使用完整文档的固定场景，避免裁切邻域丢失画外供电者。
-// Trigger: REQ-048 D5/D6。
-// Evidence: 原邻域蓝图仅携带局部实体；共用 SceneSource 可保留真实供电。
-// Replacement: useReadonlyCanvas / 完整文档投影
-// Risk: callout 必须与同一 View bounds 对齐；Human Review: Required
-// Original code:
-// hostSizeRef.current = hostSize;
 
   const selectedEntityId = editor?.state.collections.selection.length === 1
     ? editor.state.collections.selection[0] ?? null
@@ -170,19 +86,6 @@ export const InspectorNeighborhoodPreview = observer(function InspectorNeighborh
     }),
     [documentSnapshot, entityDefinitionMap, selectedEntityId],
   );
-  // AI-REMOVED 2026-11-12:
-// Reason: Inspector 使用完整文档的固定场景，避免裁切邻域丢失画外供电者。
-// Trigger: REQ-048 D5/D6。
-// Evidence: 原邻域蓝图仅携带局部实体；共用 SceneSource 可保留真实供电。
-// Replacement: useReadonlyCanvas / 完整文档投影
-// Risk: callout 必须与同一 View bounds 对齐；Human Review: Required
-// Original code:
-// const previewBlueprintDocument = useMemo(
-//     () => previewModel === null
-//       ? null
-//       : createInspectorNeighborhoodBlueprintDocument(previewModel, documentSnapshot?.baseId ?? "wuling_protocol_core"),
-//     [previewModel, documentSnapshot?.baseId],
-//   );
 
   const defaultPortPriorities = selectedEntityId === null ? null : appHost.portPriorityDefaults.get(selectedEntityId);
   const portOutputCallouts = useMemo(
@@ -196,8 +99,9 @@ export const InspectorNeighborhoodPreview = observer(function InspectorNeighborh
         selectedEntityId,
         defaultPortPriorities,
         width: hostSize.width,
+        translate: appHost.actions.translate,
       }),
-    [documentSnapshot, entityDefinitionMap, hostSize, previewModel, selectedEntityId, defaultPortPriorities],
+    [documentSnapshot, entityDefinitionMap, hostSize, previewModel, selectedEntityId, defaultPortPriorities, appHost],
   );
 
   useLayoutEffect(() => {
@@ -244,119 +148,8 @@ export const InspectorNeighborhoodPreview = observer(function InspectorNeighborh
     };
   }, [previewModel, previewModel?.bounds.height, previewModel?.bounds.width]);
 
-  // AI-REMOVED 2026-11-12:
-// Reason: Inspector 使用完整文档的固定场景，避免裁切邻域丢失画外供电者。
-// Trigger: REQ-048 D5/D6。
-// Evidence: 原邻域蓝图仅携带局部实体；共用 SceneSource 可保留真实供电。
-// Replacement: useReadonlyCanvas / 完整文档投影
-// Risk: callout 必须与同一 View bounds 对齐；Human Review: Required
-// Original code:
-// useEffect(() => {
-//     const canvasHost = canvasHostRef.current;
-//
-//     if (
-//       canvasHost === null
-//       || hostSize === null
-//       || previewModel === null
-//       || previewBlueprintDocument === null
-//       || renderHost === null
-//     ) {
-//       canvasHost?.replaceChildren();
-//       return;
-//     }
-//
-//     let active = true;
-//     let mountedHandle: BlueprintPreviewHandle | null = null;
-//
-//     void renderHost.actions.mountBlueprintPreview({
-//       blueprint: previewBlueprintDocument,
-//       width: hostSize.width,
-//       height: hostSize.height,
-//       viewportBounds: previewModel.bounds,
-//       highlightedEntityId: previewModel.highlightedEntityId,
-//     }).then((handle) => {
-//       if (!active) {
-//         renderHost.actions.disposeBlueprintPreview(handle);
-//         return;
-//       }
-//
-//       mountedHandle = handle;
-//       previewHandleRef.current = handle;
-//       const canvas = renderHost.queries.getBlueprintPreviewCanvas(handle);
-//
-//       if (canvas !== null) {
-//         canvas.style.display = "block";
-//         canvas.style.width = "100%";
-//         canvas.style.height = "100%";
-//         canvasHost.replaceChildren(canvas);
-//       }
-//
-//       const latestHostSize = hostSizeRef.current;
-//
-//       if (latestHostSize !== null) {
-//         renderHost.actions.resizeBlueprintPreview(
-//           handle,
-//           latestHostSize.width,
-//           latestHostSize.height,
-//         );
-//       }
-//     });
-//
-//     return () => {
-//       active = false;
-//       previewHandleRef.current = null;
-//       canvasHost?.replaceChildren();
-//
-//       if (mountedHandle !== null) {
-//         renderHost.actions.disposeBlueprintPreview(mountedHandle);
-//       }
-//     };
-//   }, [hostSize, previewModel, previewBlueprintDocument, renderHost]);
 
 
-  // AI-REMOVED 2026-11-12:
-// Reason: Inspector 使用完整文档的固定场景，避免裁切邻域丢失画外供电者。
-// Trigger: REQ-048 D5/D6。
-// Evidence: 原邻域蓝图仅携带局部实体；共用 SceneSource 可保留真实供电。
-// Replacement: useReadonlyCanvas / 完整文档投影
-// Risk: callout 必须与同一 View bounds 对齐；Human Review: Required
-// Original code:
-// useEffect(() => {
-//     const frame = frameRef.current;
-//
-//     if (
-//       frame === null
-//       || renderHost === null
-//       || previewModel === null
-//       || typeof ResizeObserver === "undefined"
-//     ) {
-//       return;
-//     }
-//
-//     const resizeObserver = new ResizeObserver(() => {
-//       const latestHostSize = hostSizeRef.current;
-//
-//       if (previewHandleRef.current === null) {
-//         return;
-//       }
-//
-//       if (latestHostSize === null) {
-//         return;
-//       }
-//
-//       renderHost.actions.resizeBlueprintPreview(
-//         previewHandleRef.current,
-//         latestHostSize.width,
-//         latestHostSize.height,
-//       );
-//     });
-//
-//     resizeObserver.observe(frame);
-//
-//     return () => {
-//       resizeObserver.disconnect();
-//     };
-//   }, [previewModel, renderHost]);
 
 
   const fullPreviewDocument = useMemo(() => {
@@ -447,34 +240,6 @@ export const InspectorNeighborhoodPreview = observer(function InspectorNeighborh
   );
 });
 
-// AI-REMOVED 2026-11-12:
-// Reason: 统一场景迁移后旧对象没有有效调用。
-// Trigger: REQ-048 P6 与 ESLint unused 审计。
-// Evidence: 当前调用由 Canvas 或 SceneViewInput 提供，原引用仅存于审计注释。
-// Replacement: 完整 source + 固定邻域 view，保留画外供电关系
-// Risk: Low
-// Human Review: Required
-// Original code:
-// function createInspectorNeighborhoodBlueprintDocument(
-//   model: NonNullable<ReturnType<typeof resolveInspectorNeighborhoodPreviewModel>>,
-//   baseId: string,
-// ): BlueprintDocument {
-//   const entities: Record<string, import("@/domain/document/world-document").WorldEntity> = {};
-//
-//   for (const entry of model.entities) {
-//     entities[entry.entity.id] = entry.entity;
-//   }
-//
-//   return createBlueprintDocument({
-//     name: "InspectorNeighborhood",
-//     baseId,
-//     initialGridPoint: { x: model.bounds.left, y: model.bounds.top },
-//     entities,
-//     entityOrder: model.entities.map((entry) => entry.entity.id),
-//     slotLinks: [],
-//   });
-// }
-//
 
 export function resolveInspectorPortOutputCallouts(options: {
   readonly defaultPortPriorities?: readonly DefaultPortPriority[] | null;
@@ -489,6 +254,8 @@ export function resolveInspectorPortOutputCallouts(options: {
   readonly height: number;
   readonly selectedEntityId: string | null;
   readonly width: number;
+  /** 提供时输出端口标注改用方位名（与属性面板一致），否则保留 P# 序号。 */
+  readonly translate?: (key: string) => string;
 }): InspectorPortOutputCallout[] {
   if (options.document === null || options.selectedEntityId === null) {
     return [];
@@ -504,26 +271,6 @@ export function resolveInspectorPortOutputCallouts(options: {
     return [];
   }
 
-  /*
-    AI-REMOVED 2026-06-05:
-    Reason: 蓝图预览端口标签不能只由 portOutputConfig inspector 触发；协议核心通过 warehouseItemLink 独立配置每个输出端口，同样需要端口标签。
-    Trigger: 用户指出协议核心是该功能目标场景，仓库链接面板有端口编号但蓝图预览没有端口标签。
-    Evidence: Search-First 定位到 resolveSharedOutputGroupRows 已提供 portOutputConfig 优先、无则按输出端口组回退的共享编号模型。
-    Replacement: shouldRenderOutputPortCallouts + resolveSharedOutputGroupRows。
-    Risk: Medium - 拥有 warehouseItemLink 且存在输出端口的设备现在会在预览中显示 P 标签。
-    Human Review: Required
-
-    Original code:
-    const declaration = definition.inspectors.find((inspector): inspector is PortOutputConfigInspectorDeclaration =>
-      inspector.type === INSPECTOR_TYPE.portOutputConfig,
-    );
-
-    if (declaration === undefined) {
-      return [];
-    }
-
-    const rows = resolveOutputGroupRows(definition, declaration.portGroupIds, entity);
-  */
   const cellWidth = options.width / options.bounds.width;
   const cellHeight = options.height / options.bounds.height;
   const priorityRows = resolvePortPriorityCalloutRows(definition, entity, options.defaultPortPriorities);
@@ -588,8 +335,12 @@ export function resolveInspectorPortOutputCallouts(options: {
   }
 
   const rows = resolveSharedOutputGroupRows(definition, entity);
+  const sideLabels = options.translate === undefined
+    ? null
+    : resolveOutputPortSideLabels({ definition, rows, rotation: entity.rotation, translate: options.translate });
 
   return rows.flatMap((row) => {
+    const portLabel = sideLabels?.get(row.portGroup.id) ?? row.portLabel;
     const rowModel = resolveCalloutRowModel({
       definition,
       entity,
@@ -607,7 +358,7 @@ export function resolveInspectorPortOutputCallouts(options: {
       worldX: rowModel.target.x,
       worldY: rowModel.target.y,
     });
-    const labelWidth = resolveCalloutLabelWidth(row.portLabel);
+    const labelWidth = resolveCalloutLabelWidth(portLabel);
     const label = clampCalloutLabelPoint(
       resolvePreviewPixelPoint({
         bounds: options.bounds,
@@ -623,7 +374,7 @@ export function resolveInspectorPortOutputCallouts(options: {
 
     return [{
       id: row.portGroup.id,
-      label: row.portLabel,
+      label: portLabel,
       portKind: resolvePortTone(row.portGroup),
       isPipe: row.portGroup.isPipe,
       targetX: target.x,

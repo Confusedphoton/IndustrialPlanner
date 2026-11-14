@@ -304,7 +304,6 @@ export type SimulationWorkerResponse =
 
 /**
  * Worker 主动推送的错误通知（非请求-响应）。
- * AI-CORRECTION 2026-08-08: 错误已在 Worker 内通过 console.error 直达 Collector；
  * 主线程收到此通知只处理业务状态，不得再次输出同一条日志。
  */
 export interface SimulationWorkerErrorNotification {

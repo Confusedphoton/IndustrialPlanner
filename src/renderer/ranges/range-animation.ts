@@ -60,40 +60,9 @@ interface RangeManifest {
     readonly uvs: readonly (readonly [number, number])[];
     readonly indices: readonly number[];
     readonly bounds: readonly [number, number, number, number];
-    // AI-REMOVED 2026-09-27:
-    // Reason: 新版美术 Mesh 自身以 13×13 格为边界，运行时不再保存旧素材的人工可见范围。
-    // Trigger: 用户要求直接采用美术新版范围并移除范围贴边校准。
-    // Evidence: 网站发布 v1.5-20260924-20260927-190710-cst 的 mesh.bounds 为 [-6.5,-6.5,6.5,6.5]。
-    // Replacement: 本接口的 bounds。
-    // Risk: Low
-    // Human Review: Required
-    // Original code:
-    // readonly visualBounds: readonly [number, number, number, number];
   };
 }
 
-// AI-REMOVED 2026-09-27:
-// Reason: 旧素材的人工 visualBounds 缩放已无必要，新素材边界直接为 13×13 格。
-// Trigger: 用户要求直接采用美术新版尺寸并退役范围贴边测试。
-// Evidence: 网站 mesh.json 声明 bounds [-6.5,-6.5,6.5,6.5]、1 Unity unit/cell。
-// Replacement: RangeAnimation.sync 中直接使用 manifest.mesh.bounds。
-// Risk: Low；运行时仍以当前仿真 gridRect 决定实际屏幕尺寸。
-// Human Review: Required
-// Original code:
-// export function resolveRangeMeshPlacement(
-//   layout: { readonly x: number; readonly y: number; readonly width: number; readonly height: number },
-//   visualBounds: readonly [number, number, number, number],
-// ): { readonly x: number; readonly y: number; readonly pivotX: number; readonly pivotY: number;
-//   readonly scaleX: number; readonly scaleY: number } {
-//   return {
-//     x: layout.x + layout.width / 2,
-//     y: layout.y + layout.height / 2,
-//     pivotX: (visualBounds[0] + visualBounds[2]) / 2,
-//     pivotY: (visualBounds[1] + visualBounds[3]) / 2,
-//     scaleX: layout.width / (visualBounds[2] - visualBounds[0]),
-//     scaleY: layout.height / (visualBounds[3] - visualBounds[1]),
-//   };
-// }
 
 interface RangeAssets {
   readonly manifest: RangeManifest;
@@ -107,7 +76,6 @@ interface RangeView {
 }
 
 /** 一张共享图集由所有工作中的气体散布机复用；停机时不保留任何活跃 Mesh。 */
-// AI-CORRECTION 2026-10-13: 播放器接收通用范围实例，资源路径、颜色和方向由调用方提供。
 export class RangeAnimation {
   public readonly container = new Container();
   private readonly controller = new AbortController();
@@ -178,20 +146,6 @@ export class RangeAnimation {
         view = this.createView(range, assets);
         this.views.set(key, view);
       }
-      // AI-CORRECTION 2026-09-26：原几何 bounds 含透明衰减区，缩放应按 120 帧可见外沿贴合实际 gridRect。
-      // AI-CORRECTION 2026-09-27：美术已把几何边界修正为 13×13 格，直接按新版 bounds 映射当前 gridRect。
-      // AI-REMOVED 2026-09-27:
-      // Reason: 旧 visualBounds 校准与新版美术边界重复。
-      // Trigger: 用户要求直接使用新版 13 格素材。
-      // Evidence: 已校验网站 mesh.bounds 为 [-6.5,-6.5,6.5,6.5]。
-      // Replacement: 下方按 bounds 设置 position、pivot 和 scale。
-      // Risk: Low
-      // Human Review: Required
-      // Original code:
-      // const placement = resolveRangeMeshPlacement(layout, assets.manifest.mesh.visualBounds);
-      // view.mesh.position.set(placement.x, placement.y);
-      // view.mesh.pivot.set(placement.pivotX, placement.pivotY);
-      // view.mesh.scale.set(placement.scaleX, placement.scaleY);
       const placement = resolveRangeAnimationPlacement(ctx, range, assets.manifest.mesh.bounds);
       view.mesh.position.set(placement.x, placement.y);
       view.mesh.pivot.set(placement.pivotX, placement.pivotY);
@@ -279,20 +233,6 @@ export class RangeAnimation {
       || mesh.positions.length !== mesh.uvs.length
       || mesh.positions.length === 0 || mesh.indices.length % 3 !== 0
       || mesh.bounds[2] <= mesh.bounds[0] || mesh.bounds[3] <= mesh.bounds[1]
-      // AI-REMOVED 2026-09-27:
-      // Reason: 新美术资源不再包含手工 visualBounds。
-      // Trigger: 用户要求移除本地范围贴边校准。
-      // Evidence: 本地清单直接采用网站 mesh.bounds。
-      // Replacement: 上方 bounds 有效性验证。
-      // Risk: Low
-      // Human Review: Required
-      // Original code:
-      // || mesh.visualBounds.length !== 4
-      // || !mesh.visualBounds.every(Number.isFinite)
-      // || mesh.visualBounds[0] < mesh.bounds[0] || mesh.visualBounds[1] < mesh.bounds[1]
-      // || mesh.visualBounds[2] > mesh.bounds[2] || mesh.visualBounds[3] > mesh.bounds[3]
-      // || mesh.visualBounds[2] <= mesh.visualBounds[0]
-      // || mesh.visualBounds[3] <= mesh.visualBounds[1]
       || !mesh.positions.every((point) => point.length === 2 && point.every(Number.isFinite))
       || !mesh.uvs.every((point) => point.length === 2 && point.every(Number.isFinite))
       || !mesh.indices.every((index) => Number.isInteger(index) && index >= 0 && index < mesh.positions.length)

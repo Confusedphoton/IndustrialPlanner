@@ -36,7 +36,6 @@ export class V2MigrationController {
   detection: V2MigrationDetection = detectV2MigrationData();
   migrationState: V2MigrationState = readV2MigrationState();
   phase: V2MigrationPhase = "idle";
-  // AI-CORRECTION 2026-06-13: confirmationRequested 已替换为 showClearConfirmation 文字确认流程。
   confirmationRequested = false;
   v3IsEmpty: boolean | null = null;
   showClearConfirmation = false;

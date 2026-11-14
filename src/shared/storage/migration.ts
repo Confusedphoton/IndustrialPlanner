@@ -38,20 +38,6 @@ export async function prepareVersionedStorageMigration<T, TContext>(
   location: IndexedDbStorageLocation, currentVersion: number, migrations: readonly StorageMigration<T, TContext>[],
   context: TContext, normalize: (value: T) => T | null, label: string, version = String(currentVersion),
 ) {
-// AI-REMOVED 2026-10-09:
-// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
-// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
-// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
-// Replacement: prepareStoredJsonMigration 统一原件隔离
-// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
-// Human Review: Required
-// Original code:
-//   const raw = await readFromIndexedDb<unknown>(location, { strict: true });
-//   if (raw === null) return { jobs: [] };
-//   const value = applyMigrations(raw, currentVersion, migrations, context);
-//   const normalized = value === null ? null : normalize(value);
-//   if (normalized === null) throw new Error(`${label} 无法升级，原件已保留。`);
-//   return { jobs: migratedRecordJob(location, { key: location.key, value: raw }, { _v: currentVersion, data: normalized }, label) };
   return prepareStoredJsonMigration(location, raw => {
     const value = applyMigrations(raw, currentVersion, migrations, context);
     const normalized = value === null ? null : normalize(value);
@@ -145,7 +131,7 @@ export function readFromLocalStorageWithMigration<T, TContext = void>(
   }
 
   const migrated = applyMigrations(raw, currentVersion, migrations, context);
-  // 2026-09-28: 安全启动后的应用禁止把不可迁移数据解释为空白默认值，再自动保存覆盖原件。
+  // 安全启动后的应用禁止把不可迁移数据解释为空白默认值，再自动保存覆盖原件。
   if (migrated === null && hasStorageGeneration()) throw new Error("Stored data cannot be migrated; original data was preserved.");
   return migrated;
 }
@@ -187,7 +173,7 @@ export async function readFromIndexedDbWithMigration<T, TContext = void>(
   }
 
   const migrated = applyMigrations(raw, currentVersion, migrations, context);
-  // 2026-09-28: 安全启动后的应用禁止把不可迁移数据解释为空白默认值，再自动保存覆盖原件。
+  // 安全启动后的应用禁止把不可迁移数据解释为空白默认值，再自动保存覆盖原件。
   if (migrated === null && hasStorageGeneration()) throw new Error("Stored data cannot be migrated; original data was preserved.");
   return migrated;
 }

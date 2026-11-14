@@ -24,7 +24,6 @@ function createWorkspace(): WorkspaceContract {
     simulation: null,
     sync: null,
     audio: null,
-    blueprintPlanner: null,
   };
 }
 
@@ -45,17 +44,6 @@ function attachSimulationStub(
       runningState: options.state,
       simulationMode: options.simulationMode ?? "single-base",
     simulationSpeed: 1,
-    // AI-REMOVED 2026-09-12:
-    // Reason: SimulationState 测试桩同步移除已退役的 diagnostics 字段。
-    // Trigger: 用户确认性能统计改由统一 Query 提供。
-    // Evidence: SimulationState contract 已不再声明 statistics / bufferSize。
-    // Replacement: queries.getPerformanceDiagnostics。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // statistics: { tickPerSecond: 0, targetTickPerSecond: 0, baseBatteryJoules: 0, baseBatteryCapacity: 0 },
-    // bufferSize: 0,
     timeline: createInitialSimulationTimelineState(),
   });
   const start = options.start ?? vi.fn(action(async () => {
@@ -126,16 +114,6 @@ function attachSimulationStub(
     },
     actions: {
       start,
-      // AI-REMOVED 2026-09-20:
-      // Reason: Simulation 公共 Action 不再允许外部写入会话模式。
-      // Trigger: ST2-RQ-035 改为 start 从 AppSettings 固化模式。
-      // Evidence: SimulationAction Contract 已移除该方法。
-      // Replacement: AppSettings.regionalMultiBaseEnabled。
-      // Risk: Low；本 mock 不调用该动作。
-      // Human Review: Required
-      //
-      // Original code:
-      // setRegionalMultiBaseEnabled: vi.fn(),
       pause,
       resume,
       stop,
@@ -275,7 +253,6 @@ describe("TopBar", () => {
     });
 
     expect(container.querySelector(".top-bar-layout-controls")).toBeNull();
-    // AI-CORRECTION 2026-05-20: title 现在紧随版本标签 "(Dev)"，textContent 包含完整内容。
     expect(container.querySelector(".top-bar-title")?.textContent).toBe(appHost.actions.translate("app.title") + "(Dev)");
     expect(container.querySelector('a[href*="v2"]')).toBeNull();
     expect(container.querySelectorAll(".top-bar-controls .top-bar-icon-button")).toHaveLength(4);

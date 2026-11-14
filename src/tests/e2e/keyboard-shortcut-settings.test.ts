@@ -1,42 +1,6 @@
 import { SCREEN_PROFILES } from "./harness/profiles";
 import { expect, test, type Page } from "./harness/fixture";
 
-// AI-REMOVED 2026-10-05:
-// Reason: 统一三屏配置。
-// Trigger: 用户授权基座与用例迁移。
-// Evidence: 旧用例重复配置与管理浏览器资源。
-// Replacement: harness/profiles.ts
-// Risk: Low。Human Review: Required
-// Original code:
-// const SCREEN_PROFILES = [
-//   {
-//     name: "mobile-landscape",
-//     viewport: { width: 764, height: 345 },
-//     deviceScaleFactor: 3.125,
-//     hasTouch: true,
-//     isMobile: true,
-//     expectedDeviceClass: "mobile",
-//     expectedScreenShape: "landscape",
-//   },
-//   {
-//     name: "tablet-square",
-//     viewport: { width: 711, height: 665 },
-//     deviceScaleFactor: 3.125,
-//     hasTouch: true,
-//     isMobile: true,
-//     expectedDeviceClass: "tablet",
-//     expectedScreenShape: "square",
-//   },
-//   {
-//     name: "desktop-landscape",
-//     viewport: { width: 2552, height: 1315 },
-//     deviceScaleFactor: 1,
-//     hasTouch: true,
-//     isMobile: false,
-//     expectedDeviceClass: "desktop",
-//     expectedScreenShape: "landscape",
-//   },
-// ] as const;
 
 const EXPECTED_GROUPS = [
   { id: "quick-access", title: "快速访问与面板", actionCount: 6 },
@@ -50,42 +14,10 @@ for (const profile of SCREEN_PROFILES.filter(profile => profile.name === "deskto
   test(`shortcut settings groups actions and resolves conflicts from real route scopes [${profile.name}]`, async ({ browserSession: browser }) => {
   test.setTimeout(120_000);
 
-  // AI-REMOVED 2026-10-05:
-  // Reason: 屏幕独立注册，确保逐屏清理。
-  // Trigger: 用户授权基座与用例迁移。
-  // Evidence: 旧用例重复配置与管理浏览器资源。
-  // Replacement: 外层参数化 test
-  // Risk: Low。Human Review: Required
-  // Original code:
-  // for (const profile of SCREEN_PROFILES) {
-    // AI-REMOVED 2026-10-05:
-    // Reason: 配置与精细主指针模拟由公共 profile 管理。
-    // Trigger: 用户授权基座与用例迁移。
-    // Evidence: 旧用例重复配置与管理浏览器资源。
-    // Replacement: ManagedBrowser.profile
-    // Risk: Low。Human Review: Required
-    // Original code:
-    //     const context = await browser.newContext({
-    //       deviceScaleFactor: profile.deviceScaleFactor,
-    //       hasTouch: profile.hasTouch,
-    //       isMobile: profile.isMobile,
-    //       locale: "zh-CN",
-    //       viewport: profile.viewport,
-    //     });
     const context = await browser.profile(profile);
     const page = await context.newPage();
 
     try {
-      // AI-REMOVED 2026-10-05:
-      // Reason: 统一主指针设置。
-      // Trigger: 用户授权基座与用例迁移。
-      // Evidence: 旧用例重复配置与管理浏览器资源。
-      // Replacement: ManagedBrowser.profile
-      // Risk: Low。Human Review: Required
-      // Original code:
-      //       if (true && !profile.isMobile) {
-      //         await installFinePointerTouchEnvironment(page);
-      //       }
       await page.goto("/");
       await openShortcutSettings(page);
 
@@ -146,16 +78,6 @@ for (const profile of SCREEN_PROFILES.filter(profile => profile.name === "deskto
 
       await page.reload();
 
-      // AI-REMOVED 2026-09-10:
-      // Reason: 通用打开流程会在持久化设置对话框恢复期间误判其尚未打开，并点击被 backdrop 遮挡的工具栏按钮。
-      // Trigger: 完整 E2E 检查中该点击持续被 backdrop 拦截，直至 120 秒测试超时。
-      // Evidence: Playwright trace 显示重载后设置对话框已恢复，工具栏按钮 aria-pressed=true，点击重试均被 backdrop 截获。
-      // Replacement: 下方显式等待恢复后的设置对话框，再从对话框内部打开快捷键设置。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // await openShortcutSettings(page);
       const restoredSettingsDialog = page.getByRole("dialog", { name: "设置", exact: true });
       await expect(restoredSettingsDialog).toBeVisible();
       await restoredSettingsDialog.getByRole("button", { name: "打开快捷键设置", exact: true }).click();
@@ -212,34 +134,3 @@ async function resetAllShortcuts(page: Page): Promise<void> {
   await expect(resetDialog).toBeHidden();
 }
 
-// AI-REMOVED 2026-10-05:
-// Reason: 统一主指针设置。
-// Trigger: 用户授权基座与用例迁移。
-// Evidence: 旧用例重复配置与管理浏览器资源。
-// Replacement: harness/profiles.ts
-// Risk: Low。Human Review: Required
-// Original code:
-// async function installFinePointerTouchEnvironment(page: Page): Promise<void> {
-//   await page.addInitScript(() => {
-//     Object.defineProperty(navigator, "maxTouchPoints", {
-//       configurable: true,
-//       get: () => 1,
-//     });
-//     const nativeMatchMedia = window.matchMedia.bind(window);
-//     window.matchMedia = (query) => {
-//       const result = nativeMatchMedia(query);
-//       if (query !== "(pointer: coarse)" && query !== "(hover: none)") {
-//         return result;
-//       }
-//       return new Proxy(result, {
-//         get(target, property) {
-//           if (property === "matches") {
-//             return false;
-//           }
-//           const value = Reflect.get(target, property, target) as unknown;
-//           return typeof value === "function" ? value.bind(target) : value;
-//         },
-//       });
-//     };
-//   });
-// }

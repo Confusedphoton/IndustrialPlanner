@@ -8,16 +8,9 @@ import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
 import { PwaController } from "@/app/pwa/pwa-controller";
 import { SettingsDialog } from "@/app/shell/dialogs/settings-dialog";
 import { WorkbenchSettingsDialogController } from "@/app/shell/state/settings-dialog-state";
-import type { SimulationEngineLaunchPreference } from "@/app/shell/state/simulation-engine-launch-preference";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
-
-const DENSE_ENGINE_LAUNCH_PREFERENCE: SimulationEngineLaunchPreference = {
-  activeDenseEnabled: true,
-  desiredDenseEnabled: true,
-  needsRestart: false,
-};
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -29,7 +22,6 @@ function createWorkspace(): WorkspaceContract {
     simulation: null,
     sync: null,
     audio: null,
-    blueprintPlanner: null,
   };
 }
 
@@ -151,17 +143,6 @@ describe("SettingsDialog", () => {
         return DOMRect.fromRect({ x: 0, y: 100, width: 340, height: 120 });
       }
 
-      // AI-REMOVED 2026-08-03:
-      // Reason: 通用设置页不再存在 shortcuts 分组。
-      // Trigger: ST2-RQ-002 独立快捷键设置对话框。
-      // Evidence: 滚动容器测试改用 game 分组。
-      // Replacement: 下方 settings-dialog-group-game 分支。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // if (this.id === "settings-dialog-group-shortcuts") {
-      // AI-CORRECTION 2026-09-09: 设置页已恢复 shortcuts 入口分组并移除 game 分组；滚动测试改用 auxiliary-display。
       if (this.id === "settings-dialog-group-auxiliary-display") {
         return DOMRect.fromRect({ x: 0, y: 460, width: 340, height: 120 });
       }
@@ -175,7 +156,6 @@ describe("SettingsDialog", () => {
           appHost={appHost}
           controller={controller}
           pwaController={new PwaController()}
-          simulationEngineLaunchPreference={DENSE_ENGINE_LAUNCH_PREFERENCE}
         />,
       );
     });
@@ -223,7 +203,6 @@ describe("SettingsDialog", () => {
           appHost={appHost}
           controller={controller}
           pwaController={new PwaController()}
-          simulationEngineLaunchPreference={DENSE_ENGINE_LAUNCH_PREFERENCE}
         />,
       );
     });
@@ -248,11 +227,11 @@ describe("SettingsDialog", () => {
     expect(shortcutDialog).not.toBeNull();
     const shortcutGroups = shortcutDialog?.querySelectorAll<HTMLElement>("[data-shortcut-group]");
     expect(shortcutGroups).toHaveLength(5);
-    expect(shortcutDialog?.querySelectorAll("[data-shortcut-group] > article")).toHaveLength(29);
+    expect(shortcutDialog?.querySelectorAll("[data-shortcut-group] > article")).toHaveLength(33);
 
     const expectedGroups = new Map([
       ["quick-access", { title: "快速访问与面板", actionCount: 6 }],
-      ["placement", { title: "放置入口", actionCount: 7 }],
+      ["placement", { title: "放置入口", actionCount: 11 }],
       ["operation", { title: "当前操作与选区", actionCount: 9 }],
       ["viewport", { title: "视口", actionCount: 5 }],
       ["history", { title: "历史", actionCount: 2 }],
@@ -318,14 +297,14 @@ describe("SettingsDialog", () => {
     act(() => {
       window.dispatchEvent(new KeyboardEvent("keydown", {
         bubbles: true,
-        code: "KeyI",
-        key: "i",
+        code: "KeyN",
+        key: "n",
       }));
     });
 
-    expect(appHost.internalActions.getKeyboardShortcutFor("shortcut-pan-viewport-up")).toBe("W;I");
+    expect(appHost.internalActions.getKeyboardShortcutFor("shortcut-pan-viewport-up")).toBe("W;N");
     expect(secondPanUpSlot?.querySelector("img")?.getAttribute("src")).toBe(
-      "/input-prompts/keyboard_i_outline.svg",
+      "/input-prompts/keyboard_n_outline.svg",
     );
 
     const secondRotateSlot = shortcutDialog?.querySelectorAll<HTMLButtonElement>(

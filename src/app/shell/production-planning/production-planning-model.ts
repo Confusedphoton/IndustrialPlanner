@@ -20,16 +20,6 @@ import {
   buildDeviceRunningConsumptionRecipesByMachine,
   resolveCompanionDeviceRunningConsumptionRecipe,
 } from "@/shared/device-running-consumption";
-// AI-REMOVED 2026-08-29:
-// Reason: 设备运行消耗的索引与匹配规则已提升到 shared，生产规划不应继续维护私有规则。
-// Trigger: 模块配平需要复用相同语义并避免固气转化机专用逻辑。
-// Evidence: production-planning-model 与 module-balancing-model 都需要按 ConsumptionChannelRecipe tag 解析同设备消耗。
-// Replacement: @/shared/device-running-consumption
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
 import {
   WATER_PURIFIER_BYPRODUCT_RECIPE_ID,
   WATER_PURIFIER_BYPRODUCT_SEWAGE_PER_OUTPUT,
@@ -48,7 +38,6 @@ import {
   type ProductionPlanningModuleSnapshot,
 } from "./production-planning-candidate";
 
-// AI-CORRECTION 2026-05-20: SPECIAL_INFINITE_ITEM_IDS retained for backward compat in tests;
 // panel no longer uses it. New logic uses ProductionPlanningSourceConfig.
 export const PRODUCTION_PLANNING_SPECIAL_INFINITE_ITEM_IDS = [
   "item_liquid_sewage",
@@ -228,27 +217,6 @@ export function buildProductionPlanningIndex(
       ),
   );
   const recipeById = new Map(visibleRecipes.map((recipe) => [recipe.id, recipe]));
-  // AI-REMOVED 2026-08-29:
-  // Reason: 私有索引逻辑已由 shared 统一实现，继续保留 active code 会造成规则漂移。
-  // Trigger: 模块配平同样需要索引隐藏的设备运行消耗配方。
-  // Evidence: buildDeviceRunningConsumptionRecipesByMachine 覆盖原有按 tag 与 machineId 分组行为。
-  // Replacement: 下方 buildDeviceRunningConsumptionRecipesByMachine(registry.recipeDefinitions)
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // const consumptionRecipesByMachine = new Map<string, RecipeDefinition[]>();
-  // for (const recipe of registry.recipeDefinitions) {
-  //   if (!recipe.tags.includes(CONSUMPTION_RECIPE_TAG)) {
-  //     continue;
-  //   }
-  //   const recipes = consumptionRecipesByMachine.get(recipe.machineId);
-  //   if (recipes === undefined) {
-  //     consumptionRecipesByMachine.set(recipe.machineId, [recipe]);
-  //   } else {
-  //     recipes.push(recipe);
-  //   }
-  // }
   const consumptionRecipesByMachine = buildDeviceRunningConsumptionRecipesByMachine(
     registry.recipeDefinitions,
   );
@@ -460,14 +428,6 @@ function computeProductionPlanPass(
     ...wasteTreatmentRecipeNodes,
   ];
 
-  // AI-REMOVED 2026-10-29:
-  // Reason: 未验证的循环引用不能直接计入已满足供给。
-  // Trigger: 赤铜互转零净产回路被规划器误判为无缺口。
-  // Evidence: 同一请求导出到 EDA 后缺少气态赤铜 60/min。
-  // Replacement: 下方共享循环诊断及校正后的 aggregateItemTotals。
-  // Risk: 错误循环的统计和原料展示改变；Human Review: Required。
-  // Original code:
-  // const itemTotals = aggregateItemTotals(roots, allRecipeNodes, index);
   const recipeTotals = aggregateRecipeTotals(allRecipeNodes, index, roots);
   const cycleIssues = findPlannerCycleIssues({ recipes: recipeTotals, targets: request.targets,
     externalSupplies: request.supplies, infiniteItemIds: context.infiniteItemIds });
@@ -482,23 +442,6 @@ function computeProductionPlanPass(
   }
   const itemTotals = aggregateItemTotals(roots, allRecipeNodes, index);
 
-  // AI-REMOVED 2026-05-22:
-  // Reason: 副产物身份不能用 demandPerMinute <= 0 判断；同一物品部分被生产性使用、部分剩余处置时也应保留副产物身份。
-  // Trigger: 用户指出树表副产物标记和“部分使用/部分剩余”逻辑错误，并补充给水器/废水处理机是处置性使用。
-  // Evidence: 赫铜装备原件链路中壤晶废液被生产性使用，而同配方另一个输出惰性壤晶废液剩余；旧判定还会漏掉有需求但仍有剩余的物品。
-  // Replacement: collectProductionPlanningByproductItemIds
-  // Risk: Low；只改变 byproductItemIds 与 itemTotals.isByproduct，求解数量不变。
-  // Human Review: Required
-  //
-  // Original code:
-  // // 副产物：求解结束后仍有剩余 surplus 且无下游需求（demandPerMinute <= 0）的物品
-  // const byproductItemIds: Set<string> = new Set();
-  // for (const [itemId] of context.surplusSupplyRemaining) {
-  //   const total = itemTotals.find((t) => t.itemId === itemId);
-  //   if (total !== undefined && total.demandPerMinute <= EPSILON) {
-  //     byproductItemIds.add(itemId);
-  //   }
-  // }
   const byproductItemIds = collectProductionPlanningByproductItemIds(context);
   for (const total of itemTotals) {
     total.isByproduct = byproductItemIds.has(total.itemId);
@@ -662,7 +605,6 @@ export function isRecipeExcludedFromProductionPlanningAuto(
   index: ProductionPlanningIndex,
 ): boolean {
   // 2026-10-16 用户硬约束：原料既无当前可用的工业生产配方，也未标记为自然资源时，禁止自动选择；手动外供不豁免。
-  // AI-CORRECTION 2026-10-19: 农作物在规划中同样作为一级原料，不改变其地区库存语义。
   return !isRecipeVisibleInToolbox(recipe)
     || isWaterPurifierNodeRecipe(recipe)
     || recipe.inputs.some((input) => (
@@ -676,30 +618,6 @@ export function resolveProductionPlanningAutoRecipe(
   recipes: readonly RecipeDefinition[],
   index: ProductionPlanningIndex,
 ): RecipeDefinition | undefined {
-  // AI-REMOVED 2026-09-17:
-  // Reason: 自动规划不再通过例外过滤和“自然资源无输入优先”改变统一配方顺序。
-  // Trigger: 用户要求规划默认配方严格复用 Wiki 默认、普通 ID、装拆瓶最后的排序。
-  // Evidence: sortRecipesByDefaultPriority 已被规划索引、默认吞吐与配方选择器共同使用。
-  // Replacement: 下方 sortRecipesByDefaultPriority 调用。
-  // Risk: Medium - 没有 Wiki 默认标记的自然资源也将按 ID 选配方。
-  // Human Review: Required
-  //
-  // Original code:
-  // const preferredRecipes = recipes.filter((recipe) => !isRecipeExcludedFromProductionPlanningAuto(recipe));
-  // const candidates = preferredRecipes.length > 0
-  //   ? preferredRecipes
-  //   : recipes.filter(isIronPowderToNuggetRecipe);
-  //
-  // if (preferInputlessRecipe) {
-  //   const inputlessRecipe = candidates.find(
-  //     (recipe) => resolveProductionPlanningRecipeInputs(recipe).length === 0,
-  //   );
-  //   if (inputlessRecipe !== undefined) {
-  //     return inputlessRecipe;
-  //   }
-  // }
-  //
-  // return candidates[0];
   return sortRecipesByDefaultPriority(
     recipes.filter((recipe) => !isRecipeExcludedFromProductionPlanningAuto(recipe, index)),
   )[0];
@@ -710,19 +628,6 @@ export function isWaterPurifierNodeRecipe(recipe: RecipeDefinition): boolean {
     || recipe.id === WATER_PURIFIER_BYPRODUCT_RECIPE_ID;
 }
 
-// AI-REMOVED 2026-09-17:
-// Reason: 铁粉制蓝铁块不再是自动规划例外，所有普通配方统一按 ID 排序。
-// Trigger: 用户要求 Wiki 默认配方优先，其余按 ID，装瓶/拆瓶最后。
-// Evidence: compareRecipesByDefaultPriority 已成为配方选择对话框与产线规划的统一排序入口。
-// Replacement: src/shared/registry/recipe-visibility.ts 的 compareRecipesByDefaultPriority。
-// Risk: Low - 该配方仍可自动或手动选择，只是不再被特殊排除。
-// Human Review: Required
-//
-// Original code:
-// function isIronPowderToNuggetRecipe(recipe: RecipeDefinition): boolean {
-//   return recipe.inputs.some((input) => input.itemId === "item_iron_powder")
-//     && recipe.outputs.some((output) => output.itemId === "item_iron_nugget");
-// }
 
 function resolveProductionPlanningRecipeInputs(
   recipe: RecipeDefinition,
@@ -795,7 +700,7 @@ function resolveDemand(
   }
 
   if (stack.includes(itemId)) {
-    // 2026-10-29：先记录回流引用；全链聚合后由共享净流量诊断撤销不能成立的循环供给。
+    // 先记录回流引用；全链聚合后由共享净流量诊断撤销不能成立的循环供给。
     supply.cycle = closedPlantCycleItemIds.includes(itemId) ? 0 : remaining;
     return createItemNode({
       itemId,
@@ -878,7 +783,7 @@ function resolveDemand(
   let cyclesPerMinute = plantCycleRate?.cyclesPerMinute ?? remaining / netOutputPerUnit;
   if (recipe !== undefined && recipeOutput !== undefined && targetDeviceConsumptionAmountPerCycle > EPSILON
     && context.sourceConfig.includeDeviceMinimumConsumption === "ceil") {
-    // 2026-10-29：自耗材按整台运行时，先由满载净产能确定台数，再补足这些设备的实际耗材。
+    // 自耗材按整台运行时，先由满载净产能确定台数，再补足这些设备的实际耗材。
     const machineCycles = 60 / recipe.durationSeconds;
     const machines = Math.ceil(remaining / (netOutputPerUnit * machineCycles) - 1e-6);
     cyclesPerMinute = (remaining + machines * targetDeviceConsumptionAmountPerCycle * machineCycles) / recipeOutput.amount;
@@ -921,23 +826,6 @@ function resolveDemand(
       perMinute: roundFlow(output.amount * cyclesPerMinute),
     }));
 
-  // AI-REMOVED 2026-08-29:
-  // Reason: 将系统配方先换算为每设备每分钟流量后再次缩放，改变了既有四位舍入顺序并造成水处理数量漂移。
-  // Trigger: 既有水处理回归测试出现 8→7.998、600→601.2 等精度与自消耗偏差。
-  // Evidence: 原求解按“每周期净产出→周期数→设备数”计算，模块才以每分钟端口和模块数计算。
-  // Replacement: 上方按 candidate.source 选择等价单位，但仍共用同一候选选择与端口结果模型。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // const targetDeviceConsumptionAmount = recipe === undefined
-  //   ? 0
-  //   : roundFlow((deviceConsumptionAmounts.get(itemId) ?? 0) * 60 / recipe.durationSeconds);
-  // const netOutputPerCandidate = roundFlow(candidateOutput.perMinute - targetDeviceConsumptionAmount);
-  // const deviceCount = roundFlow(remaining / netOutputPerCandidate);
-  // const cyclesPerMinute = recipe === undefined
-  //   ? deviceCount
-  //   : roundFlow(deviceCount * (60 / recipe.durationSeconds));
 
   if (candidate.module !== null) {
     const replacedSystemDemand = collectSystemRecipeDemandFootprint(
@@ -1035,55 +923,6 @@ function resolveProductivePlantCycleRate(
   return null;
 }
 
-// AI-REMOVED 2026-10-20:
-// Reason: 植物回路识别与净产配平统一到 shared。
-// Trigger: 主规划接受的植物回路在 EDA 环境补料中被当作非法循环。
-// Evidence: 两端需要同一净产公式、伙伴余量与设备支路规则。
-// Replacement: shared/planner-plant-cycle.ts 与上方候选选择调用。
-// Risk: 循环速率影响主规划与辅助扩产；Human Review: Required。
-// Original code:
-//   const picker = recipe.machineId === "seedcol_1";
-//   const planter = recipe.machineId === "planter_1" || recipe.machineId === "planter_1_liquid";
-//   if (!picker && !planter) return null;
-//
-//   for (const input of resolveProductionPlanningRecipeInputs(recipe)) {
-//     if (stack.includes(input.itemId) || context.infiniteItemIds.has(input.itemId)) continue;
-//     const partner = resolveCandidateForItem(input.itemId, input.amount, context, [...stack, itemId]);
-//     if (partner?.sourceType !== "system-recipe" || partner.recipeId === null) continue;
-//     const partnerRecipe = context.index.recipeById.get(partner.recipeId);
-//     if (partnerRecipe === undefined || !(picker
-//       ? partnerRecipe.machineId === "planter_1" || partnerRecipe.machineId === "planter_1_liquid"
-//       : partnerRecipe.machineId === "seedcol_1")) continue;
-//     const partnerOutput = partnerRecipe.outputs.find((port) => port.itemId === input.itemId);
-//     const feedbackInput = resolveProductionPlanningRecipeInputs(partnerRecipe).find((port) => port.itemId === itemId);
-//     if (partnerOutput === undefined || feedbackInput === undefined || partnerOutput.amount <= EPSILON) continue;
-//
-//     const availablePartnerSupply = (context.manualSupplyRemaining.get(input.itemId) ?? 0)
-//       + (context.surplusSupplyRemaining.get(input.itemId) ?? 0);
-//     if (availablePartnerSupply >= input.amount * externalDemand / outputPerCycle - EPSILON) return null;
-//     const feedbackPerCycle = input.amount * feedbackInput.amount / partnerOutput.amount;
-//     const netOutputPerCycle = outputPerCycle - feedbackPerCycle;
-//     if (netOutputPerCycle <= EPSILON) return null;
-//     const cyclesPerMinute = (externalDemand - availablePartnerSupply * feedbackInput.amount / partnerOutput.amount)
-//       / netOutputPerCycle;
-//     const feedbackPerMinute = (input.amount * cyclesPerMinute - availablePartnerSupply)
-//       * feedbackInput.amount / partnerOutput.amount;
-//     const outputCapacity = (recipe.outputs.find((port) => port.itemId === itemId)?.amount ?? 0)
-//       * 60 / recipe.durationSeconds;
-//     // 采种增产时，种植回流与对外输出各占独立设备支路。
-//     const minimumDeviceCount = planter && partnerOutput.amount > feedbackInput.amount + EPSILON
-//       && outputCapacity > EPSILON
-//       ? Math.ceil(feedbackPerMinute / outputCapacity - EPSILON)
-//         + Math.ceil(externalDemand / outputCapacity - EPSILON)
-//       : 0;
-//     return {
-//       cyclesPerMinute,
-//       partnerItemId: input.itemId,
-//       minimumDeviceCount,
-//     };
-//   }
-//   return null;
-// }
 
 function resolveDeviceMinimumConsumptionAmountsPerCycle(
   recipe: RecipeDefinition,
@@ -1093,25 +932,6 @@ function resolveDeviceMinimumConsumptionAmountsPerCycle(
     return new Map();
   }
 
-  // AI-REMOVED 2026-08-29:
-  // Reason: 同设备消耗配方的匹配规则已由 shared 统一实现。
-  // Trigger: 模块配平必须与生产规划选择同一个伴随运行消耗配方。
-  // Evidence: resolveCompanionDeviceRunningConsumptionRecipe 保留输入物品优先匹配与首项回退，并排除消耗配方自匹配。
-  // Replacement: 下方 resolveCompanionDeviceRunningConsumptionRecipe 调用。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // const consumptionRecipes = context.index.consumptionRecipesByMachine.get(recipe.machineId) ?? [];
-  // if (consumptionRecipes.length === 0) {
-  //   return new Map();
-  // }
-  //
-  // const consumptionRecipe = consumptionRecipes.find((candidate) =>
-  //   candidate.inputs.some((consumptionInput) =>
-  //     recipe.inputs.some((input) => input.itemId === consumptionInput.itemId),
-  //   ),
-  // ) ?? consumptionRecipes[0];
   const consumptionRecipe = resolveCompanionDeviceRunningConsumptionRecipe(
     recipe,
     context.index.consumptionRecipesByMachine,
@@ -1237,38 +1057,6 @@ function sortProductionPlanningTargetsForSharedCandidates(
   ));
 }
 
-// AI-REMOVED 2026-08-29:
-// Reason: 逐物品返回首条系统配方无法比较递归资源，也无法让模块与系统配方共享选择规则。
-// Trigger: ST2-RQ-019 要求资源优先、模块/配方统一候选和多输出全局复用。
-// Evidence: 息壤两条配方在忽略气体时存在严格资源支配，但旧函数始终回退到 candidates[0]。
-// Replacement: resolveCandidateForItem
-// Risk: Medium；自动选择由注册顺序升级为确定性的资源/层次比较。
-// Human Review: Required
-//
-// Original code:
-// function resolveRecipeForItem(itemId: string, context: SolverContext): RecipeDefinition | undefined {
-//   const selectedRecipeId = context.recipeChoices.get(itemId);
-//   const recipes = context.index.recipesByOutputItem.get(itemId) ?? [];
-//
-//   if (selectedRecipeId !== undefined) {
-//     const selected = context.index.recipeById.get(selectedRecipeId);
-//     if (
-//       selected !== undefined
-//       && !isWaterPurifierNodeRecipe(selected)
-//       && selected.outputs.some((output) => output.itemId === itemId)
-//     ) {
-//       return selected;
-//     }
-//   }
-//
-//   // AI-CORRECTION 2026-05-22:
-//   // 自然资源（矿石、清水、沉积酸）在 auto 模式下优先选择 null 配方（inputs 为空），
-//   // 避免命中净化器等其他生产同一物品的非 null 配方。
-//   return resolveProductionPlanningAutoRecipe(
-//     recipes,
-//     context.index.naturalResourceItemIds.has(itemId),
-//   );
-// }
 
 interface ProductionPlanningPlanEstimate {
   readonly externalResources: Map<string, number>;
@@ -1300,43 +1088,6 @@ function resolveCandidateForItem(
     }
   }
 
-  // AI-REMOVED 2026-09-17:
-  // Reason: 自然资源不再私自覆盖统一默认配方顺序，系统配方之间也不再按资源估算重新排名。
-  // Trigger: 用户要求产线规划默认配方严格遵循统一排序；模块候选仍保留原估算竞争。
-  // Evidence: resolveAvailableCandidatesForItem 已按共享比较器排序，首个系统候选即默认配方。
-  // Replacement: defaultSystemCandidate + moduleCandidates。
-  // Risk: Medium - 默认系统配方可能比旧启发式消耗更多资源，这是游戏百科顺序优先的预期结果。
-  // Human Review: Required
-  //
-  // Original code:
-  // if (context.index.naturalResourceItemIds.has(itemId)) {
-  //   const inputless = candidates.find((candidate) => candidate.inputs.length === 0);
-  //   if (inputless !== undefined) {
-  //     return inputless;
-  //   }
-  // }
-  //
-  // let best: ProductionPlanningCandidate | undefined;
-  // let bestEstimate: ProductionPlanningPlanEstimate | undefined;
-  // for (const candidate of candidates) {
-  //   const estimate = estimateProductionPlanningCandidate(
-  //     candidate,
-  //     itemId,
-  //     demandPerMinute,
-  //     context,
-  //     stack,
-  //   );
-  //   if (
-  //     best === undefined
-  //     || bestEstimate === undefined
-  //     || compareProductionPlanningEstimates(estimate, bestEstimate, candidate, best) < 0
-  //   ) {
-  //     best = candidate;
-  //     bestEstimate = estimate;
-  //   }
-  // }
-  //
-  // return best;
   const defaultSystemCandidate = candidates.find((candidate) => candidate.sourceType === "system-recipe");
   const moduleCandidates = candidates.filter((candidate) => candidate.sourceType !== "system-recipe");
   if (moduleCandidates.length === 0) {
@@ -1553,52 +1304,6 @@ function collectSystemRecipeDemandFootprint(
     return footprint;
   }
 
-  // AI-REMOVED 2026-10-30:
-  // Reason: 系统路线估算仍搜索所有备选配方，与正式默认选型不一致，并在互转链上产生组合爆炸。
-  // Trigger: 偏好关联的模块联产回归持续占用 CPU，无法结束。
-  // Evidence: 运行栈反复进入 estimateSystemRecipeCandidate / estimateSystemRecipeItem；正式系统选型已按默认顺序取首项。
-  // Replacement: 下方复用 resolveAvailableCandidatesForItem 的默认系统候选。
-  // Risk: 模块成本及替代需求改为按真实默认系统路线估算，可能改变模块自动竞争结果。
-  // Human Review: Required
-  //
-  // Original code:
-  //   const candidates = (context.index.candidatesByOutputItem.get(itemId) ?? [])
-  //     .filter((candidate) => {
-  //       if (candidate.sourceType !== "system-recipe" || candidate.recipeId === null) {
-  //         return false;
-  //       }
-  //       const recipe = context.index.recipeById.get(candidate.recipeId);
-  //       return recipe !== undefined && !isRecipeExcludedFromProductionPlanningAuto(recipe, context.index);
-  //     });
-  //   if (candidates.length === 0) {
-  //     return footprint;
-  //   }
-  //
-  //   let bestCandidate = candidates[0]!;
-  //   let bestEstimate = estimateSystemRecipeCandidate(
-  //     bestCandidate,
-  //     itemId,
-  //     productionDemand,
-  //     context,
-  //     stack,
-  //     new Set(),
-  //   );
-  //   for (const candidate of candidates.slice(1)) {
-  //     const estimate = estimateSystemRecipeCandidate(
-  //       candidate,
-  //       itemId,
-  //       productionDemand,
-  //       context,
-  //       stack,
-  //       new Set(),
-  //     );
-  //     if (compareProductionPlanningEstimates(estimate, bestEstimate, candidate, bestCandidate) < 0) {
-  //       bestCandidate = candidate;
-  //       bestEstimate = estimate;
-  //     }
-  //   }
-  //
-  // 系统配方按正式默认优先级取首项；模块估算不再隐式寻找另一条系统生产路线。
   const bestCandidate = resolveAvailableCandidatesForItem(itemId, context)
     .find(candidate => candidate.sourceType === "system-recipe");
   if (bestCandidate === undefined) return footprint;
@@ -1658,55 +1363,6 @@ function estimateSystemRecipeItem(
     return estimate;
   }
 
-  // AI-REMOVED 2026-10-30:
-  // Reason: 系统路线估算仍搜索所有备选配方，与正式默认选型不一致，并在互转链上产生组合爆炸。
-  // Trigger: 偏好关联的模块联产回归持续占用 CPU，无法结束。
-  // Evidence: 运行栈反复进入 estimateSystemRecipeCandidate / estimateSystemRecipeItem；正式系统选型已按默认顺序取首项。
-  // Replacement: 下方复用 resolveAvailableCandidatesForItem 的默认系统候选。
-  // Risk: 模块成本及替代需求改为按真实默认系统路线估算，可能改变模块自动竞争结果。
-  // Human Review: Required
-  //
-  // Original code:
-  //   const candidates = (context.index.candidatesByOutputItem.get(itemId) ?? [])
-  //     .filter((candidate) => {
-  //       if (
-  //         candidate.sourceType !== "system-recipe"
-  //         || excludedCandidateIds.has(candidate.id)
-  //         || candidate.recipeId === null
-  //       ) {
-  //         return false;
-  //       }
-  //       const recipe = context.index.recipeById.get(candidate.recipeId);
-  //       return recipe !== undefined && !isRecipeExcludedFromProductionPlanningAuto(recipe, context.index);
-  //     });
-  //   if (candidates.length === 0) {
-  //     return createUnresolvedEstimate(itemId, demandPerMinute);
-  //   }
-  //
-  //   let bestCandidate = candidates[0]!;
-  //   let bestEstimate = estimateSystemRecipeCandidate(
-  //     bestCandidate,
-  //     itemId,
-  //     demandPerMinute,
-  //     context,
-  //     stack,
-  //     excludedCandidateIds,
-  //   );
-  //   for (const candidate of candidates.slice(1)) {
-  //     const estimate = estimateSystemRecipeCandidate(
-  //       candidate,
-  //       itemId,
-  //       demandPerMinute,
-  //       context,
-  //       stack,
-  //       excludedCandidateIds,
-  //     );
-  //     if (compareProductionPlanningEstimates(estimate, bestEstimate, candidate, bestCandidate) < 0) {
-  //       bestCandidate = candidate;
-  //       bestEstimate = estimate;
-  //     }
-  //   }
-  //   return bestEstimate;
   const candidate = resolveAvailableCandidatesForItem(itemId, context)
     .find(candidate => candidate.sourceType === "system-recipe" && !excludedCandidateIds.has(candidate.id));
   if (candidate === undefined) return createUnresolvedEstimate(itemId, demandPerMinute);
@@ -1978,14 +1634,6 @@ function buildSupplyMap(supplies: readonly ProductionPlanningPort[]): Map<string
 function buildInfiniteItemIds(
   baseItemIds: ReadonlySet<string>,
   supplies: readonly ProductionPlanningPort[],
-  // AI-REMOVED 2026-10-03:
-  // Reason: 显式无限外供统一适用于所有原料，不再需要物品分类索引。
-  // Trigger: 用户要求所有自然资源可点击无限供给。
-  // Evidence: index 在本函数中只用于排除自然资源。
-  // Replacement: 下方按原料行的 isInfinite 合并无限供给。
-  // Risk: Low；未设置无限的自然资源仍按配方生产。Human Review: Required
-  // Original code:
-  // index: ProductionPlanningIndex,
 ): ReadonlySet<string> {
   const result = new Set(baseItemIds);
 
@@ -2128,7 +1776,7 @@ function mergeSharedPlantDeviceCounts(
     count = roundFlow(count);
     if (Math.abs(count - total.deviceCount) <= EPSILON) continue;
     total.deviceCount = count;
-    // 2026-10-21：树节点保留各自流量，设备数改为共享总产能的占比，避免流程图仍累加旧支路台数。
+    // 树节点保留各自流量，设备数改为共享总产能的占比，避免流程图仍累加旧支路台数。
     let remaining = count;
     branches.forEach((node, branch) => {
       node.deviceCount = branch === branches.length - 1 ? remaining
@@ -2464,39 +2112,6 @@ function resolveRecipeOutputPerMinute(
   return recipe?.outputs.find((output) => output.itemId === itemId)?.perMinute ?? 0;
 }
 
-// AI-REMOVED 2026-09-17:
-// Reason: 循环切口现统一建模为显式外部供给，不再按植物物品白名单决定是否允许循环。
-// Trigger: 用户要求任何已选循环配方都可展示且不报错，同时不能把零净产出循环伪装成自产。
-// Evidence: resolveDemand 在递归栈重复时写入 supply.cycle 并生成 isCycleSource 节点；估算器将相同切口计为外部资源。
-// Replacement: resolveDemand 的 stack.includes(itemId) 分支。
-// Risk: Medium - 所有循环现在都可解，但切口数量明确依赖外部供给，不代表闭环自持。
-// Human Review: Required
-//
-// Original code:
-// function isAllowedProductivePlantCycle(itemId: string, stack: readonly string[]): boolean {
-//   if (!isPlantItem(itemId)) {
-//     return false;
-//   }
-//
-//   const repeatIndex = stack.lastIndexOf(itemId);
-//   if (repeatIndex < 0) {
-//     return false;
-//   }
-//
-//   const cycleItems = stack.slice(repeatIndex);
-//   return cycleItems.length > 0
-//     && cycleItems.every(isPlantItem)
-//     && cycleItems.some(isPlantSeedItem)
-//     && cycleItems.some((candidate) => isPlantItem(candidate) && !isPlantSeedItem(candidate));
-// }
-//
-// function isPlantItem(itemId: string): boolean {
-//   return itemId.startsWith("item_plant_");
-// }
-//
-// function isPlantSeedItem(itemId: string): boolean {
-//   return itemId.includes("_seed");
-// }
 
 function createNodeId(prefix: string, context: SolverContext): string {
   context.nextNodeIndex += 1;

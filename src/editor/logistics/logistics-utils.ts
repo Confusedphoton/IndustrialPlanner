@@ -34,27 +34,6 @@ type PortGroupDefinition = EntityDefinition["portGroups"][number];
 type PortDefinition = PortGroupDefinition["ports"][number];
 type DevicePortEndpoint = Extract<LogisticsDraftEndpoint, { readonly type: "device-port" }>;
 
-// AI-REMOVED 2026-07-27:
-// Reason: editor 不应拥有传送带节和管道节 definition ID 的副本。
-// Trigger: 用户要求 definition ID 归 registry 内部常量所有，registry 外只使用 RegistryQuery。
-// Evidence: RegistryQuery.resolveLogisticsDefinitionId 与 isBelt/isPipe 已覆盖原用途。
-// Replacement: workspace.registry.queries。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// export const LOGISTICS_DEFINITION_IDS = {
-//   belt: {
-//     straight: "belt_straight_1x1",
-//     turnCw: "belt_turn_cw_1x1",
-//     turnCcw: "belt_turn_ccw_1x1",
-//   },
-//   pipe: {
-//     straight: "pipe_straight_1x1",
-//     turnCw: "pipe_turn_cw_1x1",
-//     turnCcw: "pipe_turn_ccw_1x1",
-//   },
-// } as const;
 
 const EDGE_ORDER: readonly GridEdge[] = ["NORTH", "EAST", "SOUTH", "WEST"];
 // 以起笔格为中心，设备来源方向优先级固定为左、上、右、下。
@@ -95,27 +74,6 @@ export function isAnyOrdinaryLogisticsDefinitionId(
   );
 }
 
-// AI-REMOVED 2026-07-27:
-// Reason: editor 本地 shape→definition ID 转换会重复 registry 的 ID 所有权。
-// Trigger: 用户要求 registry 外只调用导出 Query。
-// Evidence: RegistryQuery.resolveLogisticsDefinitionId(kind, shape) 已直接转发 registry 内部常量。
-// Replacement: workspace.registry.queries.resolveLogisticsDefinitionId。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// export function resolveLogisticsDefinitionId(options: {
-//   kind: LogisticsKind;
-//   shape: LogisticsPathShape;
-// }): string {
-//   const ids = LOGISTICS_DEFINITION_IDS[options.kind];
-//   switch (options.shape) {
-//     case "turn-cw": return ids.turnCw;
-//     case "turn-ccw": return ids.turnCcw;
-//     case "straight":
-//     default: return ids.straight;
-//   }
-// }
 
 export function resolveLogisticsEndpointAtGridPoint(options: {
   gridPoint: GridPoint;
@@ -739,7 +697,6 @@ function findTopEntityInListAtGridPoint(options: {
     ) {
       // 跳过对端物流类型的专用设备（如 belt 模式下跳过 pipe 段，pipe 模式下跳过 belt 段），
       // 使其下方的设备（如分流器/汇流器/桥接器）能被正常匹配。
-      // AI-CORRECTION 2026-07-24: 现在跳过对端物流类型的全部受压制设备，
       // 包括桥接器、汇流器、分流器和准入口，使端口解析可穿透这些附属设备。
       if (
         options.skipLogisticsKind !== undefined
@@ -789,7 +746,6 @@ function resolveCellFromEdge(options: {
     return replacingInputEdge;
   }
 
-  // AI-CORRECTION 2026-05-29:
   // 无合法上游连接时，从被替换实体自身的 input port edge 推断 fromEdge，
   // 而非从绘制方向反推。
   // 原行为：直接回退到 opposite(next direction) 或 "WEST"。
@@ -812,7 +768,6 @@ function resolveCellFromEdge(options: {
     return direction === null ? null : oppositeEdge(direction);
   }
 
-  // AI-CORRECTION 2026-05-30:
   // 当仅有单格路径且 source 为空地、无其他推导来源时，
   // 若 target 为 device-port，用 target 的 port edge 反推 fromEdge。
   // 否则回退到 "WEST"（原行为）。
@@ -1109,4 +1064,63 @@ function areAdjacentGridPoints(left: GridPoint, right: GridPoint): boolean {
 
 function manhattanDistance(left: GridPoint, right: GridPoint): number {
   return Math.abs(left.x - right.x) + Math.abs(left.y - right.y);
+}
+
+/**
+ * 返回恰好位于端口内侧格的设备端口（输入或输出，传送带或管道族），用于从端口拖出铺设物流。
+ * 设备内部非端口格返回 null。
+ */
+export function resolveDevicePortAtGridPoint(options: {
+  gridPoint: GridPoint;
+  document: WorldDocument;
+  entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  registryQueries: RegistryQuery;
+}): { readonly kind: LogisticsKind; readonly endpoint: DevicePortEndpoint } | null {
+  for (const kind of [LOGISTICS_KIND.belt, LOGISTICS_KIND.pipe] as const) {
+    const entity = findTopEntityAtGridPoint({
+      ...options,
+      drafts: [],
+      skipLogisticsKind: kind === LOGISTICS_KIND.belt ? LOGISTICS_KIND.pipe : LOGISTICS_KIND.belt,
+    });
+    if (entity === null || isOrdinaryLogisticsDefinitionId(entity.definitionId, kind, options.registryQueries)) {
+      continue;
+    }
+    const definition = options.entityDefinitionMap.get(entity.definitionId);
+    if (definition === undefined) {
+      continue;
+    }
+    for (const direction of ["output", "input"] as const) {
+      const endpoint = resolveDevicePortEndpoints({
+        entity,
+        definition,
+        kind,
+        direction,
+        pointerGridPoint: options.gridPoint,
+      }).find((candidate) => (
+        candidate.insideGridPoint.x === options.gridPoint.x && candidate.insideGridPoint.y === options.gridPoint.y
+      ));
+      if (endpoint !== undefined) {
+        return { kind, endpoint };
+      }
+    }
+  }
+  return null;
+}
+
+/** 返回该格上指定族的普通物流线格（传送带节/管道节）；没有时返回 null。 */
+export function resolveTransportLineAtGridPoint(options: {
+  gridPoint: GridPoint;
+  kind: LogisticsKind;
+  document: WorldDocument;
+  entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
+  registryQueries: RegistryQuery;
+}): WorldEntity | null {
+  const entity = findTopEntityAtGridPoint({
+    ...options,
+    drafts: [],
+    skipLogisticsKind: options.kind === LOGISTICS_KIND.belt ? LOGISTICS_KIND.pipe : LOGISTICS_KIND.belt,
+  });
+  return entity !== null && isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind, options.registryQueries)
+    ? entity
+    : null;
 }

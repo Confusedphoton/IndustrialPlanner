@@ -25,163 +25,6 @@ export type UiKey =
   | "canvas.alert.pipeStartWithEmpty"
   | "canvas.regionalDarkPipe"
   | "canvas.regionalDarkPipeSaveFailed"
-  | "eda.history"
-  | "eda.newTask"
-  | "eda.importTask"
-  | "eda.downloadTask"
-  | "eda.deleteTask"
-  | "eda.confirmDelete"
-  | "eda.noHistory"
-  | "eda.unnamedTask"
-  | "eda.unknownTaskType"
-  | "eda.unnamedProductionTask"
-  | "eda.unnamedBlueprintTask"
-  | "eda.productionMode"
-  | "eda.optimize"
-  | "eda.preview"
-  | "eda.pause"
-  | "eda.running"
-  | "eda.saving"
-  | "eda.saved"
-  | "eda.paused"
-  | "eda.failed"
-  | "eda.fileTooLarge"
-  | "eda.title"
-  | "eda.regression.title"
-  | "eda.regression.runAll"
-  | "eda.regression.run"
-  | "eda.regression.download"
-  | "eda.regression.seed"
-  | "eda.regression.initialArea"
-  | "eda.regression.maximumArea"
-  | "eda.regression.budget"
-  | "eda.regression.concurrency"
-  | "eda.regression.evaluations"
-  | "eda.regression.area"
-  | "eda.regression.running"
-  | "eda.regression.passed"
-  | "eda.regression.failed"
-  | "eda.regression.cancelled"
-  | "eda.regression.idle"
-  | "eda.inputMarker"
-  | "eda.outputMarker"
-  | "eda.detectOutputAutomatically"
-  | "eda.previewFit"
-  | "eda.previewZoomIn"
-  | "eda.previewZoomOut"
-  | "eda.identifyBlueprint"
-  | "eda.identifyingBlueprint"
-  | "eda.inputBoundary"
-  | "eda.outputBoundary"
-  | "eda.chooseBoundaryItem"
-  | "eda.clearBoundaryItem"
-  | "eda.blueprintMode"
-  | "eda.baselineOutputs"
-  | "eda.supplyUnspecified"
-  | "eda.layoutDetermined"
-  | "eda.itemLogistics"
-  | "eda.itemProduct"
-  | "eda.itemSupply"
-  | "eda.itemOutput"
-  | "eda.conduitOutput"
-  | "eda.environmentSupply"
-  | "eda.environmentName"
-  | "eda.environmentDevices"
-  | "eda.environmentAutomatic"
-  | "eda.supplyMode"
-  | "eda.supplyExternal"
-  | "eda.supplyProduce"
-  | "eda.supplyInherited"
-  | "eda.supplyRecipe"
-  | "eda.supplyUpstream"
-  | "eda.supplyOperating"
-  | "eda.supplyNoRecipe"
-  | "eda.supplyCycle"
-  | "eda.supplyStartup"
-  | "eda.converterStartup"
-  | "eda.converterStartupManual"
-  | "eda.converterStartupTank"
-  | "eda.converterStartupReject"
-  | "eda.supplyUnavailable"
-  | "eda.environmentCount"
-  | "eda.toolbar"
-  | "eda.planThisLine"
-  | "eda.solidSupply"
-  | "eda.fluidSupply"
-  | "eda.externalBelt"
-  | "eda.warehouseSupply"
-  | "eda.externalPipe"
-  | "eda.conduitSupply"
-  | "eda.warehousePortPlacement"
-  | "eda.portsAny"
-  | "eda.portsContinuous"
-  | "eda.portsFullSide"
-  | "eda.portsSupplyInvalid"
-  | "eda.warehouseBus"
-  | "eda.straight"
-  | "eda.corner"
-  | "eda.uShaped"
-  | "eda.free"
-  | "eda.solidOutput"
-  | "eda.warehouseOutput"
-  | "eda.stashOutput"
-  | "eda.autoOutput"
-  | "eda.byproducts"
-  | "eda.output"
-  | "eda.destroy"
-  | "eda.plantStartup"
-  | "eda.preload"
-  | "eda.warehouseStartup"
-  | "eda.budget"
-  | "eda.evaluationsPerRound"
-  | "eda.lowBudgetWarning"
-  | "eda.layoutRules"
-  | "eda.startupOptions"
-  | "eda.computationOptions"
-  | "eda.concurrency"
-  | "eda.gpu"
-  | "eda.autoConcurrency"
-  | "eda.activeConcurrency"
-  | "eda.concurrencyWarning"
-  | "eda.areaCurve"
-  | "eda.logScale"
-  | "eda.noPlan"
-  | "eda.openProductionPlanning"
-  | "eda.elapsed"
-  | "eda.elapsedDay"
-  | "eda.elapsedHour"
-  | "eda.elapsedMinute"
-  | "eda.elapsedSecond"
-  | "eda.roundProposals"
-  | "eda.totalProposals"
-  | "eda.proposalsPerSecond"
-  | "eda.recentRate"
-  | "eda.averageRate"
-  | "eda.candidates"
-  | "eda.bestArea"
-  | "eda.progress"
-  | "eda.devices"
-  | "eda.continue"
-  | "eda.save"
-  | "eda.retrySave"
-  | "eda.start"
-  | "eda.replan"
-  | "eda.randomSeed"
-  | "eda.place"
-  | "eda.unavailable"
-  | "eda.placeFailed"
-  | "eda.modulesUnsupported"
-  // AI-REMOVED 2026-10-14:
-  // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
-  // Trigger: 用户要求 EDA 默认可用且不再需要开启。
-  // Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
-  // Replacement: None；正式功能继续使用 eda.* 文案。
-  // Risk: Low；规划任务与业务可用性校验保持原行为。
-  // Human Review: Required
-  //
-  // Original code:
-  //   | "settingsField.experimental-blueprint-planner"
-  //   | "settingsField.experimental-blueprint-plannerDescription"
 
   | "action.applyValue"
   | "action.cancel"
@@ -192,6 +35,52 @@ export type UiKey =
   | "action.changePipeRoutePriority"
   | "action.clearPatch"
   | "action.close"
+  | "devicePopup.chooseRecipe"
+  | "devicePopup.more"
+  | "devicePopup.chooseItem"
+  | "inspectorText.side.top"
+  | "inspectorText.side.right"
+  | "inspectorText.side.bottom"
+  | "inspectorText.side.left"
+  | "inspectorText.logisticsType"
+  | "recipeTree.dock"
+  | "recipeTree.float"
+  | "basePicker.loadFailed"
+  | "settingsField.shortcut-insert-splitter"
+  | "settingsField.shortcut-insert-converger"
+  | "settingsField.shortcut-insert-connector"
+  | "settingsField.shortcut-insert-admission"
+  | "recipeTree.view"
+  | "recipeTree.viewTree"
+  | "recipeTree.viewGraph"
+  | "recipeTree.action.place"
+  | "recipeTree.action.selectFacilities"
+  | "recipeTree.action.applyRecipe"
+  | "recipeTree.action.applyFilter"
+  | "recipeTree.action.selectAdmissions"
+  | "recipeTree.action.pin"
+  | "activityText.title"
+  | "activityText.effective"
+  | "activityText.none"
+  | "activityText.load"
+  | "activityText.ongoing"
+  | "activityText.active"
+  | "activityText.from"
+  | "activityText.until"
+  | "activityText.permanent"
+  | "productionPlanning.producedBy"
+  | "historyLabel.createRegion"
+  | "historyLabel.editRegion"
+  | "historyLabel.deleteLine"
+  | "placementReason.edgeSnap"
+  | "placementReason.outsideBase"
+  | "placementReason.overlap"
+  | "placementReason.busDisconnected"
+  | "placementReason.nearSameEntity"
+  | "workbench.base.agriculturalLand"
+  | "workbench.base.draftBox"
+  | "placement.recent"
+  | "placement.jumpToCategory"
   | "historyLabel.editConfig"
   | "historyLabel.switchMode"
   | "historyLabel.createDepotLink"
@@ -661,16 +550,6 @@ export type UiKey =
   | "encyclopedia.itemLabel"
   | "encyclopedia.noRecipes"
   | "encyclopedia.noResults"
-  // AI-REMOVED 2026-07-14:
-  // Reason: UiKey 成员多了一个分号，真实运行代码调用的是 encyclopedia.recentItems。
-  // Trigger: 用户发现最近物品显示 key，全量 i18n 扫描定位到资源与类型拼写不一致。
-  // Evidence: src/app/shell/encyclopedia/encyclopedia-browser.tsx 调用 t("encyclopedia.recentItems")。
-  // Replacement: 当前 union 成员 encyclopedia.recentItems
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // | "encyclopedia.recentItems;"
   | "encyclopedia.recentItems"
   | "encyclopedia.searchPlaceholder"
   | "encyclopedia.viewDetails"
@@ -904,13 +783,6 @@ export type UiKey =
   | "productionPlanning.modeDevice"
   | "productionPlanning.modeItem"
   | "productionPlanning.modify"
-  // AI-REMOVED 2026-10-26:
-  // Reason: 用户订正后复用已有配方选择词条，不再增加新键。
-  // Trigger: 节点操作名称确认为“选择配方”。
-  // Evidence: 节点按钮复用 productionPlanning.chooseRecipe。
-  // Replacement: productionPlanning.chooseRecipe。Risk: Low。Human Review: Required
-  // Original code:
-  // | "productionPlanning.modifyRecipe"
   | "productionPlanning.naturalResources"
   | "productionPlanning.itemCount"
   | "productionPlanning.viewItems"
@@ -1021,26 +893,6 @@ export type UiKey =
   | "settingsField.game-pen-precise-inputDescription"
   | "settingsField.game-arknights-inspector-open-on-second-click"
   | "settingsField.game-arknights-inspector-open-on-second-clickDescription"
-  // AI-REMOVED 2026-09-10:
-  // Reason: 操作模式总开关已废弃，不再保留关闭分支
-  // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-  // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-  // Replacement: None（设置入口已移除）
-  // Risk: 历史 false 设置统一使用当前操作行为。
-  // Human Review: Required
-  //
-  // Original code:
-  // | "settingsField.game-arknights-operation-mode"
-  // AI-REMOVED 2026-09-10:
-  // Reason: 操作模式总开关已废弃，不再保留关闭分支
-  // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-  // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-  // Replacement: None（设置入口已移除）
-  // Risk: 历史 false 设置统一使用当前操作行为。
-  // Human Review: Required
-  //
-  // Original code:
-  // | "settingsField.game-arknights-operation-modeDescription"
   | "settingsField.game-arknights-selection-right-dock-sync"
   | "settingsField.game-arknights-selection-right-dock-syncDescription"
   | "settingsField.game-quick-place"
@@ -1071,30 +923,10 @@ export type UiKey =
   | "settingsField.other-debug-mode"
   | "settingsField.other-debug-modeDescription"
   | "settingsField.other-experimental-features"
-  | "settingsField.experimental-blueprint-production-planning"
-  | "settingsField.experimental-blueprint-production-planningDescription"
   | "settingsField.other-experimental-featuresDescription"
   | "settingsField.other-experimental-features-warning-confirm"
   | "settingsField.other-experimental-features-warning-message"
   | "settingsField.other-experimental-features-warning-title"
-  // AI-REMOVED 2026-09-26:
-  // Reason: 旧 key 对应启用 Dense，已由调试模式下启用 Legacy 替代。
-  // Trigger: 默认求解器反转，选项移至调试分组。
-  // Evidence: 旧 key 的语义与新开关相反。
-  // Replacement: 下方 settingsField.debug-legacy-simulation-engine 系列 key。
-  // Risk: Low。
-  // Human Review: Required
-  // Original code:
-  // | "settingsField.experimental-dense-simulation-engine"
-  // | "settingsField.experimental-dense-simulation-engineDescription"
-  // | "settingsField.experimental-dense-simulation-engine-restart-pending"
-  // | "settingsField.experimental-dense-simulation-engine-restart-pendingDescription"
-  // | "settingsField.experimental-dense-simulation-engine-reload-confirm"
-  | "settingsField.debug-legacy-simulation-engine"
-  | "settingsField.debug-legacy-simulation-engineDescription"
-  | "settingsField.debug-legacy-simulation-engine-restart-pending"
-  | "settingsField.debug-legacy-simulation-engine-restart-pendingDescription"
-  | "settingsField.debug-legacy-simulation-engine-reload-confirm"
   | "settingsAction.reload-and-apply"
   | "webDavConfig.enabled"
   | "webDavConfig.enabledDescription"
@@ -1170,8 +1002,6 @@ export type UiKey =
   | "settingsField.experimental-sync-conflict-use-local"
   | "settingsField.experimental-sync-conflict-use-remote"
   | "settingsField.experimental-sync-conflict-pause"
-  | "settingsField.experimental-regional-multi-base"
-  | "settingsField.experimental-regional-multi-baseDescription"
   | "settingsField.experimental-virtual-mouse-pointer"
   | "settingsField.experimental-virtual-mouse-pointerDescription"
   | "settingsField.other-toolbox-show-all-activity-content"
@@ -1383,16 +1213,6 @@ export type UiKey =
   | "topBar.screen"
   | "topBar.settings"
   | "topBar.speed"
-  // AI-REMOVED 2026-08-19:
-  // Reason: 旧版入口文案已退出有效词典，该 key 不再属于可翻译键。
-  // Trigger: 用户要求从下个版本开始界面不再显示“返回旧版”。
-  // Evidence: 唯一运行时调用位于已停用的 TopBar 旧版链接。
-  // Replacement: None
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // | "topBar.switchToOldVersion"
   | "topBar.theme"
   | "topBar.zoom"
   | "uiGroup.advancedManufacturing"

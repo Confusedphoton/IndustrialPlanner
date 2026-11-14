@@ -1,13 +1,4 @@
 import type { CanvasInteractionController } from "../canvas";
-// AI-REMOVED 2026-11-12:
-// Reason: 统一场景迁移后旧对象没有有效调用。
-// Trigger: REQ-048 P6 与 ESLint unused 审计。
-// Evidence: 当前调用由 Canvas 或 SceneViewInput 提供，原引用仅存于审计注释。
-// Replacement: CanvasActionImpl / SceneViewInput / 通用只读场景
-// Risk: Low
-// Human Review: Required
-// Original code:
-// import { CANVAS_OPERATION_IDS, type CanvasOperationId } from "@/domain/shared/canvas-operation";
 import type { UiKey } from "@/shared/i18n";
 import { action } from "mobx";
 
@@ -22,96 +13,13 @@ import type {
 } from "@/domain/shared/client-pixel";
 import type { AppLocale } from "@/domain/app";
 import { lookupText } from "@/shared/i18n";
-// AI-REMOVED 2026-11-12:
-// Reason: 统一场景迁移后旧对象没有有效调用。
-// Trigger: REQ-048 P6 与 ESLint unused 审计。
-// Evidence: 当前调用由 Canvas 或 SceneViewInput 提供，原引用仅存于审计注释。
-// Replacement: CanvasActionImpl / SceneViewInput / 通用只读场景
-// Risk: Low
-// Human Review: Required
-// Original code:
-// import { resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport-transform";
 import type { KeyboardShortcutManager, ShortcutEventModifiers } from "./keyboard-shortcut-manager";
 
 import type { ActiveTool } from "@/domain/app/types/app-types";
 import {
-// AI-REMOVED 2026-11-12:
-// Reason: 统一场景迁移后旧对象没有有效调用。
-// Trigger: REQ-048 P6 与 ESLint unused 审计。
-// Evidence: 当前调用由 Canvas 或 SceneViewInput 提供，原引用仅存于审计注释。
-// Replacement: CanvasActionImpl / SceneViewInput / 通用只读场景
-// Risk: Low
-// Human Review: Required
-// Original code:
-//   CANVAS_FLOATING_TOOLBAR_BUTTON_IDS,
-  // AI-REMOVED 2026-08-22:
-  // Reason: 右侧工具列状态按功能请求归一化，不再直接保存按钮 ID。
-  // Trigger: 用户要求呼起方仅声明功能及 button/shortcut/both 展示意图。
-  // Evidence: CANVAS_RIGHT_DOCK_TOOLBAR_OPERATION_IDS 是新的有效功能集合。
-  // Replacement: CANVAS_RIGHT_DOCK_TOOLBAR_OPERATION_IDS。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // CANVAS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS,
-  // AI-REMOVED 2026-11-12:
-  // Reason: 场景共享契约迁入 Domain Shared，避免 Editor/App 各有一份语义。
-  // Trigger: REQ-048 已确认 D2 契约。
-  // Evidence: 会话、只读源与交互画布均需要相同标识和只读快照。
-  // Replacement: Domain Shared CANVAS_OPERATION_IDS
-  // Risk: 所有引用需同步迁移。
-  // Human Review: Required
-  // Original code:
-  // CANVAS_RIGHT_DOCK_TOOLBAR_OPERATION_IDS,
-// AI-REMOVED 2026-11-12:
-// Reason: 统一场景迁移后旧对象没有有效调用。
-// Trigger: REQ-048 P6 与 ESLint unused 审计。
-// Evidence: 当前调用由 Canvas 或 SceneViewInput 提供，原引用仅存于审计注释。
-// Replacement: CanvasActionImpl / SceneViewInput / 通用只读场景
-// Risk: Low
-// Human Review: Required
-// Original code:
-//   CANVAS_TOP_LEFT_CORNER_TOOLBAR_BUTTON_IDS,
   type CanvasFloatingToolbarButtonId,
   type CanvasFloatingToolbarSize,
-  // AI-REMOVED 2026-08-22:
-  // Reason: 呼起接口不再接收按钮 ID 数组。
-  // Trigger: 右侧工具列改为逐项功能展示请求。
-  // Evidence: showCanvasRightDockToolbar 接收 CanvasRightDockToolbarItemRequest。
-  // Replacement: CanvasRightDockToolbarItemRequest。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // type CanvasRightDockToolbarButtonId,
   type CanvasRightDockToolbarItemRequest,
-  // AI-REMOVED 2026-11-12:
-  // Reason: 场景共享契约迁入 Domain Shared，避免 Editor/App 各有一份语义。
-  // Trigger: REQ-048 已确认 D2 契约。
-  // Evidence: 会话、只读源与交互画布均需要相同标识和只读快照。
-  // Replacement: Domain Shared CanvasOperationId
-  // Risk: 所有引用需同步迁移。
-  // Human Review: Required
-  // Original code:
-  // type CanvasRightDockToolbarOperationId,
-// AI-REMOVED 2026-11-12:
-// Reason: 统一场景迁移后旧对象没有有效调用。
-// Trigger: REQ-048 P6 与 ESLint unused 审计。
-// Evidence: 当前调用由 Canvas 或 SceneViewInput 提供，原引用仅存于审计注释。
-// Replacement: CanvasActionImpl / SceneViewInput / 通用只读场景
-// Risk: Low
-// Human Review: Required
-// Original code:
-//   type CanvasRightDockToolbarPresentation,
-// AI-REMOVED 2026-11-12:
-// Reason: 统一场景迁移后旧对象没有有效调用。
-// Trigger: REQ-048 P6 与 ESLint unused 审计。
-// Evidence: 当前调用由 Canvas 或 SceneViewInput 提供，原引用仅存于审计注释。
-// Replacement: CanvasActionImpl / SceneViewInput / 通用只读场景
-// Risk: Low
-// Human Review: Required
-// Original code:
-//   type CanvasTopLeftCornerToolbarButtonId,
   type CanvasTopLeftCornerToolbarShowButtonId,
   clampLeftDockWidth,
   clampTimelineBottomDockHeight,
@@ -130,24 +38,6 @@ import {
   type UiStateReadWrite,
 } from "../state/state-impl";
 
-// AI-REMOVED 2026-11-12:
-// Reason: 统一场景迁移后旧对象没有有效调用。
-// Trigger: REQ-048 P6 与 ESLint unused 审计。
-// Evidence: 当前调用由 Canvas 或 SceneViewInput 提供，原引用仅存于审计注释。
-// Replacement: CanvasActionImpl / SceneViewInput / 通用只读场景
-// Risk: Low
-// Human Review: Required
-// Original code:
-// const DEFAULT_CANVAS_FLOATING_TOOLBAR_HEIGHT = 44;
-// AI-REMOVED 2026-11-12:
-// Reason: 统一场景迁移后旧对象没有有效调用。
-// Trigger: REQ-048 P6 与 ESLint unused 审计。
-// Evidence: 当前调用由 Canvas 或 SceneViewInput 提供，原引用仅存于审计注释。
-// Replacement: CanvasActionImpl / SceneViewInput / 通用只读场景
-// Risk: Low
-// Human Review: Required
-// Original code:
-// const FLOATING_TOOLBAR_DEVICE_GAP_PX = 6;
 
 // DialogShell 默认最大尺寸（对应 dialog-shell.module.scss 中 .dialog-shell 的 width/height）
 const DIALOG_DEFAULT_MAX_WIDTH = 980;
@@ -228,19 +118,6 @@ export interface AppInternalAction {
   showCanvasRightDockToolbar: (
     items: readonly CanvasRightDockToolbarItemRequest[],
   ) => void;
-  // AI-REMOVED 2026-08-22:
-  // Reason: 呼起方现在逐项指定 presentation，工具列级 mode 无法表达混排。
-  // Trigger: 用户要求纯快捷键、按钮加快捷键和纯按钮可同时存在。
-  // Evidence: showCanvasRightDockToolbar 的 items 参数携带逐项 presentation。
-  // Replacement: showCanvasRightDockToolbar(items)。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // showCanvasRightDockToolbar: (
-  //   buttonIds: readonly CanvasRightDockToolbarButtonId[],
-  //   mode?: "icon" | "shortcut",
-  // ) => void;
   hideCanvasRightDockToolbar: () => void;
   showCanvasTopLeftCornerToolbar: (
     buttonIds: readonly CanvasTopLeftCornerToolbarShowButtonId[],
@@ -266,86 +143,13 @@ export interface AppInternalAction {
 }
 
 export class AppActionImpl implements AppAction, AppInternalAction {
-  // AI-REMOVED 2026-11-12:
-  // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
-  // Trigger: REQ-048 D7 已确认的画布状态拆分。
-  // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
-  // Replacement: CanvasActionImpl.canvasToastTimer
-  // Risk: 所有调用入口必须传入所属画布。
-  // Human Review: Required
-  // Original code:
-  // private canvasToastTimer: ReturnType<typeof setTimeout> | null = null;
 
-  // AI-REMOVED 2026-11-12:
-  // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
-  // Trigger: REQ-048 D7 已确认的画布状态拆分。
-  // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
-  // Replacement: CanvasActionImpl.canvasToastRevision
-  // Risk: 所有调用入口必须传入所属画布。
-  // Human Review: Required
-  // Original code:
-  // private canvasToastRevision = 0;
 
-  // AI-REMOVED 2026-11-12:
-  // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
-  // Trigger: REQ-048 D7 已确认的画布状态拆分。
-  // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
-  // Replacement: CanvasActionImpl.disposed
-  // Risk: 所有调用入口必须传入所属画布。
-  // Human Review: Required
-  // Original code:
-  // private disposed = false;
 
-  // AI-REMOVED 2026-11-12:
-  // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
-  // Trigger: REQ-048 D7 已确认的画布状态拆分。
-  // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
-  // Replacement: CanvasActionImpl.showCanvasToast
-  // Risk: 所有调用入口必须传入所属画布。
-  // Human Review: Required
-  // Original code:
-  // public readonly showCanvasToast: AppInternalAction["showCanvasToast"] = action((messageKey) => {
-  //     if (this.disposed) return;
-  //     if (this.canvasToastTimer !== null) clearTimeout(this.canvasToastTimer);
-  //     const revision = ++this.canvasToastRevision;
-  //     this.internalState.runtime.canvasToastKey = messageKey;
-  //     this.canvasToastTimer = setTimeout(action(() => {
-  //       if (this.disposed || revision !== this.canvasToastRevision) return;
-  //       this.internalState.runtime.canvasToastKey = null;
-  //       this.canvasToastTimer = null;
-  //     }), 3000);
-  //   });
   public readonly showCanvasToast: AppInternalAction["showCanvasToast"] = (...args: Parameters<AppInternalAction["showCanvasToast"]>) => this.canvas.actions.showCanvasToast(...args);
 
-  // AI-REMOVED 2026-11-12:
-  // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
-  // Trigger: REQ-048 D7 已确认的画布状态拆分。
-  // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
-  // Replacement: CanvasActionImpl.setCanvasAlert
-  // Risk: 所有调用入口必须传入所属画布。
-  // Human Review: Required
-  // Original code:
-  // public readonly setCanvasAlert: AppInternalAction["setCanvasAlert"] = action((messageKey) => {
-  //     if (!this.disposed) this.internalState.runtime.canvasAlertKey = messageKey;
-  //   });
   public readonly setCanvasAlert: AppInternalAction["setCanvasAlert"] = (...args: Parameters<AppInternalAction["setCanvasAlert"]>) => this.canvas.actions.setCanvasAlert(...args);
 
-  // AI-REMOVED 2026-11-12:
-  // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
-  // Trigger: REQ-048 D7 已确认的画布状态拆分。
-  // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
-  // Replacement: CanvasActionImpl.dispose
-  // Risk: 所有调用入口必须传入所属画布。
-  // Human Review: Required
-  // Original code:
-  // public readonly dispose = action(() => {
-  //     this.disposed = true;
-  //     ++this.canvasToastRevision;
-  //     if (this.canvasToastTimer !== null) clearTimeout(this.canvasToastTimer);
-  //     this.canvasToastTimer = null;
-  //     this.internalState.runtime.canvasToastKey = null;
-  //     this.internalState.runtime.canvasAlertKey = null;
-  //   });
   public readonly dispose = (...args: []) => this.canvas.actions.dispose(...args);
 
 
@@ -696,442 +500,26 @@ export class AppActionImpl implements AppAction, AppInternalAction {
       this.setLeftDockOpen(true);
     }
   });
-  // AI-REMOVED 2026-11-12:
-  // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
-  // Trigger: REQ-048 D7 已确认的画布状态拆分。
-  // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
-  // Replacement: CanvasActionImpl.setActiveTool
-  // Risk: 所有调用入口必须传入所属画布。
-  // Human Review: Required
-  // Original code:
-  // public readonly setActiveTool: AppInternalAction["setActiveTool"] = action((activeTool) => {
-  //     const previousActiveTool = this.internalState.activeTool;
-  //     if (previousActiveTool === activeTool) {
-  //       return;
-  //     }
-  //
-  //     if (!(previousActiveTool === "select" && activeTool === "single-placement")) {
-  //       this.internalState.runtime.selectingPlacementGroup = null;
-  //     }
-  //
-  //     if (activeTool !== "dark-pipe-link") {
-  //       this.internalState.toolInfo.darkPipeLink = null;
-  //     }
-  //
-  //     this.internalState.activeTool = activeTool;
-  //   });
   public readonly setActiveTool: AppInternalAction["setActiveTool"] = (...args: Parameters<AppInternalAction["setActiveTool"]>) => this.canvas.actions.setActiveTool(...args);
 
-  // AI-REMOVED 2026-11-12:
-  // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
-  // Trigger: REQ-048 D7 已确认的画布状态拆分。
-  // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
-  // Replacement: CanvasActionImpl.showCanvasFloatingToolbar
-  // Risk: 所有调用入口必须传入所属画布。
-  // Human Review: Required
-  // Original code:
-  // public readonly showCanvasFloatingToolbar: AppInternalAction["showCanvasFloatingToolbar"] = action((
-  //     buttonIds,
-  //     clientPixelPoint,
-  //   ) => {
-  //     const nextButtonIds = normalizeCanvasFloatingToolbarButtonIds(buttonIds);
-  //     const nextAnchor = normalizeClientPixelPoint(clientPixelPoint);
-  //
-  //     if (nextButtonIds.length === 0 || nextAnchor === null) {
-  //       this.hideCanvasFloatingToolbar();
-  //       return;
-  //     }
-  //
-  //     this.internalState.runtime.canvasFloatingToolbar.visible = true;
-  //     this.internalState.runtime.canvasFloatingToolbar.buttonIds = nextButtonIds;
-  //     this.internalState.runtime.canvasFloatingToolbar.anchor = nextAnchor;
-  //     this.internalState.runtime.canvasFloatingToolbar.attachedCollection = null;
-  //   });
   public readonly showCanvasFloatingToolbar: AppInternalAction["showCanvasFloatingToolbar"] = (...args: Parameters<AppInternalAction["showCanvasFloatingToolbar"]>) => this.canvas.actions.showCanvasFloatingToolbar(...args);
 
-  // AI-REMOVED 2026-11-12:
-  // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
-  // Trigger: REQ-048 D7 已确认的画布状态拆分。
-  // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
-  // Replacement: CanvasActionImpl.showCanvasFloatingToolbarForCollection
-  // Risk: 所有调用入口必须传入所属画布。
-  // Human Review: Required
-  // Original code:
-  // public readonly showCanvasFloatingToolbarForCollection: AppInternalAction["showCanvasFloatingToolbarForCollection"] = action((
-  //     buttonIds,
-  //     collectionType,
-  //   ) => {
-  //     const nextButtonIds = normalizeCanvasFloatingToolbarButtonIds(buttonIds);
-  //
-  //     if (nextButtonIds.length === 0) {
-  //       this.hideCanvasFloatingToolbar();
-  //       return false;
-  //     }
-  //
-  //     this.internalState.runtime.canvasFloatingToolbar.visible = true;
-  //     this.internalState.runtime.canvasFloatingToolbar.buttonIds = nextButtonIds;
-  //     this.internalState.runtime.canvasFloatingToolbar.attachedCollection = collectionType;
-  //
-  //     if (!this.alignCanvasFloatingToolbar()) {
-  //       this.hideCanvasFloatingToolbar();
-  //       return false;
-  //     }
-  //
-  //     return true;
-  //   });
   public readonly showCanvasFloatingToolbarForCollection: AppInternalAction["showCanvasFloatingToolbarForCollection"] = (...args: Parameters<AppInternalAction["showCanvasFloatingToolbarForCollection"]>) => this.canvas.actions.showCanvasFloatingToolbarForCollection(...args);
 
-  // AI-REMOVED 2026-11-12:
-  // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
-  // Trigger: REQ-048 D7 已确认的画布状态拆分。
-  // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
-  // Replacement: CanvasActionImpl.moveCanvasFloatingToolbar
-  // Risk: 所有调用入口必须传入所属画布。
-  // Human Review: Required
-  // Original code:
-  // public readonly moveCanvasFloatingToolbar: AppInternalAction["moveCanvasFloatingToolbar"] = action((
-  //     clientPixelPoint,
-  //   ) => {
-  //     if (!this.internalState.runtime.canvasFloatingToolbar.visible) {
-  //       return;
-  //     }
-  //
-  //     const nextAnchor = normalizeClientPixelPoint(clientPixelPoint);
-  //     if (nextAnchor === null) {
-  //       return;
-  //     }
-  //
-  //     this.internalState.runtime.canvasFloatingToolbar.anchor = nextAnchor;
-  //   });
   public readonly moveCanvasFloatingToolbar: AppInternalAction["moveCanvasFloatingToolbar"] = (...args: Parameters<AppInternalAction["moveCanvasFloatingToolbar"]>) => this.canvas.actions.moveCanvasFloatingToolbar(...args);
 
-  // AI-REMOVED 2026-11-12:
-  // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
-  // Trigger: REQ-048 D7 已确认的画布状态拆分。
-  // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
-  // Replacement: CanvasActionImpl.alignCanvasFloatingToolbar
-  // Risk: 所有调用入口必须传入所属画布。
-  // Human Review: Required
-  // Original code:
-  // public readonly alignCanvasFloatingToolbar: AppInternalAction["alignCanvasFloatingToolbar"] = action(() => {
-  //     const toolbar = this.internalState.runtime.canvasFloatingToolbar;
-  //     if (!toolbar.visible || toolbar.attachedCollection === null) {
-  //       return false;
-  //     }
-  //
-  //     const editor = this.workspace.editor;
-  //     if (editor === null) {
-  //       return false;
-  //     }
-  //
-  //     const collectionRect = editor.queries.findEntityCollectionGridRect(
-  //       toolbar.attachedCollection,
-  //     );
-  //     if (collectionRect === null) {
-  //       return false;
-  //     }
-  //
-  //     // AI-REMOVED 2026-08-25:
-  //     // Reason: 单独投影世界左上单元格无法代表旋转视角下的集合屏幕包围盒。
-  //     // Trigger: 基地视角旋转后，悬浮工具条锚点沿错误的屏幕方向计算。
-  //     // Evidence: 90°/180°/270° 下世界左上单元格不再是屏幕左上角，且世界 width 不再恒定映射到屏幕 X 轴。
-  //     // Replacement: 下方 collectionClientRect 使用完整 collectionRect 的四角投影结果。
-  //     // Risk: Low
-  //     // Human Review: Required
-  //     //
-  //     // Original code:
-  //     // const topLeftCellRect = editor.queries.findClientRectForGridCell({
-  //     //   x: collectionRect.x,
-  //     //   y: collectionRect.y,
-  //     // });
-  //     // if (topLeftCellRect === null) {
-  //     //   return false;
-  //     // }
-  //     const viewportState = this.canvas.view.state;
-  //     const collectionClientRect = resolveViewportRectFromWorldGridRect({
-  //       gridRect: collectionRect,
-  //       viewportBounds: viewportState.clientRect,
-  //       viewportCenter: viewportState.center,
-  //       gridCellPixelSize: viewportState.gridCellPixelSize,
-  //       displayRotation: viewportState.displayRotation,
-  //     });
-  //     if (collectionClientRect === null) {
-  //       return false;
-  //     }
-  //
-  //     const toolbarHeight = toolbar.measuredSize?.height ?? DEFAULT_CANVAS_FLOATING_TOOLBAR_HEIGHT;
-  //     const toolbarWidth = toolbar.measuredSize?.width ?? 0;
-  //     const viewport = viewportState.clientRect;
-  //
-  //     // AI-REMOVED 2026-08-25:
-  //     // Reason: 完整集合屏幕包围盒已经包含旋转后的实际宽度，不应再用单格宽度乘世界 width 重建。
-  //     // Trigger: 90°/270° 视角下集合的屏幕宽度对应世界 height。
-  //     // Evidence: resolveViewportRectFromWorldGridRect 会基于四角投影计算旋转后的 width。
-  //     // Replacement: aboveAnchor 直接使用 collectionClientRect.width。
-  //     // Risk: Low
-  //     // Human Review: Required
-  //     //
-  //     // Original code:
-  //     // const cellWidth = topLeftCellRect.width;
-  //
-  //     const halfToolbarHeight = toolbarHeight / 2;
-  //
-  //     const aboveAnchor: ClientPixelPoint = {
-  //       x:
-  //         collectionClientRect.left
-  //         + collectionClientRect.width / 2,
-  //       y:
-  //         collectionClientRect.top
-  //         - halfToolbarHeight
-  //         - FLOATING_TOOLBAR_DEVICE_GAP_PX,
-  //     };
-  //
-  //     let anchor = aboveAnchor;
-  //
-  //     const viewportTopSixth = viewport.top + viewport.height / 6;
-  //     if (aboveAnchor.y < viewportTopSixth) {
-  //       const viewportBottomFiveSixths = viewport.top + (viewport.height * 5) / 6;
-  //       const belowY =
-  //         collectionClientRect.top
-  //         + collectionClientRect.height
-  //         + halfToolbarHeight
-  //         + FLOATING_TOOLBAR_DEVICE_GAP_PX;
-  //
-  //       // AI-REMOVED 2026-08-25:
-  //       // Reason: 世界底边单元格在旋转视角下不一定处于屏幕底边，不能用于计算工具条下方锚点。
-  //       // Trigger: 集合靠近屏幕顶部时，90°/180°/270° 视角的下方回退位置仍会错乱。
-  //       // Evidence: 完整集合投影的 bottom 恒为 collectionClientRect.top + collectionClientRect.height。
-  //       // Replacement: 上方 belowY 基于 collectionClientRect 的屏幕底边计算。
-  //       // Risk: Low
-  //       // Human Review: Required
-  //       //
-  //       // Original code:
-  //       // const bottomCellY = collectionRect.y + collectionRect.height - 1;
-  //       // const bottomCellRect = editor.queries.findClientRectForGridCell({
-  //       //   x: collectionRect.x,
-  //       //   y: bottomCellY,
-  //       // });
-  //       //
-  //       // if (bottomCellRect !== null) {
-  //       //   const belowY =
-  //       //     bottomCellRect.top
-  //       //     + bottomCellRect.height
-  //       //     + halfToolbarHeight
-  //       //     + FLOATING_TOOLBAR_DEVICE_GAP_PX;
-  //       //
-  //       //   if (belowY <= viewportBottomFiveSixths) {
-  //       //     anchor = {
-  //       //       x: aboveAnchor.x,
-  //       //       y: belowY,
-  //       //     };
-  //       //   } else {
-  //       //     anchor = {
-  //       //       x: aboveAnchor.x,
-  //       //       y: viewport.top + toolbarHeight * 1.5,
-  //       //     };
-  //       //   }
-  //       // } else {
-  //       //   anchor = {
-  //       //     x: aboveAnchor.x,
-  //       //     y: viewport.top + toolbarHeight * 1.5,
-  //       //   };
-  //       // }
-  //       if (belowY <= viewportBottomFiveSixths) {
-  //         anchor = {
-  //           x: aboveAnchor.x,
-  //           y: belowY,
-  //         };
-  //       } else {
-  //         anchor = {
-  //           x: aboveAnchor.x,
-  //           y: viewport.top + toolbarHeight * 1.5,
-  //         };
-  //       }
-  //     }
-  //
-  //     if (toolbarWidth > 0) {
-  //       const halfWidth = toolbarWidth / 2;
-  //       const viewportLeft = viewport.left;
-  //       const viewportRight = viewport.left + viewport.width;
-  //
-  //       if (anchor.x - halfWidth < viewportLeft) {
-  //         anchor = {
-  //           x: viewportLeft + halfWidth,
-  //           y: anchor.y,
-  //         };
-  //       } else if (anchor.x + halfWidth > viewportRight) {
-  //         anchor = {
-  //           x: viewportRight - halfWidth,
-  //           y: anchor.y,
-  //         };
-  //       }
-  //     }
-  //
-  //     toolbar.anchor = anchor;
-  //     return true;
-  //   });
   public readonly alignCanvasFloatingToolbar: AppInternalAction["alignCanvasFloatingToolbar"] = (...args: Parameters<AppInternalAction["alignCanvasFloatingToolbar"]>) => this.canvas.actions.alignCanvasFloatingToolbar(...args);
 
-  // AI-REMOVED 2026-11-12:
-  // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
-  // Trigger: REQ-048 D7 已确认的画布状态拆分。
-  // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
-  // Replacement: CanvasActionImpl.setCanvasFloatingToolbarSize
-  // Risk: 所有调用入口必须传入所属画布。
-  // Human Review: Required
-  // Original code:
-  // public readonly setCanvasFloatingToolbarSize: AppInternalAction["setCanvasFloatingToolbarSize"] = action((size) => {
-  //     const nextSize = normalizeCanvasFloatingToolbarSize(size);
-  //     const currentSize = this.internalState.runtime.canvasFloatingToolbar.measuredSize;
-  //
-  //     if (
-  //       currentSize?.width === nextSize?.width
-  //       && currentSize?.height === nextSize?.height
-  //     ) {
-  //       return;
-  //     }
-  //
-  //     this.internalState.runtime.canvasFloatingToolbar.measuredSize = nextSize;
-  //     this.alignCanvasFloatingToolbar();
-  //   });
   public readonly setCanvasFloatingToolbarSize: AppInternalAction["setCanvasFloatingToolbarSize"] = (...args: Parameters<AppInternalAction["setCanvasFloatingToolbarSize"]>) => this.canvas.actions.setCanvasFloatingToolbarSize(...args);
 
-  // AI-REMOVED 2026-11-12:
-  // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
-  // Trigger: REQ-048 D7 已确认的画布状态拆分。
-  // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
-  // Replacement: CanvasActionImpl.hideCanvasFloatingToolbar
-  // Risk: 所有调用入口必须传入所属画布。
-  // Human Review: Required
-  // Original code:
-  // public readonly hideCanvasFloatingToolbar: AppInternalAction["hideCanvasFloatingToolbar"] = action(() => {
-  //     if (
-  //       !this.internalState.runtime.canvasFloatingToolbar.visible
-  //       && this.internalState.runtime.canvasFloatingToolbar.buttonIds.length === 0
-  //       && this.internalState.runtime.canvasFloatingToolbar.anchor === null
-  //       && this.internalState.runtime.canvasFloatingToolbar.attachedCollection === null
-  //     ) {
-  //       return;
-  //     }
-  //
-  //     this.internalState.runtime.canvasFloatingToolbar.visible = false;
-  //     this.internalState.runtime.canvasFloatingToolbar.buttonIds = [];
-  //     this.internalState.runtime.canvasFloatingToolbar.anchor = null;
-  //     this.internalState.runtime.canvasFloatingToolbar.attachedCollection = null;
-  //   });
   public readonly hideCanvasFloatingToolbar: AppInternalAction["hideCanvasFloatingToolbar"] = (...args: Parameters<AppInternalAction["hideCanvasFloatingToolbar"]>) => this.canvas.actions.hideCanvasFloatingToolbar(...args);
 
-  // AI-REMOVED 2026-11-12:
-  // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
-  // Trigger: REQ-048 D7 已确认的画布状态拆分。
-  // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
-  // Replacement: CanvasActionImpl.showCanvasRightDockToolbar
-  // Risk: 所有调用入口必须传入所属画布。
-  // Human Review: Required
-  // Original code:
-  // public readonly showCanvasRightDockToolbar: AppInternalAction["showCanvasRightDockToolbar"] = action((
-  //     items,
-  //   ) => {
-  //     const nextItems = normalizeCanvasRightDockToolbarItems(items);
-  //
-  //     if (nextItems.length === 0) {
-  //       this.hideCanvasRightDockToolbar();
-  //       return;
-  //     }
-  //
-  //     this.internalState.runtime.canvasRightDockToolbar.visible = true;
-  //     this.internalState.runtime.canvasRightDockToolbar.items = nextItems;
-  //     // AI-REMOVED 2026-08-22:
-  //     // Reason: 右侧工具列不再保存按钮数组和全局 mode。
-  //     // Trigger: 每个功能请求独立声明 button/shortcut/both。
-  //     // Evidence: nextItems 已包含归一化后的 operationId 与 presentation。
-  //     // Replacement: canvasRightDockToolbar.items = nextItems。
-  //     // Risk: Low
-  //     // Human Review: Required
-  //     //
-  //     // Original code:
-  //     // this.internalState.runtime.canvasRightDockToolbar.buttonIds = nextButtonIds;
-  //     // this.internalState.runtime.canvasRightDockToolbar.mode = mode;
-  //   });
   public readonly showCanvasRightDockToolbar: AppInternalAction["showCanvasRightDockToolbar"] = (...args: Parameters<AppInternalAction["showCanvasRightDockToolbar"]>) => this.canvas.actions.showCanvasRightDockToolbar(...args);
 
-  // AI-REMOVED 2026-11-12:
-  // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
-  // Trigger: REQ-048 D7 已确认的画布状态拆分。
-  // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
-  // Replacement: CanvasActionImpl.hideCanvasRightDockToolbar
-  // Risk: 所有调用入口必须传入所属画布。
-  // Human Review: Required
-  // Original code:
-  // public readonly hideCanvasRightDockToolbar: AppInternalAction["hideCanvasRightDockToolbar"] = action(() => {
-  //     if (
-  //       !this.internalState.runtime.canvasRightDockToolbar.visible
-  //       && this.internalState.runtime.canvasRightDockToolbar.items.length === 0
-  //     ) {
-  //       return;
-  //     }
-  //
-  //     this.internalState.runtime.canvasRightDockToolbar.visible = false;
-  //     this.internalState.runtime.canvasRightDockToolbar.items = [];
-  //     // AI-REMOVED 2026-08-22:
-  //     // Reason: 隐藏动作清理新的逐项请求状态。
-  //     // Trigger: canvasRightDockToolbar.buttonIds 已被 items 替代。
-  //     // Evidence: WorkbenchApp 从 items 渲染右侧工具列。
-  //     // Replacement: canvasRightDockToolbar.items = []。
-  //     // Risk: Low
-  //     // Human Review: Required
-  //     //
-  //     // Original code:
-  //     // this.internalState.runtime.canvasRightDockToolbar.buttonIds = [];
-  //   });
   public readonly hideCanvasRightDockToolbar: AppInternalAction["hideCanvasRightDockToolbar"] = (...args: Parameters<AppInternalAction["hideCanvasRightDockToolbar"]>) => this.canvas.actions.hideCanvasRightDockToolbar(...args);
 
-  // AI-REMOVED 2026-11-12:
-  // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
-  // Trigger: REQ-048 D7 已确认的画布状态拆分。
-  // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
-  // Replacement: CanvasActionImpl.showCanvasTopLeftCornerToolbar
-  // Risk: 所有调用入口必须传入所属画布。
-  // Human Review: Required
-  // Original code:
-  // public readonly showCanvasTopLeftCornerToolbar: AppInternalAction["showCanvasTopLeftCornerToolbar"] = action((
-  //     buttonIds,
-  //   ) => {
-  //     const nextToolbarState = normalizeCanvasTopLeftCornerToolbarButtons(buttonIds);
-  //
-  //     if (nextToolbarState.buttonIds.length === 0) {
-  //       this.hideCanvasTopLeftCornerToolbar();
-  //       return;
-  //     }
-  //
-  //     this.internalState.runtime.canvasTopLeftCornerToolbar.visible = true;
-  //     this.internalState.runtime.canvasTopLeftCornerToolbar.buttonIds = nextToolbarState.buttonIds;
-  //     this.internalState.runtime.canvasTopLeftCornerToolbar.initialOffButtonIds =
-  //       nextToolbarState.initialOffButtonIds;
-  //   });
   public readonly showCanvasTopLeftCornerToolbar: AppInternalAction["showCanvasTopLeftCornerToolbar"] = (...args: Parameters<AppInternalAction["showCanvasTopLeftCornerToolbar"]>) => this.canvas.actions.showCanvasTopLeftCornerToolbar(...args);
 
-  // AI-REMOVED 2026-11-12:
-  // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
-  // Trigger: REQ-048 D7 已确认的画布状态拆分。
-  // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
-  // Replacement: CanvasActionImpl.hideCanvasTopLeftCornerToolbar
-  // Risk: 所有调用入口必须传入所属画布。
-  // Human Review: Required
-  // Original code:
-  // public readonly hideCanvasTopLeftCornerToolbar: AppInternalAction["hideCanvasTopLeftCornerToolbar"] = action(() => {
-  //     if (
-  //       !this.internalState.runtime.canvasTopLeftCornerToolbar.visible
-  //       && this.internalState.runtime.canvasTopLeftCornerToolbar.buttonIds.length === 0
-  //       && this.internalState.runtime.canvasTopLeftCornerToolbar.initialOffButtonIds.length === 0
-  //     ) {
-  //       return;
-  //     }
-  //
-  //     this.internalState.runtime.canvasTopLeftCornerToolbar.visible = false;
-  //     this.internalState.runtime.canvasTopLeftCornerToolbar.buttonIds = [];
-  //     this.internalState.runtime.canvasTopLeftCornerToolbar.initialOffButtonIds = [];
-  //   });
   public readonly hideCanvasTopLeftCornerToolbar: AppInternalAction["hideCanvasTopLeftCornerToolbar"] = (...args: Parameters<AppInternalAction["hideCanvasTopLeftCornerToolbar"]>) => this.canvas.actions.hideCanvasTopLeftCornerToolbar(...args);
 
 
@@ -1321,153 +709,13 @@ function areScreenProfilesEqual(left: ScreenProfile, right: ScreenProfile): bool
 }
 
 
-// AI-REMOVED 2026-11-12:
-// Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
-// Trigger: REQ-048 D7 已确认的画布状态拆分。
-// Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
-// Replacement: canvas-action-impl.ts
-// Risk: 所有调用入口必须传入所属画布。
-// Human Review: Required
-// Original code:
-// function normalizeCanvasFloatingToolbarButtonIds(
-//   buttonIds: readonly CanvasFloatingToolbarButtonId[],
-// ): CanvasFloatingToolbarButtonId[] {
-//   const knownButtonIds = new Set<CanvasFloatingToolbarButtonId>(CANVAS_FLOATING_TOOLBAR_BUTTON_IDS);
-//   const deduped: CanvasFloatingToolbarButtonId[] = [];
-//
-//   for (const buttonId of buttonIds) {
-//     if (!knownButtonIds.has(buttonId) || deduped.includes(buttonId)) {
-//       continue;
-//     }
-//
-//     deduped.push(buttonId);
-//   }
-//
-//   return deduped;
-// }
 
 
 
-// AI-REMOVED 2026-11-12:
-// Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
-// Trigger: REQ-048 D7 已确认的画布状态拆分。
-// Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
-// Replacement: canvas-action-impl.ts
-// Risk: 所有调用入口必须传入所属画布。
-// Human Review: Required
-// Original code:
-// function normalizeCanvasRightDockToolbarItems(
-//   items: readonly CanvasRightDockToolbarItemRequest[],
-// ): CanvasRightDockToolbarItemRequest[] {
-//   const knownOperationIds = new Set<CanvasOperationId>(
-//     // AI-REMOVED 2026-11-12:
-//     // Reason: 场景共享契约迁入 Domain Shared，避免 Editor/App 各有一份语义。
-//     // Trigger: REQ-048 已确认 D2 契约。
-//     // Evidence: 会话、只读源与交互画布均需要相同标识和只读快照。
-//     // Replacement: Domain Shared CANVAS_OPERATION_IDS
-//     // Risk: 所有引用需同步迁移。
-//     // Human Review: Required
-//     // Original code:
-//     // CANVAS_RIGHT_DOCK_TOOLBAR_OPERATION_IDS,
-//     CANVAS_OPERATION_IDS,
-//   );
-//   const knownPresentations = new Set<CanvasRightDockToolbarPresentation>([
-//     "button",
-//     "shortcut",
-//     "both",
-//   ]);
-//   const seenOperationIds = new Set<CanvasOperationId>();
-//   const deduped: CanvasRightDockToolbarItemRequest[] = [];
-//
-//   for (const item of items) {
-//     if (
-//       !knownOperationIds.has(item.operationId)
-//       || !knownPresentations.has(item.presentation)
-//       || seenOperationIds.has(item.operationId)
-//     ) {
-//       continue;
-//     }
-//
-//     seenOperationIds.add(item.operationId);
-//     deduped.push({
-//       operationId: item.operationId,
-//       presentation: item.presentation,
-//     });
-//   }
-//
-//   return deduped;
-// }
 
 
-// AI-REMOVED 2026-08-22:
-// Reason: 右侧工具列不再归一化按钮 ID，而是归一化功能展示请求。
-// Trigger: 用户要求呼起方仅指定功能和本次展示形态。
-// Evidence: normalizeCanvasRightDockToolbarItems 同时校验 operationId、presentation 并按功能去重。
-// Replacement: normalizeCanvasRightDockToolbarItems。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// function normalizeCanvasRightDockToolbarButtonIds(
-//   buttonIds: readonly CanvasRightDockToolbarButtonId[],
-// ): CanvasRightDockToolbarButtonId[] {
-//   const knownButtonIds = new Set<CanvasRightDockToolbarButtonId>(CANVAS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS);
-//   const deduped: CanvasRightDockToolbarButtonId[] = [];
-//
-//   for (const buttonId of buttonIds) {
-//     if (!knownButtonIds.has(buttonId) || deduped.includes(buttonId)) {
-//       continue;
-//     }
-//
-//     deduped.push(buttonId);
-//   }
-//
-//   return deduped;
-// }
 
 
-// AI-REMOVED 2026-11-12:
-// Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
-// Trigger: REQ-048 D7 已确认的画布状态拆分。
-// Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
-// Replacement: canvas-action-impl.ts
-// Risk: 所有调用入口必须传入所属画布。
-// Human Review: Required
-// Original code:
-// function normalizeCanvasTopLeftCornerToolbarButtons(
-//   buttonIds: readonly CanvasTopLeftCornerToolbarShowButtonId[],
-// ): {
-//   buttonIds: CanvasTopLeftCornerToolbarButtonId[];
-//   initialOffButtonIds: CanvasTopLeftCornerToolbarButtonId[];
-// } {
-//   const knownButtonIds = new Set<CanvasTopLeftCornerToolbarButtonId>(
-//     CANVAS_TOP_LEFT_CORNER_TOOLBAR_BUTTON_IDS,
-//   );
-//   const deduped: CanvasTopLeftCornerToolbarButtonId[] = [];
-//   const initialOffButtonIds: CanvasTopLeftCornerToolbarButtonId[] = [];
-//
-//   for (const requestedButtonId of buttonIds) {
-//     const isInitialOffButton = requestedButtonId.endsWith("-off");
-//     const buttonId = (isInitialOffButton
-//       ? requestedButtonId.slice(0, -4)
-//       : requestedButtonId) as CanvasTopLeftCornerToolbarButtonId;
-//
-//     if (!knownButtonIds.has(buttonId) || deduped.includes(buttonId)) {
-//       continue;
-//     }
-//
-//     deduped.push(buttonId);
-//
-//     if (isInitialOffButton) {
-//       initialOffButtonIds.push(buttonId);
-//     }
-//   }
-//
-//   return {
-//     buttonIds: deduped,
-//     initialOffButtonIds,
-//   };
-// }
 
 
 function normalizeHelpDialogTab(tabId: string): string | null {
@@ -1483,84 +731,8 @@ function normalizeToolboxDialogTab(tabId: string): string | null {
 }
 
 
-// AI-REMOVED 2026-11-12:
-// Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
-// Trigger: REQ-048 D7 已确认的画布状态拆分。
-// Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
-// Replacement: canvas-action-impl.ts
-// Risk: 所有调用入口必须传入所属画布。
-// Human Review: Required
-// Original code:
-// function normalizeClientPixelPoint(
-//   clientPixelPoint: ClientPixelPoint,
-// ): ClientPixelPoint | null {
-//   if (!Number.isFinite(clientPixelPoint.x) || !Number.isFinite(clientPixelPoint.y)) {
-//     return null;
-//   }
-//
-//   return {
-//     x: clientPixelPoint.x,
-//     y: clientPixelPoint.y,
-//   };
-// }
 
 
 
-// AI-REMOVED 2026-11-12:
-// Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
-// Trigger: REQ-048 D7 已确认的画布状态拆分。
-// Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
-// Replacement: canvas-action-impl.ts
-// Risk: 所有调用入口必须传入所属画布。
-// Human Review: Required
-// Original code:
-// function normalizeCanvasFloatingToolbarSize(
-//   size: CanvasFloatingToolbarSize | null,
-// ): CanvasFloatingToolbarSize | null {
-//   if (
-//     size === null
-//     || !Number.isFinite(size.width)
-//     || !Number.isFinite(size.height)
-//     || size.width <= 0
-//     || size.height <= 0
-//   ) {
-//     return null;
-//   }
-//
-//   return {
-//     width: size.width,
-//     height: size.height,
-//   };
-// }
 
 
-// AI-REMOVED 2026-06-15:
-// Reason: 重构为像素偏移锚点，不再需要基于格子和 deviceClass 的间距计算。
-// Trigger: 用户需求 — toolbar 改为距离设备包围盒 0 格 + 半按钮高 + 6px，统一桌面/移动。
-// Evidence: alignCanvasFloatingToolbar 内已直接计算 aboveAnchor，不再调用此函数。
-// Replacement: alignCanvasFloatingToolbar 方法内直接计算。
-// Risk: Low
-// Human Review: Not required
-//
-// Original code:
-// function resolveCanvasFloatingToolbarAnchor(options: {
-//   collectionWidth: number;
-//   deviceClass: ScreenProfile["deviceClass"];
-//   topLeftAboveCellRect: ClientPixelRect;
-//   toolbarHeight: number;
-// }): ClientPixelPoint {
-//   const cellHeight = options.topLeftAboveCellRect.height;
-//   const verticalOverflow = Math.max(0, options.toolbarHeight - cellHeight);
-//   const desktopOffset = options.deviceClass === "desktop" ? cellHeight : 0;
-//
-//   return {
-//     x:
-//       options.topLeftAboveCellRect.left
-//       + options.topLeftAboveCellRect.width * options.collectionWidth / 2,
-//     y:
-//       options.topLeftAboveCellRect.top
-//       - cellHeight / 2
-//       - verticalOverflow / 2
-//       + desktopOffset,
-//   };
-// }

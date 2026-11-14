@@ -10,19 +10,6 @@ import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 import { compileSimulationTopology } from "@/simulation/topology/compiler";
 import type { CompiledSimulationTopology } from "@/simulation/contracts/types";
 import type { SimulationRuntimeExport } from "@/simulation/legacy/runtime-export";
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/timeline-worker-runtime/index.json
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// import {
-//   createBlueprint,
-//   createEntity,
-//   createWorldDocumentFromBlueprint,
-// } from "./blueprint-test-helpers";
 import { createWorldDocumentFromBlueprint } from "./blueprint-test-helpers";
 import { createSimulationTestRegistry } from "./simulation-test-registry";
 
@@ -687,16 +674,6 @@ function createPresentationTestDeviceSnapshot(deviceId: string) {
     recipe: null,
     channelRecipes: {},
     admissionCounters: {},
-    // AI-REMOVED 2026-07-23:
-    // Reason: 展示快照测试不再构造已删除的分钟计量字段。
-    // Trigger: 消耗机制迁移到真实槽位和 consumption channel。
-    // Evidence: RuntimeDeviceSnapshot 已删除 meteredConsumption。
-    // Replacement: channelRecipes + slots。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // meteredConsumption: null,
   };
 }
 
@@ -762,32 +739,6 @@ function createEmptyTopology(): CompiledSimulationTopology {
 }
 
 function createConsumptionTimelineTopology(): CompiledSimulationTopology {
-  // AI-REMOVED 2026-09-14:
-  // Reason: 场景构造已批量固化为带版本的蓝图文件。
-  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-  // Replacement: src/tests/fixtures/blueprints/simulation/timeline-worker-runtime/index.json
-  // Risk: Low；断言与被测动作不变。
-  // Human Review: Required
-  // Original code:
-  // createBlueprint("timeline-consumption-gas", [
-  //     createEntity("xiranite-oven", "xiranite_oven_1", 2, 0, 0, {
-  //       channelRecipes: {
-  //         default: "xiranite_oven_xiranite_powder_2",
-  //       },
-  //       "storageSlotGroups[0].slots[0].initialItemType": "item_carbon_mtl",
-  //       "storageSlotGroups[0].slots[0].initialCount": 50,
-  //       "storageSlotGroups[1].slots[0].initialItemType": "item_liquid_water",
-  //       "storageSlotGroups[1].slots[0].initialCount": 50,
-  //     }),
-  //     createEntity("gas-source", "gas_storager_1", -4, 0, 0, {
-  //       "storageSlotGroups[0].slots[0].initialItemType": "item_gas_inert",
-  //       "storageSlotGroups[0].slots[0].initialCount": 50,
-  //     }),
-  //     createEntity("gas-pipe", "pipe_straight_1x1", -1, 1),
-  //     createEntity("gas-diffuser", "vaporizer_1", 0, 0),
-  //     createEntity("power", "power_diffuser_1", 3, 5),
-  //   ])
   const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/timeline-worker-runtime/scene-01-timeline-consumption-gas-5740c606.schema7.json");
   const document = createWorldDocumentFromBlueprint(blueprint);
   return compileSimulationTopology({
@@ -799,34 +750,6 @@ function createConsumptionTimelineTopology(): CompiledSimulationTopology {
 }
 
 function createAdmissionTimelineTopology(): CompiledSimulationTopology {
-  // AI-REMOVED 2026-09-14:
-  // Reason: 场景构造已批量固化为带版本的蓝图文件。
-  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-  // Replacement: src/tests/fixtures/blueprints/simulation/timeline-worker-runtime/index.json
-  // Risk: Low；断言与被测动作不变。
-  // Human Review: Required
-  // Original code:
-  // createBlueprint("timeline-admission-snapshot", [
-  //     createEntity("source", "storager_1", 0, 0, 90, {
-  //       "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
-  //       "storageSlotGroups[0].slots[0].initialCount": 200,
-  //       "storageSlotGroups[0].slots[0].ignoreStock": true,
-  //     }),
-  //     createEntity("admission", "log_admission", 3, 1, 0, {
-  //       "portGroups[0].ports[0].acceptRule": {
-  //         base: { kind: "item", itemId: "item_iron_ore" },
-  //         exclude: [],
-  //       },
-  //       "portGroups[0].ports[0].admissionRule": {
-  //         itemId: "item_iron_ore",
-  //         limit: null,
-  //         perMinuteLimit: null,
-  //       },
-  //     }),
-  //     createEntity("belt", "belt_straight_1x1", 4, 1),
-  //     createEntity("sink", "loader_1", 5, 0, 270),
-  //   ])
   const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/timeline-worker-runtime/scene-02-timeline-admission-snapshot-981329ef.schema7.json");
   const document = createWorldDocumentFromBlueprint(blueprint);
   return compileSimulationTopology({

@@ -17,7 +17,6 @@ export function resolveDeliveredPortVariant(ports, key) {
 }
 
 /** 逻辑占地由项目显式订正；共享视图的所有映射必须采用相同几何。 */
-// AI-CORRECTION 2026-10-28: 占地宽高仍为整格，画布内的原点允许半格等有限小数，与精灵锚点保持一致。
 export function resolveProjectFootprintRect(spatial, entries) {
   const overrides = entries.filter((entry) => Object.hasOwn(entry, 'projectFootprintRectCells'));
   if (!overrides.length) return spatial.footprintRectCells;
@@ -41,9 +40,6 @@ export function resolveProjectFootprintRect(spatial, entries) {
 }
 
 /** 保留原件；数值图仅无损解码为 RGBA 并 gzip，避免浏览器颜色管理改变高度字节。 */
-// AI-CORRECTION 2026-09-11: 普通建筑还需无损反射像素行并转换空间元数据；contract2 保留自身画布契约。
-// AI-CORRECTION 2026-09-13: 发布比例显式控制数值图最近邻采样和特效逐帧重排；裁切特效补透明边界。
-// AI-CORRECTION 2026-09-19: 原件只在网站导入临时批次中读取，不再保留到仓库。
 export async function publishBuildingPortEffects({
   sourceDirectory,
   outputDirectory = 'public/3d-top-view/port-effects',
@@ -104,7 +100,6 @@ export async function publishBuildingPortEffects({
           row.copy(data, bottom);
         }
       }
-      // AI-CORRECTION 2026-09-20: 网站高度图已经是 64px 物理像素，目标倍率必须使用 target/source。
       const scaled = await resizeAssetRgba(data, info.width, info.height, scale, true, padToPixel);
       await writeFile(destination, gzipSync(scaled.data, { level: 9 }));
       result = { file, width: scaled.width, height: scaled.height, sourceHeight: info.height };
@@ -162,7 +157,7 @@ export async function publishBuildingPortEffects({
     const requestedVariantKeys = new Set(ports?.portFxApplicable === false ? [] : ports?.deliveryVariantKeys ?? []);
     const availableVariantKeys = new Set((ports?.variants ?? []).map((variant) => variant.rendererTemplateKey));
     const sourcePath = `${building.buildingId}/${building.view}`;
-    // 2026-10-16：默认高度跟随静态展示片段；动画设备也有独立静态回退，不能误用空田高度。
+    // 默认高度跟随静态展示片段；动画设备也有独立静态回退，不能误用空田高度。
     const staticPhases = new Set(collection.entries.filter((entry) => entry.sourcePath === sourcePath)
       .map((entry) => entry.staticPhase ?? entry.animationPlayback?.staticClip)
       .filter((phase) => phase !== undefined));

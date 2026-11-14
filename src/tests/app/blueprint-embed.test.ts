@@ -32,7 +32,7 @@ async function session(
 ) {
   const workspace: WorkspaceContract = {
     state: createWorkspaceState(), registry: createRegistryContract(), app: null, editor: null,
-    render: null, simulation: null, audio: null, sync: null, blueprintPlanner: null,
+    render: null, simulation: null, audio: null, sync: null,
   };
   const initialDocument = createEmbedWorldDocument(blueprint, workspace.registry);
   const app = createAppTestHost(workspace, { mode: "embed" });

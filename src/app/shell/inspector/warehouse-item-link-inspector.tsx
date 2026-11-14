@@ -19,6 +19,7 @@ import type { WarehouseItemLinkInspectorDeclaration } from "@/domain/registry/ty
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import { rotateGridRotation } from "@/shared/geometry/grid";
 import {
+  resolveOutputPortSideLabels,
   resolveSharedOutputGroupRows,
   type OutputGroupRow,
 } from "@/app/shell/inspector/port-output-config-model";
@@ -84,6 +85,8 @@ export function WarehouseItemLinkInspector({
   const deviceClass = appHost.state?.screenProfile?.deviceClass ?? "desktop";
   const displayRotation = appHost.mainCanvas.view.state.displayRotation;
   const locatorRotation = rotateGridRotation(entity.rotation, displayRotation);
+  // 输出端口按屏幕方位命名（取代 P# 序号）。
+  const outputSideLabels = resolveOutputPortSideLabels({ definition, rows: outputRows, rotation: locatorRotation, translate });
 
   if (rows.length === 0) {
     return (
@@ -92,18 +95,6 @@ export function WarehouseItemLinkInspector({
         dataInspectorKey="warehouse-item-link"
         title={translate("inspectorText.depotItemLink")}
       >
-        {/*
-          AI-REMOVED 2026-05-26:
-          Reason: inspector 卡片不再显示标题。
-          Trigger: 槽位配置 inspector 需求要求所有 inspector 无标题和副标题。
-          Evidence: 用户明确要求“所有inspector都没有标题和副标题”。
-          Replacement: 空状态文本直接作为主体内容。
-          Risk: Low
-          Human Review: Required
-
-          Original code:
-          <h4>仓库物品链接</h4>
-        */}
         <p>{translate("inspectorText.noLinkableSlots")}</p>
       </InspectorCollapsiblePanel>
     );
@@ -142,7 +133,6 @@ export function WarehouseItemLinkInspector({
       });
 
       // 自然资源物品默认开启无限供应
-      // AI-CORRECTION 2026-08-19: 自然资源是否无限现由“地区资源”统一决定；设备文档槽位必须清除旧 ignoreStock，避免有限 Profile 被绕过。
       const selectedItem = itemById.get(itemId);
       if (selectedItem?.tags.includes(translate("inspectorText.naturalResources"))) {
         patchEntityConfig({ [row.ignoreStockPath]: false });
@@ -166,86 +156,6 @@ export function WarehouseItemLinkInspector({
     });
   };
 
-  // AI-REMOVED 2026-06-05:
-  // Reason: 旧实现复用 slot-config-row 卡片行和原生 checkbox，视觉上与已美化 Inspector 的列表行、图标按钮和开关控件不一致。
-  // Trigger: 用户要求按 InspectorPanel 设计风格规范美化“仓库物品链接” Inspector，并保持功能不变。
-  // Evidence: Search-First 定位到 port-output-config-inspector / slot-config-inspector 已采用专用列表行、物品图标、低装饰边框和图标化危险按钮。
-  // Replacement: 下方 warehouse-link-list / warehouse-link-row JSX。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // {rows.map((row) => {
-  //   const itemDefinition = row.currentItemId === null
-  //     ? null
-  //     : itemById.get(row.currentItemId) ?? null;
-  //   const itemLabel = itemDefinition === null
-  //     ? translate("inspector.warehouseItemLink.selectItem")
-  //     : translate(itemDefinition.nameKey);
-  //   const canClear = row.currentItemId !== null;
-  //
-  //   return (
-  //     <div
-  //       className={cm(styles, "slot-config-row")}
-  //       data-slot-id={row.slotId}
-  //       key={row.slotId}
-  //     >
-  //       <div className={cm(styles, "slot-config-row-header")}>
-  //         <strong>{row.slotId}</strong>
-  //       </div>
-  //       <div className={cm(styles, "slot-config-row-main")}>
-  //         <button
-  //           className={cm(styles, "slot-config-item-button")}
-  //           data-slot-action="pick-item"
-  //           disabled={pendingLinkIndex === row.linkIndex}
-  //           onClick={() => {
-  //             void requestItemSelection(row);
-  //           }}
-  //           type="button"
-  //         >
-  //           <span>{itemLabel}</span>
-  //         </button>
-  //         <div className={cm(styles, "slot-config-row-actions")}>
-  //           <label className={cm(styles, "warehouse-link-ignore-stock")}>
-  //             <input
-  //               checked={row.currentIgnoreStock}
-  //               disabled={row.currentItemId === null}
-  //               onChange={() => {
-  //                 toggleIgnoreStock(row);
-  //               }}
-  //               type="checkbox"
-  //             />
-  //             <span>{translate("inspector.warehouseItemLink.ignoreStock")}</span>
-  //           </label>
-  //           <button
-  //             className={cm(styles, "slot-config-clear-button")}
-  //             data-slot-action="clear-item"
-  //             disabled={!canClear}
-  //             onClick={() => {
-  //               clearLink(row);
-  //             }}
-  //             type="button"
-  //           >
-  //             <LucideX aria-hidden="true" />
-  //             {/*
-  //               AI-REMOVED 2026-06-04:
-  //               Reason: “链接”已经由当前 Inspector 标题和行上下文表达，按钮只需要保留动作动词。
-  //               Trigger: 用户要求文字不能重复表达已由区域或上下文表达的信息。
-  //               Evidence: InspectorPanel设计风格规范 2.5。
-  //               Replacement: <span>清除</span>
-  //               Risk: Low
-  //               Human Review: Required
-  //
-  //               Original code:
-  //               <span>清除链接</span>
-  //             */}
-  //             <span>清除</span>
-  //           </button>
-  //         </div>
-  //       </div>
-  //     </div>
-  //   );
-  // })}
 
   return (
     <InspectorCollapsiblePanel
@@ -256,23 +166,6 @@ export function WarehouseItemLinkInspector({
       data-render-mode={mode}
       title={translate("inspectorText.depotItemLink")}
     >
-      {/*
-        AI-REMOVED 2026-05-26:
-        Reason: inspector 卡片不再显示标题和副标题。
-        Trigger: 槽位配置 inspector 需求要求所有 inspector 无标题和副标题。
-        Evidence: 用户明确要求“所有inspector都没有标题和副标题”。
-        Replacement: 链接行列表直接作为主体内容。
-        Risk: Low
-        Human Review: Required
-
-        Original code:
-        <div className={cm(styles, "slot-config-group-header")}>
-          <div>
-            <h4>仓库物品链接</h4>
-            <p>{translate("inspector.warehouseItemLink.description")}</p>
-          </div>
-        </div>
-      */}
       <div className={cm(styles, "warehouse-link-list")}>
         {rows.map((row) => {
           const itemDefinition = row.currentItemId === null
@@ -283,7 +176,9 @@ export function WarehouseItemLinkInspector({
             ? translate("inspector.warehouseItemLink.selectItem")
             : translate(itemDefinition.nameKey);
           const canClear = row.currentItemId !== null;
-          const slotLabel = row.boundOutputRow?.portLabel ?? `${translate("inspectorText.slot")} ${row.linkIndex + 1}`;
+          const slotLabel = (row.boundOutputRow === null ? undefined : outputSideLabels.get(row.boundOutputRow.portGroup.id))
+            ?? row.boundOutputRow?.portLabel
+            ?? `${translate("inspectorText.slot")} ${row.linkIndex + 1}`;
           const slotTitle = `${row.storageGroupId} / ${row.slotId}`;
           const ignoreStockLabel = translate("inspector.warehouseItemLink.ignoreStock");
 
@@ -301,14 +196,23 @@ export function WarehouseItemLinkInspector({
                   <span className={cm(styles, "warehouse-link-slot-label")}>{slotLabel}</span>
                 </div>
               ) : (
+                <button
+                  className={cm(styles, "port-output-locator-button")}
+                  disabled={pendingLinkIndex === row.linkIndex}
+                  onClick={() => {
+                    void requestItemSelection(row);
+                  }}
+                  type="button"
+                >
                 <PortOutputLocatorBadge
                   definition={definition}
-                  portLabel={row.boundOutputRow.portLabel}
+                  portLabel={outputSideLabels.get(row.boundOutputRow.portGroup.id) ?? row.boundOutputRow.portLabel}
                   rows={outputRows}
                   rotation={locatorRotation}
                   targetPortGroupId={row.boundOutputRow.portGroup.id}
-                  title={`${row.boundOutputRow.portLabel} ${translate(row.boundOutputRow.label)} ${translate("inspectorText.location")}`}
+                  title={`${outputSideLabels.get(row.boundOutputRow.portGroup.id) ?? row.boundOutputRow.portLabel} · ${translate(row.boundOutputRow.label)}`}
                 />
+                </button>
               )}
               <button
                 className={cm(styles, "warehouse-link-item-button")}
@@ -329,37 +233,6 @@ export function WarehouseItemLinkInspector({
                 </span>
                 <span className={cm(styles, "warehouse-link-item-name")}>{itemLabel}</span>
               </button>
-              {/*
-                AI-REMOVED 2026-06-05:
-                Reason: 原“无限物品”文字开关占用横向空间，且文字与开关状态重复表达同一功能。
-                Trigger: 用户要求改成无限符号的切换形按钮，并且需要通过视觉元素明显区分是否切换到无限。
-                Evidence: InspectorPanel设计风格规范 2.6 要求开关控件已表达开/关时不再重复显示文案；当前仓库行需要腾出端口定位徽标空间。
-                Replacement: 下方 warehouse-link-infinity-button。
-                Risk: Low
-                Human Review: Required
-
-                Original code:
-                <label
-                  className={cm(styles, "warehouse-link-ignore-stock", row.currentItemId === null ? "is-disabled" : "")}
-                  title={ignoreStockLabel}
-                >
-                  <span className={cm(styles, "warehouse-link-ignore-stock-copy")}>
-                    {ignoreStockLabel}
-                  </span>
-                  <input
-                    aria-label={`${slotLabel} ${ignoreStockLabel}`}
-                    checked={row.currentIgnoreStock}
-                    disabled={row.currentItemId === null}
-                    onChange={() => {
-                      toggleIgnoreStock(row);
-                    }}
-                    type="checkbox"
-                  />
-                  <span className={cm(styles, "warehouse-link-ignore-stock-track")} aria-hidden="true" />
-                </label>
-              */}
-              {/* AI-CORRECTION 2026-08-19: 自然资源的无限状态只能在“地区资源”面板编辑，仓库链接行不再显示局部无限按钮。 */}
-              {/* AI-CORRECTION 2026-08-20: 上述“隐藏按钮”会破坏仓库链接行的操作列一致性；现在保留锁定态按钮，并通过 Tooltip 说明地区资源控制来源。 */}
               {itemDefinition?.tags.includes(translate("inspectorText.naturalResources")) ? (
                 <LockedNaturalResourceInfinityButton
                   ignoreStockLabel={ignoreStockLabel}
@@ -396,18 +269,6 @@ export function WarehouseItemLinkInspector({
                 type="button"
               >
                 <LucideTrash2 aria-hidden="true" />
-                {/*
-                  AI-REMOVED 2026-06-04:
-                  Reason: “链接”已经由当前 Inspector 标题和行上下文表达，按钮只需要保留动作动词。
-                  Trigger: 用户要求文字不能重复表达已由区域或上下文表达的信息。
-                  Evidence: InspectorPanel设计风格规范 2.5。
-                  Replacement: <span className={cm(styles, "warehouse-link-action-label")}>清除</span>
-                  Risk: Low
-                  Human Review: Required
-
-                  Original code:
-                  <span>清除链接</span>
-                */}
                 <span className={cm(styles, "warehouse-link-action-label")}>{translate("inspectorText.clear")}</span>
               </button>
             </div>
@@ -679,8 +540,6 @@ function resolveSlotGroupDomain(
   return storageGroup.kind;
 }
 
-// AI-CORRECTION 2026-05-16: domain 判定统一委托 RegistryQuery.isItemLiquid，不再本地推断。
-// AI-CORRECTION 2026-07-10: 气体加入后改为 RegistryQuery.resolveItemDomain，并允许 fluid 匹配 liquid/gas。
 function matchesItemDomain(
   item: ItemDefinition,
   domain: InspectorItemDomainFilter,

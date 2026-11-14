@@ -81,7 +81,6 @@ export const INSPECTOR_TYPE = {
    * 标尺左侧显示该较大值所属窗口锁定的计量物品图标。
    * 标尺范围来自 EntityDefinition.meteredConsumption，游标值来自
    * SimulationDeviceRuntimeStatusReadModel.meteredConsumption。
-   * AI-CORRECTION 2026-07-23: 数据源已改为 consumption-channel 绑定的真实槽位；
    * 标尺游标显示槽位物品数量 × 6，不再读取已删除的计量窗口字段。
    */
   meteredConsumption: "metered-consumption",
@@ -361,7 +360,6 @@ export const INSPECTOR_TYPE = {
    * 这是仓储设备（取货口/出货口）专用的面板。
    * 与设计文档《仿真运行原理》§3.3 中的 share-all Link 对应。
    *
-   * AI-CORRECTION 2026-06-09: EntityDefinition.links 已移除，仓库物品链接改为写入 document.slotLinks。
    */
   warehouseItemLink: "warehouse-item-link",
 

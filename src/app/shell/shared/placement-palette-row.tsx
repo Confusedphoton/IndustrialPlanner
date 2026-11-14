@@ -23,11 +23,6 @@ export interface PlacementPaletteRowProps {
 /** 放置入口的共享外观；数量在按钮外，数据来源、放置手势及展开动作由调用方持有。 */
 export function PlacementPaletteRow({ label, iconSrc, products = [], count, badge, appearance = "default",
   className, iconClassName, imageClassName, labelClassName, rootRef, buttonProps, buttonSuffix, children, interactive = true }: PlacementPaletteRowProps) {
-  // AI-REMOVED 2026-11-13:
-  // Reason: 联合标签无法保留按钮 ref 的具体类型。Trigger: TypeScript 编译失败。
-  // Evidence: TS2322；Replacement: 下方共享内容与具体标签分支。Risk: Low。Human Review: Required。
-  // Original code:
-  // const RowContent = interactive ? "button" : "div";
   const content = <>
       <span className={iconClassName ?? styles.icon} aria-hidden="true">
         <img className={imageClassName} alt="" src={iconSrc} />

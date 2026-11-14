@@ -2,18 +2,6 @@
 .dialog-shell-backdrop {
   position: absolute;
   inset: 0;
-  /*
-    AI-REMOVED 2026-06-30:
-    Reason: DialogShell 层级已改由 OverlayStack 按打开顺序统一分配。
-    Trigger: 用户要求所有弹层场景系统性避免 z-index 互相压错。
-    Evidence: DialogShell.tsx 通过 useOverlayStackLayer 写入 inline zIndex。
-    Replacement: src/app/shell/shared/overlay-stack.tsx
-    Risk: Low
-    Human Review: Required
-
-    Original code:
-    z-index: 13;
-  */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -590,41 +578,6 @@
   user-select: none;
 }
 
-// AI-REMOVED 2026-07-14:
-// Reason: 右下角单点 resize grip 与用户要求的 Windows 式八方向边缘 resize 冲突。
-// Trigger: 用户要求移除右下角句柄绘制，并改为窗口边缘八个方向调整。
-// Evidence: DialogShell 现在渲染 dialog-shell-resize-edge--n/ne/e/se/s/sw/w/nw 八个边缘热区。
-// Replacement: .dialog-shell-resize-edge and direction modifiers below.
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// .dialog-shell-resize-grip {
-//   position: absolute;
-//   right: 0;
-//   bottom: 0;
-//   width: 20px;
-//   height: 20px;
-//   cursor: nwse-resize;
-//   z-index: 1;
-// }
-//
-// .dialog-shell-resize-grip::after {
-//   content: "";
-//   position: absolute;
-//   right: 4px;
-//   bottom: 4px;
-//   width: 10px;
-//   height: 10px;
-//   border-right: 2px solid var(--text-2);
-//   border-bottom: 2px solid var(--text-2);
-//   opacity: 0.5;
-//   transition: opacity 0.15s;
-// }
-//
-// .dialog-shell-resize-grip:hover::after {
-//   opacity: 1;
-// }
 
 :global(body.is-resizing-dialog-shell-n),
 :global(body.is-resizing-dialog-shell-n *),
@@ -819,9 +772,6 @@
   padding-inline: 8px;
 }
 
-/* AI-CORRECTION 2026-05-11:
-   上面的 compact mobile 规则保留用于审计，但当前有效实现不再让手机端 tab
-   使用高低差和额外间距。手机端沿用桌面/平板的平面轨道，只保留更小字号。 */
 .dialog-shell.has-tabs.is-mobile-compact .dialog-shell-header {
   --dialog-shell-header-row-height: 36px;
   --dialog-shell-tab-track-height: 30px;

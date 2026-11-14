@@ -38,26 +38,7 @@ import {
   createPixiRenderDiagnostics,
   type PixiRenderDiagnosticsSnapshot,
 } from "../pixi-render-diagnostics"
-// AI-REMOVED 2026-11-12: 场景只持有 Surface context；REQ-048；Replacement: RenderSurfaceContext；Risk: Low；Human Review: Required
-// import type { RenderHost } from "../renderer-host"
 import type { RenderSurfaceContext } from "../render-surface-context"
-// AI-REMOVED 2026-10-13:
-// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
-// Trigger: 洒水机和定向离体区域支持。
-// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
-// Replacement: src/renderer/ranges。
-// Risk: 保持既有供电与气体规则，需范围回归验证。
-// Human Review: Required
-// Original code:
-// import {
-//   resolvePowerInteractionVisualState,
-//   type PowerInteractionVisualState,
-// } from "../power-interaction-visual-state"
-// import {
-//   createGasInteractionDefinitionIndex,
-//   resolveGasInteractionVisualState,
-//   type GasInteractionVisualState,
-// } from "../gas-interaction-visual-state"
 import {
   collectRangeInstances, createRangeInteractionRules, resolveRangeInteractionVisualState,
   resolveRangePresentation, RangeLayer, type RangeInstance, type RangeInteractionVisualState,
@@ -100,44 +81,6 @@ import { createInvalidPlacementDecoration } from "./decorations/InvalidPlacement
 import { createGrassBackgroundDecoration } from "./decorations/GrassBackgroundDecoration"
 import { createBeltCargoDecoration } from "./decorations/BeltCargoDecoration"
 import { createBeltPortInsertionDecoration } from "./decorations/BeltPortInsertionDecoration"
-// AI-REMOVED 2026-09-10:
-// Reason: 物流材质按实体内部层序渲染，替换独立箭头叠加。
-// Trigger: 用户授权接入 contract2 动静态素材并降低静态开销。
-// Evidence: 新素材的支架、液体、壳体必须交错绘制。
-// Replacement: DedicatedLogisticSprite / LogisticsMaterialSceneState
-// Risk: 原材质相关视觉断言需要同步验证。
-// Human Review: Required
-//
-// Original code:
-// import { createBeltFlowDecoration } from "./decorations/BeltFlowDecoration"
-// AI-REMOVED 2026-09-10:
-// Reason: 物流材质按实体内部层序渲染，替换独立箭头叠加。
-// Trigger: 用户授权接入 contract2 动静态素材并降低静态开销。
-// Evidence: 新素材的支架、液体、壳体必须交错绘制。
-// Replacement: DedicatedLogisticSprite / LogisticsMaterialSceneState
-// Risk: 原材质相关视觉断言需要同步验证。
-// Human Review: Required
-//
-// Original code:
-// import { createPipeFlowDecoration } from "./decorations/PipeFlowDecoration"
-// AI-REMOVED 2026-10-13:
-// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
-// Trigger: 洒水机和定向离体区域支持。
-// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
-// Replacement: src/renderer/ranges。
-// Risk: 保持既有供电与气体规则，需范围回归验证。
-// Human Review: Required
-// Original code:
-// import { createPowerRangeDecoration } from "./decorations/PowerRangeDecoration"
-// AI-REMOVED 2026-10-13:
-// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
-// Trigger: 洒水机和定向离体区域支持。
-// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
-// Replacement: src/renderer/ranges。
-// Risk: 保持既有供电与气体规则，需范围回归验证。
-// Human Review: Required
-// Original code:
-// import { createGasDiffusionRangeDecoration } from "./decorations/GasDiffusionRangeDecoration"
 import { createDarkPipeLinkLineDecoration } from "./decorations/DarkPipeLinkLineDecoration"
 import { createRegionalDarkPipeLinkDecoration } from "./decorations/RegionalDarkPipeLinkDecoration"
 import { createDarkPipeLinkSelectionDecoration } from "./decorations/DarkPipeLinkSelectionDecoration"
@@ -157,17 +100,6 @@ const WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH = 4
 const RENDER_PERF_LOG_WINDOW_MS = 10_000
 const RENDER_PERF_LONG_FRAME_MS = 50
 const RENDER_PERF_TOP_STAGE_COUNT = 12
-// AI-REMOVED 2026-09-21:
-// Reason: Pixi render 的前后测量改由 RenderSurface 在 Host scheduler 的显式 render 调用两侧执行，不再依赖 Application ticker 优先级。
-// Trigger: ST2-RQ-037 第一阶段要求一个 Host 循环统一驱动全部 canvas。
-// Evidence: RenderSurfaceScene.beforeRender / afterRender 成为唯一 render 测量边界。
-// Replacement: src/renderer/surface/render-surface.ts
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// const PIXI_RENDER_START_PRIORITY = UPDATE_PRIORITY.LOW + 1
-// const PIXI_RENDER_FINISH_PRIORITY = UPDATE_PRIORITY.LOW - 1
 const RENDER_INVALIDATION_COLLECTION_TYPES: readonly EntityCollectionTypeValue[] = [
   EntityCollectionType.selection,
   EntityCollectionType.marquee,
@@ -180,7 +112,6 @@ const RENDER_INVALIDATION_COLLECTION_TYPES: readonly EntityCollectionTypeValue[]
 ]
 
 /** 渲染低层设备定义 ID —— 先渲染，被其他设备覆盖 */
-/** AI-CORRECTION 2026-07-19: 设备定义 ID 已移除 item_/item_port_ 前缀。 */
 const ENTITY_LOW_DEFINITION_IDS = new Set([
   "log_hongs_bus",         // 仓库存取线基段
   "log_hongs_bus_source",  // 源桩
@@ -191,23 +122,6 @@ const ENTITY_HIGH_DEFINITION_IDS = new Set([
   "water_pump_1",          // 抽水泵
 ])
 
-// AI-REMOVED 2026-07-27:
-// Reason: renderer 不应维护传送带族和管道设备族 definition ID 集合。
-// Trigger: 用户要求设备 ID 归 registry 内部常量所有，registry 外只使用 RegistryQuery。
-// Evidence: RegistryQuery.isBeltFamily/isPipeFamily 已覆盖渲染分层。
-// Replacement: selectRenderLayerMap / resolveEntitySpriteLayerKey 的 queries 参数。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// const BELT_DEFINITION_IDS = new Set([
-//   "belt_straight_1x1", "belt_turn_cw_1x1", "belt_turn_ccw_1x1",
-//   "log_splitter", "log_converger", "log_connector", "log_admission",
-// ])
-// const PIPE_DEFINITION_IDS = new Set([
-//   "pipe_straight_1x1", "pipe_turn_cw_1x1", "pipe_turn_ccw_1x1",
-//   "pipe_splitter", "pipe_converger", "pipe_connector", "pipe_admission",
-// ])
 
 function selectRenderLayerMap(
   spriteLayerKey: EntitySpriteLayerKey,
@@ -290,23 +204,6 @@ interface RenderFrameTimeState {
   deltaMs: number;
 }
 
-// AI-REMOVED 2026-11-12:
-// Reason: Renderer 不得从已退出的 App 运行态推断物流工具。
-// Trigger: REQ-048 ScenePresentation 与显式时间迁移。
-// Evidence: 新投影没有 internalState，旧查询恒为 null。
-// Replacement: ScenePresentation.activeTool；CSS 脉冲按 SceneTime 采样。
-// Risk: Low；物流编辑阶段仍由 Canvas 管理。
-// Human Review: Required
-// Original code:
-// interface AppWithLogisticsPlacementRuntime {
-//   internalState: {
-//     runtime: {
-//       logisticsPlacement: {
-//         kind: LogisticsKind | null;
-//       };
-//     };
-//   };
-// }
 
 
 export interface RenderSceneOrchestrator {
@@ -328,16 +225,6 @@ export function createRenderSceneOrchestrator(
   const pipeSubEntity = new Container()
   const gridDecoration = createGridLineDecoration()
   const baseBoundaryDecoration = createBaseBoundaryDecoration()
-// AI-REMOVED 2026-10-13:
-// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
-// Trigger: 洒水机和定向离体区域支持。
-// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
-// Replacement: src/renderer/ranges/RangeLayer。
-// Risk: 保持既有供电与气体规则，需范围回归验证。
-// Human Review: Required
-// Original code:
-//   const powerRangeDecoration = createPowerRangeDecoration()
-//   const gasDiffusionRangeDecoration = createGasDiffusionRangeDecoration()
   const rangeLayer = new RangeLayer(renderHost.resources)
   const previewRectDecoration = createPreviewRectDecoration()
   const invalidPlacementDecoration = createInvalidPlacementDecoration()
@@ -352,66 +239,17 @@ export function createRenderSceneOrchestrator(
   const portOverlayDecoration = createPortOverlayDecoration()
   const pipePortGhostDecoration = createPipePortGhostDecoration()
   const configuredItemIconDecoration = createConfiguredItemIconDecoration()
-// AI-REMOVED 2026-09-10:
-// Reason: 物流材质按实体内部层序渲染，替换独立箭头叠加。
-// Trigger: 用户授权接入 contract2 动静态素材并降低静态开销。
-// Evidence: 新素材的支架、液体、壳体必须交错绘制。
-// Replacement: DedicatedLogisticSprite / LogisticsMaterialSceneState
-// Risk: 原材质相关视觉断言需要同步验证。
-// Human Review: Required
-//
-// Original code:
-//   const beltFlowDecoration = createBeltFlowDecoration()
-// AI-REMOVED 2026-09-10:
-// Reason: 物流材质按实体内部层序渲染，替换独立箭头叠加。
-// Trigger: 用户授权接入 contract2 动静态素材并降低静态开销。
-// Evidence: 新素材的支架、液体、壳体必须交错绘制。
-// Replacement: DedicatedLogisticSprite / LogisticsMaterialSceneState
-// Risk: 原材质相关视觉断言需要同步验证。
-// Human Review: Required
-//
-// Original code:
-//   const pipeFlowDecoration = createPipeFlowDecoration()
   const darkPipeLinkLineDecoration = createDarkPipeLinkLineDecoration()
   const regionalDarkPipeLinkDecoration = createRegionalDarkPipeLinkDecoration()
   const darkPipeLinkSelectionDecoration = createDarkPipeLinkSelectionDecoration()
   const beltPortInsertionDecoration = createBeltPortInsertionDecoration()
   const beltCargoDecoration = createBeltCargoDecoration()
-  // AI-REMOVED 2026-09-10:
-  // Reason: 材质 Mesh 已归属实体，不再创建独立箭头层。
-  // Trigger: contract2 内部层序与静态低开销要求。
-  // Evidence: DedicatedLogisticSprite 持有全部材质分层。
-  // Replacement: beltSubEntity / pipeSubEntity
-  // Risk: Low
-  // Human Review: Required
-  // Original code:
-  // const beltFlowLayer = new Container()
-  // AI-REMOVED 2026-09-10:
-  // Reason: 材质 Mesh 已归属实体，不再创建独立箭头层。
-  // Trigger: contract2 内部层序与静态低开销要求。
-  // Evidence: DedicatedLogisticSprite 持有全部材质分层。
-  // Replacement: beltSubEntity / pipeSubEntity
-  // Risk: Low
-  // Human Review: Required
-  // Original code:
-  // const pipeFlowLayer = new Container()
   const darkPipeLinkLineLayer = new Container()
   const beltInsertionLayer = new Container()
   const beltCargoOverlayLayer = new Container()
   const invalidPlacementOverlayLayer = new Container()
   const marqueeOverlayLayer = new Container()
   const entityDefinitionMap = createEntityDefinitionMap(renderHost)
-// AI-REMOVED 2026-10-13:
-// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
-// Trigger: 洒水机和定向离体区域支持。
-// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
-// Replacement: src/renderer/ranges。
-// Risk: 保持既有供电与气体规则，需范围回归验证。
-// Human Review: Required
-// Original code:
-//   const gasInteractionDefinitionIndex = createGasInteractionDefinitionIndex(
-//     renderHost.workspace.registry.recipeDefinitions,
-//   )
   const rangeRules = createRangeInteractionRules(renderHost.input.source.registry.recipeDefinitions)
   let rangeInstances: readonly RangeInstance[] = []
   let rangeInteractionVisualState: RangeInteractionVisualState = { highlightedEntityIds: new Set(), visibleRangeKeys: new Set() }
@@ -626,7 +464,6 @@ export function createRenderSceneOrchestrator(
     portOccupancyCache = occupancy;
     return occupancy;
   }
-  // AI-CORRECTION 2026-06-18:
   // 旧的“外侧格存在物流实体即视为占用”逻辑已由 PortOverlayDecoration 的合法引出判断替代。
   // 保留函数用于删除审计；禁止执行，避免与全局 decoration 重复扫描实体。
   void resolveLogisticsPortOccupancy;
@@ -663,18 +500,6 @@ export function createRenderSceneOrchestrator(
     measureRenderStage(frameProfiler, "viewport.applySize", () => {
       applyViewportSize(app, viewportState)
     })
-    // AI-REMOVED 2026-09-21:
-    // Reason: Simulation 是 Host 级时间输入，不能由每个 Surface scene 分别推进。
-    // Trigger: ST2-RQ-037 第一阶段要求多个 canvas 共用循环，且每帧最多推进一次 Simulation。
-    // Evidence: RenderScheduler.advanceHostFrame 在遍历 Surface 前只执行一次。
-    // Replacement: src/renderer/renderer-host.tsx createRenderScheduler.advanceHostFrame
-    // Risk: 若 Host scheduler 未启动，仿真和所有画布都会同时停止，符合统一 owner 语义。
-    // Human Review: Required
-    //
-    // Original code:
-    // measureRenderStage(frameProfiler, "simulation.advancePlayback", () => {
-    //   void renderHost.workspace.simulation?.actions.advancePlaybackByDeltaMs(frameTime.deltaMs)
-    // })
 
     if (!areRenderViewportStatesEqual(lastViewportState, viewportState)) {
       lastViewportState = viewportState
@@ -730,54 +555,10 @@ export function createRenderSceneOrchestrator(
         ...frameVersions,
         document: documentVersion,
       }
-      // AI-REMOVED 2026-10-13: 几何失效检查前移至范围计算之前，ctx 在下方按最新版本创建。
-      // Trigger: 定向范围移动不得滞后一帧；Evidence: 原检查晚于范围缓存读取。
-      // Replacement: 下方 DecorationSyncContext 初始化；Risk: Low；Human Review: Required
-      // ctx.versions = frameVersions
     }
     const editorCollections = renderHost.input.source.snapshot.getSnapshot().interaction?.collections
     sceneOverlay.sync(renderHost.input.overlay.getSnapshot(), entities, renderHost.input.source.registry, viewportState,
       viewportState.width, viewportState.height, `${documentVersion}:${viewportVersion}:${collectionVersion}`)
-    // AI-REMOVED 2026-11-13: 产物纹理统一由设备标签管理；Trigger: 人工产物覆盖 avatar。
-    // Evidence: SceneOverlayDecoration 不再创建 Sprite；Replacement: GenericDeviceSprite。
-    // Risk: Low；Human Review: Required；Original code:
-    // (key) => renderHost.textureManager.getTexture(key)
-// AI-REMOVED 2026-10-13:
-// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
-// Trigger: 洒水机和定向离体区域支持。
-// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
-// Replacement: src/renderer/ranges/range-interaction.ts。
-// Risk: 保持既有供电与气体规则，需范围回归验证。
-// Human Review: Required
-// Original code:
-//     const powerInteractionVisualState = measureRenderStage(
-//       frameProfiler,
-//       "powerInteraction.resolve",
-//       () => resolvePowerInteractionVisualState({
-//         alwaysShowPowerRange: workspaceApp.state.settings.gameAlwaysShowPowerRange,
-//         activeTool: workspaceApp.state.activeTool,
-//         moveKind: workspaceApp.state.moveKind,
-//         entities: listEntitiesForFrame(),
-//         previewEntityIds: editorCollections[EntityCollectionType.preview],
-//         ghostEntityIds: editorCollections[EntityCollectionType.ghost],
-//         entityDefinitionMap,
-//         listPowerRangeProvidersCoveringGridRect: (gridRect) =>
-//           renderHost.workspace.editor!.queries.listPowerRangeProvidersCoveringGridRect(gridRect),
-//       }),
-//     )
-//     const gasInteractionVisualState = measureRenderStage(
-//       frameProfiler,
-//       "gasInteraction.resolve",
-//       () => resolveGasInteractionVisualState({
-//         activeTool: workspaceApp.state.activeTool,
-//         moveKind: workspaceApp.state.moveKind,
-//         entities: listEntitiesForFrame(),
-//         previewEntityIds: editorCollections[EntityCollectionType.preview],
-//         ghostEntityIds: editorCollections[EntityCollectionType.ghost],
-//         entityDefinitionMap,
-//         definitionIndex: gasInteractionDefinitionIndex,
-//       }),
-//     )
     const nextRangeStamp = JSON.stringify([documentVersion, collectionVersion,
       presentation.activeTool, presentation.moveKind,
       presentation.settings.gameAlwaysShowPowerRange])
@@ -821,22 +602,6 @@ export function createRenderSceneOrchestrator(
       baseBoundaryDecoration.sync(ctx)
     })
 
-// AI-REMOVED 2026-10-13:
-// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
-// Trigger: 洒水机和定向离体区域支持。
-// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
-// Replacement: src/renderer/ranges。
-// Risk: 保持既有供电与气体规则，需范围回归验证。
-// Human Review: Required
-// Original code:
-//     measureRenderStage(frameProfiler, "decoration.powerRange", () => {
-//       powerRangeDecoration.sync(ctx)
-//     })
-//
-//     measureRenderStage(frameProfiler, "decoration.gasDiffusionRange", () => {
-//       gasDiffusionRangeDecoration.sync(ctx)
-//     })
-//
     measureRenderStage(frameProfiler, "decoration.ranges", () => {
       const visible = resolveVisibleWorldRect(viewportState, ctx.viewportBounds, 0)
       rangeLayer.sync({
@@ -938,18 +703,6 @@ export function createRenderSceneOrchestrator(
     })
 
     measureRenderStage(frameProfiler, "buildingEffects.sync", () => {
-      // AI-REMOVED 2026-09-11:
-      // Reason: 变换应由特效组件随已加载资源统一管理。
-      // Trigger: 高度渲染接入需要保持现有场景编排边界。
-      // Evidence: 编排层不需要直接操作子组件的 Pixi 变换。
-      // Replacement: BuildingEffectsScene.sync 的 view 参数。
-      // Risk: Low; Human Review: Required
-      // Original code:
-      // buildingEffects.container.position.set(ctx.viewportBounds.left + ctx.viewportBounds.width / 2,
-      //   ctx.viewportBounds.top + ctx.viewportBounds.height / 2)
-      // buildingEffects.container.pivot.set(viewportState.centerX, viewportState.centerY)
-      // buildingEffects.container.scale.set(viewportState.gridCellPixelSize)
-      // buildingEffects.container.rotation = resolveDisplayRotationRadians(viewportState.displayRotation)
       buildingEffects.sync({
         view: { x: ctx.viewportBounds.left + ctx.viewportBounds.width / 2,
           y: ctx.viewportBounds.top + ctx.viewportBounds.height / 2,
@@ -1013,31 +766,7 @@ export function createRenderSceneOrchestrator(
       configuredItemIconDecoration.sync(ctx, entities)
     })
 
-// AI-REMOVED 2026-09-10:
-// Reason: 物流材质按实体内部层序渲染，替换独立箭头叠加。
-// Trigger: 用户授权接入 contract2 动静态素材并降低静态开销。
-// Evidence: 新素材的支架、液体、壳体必须交错绘制。
-// Replacement: LogisticsMaterialSceneState.sync
-// Risk: 原材质相关视觉断言需要同步验证。
-// Human Review: Required
-//
-// Original code:
-//     measureRenderStage(frameProfiler, "decoration.beltFlow", () => {
-//       beltFlowDecoration.sync(ctx)
-//     })
 
-// AI-REMOVED 2026-09-10:
-// Reason: 物流材质按实体内部层序渲染，替换独立箭头叠加。
-// Trigger: 用户授权接入 contract2 动静态素材并降低静态开销。
-// Evidence: 新素材的支架、液体、壳体必须交错绘制。
-// Replacement: LogisticsMaterialSceneState.sync
-// Risk: 原材质相关视觉断言需要同步验证。
-// Human Review: Required
-//
-// Original code:
-//     measureRenderStage(frameProfiler, "decoration.pipeFlow", () => {
-//       pipeFlowDecoration.sync(ctx)
-//     })
 
     measureRenderStage(frameProfiler, "decoration.darkPipeLinkLine", () => {
       darkPipeLinkLineDecoration.sync(ctx)
@@ -1090,42 +819,13 @@ export function createRenderSceneOrchestrator(
 
   // 物流传送带层级（从底到顶）
   layers.logisticsBelt.addChild(beltSubEntity)
-  // AI-REMOVED 2026-09-10:
-  // Reason: 材质 Mesh 已归属实体，不再创建独立箭头层。
-  // Trigger: contract2 内部层序与静态低开销要求。
-  // Evidence: DedicatedLogisticSprite 持有全部材质分层。
-  // Replacement: beltSubEntity / pipeSubEntity
-  // Risk: Low
-  // Human Review: Required
-  // Original code:
-  // layers.logisticsBelt.addChild(beltFlowLayer)
   layers.logisticsBelt.addChild(beltInsertionLayer)
   layers.logisticsBelt.addChild(beltCargoOverlayLayer)
 
-  // 物流管道层级（从底到顶）
-  // AI-REMOVED 2026-09-23:
-  // Reason: 管壳反射必须采样后支架、流体及中支架，并位于标记之前。
-  // Trigger: 可选管壁反射与正常素材互斥。
-  // Evidence: 网站 sceneTransmission.order。
-  // Replacement: 下方 pipeReflection.scene 中的相同节点，层序不变。
-  // Risk: 需验证前景标记不参与反射；Human Review: Required
-  // Original code:
-  // layers.logisticsPipe.addChild(pipePortGhostDecoration.container)
-  // layers.logisticsPipe.addChild(logisticsBakedFlow.container)
-  // AI-CORRECTION 2026-09-23: 默认保持原父节点，仅启用反射时由 pipeReflection 临时重组。
   layers.logisticsPipe.addChild(pipePortGhostDecoration.container)
   layers.logisticsPipe.addChild(logisticsBakedFlow.container)
   layers.logisticsPipe.addChild(pipeSubEntity)
   layers.logisticsPipe.addChild(logisticsBakedFlow.endpoints)
-  // AI-REMOVED 2026-09-10:
-  // Reason: 材质 Mesh 已归属实体，不再创建独立箭头层。
-  // Trigger: contract2 内部层序与静态低开销要求。
-  // Evidence: DedicatedLogisticSprite 持有全部材质分层。
-  // Replacement: beltSubEntity / pipeSubEntity
-  // Risk: Low
-  // Human Review: Required
-  // Original code:
-  // layers.logisticsPipe.addChild(pipeFlowLayer)
   layers.logisticsPipe.addChild(buildingEffects.container)
   layers.logisticsPipe.addChild(darkPipeLinkLineLayer)
 
@@ -1136,14 +836,6 @@ export function createRenderSceneOrchestrator(
     layers.entityHigh,
     layers.logisticsBelt,
     layers.logisticsPipe,
-    // AI-REMOVED 2026-09-11:
-    // Reason: 特效属于既有管道绘制阶段，不新增顶层阶段。
-    // Trigger: 高度管道特效接入。
-    // Evidence: pipeSubEntity 之后、暗管连接线之前即为所需排序。
-    // Replacement: layers.logisticsPipe 内的 buildingEffects.container。
-    // Risk: Low; Human Review: Required
-    // Original code:
-    // buildingEffects.container,
     layers.draft,
     layers.overlay,
     invalidPlacementOverlayLayer,
@@ -1160,26 +852,6 @@ export function createRenderSceneOrchestrator(
   layers.background.addChild(rangeLayer.container)
   layers.background.addChild(previewRectDecoration.container)
   invalidPlacementOverlayLayer.addChild(invalidPlacementDecoration.container)
-// AI-REMOVED 2026-09-10:
-// Reason: 物流材质按实体内部层序渲染，替换独立箭头叠加。
-// Trigger: 用户授权接入 contract2 动静态素材并降低静态开销。
-// Evidence: 新素材的支架、液体、壳体必须交错绘制。
-// Replacement: DedicatedLogisticSprite / LogisticsMaterialSceneState
-// Risk: 原材质相关视觉断言需要同步验证。
-// Human Review: Required
-//
-// Original code:
-//   beltFlowLayer.addChild(beltFlowDecoration.container)
-// AI-REMOVED 2026-09-10:
-// Reason: 物流材质按实体内部层序渲染，替换独立箭头叠加。
-// Trigger: 用户授权接入 contract2 动静态素材并降低静态开销。
-// Evidence: 新素材的支架、液体、壳体必须交错绘制。
-// Replacement: DedicatedLogisticSprite / LogisticsMaterialSceneState
-// Risk: 原材质相关视觉断言需要同步验证。
-// Human Review: Required
-//
-// Original code:
-//   pipeFlowLayer.addChild(pipeFlowDecoration.container)
   darkPipeLinkLineLayer.addChild(darkPipeLinkLineDecoration.container)
   darkPipeLinkLineLayer.addChild(regionalDarkPipeLinkDecoration.container)
   beltInsertionLayer.addChild(beltPortInsertionDecoration.container)
@@ -1194,18 +866,6 @@ export function createRenderSceneOrchestrator(
   marqueeOverlayLayer.addChild(configuredItemIconDecoration.container)
   marqueeOverlayLayer.addChild(marqueeDecoration.container)
   marqueeOverlayLayer.addChild(darkPipeLinkSelectionDecoration.container)
-  // AI-REMOVED 2026-09-21:
-  // Reason: Main scene 不再拥有私有 ticker listener；同步与 render 都由 Host scheduler 驱动。
-  // Trigger: ST2-RQ-037 第一阶段多画布统一调度。
-  // Evidence: RenderSurface.renderFrame 顺序调用 scene.sync、beforeRender、app.render、afterRender。
-  // Replacement: src/renderer/surface/render-surface.ts
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // app.ticker.add(flushViewport, undefined, UPDATE_PRIORITY.HIGH)
-  // app.ticker.add(startPixiRenderMeasurement, undefined, PIXI_RENDER_START_PRIORITY)
-  // app.ticker.add(finishPixiRenderMeasurement, undefined, PIXI_RENDER_FINISH_PRIORITY)
 
   const host: RenderSceneOrchestrator = {
     sync: syncFrame,
@@ -1219,18 +879,6 @@ export function createRenderSceneOrchestrator(
     destroy: () => {
       pipeReflection.destroy()
       diagnosticSession.destroy()
-      // AI-REMOVED 2026-09-21:
-      // Reason: Scene 已不再向 Application ticker 注册 listener，因此销毁时无需逐项移除。
-      // Trigger: ST2-RQ-037 第一阶段多画布统一调度。
-      // Evidence: 上方 ticker add 已由 RenderSurface 显式帧边界替代。
-      // Replacement: RenderSurfaceRegistry 在 dispose 时销毁 scene。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // app.ticker.remove(flushViewport)
-      // app.ticker.remove(startPixiRenderMeasurement)
-      // app.ticker.remove(finishPixiRenderMeasurement)
       disposeDocumentVersionSubscription()
       disposeRegionalDocumentSubscription()
       memoryCollector.stop()
@@ -1265,26 +913,6 @@ export function createRenderSceneOrchestrator(
       buildingEffects.destroy()
       logisticsBakedFlow.destroy()
       configuredItemIconDecoration.destroy()
-// AI-REMOVED 2026-09-10:
-// Reason: 物流材质按实体内部层序渲染，替换独立箭头叠加。
-// Trigger: 用户授权接入 contract2 动静态素材并降低静态开销。
-// Evidence: 新素材的支架、液体、壳体必须交错绘制。
-// Replacement: DedicatedLogisticSprite / LogisticsMaterialSceneState
-// Risk: 原材质相关视觉断言需要同步验证。
-// Human Review: Required
-//
-// Original code:
-//       beltFlowDecoration.destroy()
-// AI-REMOVED 2026-09-10:
-// Reason: 物流材质按实体内部层序渲染，替换独立箭头叠加。
-// Trigger: 用户授权接入 contract2 动静态素材并降低静态开销。
-// Evidence: 新素材的支架、液体、壳体必须交错绘制。
-// Replacement: DedicatedLogisticSprite / LogisticsMaterialSceneState
-// Risk: 原材质相关视觉断言需要同步验证。
-// Human Review: Required
-//
-// Original code:
-//       pipeFlowDecoration.destroy()
       darkPipeLinkLineDecoration.destroy()
       regionalDarkPipeLinkDecoration.destroy()
       darkPipeLinkSelectionDecoration.destroy()
@@ -1336,8 +964,6 @@ function syncRendererDomOverlays(
   }
 
   // 所有输出使用所属场景的背景，透明 canvas 不再透出深色预览宿主。
-  // AI-CORRECTION 2026-11-12：底色由所属容器承载；Canvas 保留原透明像素，避免破坏反射与出图 alpha。
-  // AI-CORRECTION 2026-11-13：透明清屏必须同时将 RGB 归零；非零 RGB 会污染预乘 alpha，令半透明网格与设备边缘泛白。
   renderHost.container.style.backgroundColor = theme.colors["in-canvas-bg"]
   renderHost.app.renderer.background.color = 0
   renderHost.app.renderer.background.alpha = 0
@@ -1347,15 +973,6 @@ function syncRendererDomOverlays(
     overlay.style.animationDelay = `-${nowMs % 2000}ms`
   }
   const activeTool = app.activeTool
-// AI-REMOVED 2026-11-12:
-// Reason: Renderer 不得从已退出的 App 运行态推断物流工具。
-// Trigger: REQ-048 ScenePresentation 与显式时间迁移。
-// Evidence: 新投影没有 internalState，旧查询恒为 null。
-// Replacement: ScenePresentation.activeTool；CSS 脉冲按 SceneTime 采样。
-// Risk: Low；物流编辑阶段仍由 Canvas 管理。
-// Human Review: Required
-// Original code:
-//   const logisticsKind = resolveRendererLogisticsPlacementKind(renderHost)
 
   const isPlacementGlowActive = activeTool === "single-placement"
     || activeTool === "logistics-placement"
@@ -1397,26 +1014,6 @@ function syncRendererDomOverlays(
   )
 }
 
-// AI-REMOVED 2026-11-12:
-// Reason: Renderer 不得从已退出的 App 运行态推断物流工具。
-// Trigger: REQ-048 ScenePresentation 与显式时间迁移。
-// Evidence: 新投影没有 internalState，旧查询恒为 null。
-// Replacement: ScenePresentation.activeTool；CSS 脉冲按 SceneTime 采样。
-// Risk: Low；物流编辑阶段仍由 Canvas 管理。
-// Human Review: Required
-// Original code:
-// function resolveRendererLogisticsPlacementKind(
-//   renderHost: RenderSurfaceContext,
-// ): LogisticsKind | null {
-//   const app = renderHost.input.presentation.getSnapshot()
-//
-//   if (app === null || !("internalState" in app)) {
-//     return null
-//   }
-//
-//   return (app as AppWithLogisticsPlacementRuntime)
-//     .internalState.runtime.logisticsPlacement.kind
-// }
 
 
 function formatCssRgbColor(color: number): string {
@@ -1469,15 +1066,6 @@ export function applyViewportSize(
 }
 
 function readViewportState(renderHost: RenderSurfaceContext): RenderViewportState {
-// AI-REMOVED 2026-11-12:
-// Reason: 统一场景迁移后旧对象没有有效调用。
-// Trigger: REQ-048 P6 与 ESLint unused 审计。
-// Evidence: 当前调用由 Canvas 或 SceneViewInput 提供，原引用仅存于审计注释。
-// Replacement: CanvasActionImpl / SceneViewInput / 通用只读场景
-// Risk: Low
-// Human Review: Required
-// Original code:
-//   const source = renderHost.input.source!
 
   return {
     width: resolveViewportAxisSize(
@@ -1874,21 +1462,6 @@ export function createEntitySpriteScene(
         profiler: null,
         logisticsPortOccupancy: null,
         logisticsMaterials: options.logisticsMaterials,
-// AI-REMOVED 2026-10-13:
-// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
-// Trigger: 洒水机和定向离体区域支持。
-// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
-// Replacement: rangeInteractionVisualState。
-// Risk: 保持既有供电与气体规则，需范围回归验证。
-// Human Review: Required
-// Original code:
-//         gasInteractionVisualState: options.gasInteractionVisualState ?? {
-//           highlightedEntityIds: new Set(),
-//         },
-//         powerInteractionVisualState: options.powerInteractionVisualState ?? {
-//           visiblePowerRangeEntityIds: new Set(),
-//           highlightedEntityIds: new Set(),
-//         },
         rangeInteractionVisualState: options.rangeInteractionVisualState ?? {
           highlightedEntityIds: new Set(), visibleRangeKeys: new Set(),
         },
@@ -2161,17 +1734,6 @@ function syncWorldEntitySprites(options: {
     }
 
     sprite.setVisible(true)
-    // AI-REMOVED 2026-09-16:
-    // Reason: 完整同步计数移到实际完整同步分支。
-    // Trigger: 用户要求优化视口拖动与虚影移动。
-    // Evidence: Trace 与调用链确认重复布局、全量候选扫描和缓存驱逐。
-    // Replacement: 下方 syncPosition / syncLayout 分支
-    // Risk: 需验证平移、缩放、旋转与编辑后的正确性。
-    // Human Review: Required
-    // Original code:
-    // if (stats !== null) {
-    //       stats.syncLayoutCalls += 1
-    //     }
     const layout = resolveWorldEntitySpriteLayout({
       entity,
       footprint: definition.footprint,
@@ -2788,7 +2350,6 @@ export function resolveWorldEntitySpriteLayout(options: {
 /**
  * 根据当前渲染模式（蓝图 / 3D-top）解析有效的 spriteOffset。
  * gameUseBlueprintStyleDeviceImages=true 时使用 blueprint 偏移，否则使用 topView 偏移。
- * AI-CORRECTION 2026-10-06: 物流预览及连线端点强制蓝图时也必须使用 blueprint 偏移，与本体、遮罩保持一致。
  */
 function resolveEffectiveSpriteOffset(
   definition: EntityDefinition,
@@ -2798,19 +2359,6 @@ function resolveEffectiveSpriteOffset(
   if (!definition.spriteOffset) {
     return undefined
   }
-  // AI-REMOVED 2026-10-06:
-  // Reason: 仅按全局设置选范围会遗漏物流预览与连线端点的强制蓝图显示。
-  // Trigger: 管道准入口的 1×1 蓝图图片被绘制成 1×3。
-  // Evidence: GenericDeviceSprite 在相同状态下选择 blueprint 纹理。
-  // Replacement: 下方 resolveDeviceBodyPresentation，与纹理共用交互判断。
-  // Risk: Low；无 spriteOffset 的设备继续直接使用 footprint。
-  // Human Review: Required
-  // Original code:
-  // if (!spriteOffset) {
-  //   return undefined
-  // }
-  // const isBlueprint = app?.state.settings.gameUseBlueprintStyleDeviceImages ?? false
-  // return isBlueprint ? spriteOffset.blueprint : spriteOffset.topView
   return resolveDeviceBodyPresentation(definition, input.presentation.getSnapshot(), {
     forceBlueprint: shouldForceBlueprintDeviceTexture(entityId, definition.id, input.source.registry.queries, input),
     allowAnimation: false,

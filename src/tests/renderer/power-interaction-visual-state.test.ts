@@ -2,22 +2,6 @@ import { loadBlueprintFromFile, getBlueprintEntityArray } from "@/tests/simulati
 import { describe, expect, it } from "vitest";
 
 import type { WorldEntity } from "@/domain/document/world-document";
-// AI-REMOVED 2026-10-13:
-// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
-// Trigger: 洒水机和定向离体区域支持。
-// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
-// Replacement: 统一范围交互测试入口。
-// Risk: 保持既有供电与气体规则，需范围回归验证。
-// Human Review: Required
-// Original code:
-// import type { GridRect } from "@/domain/shared/grid";
-// import { createRegistryContract } from "@/registry";
-// import { resolvePowerInteractionVisualState } from "@/renderer/power-interaction-visual-state";
-// import {
-//   areGridRectsIntersecting,
-//   resolvePowerRangeGridRect,
-// } from "@/shared/geometry/power-range";
-//
 import { createRegistryContract } from "@/registry";
 import { collectRangeInstances, createRangeInteractionRules, resolveRangeInteractionVisualState } from "@/renderer/ranges";
 
@@ -28,18 +12,6 @@ const entityDefinitionMap = new Map(
 
 describe("resolvePowerInteractionVisualState", () => {
   it("shows every range without power-specific highlights when the setting is enabled", () => {
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/renderer/power-interaction-visual-state/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       createEntity("power", "power_diffuser_1", 0, 0),
-    //       createPreviewEntity("storage-preview", "storager_1", 3, 0),
-    //     ]
     const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/power-interaction-visual-state/scene-01-variant-1.schema7.json"));
 
     const state = resolveState({
@@ -50,7 +22,6 @@ describe("resolvePowerInteractionVisualState", () => {
       previewEntityIds: ["storage-preview"],
     });
 
-    // AI-CORRECTION 2026-10-13: 新接口返回明确范围 key 集合，常显仍展示全部供电范围。
     expect(state.visiblePowerRangeEntityIds).toEqual(new Set(["power"]));
     expect(state.highlightedEntityIds).toEqual(new Set());
   });
@@ -62,19 +33,6 @@ describe("resolvePowerInteractionVisualState", () => {
     activeTool,
     moveKind,
   }) => {
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/renderer/power-interaction-visual-state/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       createEntity("power-a", "power_diffuser_1", 0, 0),
-    //       createEntity("power-b", "power_diffuser_1", 8, 0),
-    //       createPreviewEntity("storage-preview", "storager_1", 5, 0),
-    //     ]
     const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/power-interaction-visual-state/scene-02-variant-1.schema7.json"));
 
     const state = resolveState({
@@ -90,18 +48,6 @@ describe("resolvePowerInteractionVisualState", () => {
   });
 
   it("does not activate the interaction during a batch move", () => {
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/renderer/power-interaction-visual-state/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       createEntity("power", "power_diffuser_1", 0, 0),
-    //       createPreviewEntity("storage-preview", "storager_1", 3, 0),
-    //     ]
     const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/power-interaction-visual-state/scene-03-variant-1.schema7.json"));
 
     const state = resolveState({
@@ -123,20 +69,6 @@ describe("resolvePowerInteractionVisualState", () => {
     activeTool,
     moveKind,
   }) => {
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/renderer/power-interaction-visual-state/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       createPreviewEntity("power-preview", "power_diffuser_1", 0, 0),
-    //       createEntity("protocol-storage", "storager_1", 4, 0),
-    //       createEntity("outside-storage", "storager_1", 20, 0),
-    //       createEntity("zero-demand", "power_diffuser_1", 4, 3),
-    //     ]
     const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/power-interaction-visual-state/scene-04-variant-1.schema7.json"));
 
     const state = resolveState({
@@ -160,42 +92,6 @@ function resolveState(options: {
   previewEntityIds: readonly string[];
   ghostEntityIds?: readonly string[];
 }) {
-// AI-REMOVED 2026-10-13:
-// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
-// Trigger: 洒水机和定向离体区域支持。
-// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
-// Replacement: resolveRangeInteractionVisualState。
-// Risk: 保持既有供电与气体规则，需范围回归验证。
-// Human Review: Required
-// Original code:
-//   return resolvePowerInteractionVisualState({
-//     alwaysShowPowerRange: options.alwaysShowPowerRange ?? false,
-//     activeTool: options.activeTool,
-//     moveKind: options.moveKind,
-//     entities: options.entities,
-//     previewEntityIds: options.previewEntityIds,
-//     ghostEntityIds: options.ghostEntityIds ?? [],
-//     entityDefinitionMap,
-//     listPowerRangeProvidersCoveringGridRect: (gridRect) =>
-//       listPowerRangeProvidersCoveringGridRect(options.entities, gridRect),
-//   });
-// }
-//
-// function listPowerRangeProvidersCoveringGridRect(
-//   entities: readonly WorldEntity[],
-//   gridRect: GridRect,
-// ): readonly WorldEntity[] {
-//   return entities.filter((entity) => {
-//     const definition = entityDefinitionMap.get(entity.definitionId);
-//     if (definition === undefined) {
-//       return false;
-//     }
-//
-//     const powerRangeGridRect = resolvePowerRangeGridRect({ entity, definition });
-//     return powerRangeGridRect !== null
-//       && areGridRectsIntersecting(powerRangeGridRect, gridRect);
-//   });
-// }
   const ranges = collectRangeInstances(options.entities, entityDefinitionMap);
   const state = resolveRangeInteractionVisualState({
     ...options, alwaysShowPowerRange: options.alwaysShowPowerRange ?? false,
@@ -206,48 +102,4 @@ function resolveState(options: {
     state.visibleRangeKeys.has(range.key)).map((range) => range.entityId)) };
 }
 
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/power-interaction-visual-state/index.json
-// AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections/renderer/power-interaction-visual-state/index.json。
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// function createEntity(
-//   id: string,
-//   definitionId: string,
-//   x: number,
-//   y: number,
-// ): WorldEntity {
-//   return {
-//     id,
-//     definitionId,
-//     position: { x, y },
-//     rotation: 0,
-//     config: {},
-//     tags: [],
-//   };
-// }
 
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/power-interaction-visual-state/index.json
-// AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections/renderer/power-interaction-visual-state/index.json。
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// function createPreviewEntity(
-//   id: string,
-//   definitionId: string,
-//   x: number,
-//   y: number,
-// ): WorldEntity & { readonly originalEntityId: string } {
-//   return {
-//     ...createEntity(id, definitionId, x, y),
-//     originalEntityId: id,
-//   };
-// }

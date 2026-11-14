@@ -85,16 +85,6 @@ function collectEntityResetReasons(options: {
     return reasons;
   }
 
-  // AI-REMOVED 2026-07-23:
-  // Reason: 拓扑不再包含独立 meteredConsumption 配置。
-  // Trigger: 用户要求消耗迁移到普通节点、槽位和频道拓扑。
-  // Evidence: 下方 nodeIds/slotIds/recipeChannels/configHash 变化会触发标准设备重置。
-  // Replacement: 通用拓扑差异检查。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // if (JSON.stringify(previousDevice.meteredConsumption) !== ...) { ... }
 
   const prevNodeIds = [...previousDevice.nodeIds].sort();
   const nextNodeIds = [...nextDevice.nodeIds].sort();
@@ -167,17 +157,6 @@ function compareSlotRuntimeShape(
     { key: 'initialItemType', label: 'initialItemType' },
     { key: 'initialCount', label: 'initialCount' },
     { key: 'ignoreStock', label: 'ignoreStock' },
-    // AI-REMOVED 2026-06-06:
-    // Reason: CompiledSimulationSlot 已删除 submitMode / submitIntervalTicks，拓扑迁移不再比较该运行时形状。
-    // Trigger: 用户要求 submit mode 机制彻底删除。
-    // Evidence: RUN_ID 20260606-041337-509040 中 submitMode 误触发全局提交导致产线测试失败。
-    // Replacement: WarehouseSink tag / r_warehouse_submit recipe.
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // { key: 'submitMode', label: 'submitMode' },
-    // { key: 'submitIntervalTicks', label: 'submitIntervalTicks' },
     { key: 'nodeId', label: 'nodeId' },
     { key: 'sourceStorageSlotGroupId', label: 'sourceStorageSlotGroupId' },
     { key: 'sourceSlotId', label: 'sourceSlotId' },
@@ -201,122 +180,6 @@ function listDeviceSlotIds(
   return device.nodeIds.flatMap((nodeId) => topology.nodes[nodeId]?.slotIds ?? []);
 }
 
-// AI-REMOVED 2026-09-20:
-// Reason: 通用 topology migration 不再接受当前基地切换产生的跨实体／设备 ID 映射。
-// Trigger: ST2-RQ-036 将基地切换定义为展示投影替换，规范执行 ID 不发生变化。
-// Evidence: Dense Host 仅在真实执行文档变化时调用 createSimulationTopologyMigration。
-// Replacement: DensePresentationIdentity + DenseEngineBridge.switchPresentation
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// interface options additions:
-// readonly previousEntityIdByNextEntityId?: Readonly<Record<string, string>>;
-// readonly previousDeviceIdByNextDeviceId?: Readonly<Record<string, string>>;
-//
-// function remapDeviceScopedId(
-//   id: string,
-//   sourceDeviceId: string,
-//   targetDeviceId: string,
-// ): string {
-//   if (id === sourceDeviceId) return targetDeviceId;
-//   const separator = id[sourceDeviceId.length];
-//   return id.startsWith(sourceDeviceId) && (separator === ":" || separator === "/")
-//     ? `${targetDeviceId}${id.slice(sourceDeviceId.length)}`
-//     : id;
-// }
 
-// AI-REMOVED 2026-05-23:
-// Reason: 替换为 collectEntityResetReasons，后者逐字段比较并产出详细的变化原因日志。
-// Trigger: 需求——当设备无法增量编译时必须输出具体变化原因。
-// Evidence: hasEntityRuntimeShapeChanged 仅返回 boolean，无法提供诊断信息。
-// Replacement: collectEntityResetReasons（同文件）。
-// Risk: Low。新函数覆盖了旧函数的所有比较维度，并增加了字段级详情。
-// Human Review: Not required.
-//
-// Original code:
-// function hasEntityRuntimeShapeChanged(options: {
-//   readonly previousEntity: WorldEntity;
-//   readonly nextEntity: WorldEntity;
-//   readonly previousTopology: CompiledSimulationTopology;
-//   readonly nextTopology: CompiledSimulationTopology;
-//   readonly deviceId: string;
-// }): boolean {
-//   if (options.previousEntity.definitionId !== options.nextEntity.definitionId) {
-//     return true;
-//   }
-//   const previousDevice = options.previousTopology.devices[options.deviceId];
-//   const nextDevice = options.nextTopology.devices[options.deviceId];
-//   if (previousDevice === undefined || nextDevice === undefined) {
-//     return true;
-//   }
-//   return createDeviceRuntimeShapeSignature(options.previousTopology, previousDevice)
-//     !== createDeviceRuntimeShapeSignature(options.nextTopology, nextDevice);
-// }
 
-// AI-REMOVED 2026-05-23:
-// Reason: 替换为 collectEntityResetReasons + getDeviceLinkSignatures + compareSlotRuntimeShape。
-// Trigger: 需求——需要逐字段比较 device runtime shape 以产出详细变化日志。
-// Evidence: createDeviceRuntimeShapeSignature 仅产出 hash，无法定位具体变化字段。
-// Replacement: collectEntityResetReasons（同文件）内联了所有字段比较逻辑。
-// Risk: Low。
-// Human Review: Not required.
-//
-// Original code:
-// function createDeviceRuntimeShapeSignature(
-//   topology: CompiledSimulationTopology,
-//   device: CompiledSimulationDevice,
-// ): string {
-//   const slotIds = listDeviceSlotIds(topology, device).sort();
-//   const slotIdSet = new Set(slotIds);
-//   const linkSignatureInput = Object.values(topology.links)
-//     .filter((link) =>
-//       link.sourceSlotIds.some((slotId) => slotIdSet.has(slotId))
-//       || link.targetSlotIds.some((slotId) => slotIdSet.has(slotId)),
-//     )
-//     .map((link) => ({
-//       id: link.id,
-//       linkType: link.linkType,
-//       sourceSlotIds: [...link.sourceSlotIds].sort(),
-//       targetSlotIds: [...link.targetSlotIds].sort(),
-//       targetSlotIdBySourceSlotId: link.targetSlotIdBySourceSlotId,
-//     }))
-//     .sort((left, right) => left.id.localeCompare(right.id));
-//   return hashStable({
-//     definitionId: device.definitionId,
-//     nodeIds: [...device.nodeIds].sort(),
-//     ingredientNodeIds: [...device.recipeChannels.flatMap(ch => ch.ingredientNodeIds)].sort(),
-//     productNodeIds: [...device.recipeChannels.flatMap(ch => ch.productNodeIds)].sort(),
-//     slots: slotIds.map((slotId) => createSlotRuntimeShape(topology.slots[slotId])),
-//     links: linkSignatureInput,
-//   });
-// }
 
-// AI-REMOVED 2026-05-23:
-// Reason: 替换为 compareSlotRuntimeShape，后者逐字段比较并产出变化原因。
-// Trigger: 需求——需要 slot 级别的详细变化日志。
-// Evidence: createSlotRuntimeShape 仅产出 shape 对象用于 hash，无法独立产出诊断信息。
-// Replacement: compareSlotRuntimeShape（同文件）。
-// Risk: Low。
-// Human Review: Not required.
-//
-// Original code:
-// function createSlotRuntimeShape(slot: CompiledSimulationSlot | undefined): unknown {
-//   if (slot === undefined) {
-//     return null;
-//   }
-//   return {
-//     id: slot.id,
-//     nodeId: slot.nodeId,
-//     sourceStorageSlotGroupId: slot.sourceStorageSlotGroupId,
-//     sourceSlotId: slot.sourceSlotId,
-//     capacity: slot.capacity,
-//     domain: slot.domain,
-//     lock: slot.lock,
-//     initialItemType: slot.initialItemType,
-//     initialCount: slot.initialCount,
-//     ignoreStock: slot.ignoreStock,
-//     submitMode: slot.submitMode,
-//     submitIntervalTicks: slot.submitIntervalTicks,
-//   };
-// }

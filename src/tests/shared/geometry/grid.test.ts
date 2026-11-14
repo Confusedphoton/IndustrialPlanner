@@ -31,7 +31,6 @@ describe("rotateLocalGridRect", () => {
   it("rotates 180° around the footprint center", () => {
     const result = rotateLocalGridRect(offset, footprint, 180)
     expect(result).toEqual({
-      // AI-CORRECTION 2026-05-26: footprint 中心旋转后，水泵 footprint 位于旋转后精灵左侧 3×3，不再是单纯 -x。
       x: 0,   // -x = -(-2) = 2
       y: 0,   // -y = -0 → 0
       width: 5,
@@ -42,7 +41,6 @@ describe("rotateLocalGridRect", () => {
   it("rotates 270°: (x,y)→(y,-x), width↔height", () => {
     expect(rotateLocalGridRect(offset, footprint, 270)).toEqual({
       x: 0,      // y = 0
-      // AI-CORRECTION 2026-05-26: footprint 中心旋转后，水泵 footprint 位于旋转后精灵上侧 3×3，不再是单纯 -x。
       y: 0,      // -x = -(-2) = 2
       width: 3,  // height
       height: 5, // width
@@ -132,7 +130,6 @@ describe("resolveSpriteGridRect (with offset)", () => {
       180,
     )
     // offset rotates: (-2,0,5,3) → (2,0,5,3)
-    // AI-CORRECTION 2026-05-26: offset 现在绕 footprint 中心旋转，180° 后为 (0,0,5,3)。
     expect(rect).toEqual({
       x: 10,  // 10 + 2
       y: 5,   // 5 + 0

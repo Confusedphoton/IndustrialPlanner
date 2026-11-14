@@ -68,23 +68,12 @@ function createWorkspace(): WorkspaceContract {
     simulation: null,
     sync: null,
     audio: null,
-    blueprintPlanner: null,
   };
 }
 
 const DEFAULT_APP_SETTINGS_STORAGE = {
   locale: "zh-CN",
   themeId: "ayu-light",
-  // AI-REMOVED 2026-09-10:
-  // Reason: 操作模式总开关已废弃，不再保留关闭分支
-  // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-  // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-  // Replacement: 测试状态不再需要模式字段
-  // Risk: 历史 false 设置统一使用当前操作行为。
-  // Human Review: Required
-  //
-  // Original code:
-  // hypergryphOperationMode: true,
   hypergryphImmediateMove: true,
   hypergryphCopyWhileMoving: false,
   hypergryphImmediateMarquee: false,
@@ -94,14 +83,13 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   quickPlaceEnabled: true,
   invertWheelZoom: false,
   penPreciseInput: true,
-  hypergryphSelectionRightDockSync: true,
+  hypergryphSelectionRightDockSync: false,
   hypergryphInspectorOpenOnSecondClick: false,
   gameUseBlueprintStyleDeviceImages: false,
   gamePlayDeviceAnimations: false,
   gamePlayDeviceAudio: false,
   gameShowDeviceNames: true,
   gameShowDeviceIcons: false,
-  // AI-CORRECTION 2026-11-13：属性面板默认改为右侧停靠。
   gameUseInspectorPanel: true,
   gameShowHotkeys: false,
   collapseDeviceModes: true,
@@ -130,16 +118,6 @@ const _DEFAULT_APP_SHORTCUTS_STORAGE = {
   [SHORTCUT_KEY.BASIC_PRODUCTION]: "V",
   [SHORTCUT_KEY.SYNTHESIS]: "B",
   [SHORTCUT_KEY.SAVE_BLUEPRINT]: "Ctrl+S",
-  // AI-REMOVED 2026-08-03:
-  // Reason: Escape 返回选择不再属于可配置快捷键默认值。
-  // Trigger: ST2-RQ-002 禁止绑定 Escape。
-  // Evidence: SHORTCUT_KEY.RETURN_SELECT 已归档。
-  // Replacement: select 手势硬编码 Escape。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // [SHORTCUT_KEY.RETURN_SELECT]: "Esc",
   [SHORTCUT_KEY.ROTATE]: "R",
   [SHORTCUT_KEY.SWITCH_DEVICE_MODE]: "Tab",
   [SHORTCUT_KEY.ROTATE_VIEWPORT]: "Ctrl+R",
@@ -1329,17 +1307,6 @@ describe("WorkbenchApp", () => {
         runningState: "stop",
         simulationMode: "single-base",
         simulationSpeed: 1,
-        // AI-REMOVED 2026-09-12:
-        // Reason: SimulationState 测试桩同步移除已退役的 diagnostics 字段。
-        // Trigger: 用户确认性能统计改由统一 Query 提供。
-        // Evidence: SimulationState contract 已不再声明 statistics / bufferSize。
-        // Replacement: queries.getPerformanceDiagnostics。
-        // Risk: Low。
-        // Human Review: Required
-        //
-        // Original code:
-        // statistics: { tickPerSecond: 0, targetTickPerSecond: 0, baseBatteryJoules: 0, baseBatteryCapacity: 0 },
-        // bufferSize: 0,
         timeline: createInitialSimulationTimelineState(),
       },
       topology: createSnapshotStore(null),
@@ -1397,16 +1364,6 @@ describe("WorkbenchApp", () => {
       },
       actions: {
         start: vi.fn(async () => {}),
-        // AI-REMOVED 2026-09-20:
-        // Reason: Simulation 公共 Action 不再允许外部写入会话模式。
-        // Trigger: ST2-RQ-035 改为 start 从 AppSettings 固化模式。
-        // Evidence: SimulationAction Contract 已移除该方法。
-        // Replacement: AppSettings.regionalMultiBaseEnabled。
-        // Risk: Low；本 mock 不调用该动作。
-        // Human Review: Required
-        //
-        // Original code:
-        // setRegionalMultiBaseEnabled: vi.fn(),
         pause: vi.fn(),
         resume: vi.fn(),
         stop: vi.fn(),
@@ -1799,7 +1756,7 @@ describe("WorkbenchApp", () => {
     const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     const appHost = createAppTestHost(workspace);
-    // 2026-11-12：本用例验证可操作工具栏；选中设备使用侧栏，避免模态 Inspector 挂起底图。
+    // 本用例验证可操作工具栏；选中设备使用侧栏，避免模态 Inspector 挂起底图。
     appHost.internalState.settings.gameUseInspectorPanel = true;
     const gestures: GestureEvent[] = [];
     appHost.gestureAdapter.subscribe((event) => gestures.push(event));
@@ -1910,7 +1867,7 @@ describe("WorkbenchApp", () => {
     const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     const appHost = createAppTestHost(workspace);
-    // 2026-11-12：真实 Canvas 会拒绝模态遮挡后的按钮输入，工具栏场景使用侧栏 Inspector。
+    // 真实 Canvas 会拒绝模态遮挡后的按钮输入，工具栏场景使用侧栏 Inspector。
     appHost.internalState.settings.gameUseInspectorPanel = true;
     const gestures: GestureEvent[] = [];
     appHost.gestureAdapter.subscribe((event) => gestures.push(event));
@@ -1959,7 +1916,7 @@ describe("WorkbenchApp", () => {
 
   it("keeps the canvas right dock toolbar visible while the right dock toggles", () => {
     const workspace = createWorkspace();
-    // 2026-11-12：工具栏资格来自真实 Editor 会话。
+    // 工具栏资格来自真实 Editor 会话。
     placementEditors.add(createEditorTestHost(workspace, { persistence: "memory" }));
     const appHost = createAppTestHost(workspace);
 
@@ -2020,7 +1977,7 @@ describe("WorkbenchApp", () => {
 
   it("renders shortcut-only right dock items with key badges instead of buttons", () => {
     const workspace = createWorkspace();
-    // 2026-11-12：工具栏资格来自真实 Editor 会话。
+    // 工具栏资格来自真实 Editor 会话。
     placementEditors.add(createEditorTestHost(workspace, { persistence: "memory" }));
     const appHost = createAppTestHost(workspace);
 
@@ -2048,23 +2005,9 @@ describe("WorkbenchApp", () => {
     expect(toolbar?.querySelectorAll('[data-toolbar-presentation="shortcut"]')).toHaveLength(3);
     expect(toolbar?.querySelector('[data-toolbar-operation-id="delete"]')).toBeNull();
 
-    // AI-CORRECTION 2026-08-03: 快捷键模式渲染 input-prompts 图片，而非文字 kbd 徽章。
-    // AI-CORRECTION 2026-08-22: 全局快捷键模式已取消；本断言现在验证逐项 shortcut presentation。
     const iconElements = toolbar?.querySelectorAll("svg[data-workbench-icon]");
     expect(iconElements?.length).toBe(0);
 
-    // AI-REMOVED 2026-08-03:
-    // Reason: 旧文字快捷键徽章已被共享图片提示组件替代。
-    // Trigger: ST2-RQ-002 图片化快捷键展示。
-    // Evidence: KeyboardShortcutPrompt 输出 img[data-key-token]。
-    // Replacement: 下方 input-prompts 图片断言。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // const keyBadges = toolbar?.querySelectorAll(".canvas-right-dock-toolbar-shortcut-key");
-    // expect(keyBadges).not.toBeNull();
-    // expect(keyBadges!.length).toBeGreaterThan(0);
     const shortcutImages = toolbar?.querySelectorAll('img[data-key-token]');
     expect(shortcutImages).not.toBeNull();
     expect(shortcutImages?.length).toBe(3);
@@ -2082,19 +2025,6 @@ describe("WorkbenchApp", () => {
       Array.from(toolbar?.querySelectorAll(".canvas-right-dock-toolbar-shortcut-separator") ?? [])
         .map((separator) => separator.textContent),
     ).toContain("/");
-    // AI-REMOVED 2026-08-22:
-    // Reason: KeyboardShortcutPrompt 使用 CSS Modules，测试不能依赖未经映射的内部类名。
-    // Trigger: 新增的第二快捷键斜杠断言没有命中实际 DOM 类名。
-    // Evidence: data-key-token 已确认 M、N 均渲染，但旧选择器返回空数组。
-    // Replacement: 下方通过公开 aria-label 定位快捷键提示，并验证实际斜杠文本。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // expect(
-    //   Array.from(toolbar?.querySelectorAll(".keyboard-shortcut-prompt-alternative-separator") ?? [])
-    //     .map((separator) => separator.textContent),
-    // ).toContain("/");
     const moveKeyboardPrompt = toolbar?.querySelector('[aria-label="M;N"]');
     expect(moveKeyboardPrompt).not.toBeNull();
     expect(
@@ -2116,7 +2046,7 @@ describe("WorkbenchApp", () => {
 
   it("renders viewport pan bindings as grouped rows with a Shift acceleration hint", () => {
     const workspace = createWorkspace();
-    // 2026-11-12：工具栏资格来自真实 Editor 会话。
+    // 工具栏资格来自真实 Editor 会话。
     placementEditors.add(createEditorTestHost(workspace, { persistence: "memory" }));
     const appHost = createAppTestHost(workspace);
 
@@ -2158,7 +2088,7 @@ describe("WorkbenchApp", () => {
 
   it("renders both configured marquee bindings before the fixed escape binding", () => {
     const workspace = createWorkspace();
-    // 2026-11-12：工具栏资格来自真实 Editor 会话。
+    // 工具栏资格来自真实 Editor 会话。
     placementEditors.add(createEditorTestHost(workspace, { persistence: "memory" }));
     const appHost = createAppTestHost(workspace);
 
@@ -2180,20 +2110,6 @@ describe("WorkbenchApp", () => {
       Array.from(toolbar?.querySelectorAll("img[data-key-token]") ?? [])
         .map((image) => image.getAttribute("data-key-token")),
     ).toEqual(["X", "Q", "Esc"]);
-    // AI-REMOVED 2026-08-22:
-    // Reason: 组合选择器中的 KeyboardShortcutPrompt 类名受 CSS Modules 映射，无法稳定命中。
-    // Trigger: 三键退出测试只命中工具栏外层斜杠，漏掉 X 与 Q 之间已渲染的内层斜杠。
-    // Evidence: data-key-token 顺序已确认是 X、Q、Esc。
-    // Replacement: 下方按 aria-hidden 与实际文本统计本功能内的两个斜杠。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // expect(
-    //   Array.from(toolbar?.querySelectorAll(
-    //     ".keyboard-shortcut-prompt-alternative-separator, .canvas-right-dock-toolbar-shortcut-separator",
-    //   ) ?? []).map((separator) => separator.textContent),
-    // ).toEqual(["/", "/"]);
     expect(
       Array.from(toolbar?.querySelectorAll('span[aria-hidden="true"]') ?? [])
         .map((separator) => separator.textContent)
@@ -2203,7 +2119,7 @@ describe("WorkbenchApp", () => {
 
   it("keeps buttons when a both request resolves to an empty shortcut", () => {
     const workspace = createWorkspace();
-    // 2026-11-12：工具栏资格来自真实 Editor 会话。
+    // 工具栏资格来自真实 Editor 会话。
     placementEditors.add(createEditorTestHost(workspace, { persistence: "memory" }));
     const appHost = createAppTestHost(workspace);
 
@@ -2226,8 +2142,6 @@ describe("WorkbenchApp", () => {
     expect(toolbar?.querySelectorAll('[data-toolbar-presentation="both"]')).toHaveLength(1);
 
     // 图标模式应渲染 WorkbenchIcon SVG，而非 kbd 徽章
-    // AI-CORRECTION 2026-08-22: 全局图标模式已取消；本断言现在验证逐项 button presentation。
-    // AI-CORRECTION 2026-08-22: 同时覆盖 both 请求在快捷键绑定为空时自动退化为按钮。
     const iconElements = toolbar?.querySelectorAll("svg[data-workbench-icon]");
     expect(iconElements?.length).toBe(2);
     expect(toolbar?.querySelectorAll('img[data-key-token]')).toHaveLength(0);
@@ -2271,7 +2185,7 @@ describe("WorkbenchApp", () => {
     });
 
     expect(appHost.state.workbench.rightDockOpen).toBe(false);
-    // 2026-05-08：关闭"使用面板"时清除选择，避免"有选中但无 inspector"的中间态。
+    // 关闭"使用面板"时清除选择，避免"有选中但无 inspector"的中间态。
     expect(editorHost.state.collections.selection).toEqual([]);
     expect(container.querySelector(".dock-right")).toBeNull();
     expect(container.querySelector('[data-dialog-key="inspector"]')).toBeNull();
@@ -2283,7 +2197,7 @@ describe("WorkbenchApp", () => {
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
     const appHost = createAppTestHost(workspace);
-    // 2026-11-13：属性面板默认停靠；本用例验证对话框模式，显式关闭停靠面板。
+    // 属性面板默认停靠；本用例验证对话框模式，显式关闭停靠面板。
     runInAction(() => { appHost.internalState.settings.gameUseInspectorPanel = false; });
 
     runInAction(() => {
@@ -2309,7 +2223,7 @@ describe("WorkbenchApp", () => {
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
     const appHost = createAppTestHost(workspace);
-    // 2026-11-13：属性面板默认停靠；本用例验证对话框模式，显式关闭停靠面板。
+    // 属性面板默认停靠；本用例验证对话框模式，显式关闭停靠面板。
     runInAction(() => { appHost.internalState.settings.gameUseInspectorPanel = false; });
 
     act(() => {
@@ -2330,7 +2244,7 @@ describe("WorkbenchApp", () => {
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
     const appHost = createAppTestHost(workspace);
-    // 2026-11-13：属性面板默认停靠；本用例验证对话框模式，显式关闭停靠面板。
+    // 属性面板默认停靠；本用例验证对话框模式，显式关闭停靠面板。
     runInAction(() => { appHost.internalState.settings.gameUseInspectorPanel = false; });
 
     act(() => {
@@ -2369,7 +2283,7 @@ describe("WorkbenchApp", () => {
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
     const appHost = createAppTestHost(workspace);
-    // 2026-11-13：属性面板默认停靠；本用例验证对话框模式，显式关闭停靠面板。
+    // 属性面板默认停靠；本用例验证对话框模式，显式关闭停靠面板。
     runInAction(() => { appHost.internalState.settings.gameUseInspectorPanel = false; });
 
     act(() => {
@@ -2386,50 +2300,10 @@ describe("WorkbenchApp", () => {
     expect(dialog?.querySelector('button[title="最大化"]')).toBeNull();
   });
 
-  // AI-REMOVED 2026-05-16:
-  // Reason: InspectorDialog 初始尺寸频繁变动（72%→min(920px,72vw)），
-  //   该测试断言具体 CSS 值会持续断开，且该 UI 区域预计未来剧烈变动。
-  // Trigger: 本地未提交改动将 width/height 从百分值改为 min() 函数值，测试断言过时。
-  // Evidence: git diff src/app/shell/dialogs/inspector-dialog.tsx
-  // Replacement: 待 InspectorDialog 尺寸方案稳定后重新编写。
-  // Risk: Low — 该测试仅验证平板端 inspector 对话框初始样式，不影响核心功能。
-  // Human Review: Not Required
-  //
-  // Original code:
-  // it("uses a 72% by 80% inspector dialog with resize handles on tablets", () => {
-  //   coarsePointer = true;
-  //   hoverNone = true;
-  //   setViewport({
-  //     width: 1024,
-  //     height: 768,
-  //     userAgent:
-  //       "Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1",
-  //     maxTouchPoints: 5,
-  //   });
-  //
-  //   const workspace = createWorkspace();
-  //   const editorHost = createEditorHost(workspace);
-  //   editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-  //   editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
-  //   const appHost = createAppHost(workspace);
-  //
-  //   act(() => {
-  //     root.render(<WorkbenchApp appHost={appHost} />);
-  //   });
-  //
-  //   const dialog = container.querySelector('.inspector-dialog[data-dialog-key="inspector"]') as HTMLElement | null;
-  //
-  //   expect(appHost.state.screenProfile.deviceClass).toBe("tablet");
-  //   expect(dialog).not.toBeNull();
-  //   expect(dialog?.style.width).toBe("72%");
-  //   expect(dialog?.style.height).toBe("80%");
-  //   expect(dialog?.querySelector(".dialog-shell-resize-grip")).not.toBeNull();
-  //   expect(dialog?.querySelector('button[title="最大化"]')).not.toBeNull();
-  // });
 
   it("emits ui-button events from the canvas right dock toolbar without leaking canvas gestures", () => {
     const workspace = createWorkspace();
-    // 2026-11-12：工具栏资格来自真实 Editor 会话。
+    // 工具栏资格来自真实 Editor 会话。
     placementEditors.add(createEditorTestHost(workspace, { persistence: "memory" }));
     const appHost = createAppTestHost(workspace);
     const gestures: GestureEvent[] = [];
@@ -2633,7 +2507,7 @@ describe("WorkbenchApp", () => {
 
   it("shows the canvas top left corner toolbar and updates toggle labels locally", () => {
     const workspace = createWorkspace();
-    // 2026-11-12：工具栏资格来自真实 Editor 会话。
+    // 工具栏资格来自真实 Editor 会话。
     placementEditors.add(createEditorTestHost(workspace, { persistence: "memory" }));
     const appHost = createAppTestHost(workspace);
 
@@ -2721,7 +2595,7 @@ describe("WorkbenchApp", () => {
 
   it("honors the off-suffixed initial top-left toolbar button state", () => {
     const workspace = createWorkspace();
-    // 2026-11-12：工具栏资格来自真实 Editor 会话。
+    // 工具栏资格来自真实 Editor 会话。
     placementEditors.add(createEditorTestHost(workspace, { persistence: "memory" }));
     const appHost = createAppTestHost(workspace);
     const gestures: GestureEvent[] = [];
@@ -2774,7 +2648,7 @@ describe("WorkbenchApp", () => {
 
   it("emits toggle ui-button events from the canvas top left corner toolbar without leaking canvas gestures", () => {
     const workspace = createWorkspace();
-    // 2026-11-12：工具栏资格来自真实 Editor 会话。
+    // 工具栏资格来自真实 Editor 会话。
     placementEditors.add(createEditorTestHost(workspace, { persistence: "memory" }));
     const appHost = createAppTestHost(workspace);
     const gestures: GestureEvent[] = [];
@@ -2985,28 +2859,6 @@ describe("WorkbenchApp", () => {
     const themeOptionLabels = Array.from(themeSelect?.options ?? []).map((option) => option.textContent);
 
     expect(dialog).not.toBeNull();
-    // 2026-06-14: system 与 display 合并为「显示与系统」；arknights-operation 改为「操作」；
-    // PWA 区域移入「其他」分组内部。
-    // AI-REMOVED 2026-08-03:
-    // Reason: “快捷键”分组已取消，入口移入“游戏”分组并打开独立对话框。
-    // Trigger: ST2-RQ-002 快捷键设置收拢。
-    // Evidence: SettingsDialog 渲染 keyboardShortcutDialog.open action card。
-    // Replacement: 下方不含快捷键分组的断言。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // expect(groupTitles).toEqual(["显示与系统", "游戏", "操作", "快捷键", "其他", "调试"]);
-    // expect(groupDescriptions).toEqual([
-    //   "语言、主题与显示设置。",
-    //   "显示风格调整",
-    //   "调整仿真工具中的操作逻辑。可以选择与游戏操作习惯对齐或开启增强选项。",
-    //   "编辑当前可自定义的快捷键设置。",
-    //   "其他功能与设置",
-    //   "一系列用于调试的设置内容。",
-    // ]);
-    // AI-CORRECTION 2026-09-09: 设置页现按用户意图拆为系统、显示、交互模式、辅助显示、便捷操作、活动和快捷键。
-    // AI-CORRECTION 2026-09-26: 动画与音效移入常规设置，“显示”同步更名为“显示与性能”。
     expect(groupTitles).toEqual([
       "系统",
       "显示与性能",
@@ -3043,11 +2895,10 @@ describe("WorkbenchApp", () => {
       "该选项将会详细在日志汇报仿真情况，将会严重拖慢性能，仅用于无法确认的仿真出错诊断。",
     );
     expect(languageOptionLabels).toEqual(["中文(简体)", "English (AI Translate)"]);
-    // AI-CORRECTION 2026-11-13：Ayu Dark 由 Graphite Dark 取代，原期望为 ["Ayu Light", "Ayu Dark"]。
     expect(themeOptionLabels).toEqual(["Ayu Light", "石墨深色"]);
     expect(languageSelect?.value).toBe("zh-CN");
     expect(themeSelect?.value).toBe("ayu-light");
-    // 2026-05-26: game-arknights-operation-mode 已移除，不再校验 operationModeToggle。
+    // game-arknights-operation-mode 已移除，不再校验 operationModeToggle。
     // immediateMove / immediateMarquee 不再受 editableWhen 锁定。
     expect(immediateMoveToggle?.checked).toBe(true);
     expect(immediateMoveToggle?.disabled).toBe(false);
@@ -3126,16 +2977,6 @@ describe("WorkbenchApp", () => {
 
     expect(shortcutsTab?.getAttribute("aria-selected")).toBe("true");
     expect(container.querySelector(".help-dialog")?.textContent).toContain("旋转画布");
-    // AI-REMOVED 2026-08-03:
-    // Reason: 操作说明中的快捷键已改为 input-prompts 图片。
-    // Trigger: ST2-RQ-002 图片化快捷键展示。
-    // Evidence: KeyboardShortcutPrompt 为组合键分别渲染 Ctrl、R 图片。
-    // Replacement: 下方图片 token 断言。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // expect(container.querySelector(".help-dialog")?.textContent).toContain("Ctrl+R");
     expect(container.querySelector('.help-dialog img[data-key-token="Ctrl"]')).not.toBeNull();
     expect(container.querySelector('.help-dialog img[data-key-token="R"]')).not.toBeNull();
 
@@ -3211,19 +3052,6 @@ describe("WorkbenchApp", () => {
     expect(textarea).not.toBeNull();
     expect(textarea?.placeholder).toContain("SharedWorker");
 
-    // AI-REMOVED 2026-08-08:
-    // Reason: Workbench 组件测试不再拥有同步内存日志 store，不能用一次 console 调用同步断言 textarea。
-    // Trigger: ST2-RQ-009 将日志读取改为 SharedWorker + IndexedDB + 可见时轮询。
-    // Evidence: console 捕获和全局异常已有独立单元测试；此处只验证产品开关与不可用状态。
-    // Replacement: src/tests/shared/console-intercept.test.ts 与 log-collector-storage.test.ts。
-    // Risk: 真实 SharedWorker 连接仍需浏览器集成验收。
-    // Human Review: Required
-    //
-    // Original code:
-    // act(() => { console.warn("debug log panel smoke"); });
-    // expect(textarea?.value).toContain("debug log panel smoke");
-    // window.dispatchEvent(errorEvent / rejectionEvent);
-    // expect(textarea?.value).toContain("[window.error] / [window.unhandledrejection]");
 
     act(() => {
       runInAction(() => {
@@ -3519,49 +3347,6 @@ describe("WorkbenchApp", () => {
     ]);
   });
 
-    /*
-      AI-REMOVED 2026-05-12:
-      Reason: 该测试断言依赖已移除的 toolbox placeholder DOM 结构，当前实现已改为正式的 production planning 面板。
-      Trigger: 用户要求删除这条过时测试，避免继续因旧 DOM 选择器导致全量测试失败。
-      Evidence: 当前失败断言查询 .toolbox-dialog-placeholder h3，但 production-planning tab 现在渲染的是 .production-planning-panel。
-      Replacement: None
-      Risk: Low
-      Human Review: Required
-
-      Original code:
-      it("opens the toolbox dialog through toolbar interaction", () => {
-        const workspace = createWorkspace();
-        const appHost = createAppTestHost(workspace);
-
-        act(() => {
-          root.render(<WorkbenchApp appHost={appHost} />);
-        });
-
-        const toolboxButton = container.querySelector(
-          'button[title="工具箱"]',
-        ) as HTMLButtonElement | null;
-
-        expect(toolboxButton).not.toBeNull();
-
-        act(() => {
-          toolboxButton?.click();
-        });
-
-        expect(container.querySelector(".toolbox-dialog")).not.toBeNull();
-        expect(container.querySelector("#toolbox-dialog-tab-item-encyclopedia")?.getAttribute("aria-selected")).toBe("true");
-
-        const productionPlanningTab = container.querySelector(
-          "#toolbox-dialog-tab-production-planning",
-        ) as HTMLButtonElement | null;
-
-        act(() => {
-          productionPlanningTab?.click();
-        });
-
-        expect(appHost.internalState.workbench.dialogState.toolbox.activeTab).toBe("production-planning");
-        expect(container.querySelector(".toolbox-dialog-placeholder h3")?.textContent).toBe("产线规划");
-      });
-    */
 
   it("keeps timeline height fixed in floating and bottom dock modes", () => {
     const workspace = createWorkspace();
@@ -4208,20 +3993,9 @@ describe("WorkbenchApp", () => {
     const systemRecipeCard = container.querySelector(".module-balancing-module-card");
 
     expect(desktopLayout?.classList.contains("has-library")).toBe(true);
-    // AI-REMOVED 2026-07-27:
-    // Reason: 系统配方卡不再渲染完整 RecipeDisplay 公式，旧断言与新产品外观冲突。
-    // Trigger: 用户要求系统配方头部改为设备图标及“产物 · 设备”文本。
-    // Evidence: 新断言验证卡片标题分隔符与 device-icons 设备图标。
-    // Replacement: 下方 systemRecipeCard 标题和图标断言
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // expect(container.querySelector(".recipe-display-formula-module-library")).not.toBeNull();
     expect(systemRecipeCard).not.toBeNull();
     expect(systemRecipeCard?.querySelector(".module-balancing-module-title")?.textContent).toContain("·");
     expect(systemRecipeCard?.querySelector("img")?.getAttribute("src")).toContain("device-icons/");
-    // AI-CORRECTION 2026-07-27: 新头部与原配方展示控件需要同时存在。
     expect(systemRecipeCard?.querySelector(".recipe-display-formula-module-library")).not.toBeNull();
     expect(closeLibraryButton).not.toBeNull();
 
@@ -4445,7 +4219,6 @@ describe("WorkbenchApp", () => {
         return;
       }
 
-      // AI-CORRECTION 2026-11-13：深色选项改为 graphite-dark，原用例选择 ayu-dark。
       themeSelect.value = "graphite-dark";
       themeSelect.dispatchEvent(new Event("change", { bubbles: true }));
     });
@@ -4472,16 +4245,6 @@ describe("WorkbenchApp", () => {
       JSON.stringify({
         locale: "zh-CN",
         themeId: "ayu-light",
-        // AI-REMOVED 2026-09-10:
-        // Reason: 操作模式总开关已废弃，不再保留关闭分支
-        // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-        // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-        // Replacement: 测试状态不再需要模式字段
-        // Risk: 历史 false 设置统一使用当前操作行为。
-        // Human Review: Required
-        //
-        // Original code:
-        // hypergryphOperationMode: true,
         hypergryphImmediateMove: false,
         hypergryphImmediateMarquee: false,
       }),
@@ -4614,7 +4377,7 @@ describe("WorkbenchApp", () => {
       settingsButton?.click();
     });
 
-    // 2026-06-14: debug-mode 移至调试分组首位；关闭时隐藏后续调试项，
+    // debug-mode 移至调试分组首位；关闭时隐藏后续调试项，
     // 需要先开启调试模式才能看到 FPS/手势测试开关。
     const debugModeToggle = container.querySelector(
       'input[name="other-debug-mode"]',
@@ -4941,66 +4704,6 @@ describe("WorkbenchApp", () => {
     expect(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY)).toBeNull();
   });
 
-  // AI-REMOVED 2026-05-26:
-  // Reason: game-arknights-operation-mode 开关已从设置面板移除，
-  //         此测试验证鹰角模式关闭状态下操作模式开关的行为，不再适用。
-  // Trigger: 用户需求 — 取消该设置的图像化入口。
-  // Evidence: settings-dialog-state.ts 中 game-arknights-operation-mode 项已删除，
-  //           workbench-app.tsx 中对应的 readValue/writeValue 绑定已移除。
-  // Replacement: None（鹰角模式的键盘行为仍通过其他测试覆盖）。
-  // Risk: Low
-  // Human Review: Not Required
-  //
-  // Original code:
-  // it("captures keybinding settings when operation mode is externally off and keeps the mode toggle disabled", () => {
-  //   localStorage.setItem(
-  //     APP_SETTINGS_LOCAL_STORAGE_KEY,
-  //     JSON.stringify({
-  //       locale: "zh-CN",
-  //       themeId: "ayu-light",
-  //       hypergryphOperationMode: false,
-  //     }),
-  //   );
-  //   const workspace = createWorkspace();
-  //   const appHost = createAppHost(workspace);
-  //   act(() => { root.render(<WorkbenchApp appHost={appHost} />); });
-  //   const settingsButton = container.querySelector(".toolbar-rail-utility .rail-button:last-child") as HTMLButtonElement | null;
-  //   act(() => { settingsButton?.click(); });
-  //   const operationModeToggle = container.querySelector('input[name="game-arknights-operation-mode"]') as HTMLInputElement | null;
-  //   const immediateMoveToggle = container.querySelector('input[name="game-arknights-immediate-move"]') as HTMLInputElement | null;
-  //   const immediateMarqueeToggle = container.querySelector('input[name="game-arknights-immediate-marquee"]') as HTMLInputElement | null;
-  //   const confirmShortcutButton = container.querySelector('button[data-setting-id="shortcut-place-conveyor"]') as HTMLButtonElement | null;
-  //   const cancelShortcutButton = container.querySelector('button[data-setting-id="shortcut-place-pipe"]') as HTMLButtonElement | null;
-  //   const rotateShortcutButton = container.querySelector('button[data-setting-id="shortcut-rotate"]') as HTMLButtonElement | null;
-  //   const rotateViewportShortcutButton = container.querySelector('button[data-setting-id="shortcut-rotate-viewport"]') as HTMLButtonElement | null;
-  //   expect(operationModeToggle).not.toBeNull();
-  //   expect(immediateMoveToggle).not.toBeNull();
-  //   expect(immediateMarqueeToggle).not.toBeNull();
-  //   expect(confirmShortcutButton).not.toBeNull();
-  //   expect(cancelShortcutButton).not.toBeNull();
-  //   expect(rotateShortcutButton).not.toBeNull();
-  //   expect(rotateViewportShortcutButton).not.toBeNull();
-  //   expect(operationModeToggle?.checked).toBe(false);
-  //   expect(operationModeToggle?.disabled).toBe(true);
-  //   expect(immediateMoveToggle?.checked).toBe(true);
-  //   expect(immediateMoveToggle?.disabled).toBe(true);
-  //   expect(immediateMarqueeToggle?.checked).toBe(false);
-  //   expect(immediateMarqueeToggle?.disabled).toBe(true);
-  //   expect(confirmShortcutButton?.disabled).toBe(false);
-  //   expect(confirmShortcutButton?.textContent).toBe("E");
-  //   expect(rotateShortcutButton?.disabled).toBe(false);
-  //   expect(rotateShortcutButton?.textContent).toBe("R");
-  //   expect(rotateViewportShortcutButton?.disabled).toBe(false);
-  //   expect(rotateViewportShortcutButton?.textContent).toBe("Ctrl+R");
-  //   expect(container.querySelector(".settings-dialog")?.textContent).toContain("旋转画布");
-  //   act(() => { confirmShortcutButton?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true })); });
-  //   expect(confirmShortcutButton?.textContent).toBe("按任意键...");
-  //   act(() => { window.dispatchEvent(new KeyboardEvent("keydown", { key: "p", bubbles: true })); });
-  //   expect(confirmShortcutButton?.textContent).toBe("P");
-  //   expect(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY)).toBeNull();
-  //   expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBe(JSON.stringify({ locale: "zh-CN", themeId: "ayu-light", hypergryphOperationMode: false }));
-  //   expect(localStorage.getItem(APP_SHORTCUTS_LOCAL_STORAGE_KEY)).toBe(JSON.stringify({ ...DEFAULT_APP_SHORTCUTS_STORAGE, [SHORTCUT_KEY.PLACE_CONVEYOR]: "P" }));
-  // });
 
   it("routes global keyboard events only while no dialog shell is visible", () => {
     const workspace = createWorkspace();
@@ -5235,10 +4938,8 @@ describe("WorkbenchApp", () => {
 
     expect(dialog).not.toBeNull();
     expect(container.querySelector(".settings-dialog-sidebar")).toBeNull();
-    // 2026-06-14: system/display 合并，arknights-operation 改为 operation，
+    // system/display 合并，arknights-operation 改为 operation，
     // PWA 移入 other 分组内，快捷键分组 mobileHidden。
-    // AI-CORRECTION 2026-09-09: 新分组均在非桌面单栏中展示；仅“显示快捷键”设置项继续保持非桌面隐藏。
-    // AI-CORRECTION 2026-09-26: “显示与性能”在手机单栏中使用相同分组名称。
     expect(groupTitles).toEqual([
       "系统",
       "显示与性能",

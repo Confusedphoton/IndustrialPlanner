@@ -125,20 +125,6 @@ function readSyncMetadataState(): SyncMetadataState {
     return EMPTY_METADATA;
   }
 
-  // AI-REMOVED 2026-07-29:
-  // Reason: 元数据现同时保存内容哈希和远端 revision 游标，旧校验会在任一字段缺失时丢弃另一字段。
-  // Trigger: 同内容二次检查应直接探测下一 revision，避免每次枚举 revision 目录。
-  // Evidence: 历史 v3-webdav-sync-metadata 只含 contentHashes，必须继续兼容。
-  // Replacement: 下方两个字段分别容错归一化。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // if (!isRecord(rawState) || !isRecord(rawState.contentHashes)) {
-  //   return EMPTY_METADATA;
-  // }
-  // AI-CORRECTION 2026-07-29: 元数据现在包含内容哈希、revision 游标和 canonical ETag；
-  // 三个字段继续分别容错，历史客户端缺少 remoteEtags 时不得丢弃已有同步元数据。
   const contentHashes = Object.fromEntries(
     Object.entries(
       isRecord(rawState.contentHashes) ? rawState.contentHashes : {},

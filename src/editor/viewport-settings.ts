@@ -121,18 +121,6 @@ export function clampViewportCenterToBaseWarningBounds(options: {
 }
 
 function resolveBaseWarningBounds(baseDefinition: BaseDefinition): SceneBounds | null {
-  // AI-REMOVED 2026-09-26:
-  // Reason: 视口限制只考虑主区域时无法定位左上角分区。
-  // Trigger: 草稿箱不连续建造区。
-  // Evidence: resolveBaseOuterBounds 返回全部分区的外接范围。
-  // Replacement: 下方按共享外接范围计算警告边界。
-  // Risk: 外接范围内的空地可被视口居中，但仍不能放置。
-  // Human Review: Required
-  // Original code:
-  // const minX = -baseDefinition.outerRing.left - BASE_WARNING_PADDING_CELLS;
-  // const minY = -baseDefinition.outerRing.top - BASE_WARNING_PADDING_CELLS;
-  // const maxX = baseDefinition.placeableArea.width + baseDefinition.outerRing.right + BASE_WARNING_PADDING_CELLS;
-  // const maxY = baseDefinition.placeableArea.height + baseDefinition.outerRing.bottom + BASE_WARNING_PADDING_CELLS;
   const outerBounds = resolveBaseOuterBounds(baseDefinition);
   return outerBounds === null ? null : expandSceneBounds(outerBounds, {
     top: BASE_WARNING_PADDING_CELLS, right: BASE_WARNING_PADDING_CELLS,

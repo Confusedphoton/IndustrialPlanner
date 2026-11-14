@@ -23,11 +23,7 @@ import {
   resolveProtocolCoreDefinitionIdForBase,
 } from "@/shared/protocol-core";
 
-// AI-CORRECTION 2026-09-09: schema 6 将区域标记纳入基地与蓝图的统一迁移边界。
-// AI-CORRECTION 2026-09-11: 远端发布 tag v1.5.0 仍为 schema 5；所有当前未发布变更统一进入 5→6。
 // USER-REQUIREMENT 2026-09-18: 修改迁移目标前必须先核查目标 schema 是否已经上线；未上线时不得增加下一个版本，只能把新增迁移追加到现有生产版本至目标版本的 step。当前固定追加到 5→6。
-// AI-CORRECTION 2026-10-08: 用户允许 REQ-041 增加 6→7 空步骤，专用于迁移模式切换及旧 fallback，既有 1→6 规则保留。
-// AI-CORRECTION 2026-10-08: 迁移链目标同样取自唯一文档版本，避免蓝图、基地和转换器分别维护数字。
 export const BLUEPRINT_DEVICE_ID_SCHEMA_VERSION = BLUEPRINT_SCHEMA_VERSION;
 
 const ADMISSION_RULE_CONFIG_PATH = "portGroups[0].ports[0].admissionRule";
@@ -86,27 +82,6 @@ export interface BlueprintDeviceIdMigrationSpec {
   readonly fromVersion: number;
   readonly toVersion: number;
   readonly deviceRules: readonly BlueprintDeviceIdMigrationRule[];
-  // AI-REMOVED 2026-08-19:
-  // Reason: schema 5 迁移需要同时读取并修改 entities 与 slotLinks，实体配置专用迁移类型已无法表达完整文档迁移。
-  // Trigger: 气体收集泵与抽水泵从仓库代理改为真实配方生产设备。
-  // Evidence: 旧泵所选物品只存在于 document.slotLinks，单独迁移 entity.config 无法判断配方或作弊设备替换。
-  // Replacement: documentMigration
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // readonly entityConfigMigration?: "normalize-admission-rate";
-  // AI-CORRECTION 2026-08-19: 同一 schema 版本可能包含多个相互独立的完整文档迁移，当前替代入口为 documentMigrations。
-  // AI-REMOVED 2026-08-19:
-  // Reason: 单值迁移入口无法在 schema 4→5 同时执行资源泵转换与暗管入口旧配置清理。
-  // Trigger: schema 5 新暗管入口定义已移除 recipeChannels，但历史蓝图仍携带该配置并会重建无效通道。
-  // Evidence: getting-started-tutorial 与 utimate-xiranite 的暗管入口配置包含 recipeChannels[...].manualRecipeOnly。
-  // Replacement: documentMigrations
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // readonly documentMigration?: "normalize-admission-rate" | "migrate-resource-pump-sources";
   readonly documentMigrations?: readonly BlueprintDocumentMigration[];
 }
 
@@ -142,20 +117,8 @@ export interface BlueprintDeviceReferenceMigrationResult {
  *
  * 每个版本只能迁移到紧邻的下一个版本。设备方向迁移使用：
  * `nextRotation = currentRotation + rotationOffset`。
- * AI-CORRECTION 2026-07-23: 迁移链现同时承载准入口速率配置归一化，名称中的 DeviceId 仅保留为既有公共 API。
- * AI-CORRECTION 2026-08-19: schema 5 起迁移链以完整文档状态为边界，同时迁移实体、实体顺序与槽位链接。
  */
 export const BLUEPRINT_DEVICE_ID_MIGRATION_SPECS = [
-// AI-REMOVED 2026-10-08:
-// Reason: 收敛全局迁移入口，避免重复调度及旧缓存覆盖。
-// Trigger: REQ-041 用户授权统一迁移。
-// Evidence: 启动、导入和保存调用链审查。
-// Replacement: 本数组尾部的 6→7 步骤
-// Risk: 需回归迁移失败与恢复。
-// Human Review: Required
-// Original code:
-//   // 2026-10-08：只建立恢复边界，业务内容保持原样；历史转换仍按相邻版本执行。
-//   { fromVersion: 6, toVersion: 7, deviceRules: [] },
   {
     fromVersion: 1,
     toVersion: 2,
@@ -224,16 +187,6 @@ export const BLUEPRINT_DEVICE_ID_MIGRATION_SPECS = [
     fromVersion: 3,
     toVersion: 4,
     deviceRules: [],
-    // AI-REMOVED 2026-08-19:
-    // Reason: 文档迁移入口已统一为可组合的迁移序列。
-    // Trigger: schema 4→5 需要在同一版本执行资源泵与暗管入口两项迁移。
-    // Evidence: BlueprintDeviceIdMigrationSpec.documentMigrations 取代单值 documentMigration。
-    // Replacement: documentMigrations
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // documentMigration: "normalize-admission-rate",
     documentMigrations: ["normalize-admission-rate"],
   },
   {
@@ -252,43 +205,15 @@ export const BLUEPRINT_DEVICE_ID_MIGRATION_SPECS = [
       { fromDeviceId: "vaporizer_1", toDeviceId: "vaporizer_1", rotationOffset: 180 },
       { fromDeviceId: "gas_pump_1", toDeviceId: "gas_pump_1", rotationOffset: 180 },
     ],
-    // AI-REMOVED 2026-08-19:
-    // Reason: schema 5 的资源泵迁移需要与暗管入口旧配置清理共同执行。
-    // Trigger: 暗管入口 recipeChannels 已从 registry 移除，历史配置必须在迁移时同步移除。
-    // Evidence: 历史系统蓝图的扁平配置会被 materializeConfigOverrides 重建为不完整 recipe channel。
-    // Replacement: documentMigrations
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // documentMigration: "migrate-resource-pump-sources",
     documentMigrations: [
       "migrate-resource-pump-sources",
       "remove-dark-pipe-recipe-channel-config",
     ],
   },
-  // AI-REMOVED 2026-09-11:
-  // Reason: 撤回为未发布 schema 6 保留空迁移的假设。
-  // Trigger: 用户明确要求未发布改动复用同一个蓝图版本，不以未发布版本作为历史迁移边界。
-  // Evidence: 远端 v1.5.0 的蓝图、基地及迁移 schema 均为 5。
-  // Replacement: 下方合并后的 5→6 迁移。
-  // Risk: Low；仅兼容已发布 schema 1～5，当前未发布目标统一为 6。
-  // Human Review: Required
-  //
-  // Original code:
-  //   {
-  //     fromVersion: 5,
-  //     toVersion: 6,
-  //     // AI-CORRECTION 2026-09-11: schema 6 文档可能已在用户环境存在，5→6 保持原空规则以避免重放本次端口补偿。
-  //     deviceRules: [],
-  //   },
   {
     fromVersion: 5,
     toVersion: 6,
-    // AI-CORRECTION 2026-09-11: 将 AKEData 1.5.3@9913107-5 确认的 37 个唯一 180°修正放入新兼容边界；schema 6 文档只在本 step 旋转一次。
-    // AI-CORRECTION 2026-09-11: 上述 6→7 边界未发布，现合并回 5→6；37 项端口补偿保持不变，三台液体变体同时重命名。
     // 对称、无映射和无端口定义继续不纳入。
-    // AI-CORRECTION 2026-09-12: AKEData 1.5.3@9885010-4 的物流阀门专表补充确认两个准入口各需 270°文档补偿；本 step 现共 39 项。
     deviceRules: [
       { fromDeviceId: "storager_1", toDeviceId: "storager_1", rotationOffset: 180 },
       { fromDeviceId: "mix_pool_1", toDeviceId: "mix_pool_1", rotationOffset: 180 },
@@ -330,86 +255,11 @@ export const BLUEPRINT_DEVICE_ID_MIGRATION_SPECS = [
       { fromDeviceId: "log_admission", toDeviceId: "log_admission", rotationOffset: 270 },
       { fromDeviceId: "pipe_admission", toDeviceId: "pipe_admission", rotationOffset: 270 },
     ],
-    // AI-CORRECTION 2026-09-18: 生产环境仍为 schema 5；暗管共享槽位改为传输输入后，旧链路迁移追加到现有 5→6 step，不新建未发布版本。
     documentMigrations: [
       "replace-base-protocol-core",
       "migrate-dark-pipe-transport-input-links",
     ],
   },
-  // AI-REMOVED 2026-09-11:
-  // Reason: 撤回额外的 schema 8；三台设备重命名与端口旋转属于同一次未发布升级。
-  // Trigger: 用户明确要求未发布改动复用同一个蓝图版本，不以未发布版本作为历史迁移边界。
-  // Evidence: 远端 v1.5.0 的蓝图、基地及迁移 schema 均为 5。
-  // Replacement: 上方 5→6 的三个 old ID → new ID + 180° 规则。
-  // Risk: Low；仅兼容已发布 schema 1～5，当前未发布目标统一为 6。
-  // Human Review: Required
-  //
-  // Original code:
-  //   {
-  //     fromVersion: 7,
-  //     toVersion: 8,
-  //     // 2026-09-11: 液体变体统一为基础设备 ID + 模式后缀；历史旋转补偿仍只由 6→7 执行。
-  //     deviceRules: [
-  //       { fromDeviceId: "liquid_filling_pd_mc_1", toDeviceId: "filling_pd_mc_1_liquid", rotationOffset: 0 },
-  //       { fromDeviceId: "hydro_planter_1", toDeviceId: "planter_1_liquid", rotationOffset: 0 },
-  //       { fromDeviceId: "liquid_furnance_1", toDeviceId: "furnance_1_liquid", rotationOffset: 0 },
-  //     ],
-  //   },
-  // AI-REMOVED 2026-09-11:
-  // Reason: 端口旋转规则从 5→6 移入新建 6→7，保护可能已经存在的 schema 6 文档不被重复旋转。
-  // Trigger: 无法由仓库 tag、发布提交或本地存档证明用户环境不存在 schema 6。
-  // Evidence: schema 6 已是当前代码声明，且用户要求兼容已有 schema 6 文档。
-  // Replacement: 上方 6→7 migration step。
-  // Risk: Low；历史代码仅作为审计记录保留。
-  // Human Review: Required
-  //
-  // Original code:
-//   {
-//     fromVersion: 5,
-//     toVersion: 6,
-//     // AI-CORRECTION 2026-09-11: 仓库可见发布证据显示 schema 6 引入提交 513e460c（2026-09-09）晚于全部正式/beta/pre tag（最新正式 tag v1.4.2.1，2026-08-28）及 2026-08-29 Alpha 发布提交；现有 public/blueprints 仍为 schema 5。因此在尚未暴露的 5→6 step 加入 AKEData 1.5.3@9913107-5 端口审计确认的 37 个唯一 180° 修正，保留既有 4→5 历史迁移。
-//     // `unloader_1`、`loader_1`、`sp_hub_1` 为 180° 对称，未纳入无证据旋转；未映射和无端口定义同样不纳入。
-//     deviceRules: [
-//       { fromDeviceId: "storager_1", toDeviceId: "storager_1", rotationOffset: 180 },
-//       { fromDeviceId: "mix_pool_1", toDeviceId: "mix_pool_1", rotationOffset: 180 },
-//       { fromDeviceId: "grinder_1", toDeviceId: "grinder_1", rotationOffset: 180 },
-//       { fromDeviceId: "liquid_filling_pd_mc_1", toDeviceId: "liquid_filling_pd_mc_1", rotationOffset: 180 },
-//       { fromDeviceId: "filling_pd_mc_1", toDeviceId: "filling_pd_mc_1", rotationOffset: 180 },
-//       { fromDeviceId: "udpipe_loader_1", toDeviceId: "udpipe_loader_1", rotationOffset: 180 },
-//       { fromDeviceId: "udpipe_unloader_1", toDeviceId: "udpipe_unloader_1", rotationOffset: 180 },
-//       { fromDeviceId: "furnance_1", toDeviceId: "furnance_1", rotationOffset: 180 },
-//       { fromDeviceId: "liquid_furnance_1", toDeviceId: "liquid_furnance_1", rotationOffset: 180 },
-//       { fromDeviceId: "cmpt_mc_1", toDeviceId: "cmpt_mc_1", rotationOffset: 180 },
-//       { fromDeviceId: "shaper_1", toDeviceId: "shaper_1", rotationOffset: 180 },
-//       { fromDeviceId: "shaper_1_gas", toDeviceId: "shaper_1_gas", rotationOffset: 180 },
-//       { fromDeviceId: "seedcol_1", toDeviceId: "seedcol_1", rotationOffset: 180 },
-//       { fromDeviceId: "planter_1", toDeviceId: "planter_1", rotationOffset: 180 },
-//       { fromDeviceId: "hydro_planter_1", toDeviceId: "hydro_planter_1", rotationOffset: 180 },
-//       { fromDeviceId: "winder_1", toDeviceId: "winder_1", rotationOffset: 180 },
-//       { fromDeviceId: "tools_asm_mc_1", toDeviceId: "tools_asm_mc_1", rotationOffset: 180 },
-//       { fromDeviceId: "thickener_1", toDeviceId: "thickener_1", rotationOffset: 180 },
-//       { fromDeviceId: "power_sta_1", toDeviceId: "power_sta_1", rotationOffset: 180 },
-//       { fromDeviceId: "mix_pool_2", toDeviceId: "mix_pool_2", rotationOffset: 180 },
-//       { fromDeviceId: "liquid_purifier_1", toDeviceId: "liquid_purifier_1", rotationOffset: 180 },
-//       { fromDeviceId: "liquid_purifier_1_gas", toDeviceId: "liquid_purifier_1_gas", rotationOffset: 180 },
-//       { fromDeviceId: "xiranite_oven_1", toDeviceId: "xiranite_oven_1", rotationOffset: 180 },
-//       { fromDeviceId: "dismantler_1", toDeviceId: "dismantler_1", rotationOffset: 180 },
-//       { fromDeviceId: "transmuter_2_gastrans", toDeviceId: "transmuter_2_gastrans", rotationOffset: 180 },
-//       { fromDeviceId: "transmuter_2_solidtrans", toDeviceId: "transmuter_2_solidtrans", rotationOffset: 180 },
-//       { fromDeviceId: "gas_reactor_1", toDeviceId: "gas_reactor_1", rotationOffset: 180 },
-//       { fromDeviceId: "transmuter_1_gastrans", toDeviceId: "transmuter_1_gastrans", rotationOffset: 180 },
-//       { fromDeviceId: "transmuter_1_liquidtrans", toDeviceId: "transmuter_1_liquidtrans", rotationOffset: 180 },
-//       { fromDeviceId: "water_pump_1", toDeviceId: "water_pump_1", rotationOffset: 180 },
-//       { fromDeviceId: "udpipe_loader_2", toDeviceId: "udpipe_loader_2", rotationOffset: 180 },
-//       { fromDeviceId: "udpipe_unloader_2", toDeviceId: "udpipe_unloader_2", rotationOffset: 180 },
-//       { fromDeviceId: "liquid_cleaner_1", toDeviceId: "liquid_cleaner_1", rotationOffset: 180 },
-//       { fromDeviceId: "liquid_storager_1", toDeviceId: "liquid_storager_1", rotationOffset: 180 },
-//       { fromDeviceId: "gas_storager_1", toDeviceId: "gas_storager_1", rotationOffset: 180 },
-//       { fromDeviceId: "vaporizer_1", toDeviceId: "vaporizer_1", rotationOffset: 180 },
-//       { fromDeviceId: "gas_pump_1", toDeviceId: "gas_pump_1", rotationOffset: 180 },
-//     ],
-//   },
-  // 2026-10-08：只建立恢复边界，业务内容保持原样；历史转换仍按相邻版本执行。
   { fromVersion: 6, toVersion: 7, deviceRules: [] },
 ] as const satisfies readonly BlueprintDeviceIdMigrationSpec[];
 
@@ -417,33 +267,7 @@ const MIGRATION_SPEC_BY_SOURCE_VERSION = createMigrationSpecBySourceVersion(
   BLUEPRINT_DEVICE_ID_MIGRATION_SPECS,
 );
 
-// AI-REMOVED 2026-07-19:
-// Reason: 旧索引会把任意历史 ID 直接压平到最新 ID，无法逐版本断言，也无法携带旋转增量。
-// Trigger: 用户要求将现有 ID 迁移固化为 schema 2，并将带旋转规则的去前缀迁移定义为 schema 3。
-// Evidence: 新迁移链必须严格执行 1→2→3，不能从 schema 1 跳过 schema 2。
-// Replacement: MIGRATION_SPEC_BY_SOURCE_VERSION + migrateBlueprintEntityDeviceIds
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// const LATEST_DEVICE_ID_BY_HISTORICAL_ID = new Map<string, string>(
-//   BLUEPRINT_DEVICE_ID_MIGRATION_SPECS.flatMap((spec) =>
-//     spec.historicalDeviceIds.map((historicalId) => [historicalId, spec.deviceId] as const),
-//   ),
-// );
 
-// AI-REMOVED 2026-07-19:
-// Reason: 直接解析到最新 ID 会丢失中间 schema 与旋转迁移语义。
-// Trigger: 用户要求任意版本必须逐阶段迁移，并在每一步进行断言。
-// Evidence: schema 1 的 item_port_mix_pool_large_1 必须先迁移为 schema 2 的 item_port_mix_pool_2。
-// Replacement: migrateBlueprintEntityDeviceIds
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// export function resolveLatestBlueprintDeviceId(deviceId: string): string {
-//   return LATEST_DEVICE_ID_BY_HISTORICAL_ID.get(deviceId) ?? deviceId;
-// }
 
 export function migrateBlueprintEntityDeviceIds<TEntity extends WorldEntity>(
   entities: Record<string, TEntity>,
@@ -468,7 +292,6 @@ export function migrateBlueprintEntityDeviceIds<TEntity extends WorldEntity>(
 /**
  * 蓝图、基地与系统蓝图共用的完整文档迁移入口。
  *
- * AI-CORRECTION 2026-08-19: 设备 ID 之外的迁移必须从这里进入，避免丢失
  * entityOrder 或 slotLinks 上的跨对象语义。
  */
 export function migrateBlueprintDocumentState<TEntity extends WorldEntity>(
@@ -498,7 +321,7 @@ export function migrateBlueprintDocumentState<TEntity extends WorldEntity>(
     return null;
   }
 
-  // 2026-09-11: 调试开关仅将未发布的未来 schema 降写为当前最高版本，
+  // 调试开关仅将未发布的未来 schema 降写为当前最高版本，
   // 不执行任何历史迁移；关闭开关时仍由上方校验拒绝。
   let schemaVersion = forceFlattenFutureVersion
     ? BLUEPRINT_DEVICE_ID_SCHEMA_VERSION
@@ -522,24 +345,6 @@ export function migrateBlueprintDocumentState<TEntity extends WorldEntity>(
       ...nextState,
       entities: applyBlueprintDeviceIdMigrationRules(nextState.entities, spec.deviceRules),
     };
-    // AI-REMOVED 2026-08-19:
-    // Reason: 两个互斥 if 只支持每个 schema 版本执行单项迁移，无法组合 schema 5 的独立迁移步骤。
-    // Trigger: 4→5 必须同时迁移资源泵并清理暗管入口 recipeChannels 旧配置。
-    // Evidence: BlueprintDeviceIdMigrationSpec 已改为 documentMigrations 有序列表。
-    // Replacement: 下方 documentMigrations 循环与 switch。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // if (spec.documentMigration === "normalize-admission-rate") {
-    //   nextState = {
-    //     ...nextState,
-    //     entities: applyAdmissionRateConfigMigration(nextState.entities),
-    //   };
-    // }
-    // if (spec.documentMigration === "migrate-resource-pump-sources") {
-    //   nextState = applyResourcePumpSourceMigration(nextState);
-    // }
     for (const documentMigration of spec.documentMigrations ?? []) {
       switch (documentMigration) {
         case "normalize-admission-rate":

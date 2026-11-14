@@ -18,17 +18,12 @@ export const SHORTCUT_KEY = {
   BASIC_PRODUCTION:    "shortcut-basic-production",
   SYNTHESIS:           "shortcut-synthesis",
   CHEAT:               "shortcut-cheat",
+  // 在光标所在物流线插入物流设备（传送带/管道按光标下的设备自动判定）。
+  INSERT_SPLITTER:     "shortcut-insert-splitter",
+  INSERT_CONVERGER:    "shortcut-insert-converger",
+  INSERT_CONNECTOR:    "shortcut-insert-connector",
+  INSERT_ADMISSION:    "shortcut-insert-admission",
   SAVE_BLUEPRINT:      "shortcut-save-blueprint",
-  // AI-REMOVED 2026-08-03:
-  // Reason: Escape 类功能必须保持硬编码，不允许进入可配置快捷键体系。
-  // Trigger: ST2-RQ-002 明确禁止任何快捷键绑定 Escape。
-  // Evidence: 返回选择模式由 hypergryph-select-gesture-module.ts 直接判断 Escape。
-  // Replacement: hypergryph-select-gesture-module.ts 的 Escape 硬编码判断。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // RETURN_SELECT:       "shortcut-return-select",
   ROTATE:              "shortcut-rotate",
   SWITCH_DEVICE_MODE:  "shortcut-switch-device-mode",
   ROTATE_VIEWPORT:     "shortcut-rotate-viewport",
@@ -96,9 +91,7 @@ const VALID_SHORTCUT_KEYS: ReadonlySet<string> = new Set(Object.values(SHORTCUT_
 
 // ─── 默认值 ───
 /** 可配置 Action 的产品元数据。作用域只能由可执行 Shortcut Route 定义。 */
-// AI-CORRECTION 2026-08-31: 上述标题与注释对应下方 SHORTCUT_ACTION_SPECS；
 // 分组标题元数据先行登记，供设置页按同一 Action registry 分段展示。
-// AI-CORRECTION 2026-08-31: 统一 registry 纳入固定 Action 后，可配置元数据现由
 // CONFIGURABLE_SHORTCUT_ACTION_SPECS 提供，SHORTCUT_ACTION_SPECS 表示全部键盘 Action。
 /** 可配置 Action 的展示分组元数据；分组只影响设置页信息架构。 */
 export const SHORTCUT_ACTION_GROUP_SPECS: readonly ShortcutActionGroupSpec[] = [
@@ -124,6 +117,10 @@ export const CONFIGURABLE_SHORTCUT_ACTION_SPECS: readonly ConfigurableShortcutAc
   { id: SHORTCUT_KEY.BASIC_PRODUCTION, group: "placement", labelKey: "settingsField.shortcut-basic-production", defaultBindings: ["V"], configurable: true },
   { id: SHORTCUT_KEY.SYNTHESIS, group: "placement", labelKey: "settingsField.shortcut-synthesis", defaultBindings: ["B"], configurable: true },
   { id: SHORTCUT_KEY.CHEAT, group: "placement", labelKey: "settingsField.shortcut-cheat", defaultBindings: ["U"], configurable: true },
+  { id: SHORTCUT_KEY.INSERT_SPLITTER, group: "placement", labelKey: "settingsField.shortcut-insert-splitter", defaultBindings: ["Y"], configurable: true },
+  { id: SHORTCUT_KEY.INSERT_CONVERGER, group: "placement", labelKey: "settingsField.shortcut-insert-converger", defaultBindings: ["O"], configurable: true },
+  { id: SHORTCUT_KEY.INSERT_CONNECTOR, group: "placement", labelKey: "settingsField.shortcut-insert-connector", defaultBindings: ["J"], configurable: true },
+  { id: SHORTCUT_KEY.INSERT_ADMISSION, group: "placement", labelKey: "settingsField.shortcut-insert-admission", defaultBindings: ["I"], configurable: true },
   { id: SHORTCUT_KEY.SAVE_BLUEPRINT, group: "operation", labelKey: "settingsField.shortcut-save-blueprint", defaultBindings: ["Ctrl+S"], configurable: true },
   { id: SHORTCUT_KEY.ROTATE, group: "operation", labelKey: "settingsField.shortcut-rotate", defaultBindings: ["R"], configurable: true },
   { id: SHORTCUT_KEY.SWITCH_DEVICE_MODE, group: "operation", labelKey: "settingsField.shortcut-switch-device-mode", defaultBindings: ["Tab"], configurable: true },
@@ -175,48 +172,6 @@ export const SHORTCUT_ACTION_SPECS: readonly ShortcutActionSpec[] = [
 assertShortcutActionSpecs(SHORTCUT_ACTION_SPECS);
 assertShortcutActionGroups(SHORTCUT_ACTION_GROUP_SPECS, CONFIGURABLE_SHORTCUT_ACTION_SPECS);
 
-// AI-REMOVED 2026-08-30:
-// Reason: 默认值必须由 ActionSpec.defaultBindings 单点生成，避免设置、重置和运行时出现双默认真相。
-// Trigger: ST2-RQ-020 的 P0 默认重置门槛。
-// Evidence: SHORTCUT_ACTION_SPECS 已覆盖全部 28 个 ShortcutKeyId，并由下方 SHORTCUT_DEFAULTS 派生。
-// Replacement: SHORTCUT_ACTION_SPECS in this file
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// const SHORTCUT_DEFAULTS: Readonly<Record<ShortcutKeyId, string>> = {
-//   [SHORTCUT_KEY.PLACE_CONVEYOR]:   "E",
-//   [SHORTCUT_KEY.PLACE_PIPE]:       "Q",
-//   [SHORTCUT_KEY.RESOURCES_POWER]:  "G",
-//   [SHORTCUT_KEY.WAREHOUSE]:        "C",
-//   [SHORTCUT_KEY.BASIC_PRODUCTION]: "V",
-//   [SHORTCUT_KEY.SYNTHESIS]:        "B",
-//   [SHORTCUT_KEY.CHEAT]:            "U",
-//   [SHORTCUT_KEY.SAVE_BLUEPRINT]:   "Ctrl+S",
-//   [SHORTCUT_KEY.ROTATE]:           "R",
-//   [SHORTCUT_KEY.SWITCH_DEVICE_MODE]: "Tab",
-//   [SHORTCUT_KEY.ROTATE_VIEWPORT]:  "Ctrl+R",
-//   [SHORTCUT_KEY.DELETE_DEVICE]:    "F",
-//   [SHORTCUT_KEY.MOVE_SELECTION]:   "M",
-//   [SHORTCUT_KEY.COPY_SELECTION]:   "Ctrl+C",
-//   [SHORTCUT_KEY.PASTE_SELECTION]:  "Ctrl+V",
-//   [SHORTCUT_KEY.UNDO]:             "Ctrl+Z",
-//   [SHORTCUT_KEY.REDO]:             "Ctrl+Y",
-//   [SHORTCUT_KEY.TOGGLE_PLACEMENT_PANEL]: "P",
-//   [SHORTCUT_KEY.TOGGLE_BLUEPRINT_PANEL]: "L",
-//   [SHORTCUT_KEY.TOGGLE_HISTORY_PANEL]:   "H",
-//   [SHORTCUT_KEY.TOGGLE_BASE_PANEL]:      "K",
-//   [SHORTCUT_KEY.QUICK_PLACE]:            "Z",
-//   [SHORTCUT_KEY.OPEN_TOOLBOX]:           "T",
-//   [SHORTCUT_KEY.PAN_VIEWPORT_UP]:        "W;ArrowUp",
-//   [SHORTCUT_KEY.PAN_VIEWPORT_DOWN]:      "S;ArrowDown",
-//   [SHORTCUT_KEY.PAN_VIEWPORT_LEFT]:      "A;ArrowLeft",
-//   [SHORTCUT_KEY.PAN_VIEWPORT_RIGHT]:     "D;ArrowRight",
-//   [SHORTCUT_KEY.MARQUEE]:                "X",
-// };
-// AI-CORRECTION 2026-08-31: 上述历史 Evidence 与 Replacement 中的 28 项来源现为
-// CONFIGURABLE_SHORTCUT_ACTION_SPECS；SHORTCUT_ACTION_SPECS 已扩展为可配置与固定 Action 的统一 registry。
-// AI-CORRECTION 2026-09-27: 上述归档说明中的 28 项已因新增剪切选区增加为 29 项。
 const SHORTCUT_DEFAULTS = Object.fromEntries(
   CONFIGURABLE_SHORTCUT_ACTION_SPECS.map((spec) => [spec.id, spec.defaultBindings.join(";")]),
 ) as Readonly<Record<ShortcutKeyId, string>>;
@@ -254,22 +209,11 @@ export class KeyboardShortcutManager {
     this.appHost = appHost;
 
     // 初始化：先取默认值，再用 localStorage 覆盖
-    // AI-CORRECTION 2026-10-12: 内存会话仅使用默认快捷键，不恢复个人配置。
     const initial = { ...SHORTCUT_DEFAULTS };
     const persisted = options.persistence === "memory" ? null : readPersistedShortcutState();
     if (persisted !== null) {
       for (const [k, v] of Object.entries(persisted)) {
         if (isShortcutKey(k) && typeof v === "string") {
-          // AI-REMOVED 2026-08-03:
-          // Reason: 旧存储中的 Escape 绑定也必须按保留键规则清除。
-          // Trigger: ST2-RQ-002 禁止配置 Escape。
-          // Evidence: normalizeConfigurableShortcutValue 会逐槽剔除 Escape 绑定。
-          // Replacement: 下方规范化后的赋值。
-          // Risk: Low
-          // Human Review: Required
-          //
-          // Original code:
-          // initial[k] = migrateLegacyShortcutValue(k, v.trim());
           initial[k] = normalizeConfigurableShortcutValue(
             migrateLegacyShortcutValue(k, v.trim()),
           );

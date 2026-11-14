@@ -9,30 +9,10 @@ import type { EditorContract } from "@/domain/editor/editor-contract";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
-// AI-REMOVED 2026-09-10:
-// Reason: 操作模式总开关已废弃，不再保留关闭分支
-// Trigger: 用户要求彻底移除 hypergryphOperationMode。
-// Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-// Replacement: gesture-action-router.ts 的默认启用语义
-// Risk: 历史 false 设置统一使用当前操作行为。
-// Human Review: Required
-//
-// Original code:
-// import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 
 export function createHypergryphEntityVariantSwitchGestureModule(): GestureMappingModule<AppHost> {
   return {
     id: "hypergryph-entity-variant-switch-gesture",
-    // AI-REMOVED 2026-09-10:
-    // Reason: 操作模式总开关已废弃，不再保留关闭分支
-    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-    // Replacement: gesture-action-router.ts 的默认启用语义
-    // Risk: 历史 false 设置统一使用当前操作行为。
-    // Human Review: Required
-    //
-    // Original code:
-    // when: isHypergryphGestureEnabled,
     shortcutRoutes: [{
       id: "switch-device-mode.selection",
       operation: "switch-device-variant",
@@ -56,29 +36,6 @@ export function createHypergryphEntityVariantSwitchGestureModule(): GestureMappi
       }
 
       switch (event.type) {
-        // AI-REMOVED 2026-08-30:
-        // Reason: select 模式的设备变体快捷键已迁入可执行 Route。
-        // Trigger: ST2-RQ-020 要求同一 Action 的多模式 Route 分别声明触发策略。
-        // Evidence: switch-device-mode.selection 使用 exact 策略并保留 Inspector 设置瞬时条件。
-        // Replacement: shortcutRoutes[switch-device-mode.selection] in this module
-        // Risk: Low
-        // Human Review: Required
-        //
-        // Original code:
-        // case "key down":
-        //   if (
-        //     context.appHost.internalState.activeTool !== "select"
-        //     || !context.appHost.state.settings.gameUseInspectorPanel
-        //     || !context.appHost.internalActions.isShortcutFor(
-        //       SHORTCUT_KEY.SWITCH_DEVICE_MODE,
-        //       event.code,
-        //       event.key,
-        //       event.modifiers,
-        //     )
-        //   ) {
-        //     return { status: "ignored" };
-        //   }
-        //   return switchSelectedEntityVariant(context.appHost, editor);
 
         case "ui-button-touch-tap":
           return event.uiButtonId === SWITCH_DEVICE_MODE_BUTTON_ID

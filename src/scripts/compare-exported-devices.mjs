@@ -33,26 +33,6 @@ const APPROVED_NAME_EXCEPTIONS = Object.freeze({
   }),
 });
 
-// AI-REMOVED 2026-08-31:
-// Reason: raw i18n 只提供 building 级名称；按 mode 人工拼接名称会把项目显示策略伪装成解包事实。
-// Trigger: 用户要求按“单个 raw building 转换为多个项目变体”的既有机制修正技能和对账脚本。
-// Evidence: FactoryMachineCrafterTable.modeMap 提供变体映射，但 FactoryBuildingTable.name 不提供变体名称。
-// Replacement: generateDeviceI18n 直接保留 raw building 名称；变体身份由 modeMap 与 registry tag 对账。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// const MODE_I18N = Object.freeze({
-//   normal: { zhCN: "", enUS: "" },
-//   gastrans: { zhCN: "气体", enUS: "Gas" },
-//   liquidtrans: { zhCN: "液体", enUS: "Liquid" },
-//   gas: { zhCN: "气体", enUS: "Gas" },
-//   liquid: { zhCN: "液体", enUS: "Liquid" },
-//   // recipes-export.json 当前还包含以下两种 mode；沿用项目已有领域含义。
-//   // AI-CORRECTION 2026-08-31: 当前输入已改为 raw TableCfg 或 legacy json-export；两种来源仍包含以下 mode，原领域含义不变。
-//   solidtrans: { zhCN: "固体", enUS: "Solid" },
-//   gasliquid: { zhCN: "气液", enUS: "Gas/Liquid" },
-// });
 
 function assertRecord(value, label) {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {

@@ -14,53 +14,17 @@ import {
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
 import {
   BASE_OUTER_WARNING_PADDING_CELLS,
-  // AI-REMOVED 2026-11-12:
-  // Reason: 绘图范围必须在有限视口内从真实空间派生。
-  // Trigger: REQ-048 无界与多区域并集。
-  // Evidence: 旧完整矩形外扩会产生无限尺寸或内部警告边。
-  // Replacement: resolveSceneOuterRects
-  // Risk: 地面和警告轮廓需三屏视觉复核。
-  // Human Review: Required
-  // Original code:
-  // resolveBaseOuterGridRects,
   resolveCurrentBaseDefinition,
-  // AI-REMOVED 2026-11-12:
-  // Reason: 绘图范围必须在有限视口内从真实空间派生。
-  // Trigger: REQ-048 无界与多区域并集。
-  // Evidence: 旧完整矩形外扩会产生无限尺寸或内部警告边。
-  // Replacement: resolveSceneOuterRects
-  // Risk: 地面和警告轮廓需三屏视觉复核。
-  // Human Review: Required
-  // Original code:
-  // resolveExpandedGridRect,
 } from "./BaseBoundaryDecoration";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
 import { resolveMarqueeGridRectLayout } from "./MarqueeRectDecoration";
 
 const WORLD_GRID_LINE_ALPHA = 0.30;
-// Reason: 固定 1.5px 线宽无法表达 REQ-059 的分级降级规则。
-// Trigger: ST1-RQ-059 要求格线宽度随缩放级别从 2px 逐级收敛到 1px。
-// Evidence: .docs/stages/stage1/requirements/REQ-059-fluid-grid-line-drawing-rules.md
-// Replacement: 同文件中的 WORLD_GRID_FINE_LINE_WIDTH、WORLD_GRID_MAJOR_LINE_WIDTH、WORLD_GRID_REDUCED_LINE_WIDTH。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// const WORLD_GRID_LINE_WIDTH = 1.5;
 const WORLD_GRID_FINE_LINE_WIDTH = 1;
 const WORLD_GRID_MAJOR_LINE_WIDTH = 2;
 const WORLD_GRID_REDUCED_LINE_WIDTH = 1;
 const WORLD_GRID_MAJOR_LINE_INTERVAL = 5;
-// Reason: 粗格线不再通过固定倍率从细线样式推导，而是按 Level 直接指定 2px 或 1px。
-// Trigger: ST1-RQ-059 要求 Level 1-3 粗线 2px，Level 4-5 粗线 1px。
-// Evidence: .docs/stages/stage1/requirements/REQ-059-fluid-grid-line-drawing-rules.md
-// Replacement: 同文件中的 WORLD_GRID_MAJOR_LINE_WIDTH 与 WORLD_GRID_REDUCED_LINE_WIDTH。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// const WORLD_GRID_MAJOR_LINE_WIDTH_MULTIPLIER = 2;
 /** 缩放阈值：zoom >= A 时所有格线都不需要 pixelLine。 */
 export const WORLD_GRID_ZOOM_THRESHOLD_A = 48;
 /** 缩放阈值：B <= zoom < A 时仅细格线启用 pixelLine。 */
@@ -75,24 +39,6 @@ const WORLD_GRID_PREVIEW_PADDING_CELLS = 4;
 const WORLD_GRID_PREVIEW_MIN_HALF_SPAN_CELLS = 8;
 const WORLD_GRID_SEGMENT_LENGTH_RATIO = 0.5;
 const WORLD_GRID_INTERSECTION_DOT_SIZE_RATIO = 0.24;
-// Reason: 交点尺寸不再使用固定最小值，避免远缩放下放大成噪声。
-// Trigger: ST1-RQ-059 要求交点尺寸按 Level 上限收敛到 2px / 1px。
-// Evidence: .docs/stages/stage1/requirements/REQ-059-fluid-grid-line-drawing-rules.md
-// Replacement: 同文件中的 WORLD_GRID_INTERSECTION_DOT_FULL_SIZE 与 WORLD_GRID_INTERSECTION_DOT_REDUCED_SIZE。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// const WORLD_GRID_INTERSECTION_DOT_MIN_SIZE = 2.5;
-// Reason: 交点尺寸不再使用固定最大值，而是按缩放 Level 选择 2px 或 1px 的上限。
-// Trigger: ST1-RQ-059 需要交点在 Level 4-5 缩到 1px。
-// Evidence: .docs/stages/stage1/requirements/REQ-059-fluid-grid-line-drawing-rules.md
-// Replacement: 同文件中的 WORLD_GRID_INTERSECTION_DOT_FULL_SIZE 与 WORLD_GRID_INTERSECTION_DOT_REDUCED_SIZE。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// const WORLD_GRID_INTERSECTION_DOT_MAX_SIZE = 4.5;
 const WORLD_GRID_INTERSECTION_DOT_FULL_SIZE = 2;
 const WORLD_GRID_INTERSECTION_DOT_REDUCED_SIZE = 1;
 const WORLD_GRID_INTERSECTION_DOT_ALPHA_MULTIPLIER = 1.75;
@@ -957,43 +903,6 @@ export function createGridLineDecoration(): DecorationLayer {
       }
 
       const baseDefinition = resolveCurrentBaseDefinition(ctx)
-      // AI-REMOVED 2026-11-12:
-      // Reason: 绘图范围必须在有限视口内从真实空间派生。
-      // Trigger: REQ-048 无界与多区域并集。
-      // Evidence: 旧完整矩形外扩会产生无限尺寸或内部警告边。
-      // Replacement: 有限视口内的真实区域警告并集
-      // Risk: 地面和警告轮廓需三屏视觉复核。
-      // Human Review: Required
-      // Original code:
-      //       const baseOuterGridRect = baseDefinition === null
-      //         ? null
-      //         : resolveBaseOuterBounds(baseDefinition)
-      //       const baseOuterGridRects = baseDefinition === null
-      //         ? []
-      //         : resolveBaseOuterGridRects(baseDefinition)
-      //       areaMask.clear();
-      //       areaMask.visible = baseOuterGridRects.length > 1;
-      //       graphics.mask = baseOuterGridRects.length > 1 ? areaMask : null;
-      //       for (const rect of baseOuterGridRects) {
-      //         const warningRect = resolveExpandedGridRect(rect, BASE_OUTER_WARNING_PADDING_CELLS);
-      //         if (warningRect === null) continue;
-      //         const layout = resolveMarqueeGridRectLayout({
-      //           gridRect: warningRect,
-      //           viewportBounds: ctx.viewportBounds,
-      //           viewportCenter: { x: ctx.viewportState.centerX, y: ctx.viewportState.centerY },
-      //           gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
-      //           displayRotation: ctx.viewportState.displayRotation,
-      //         });
-      //         if (layout !== null) {
-      //           areaMask.rect(layout.x, layout.y, layout.width, layout.height).fill(0xffffff);
-      //         }
-      //       }
-      //       const baseWarningGridRect = baseOuterGridRect === null
-      //         ? null
-      //         : resolveExpandedGridRect(
-      //           baseOuterGridRect,
-      //           BASE_OUTER_WARNING_PADDING_CELLS,
-      //         )
       const warningRects = baseDefinition === null ? [] : resolveSceneOuterRects(
         baseDefinition, resolveSceneViewportGridRect(ctx), BASE_OUTER_WARNING_PADDING_CELLS,
       );

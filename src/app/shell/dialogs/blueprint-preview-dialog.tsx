@@ -1,6 +1,5 @@
 import { useReadonlyCanvas } from "@/app/canvas";
 import { createEmbedWorldDocument } from "@/app/embed";
-import { resolveEffectiveActivityIds } from "@/shared/registry/activity-availability";
 import { selectDocumentBaseId } from "@/shared/snapshot/world-document-selection";
 import {
   useEffect,
@@ -10,8 +9,6 @@ import {
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
-  // AI-REMOVED 2026-11-12: 静态预览退出滚轮输入；Replacement: None；Risk: Low；Human Review: Required
-  // type WheelEvent as ReactWheelEvent,
 } from "react";
 import { observer } from "mobx-react-lite";
 import LucideChevronLeft from "~icons/lucide/chevron-left";
@@ -27,37 +24,10 @@ import { useEditorDocumentSnapshot } from "../hooks";
 import type { WorkbenchBlueprintPreviewController } from "@/app/shell/state/blueprint-preview-dialog-state";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
-// AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// import type { BlueprintPreviewHandle, BlueprintPreviewViewport } from "@/domain/renderer";
 
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { resolveEntityGridGeometry } from "@/shared/geometry/entity-grid-geometry";
-// AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// import { resolveWheelZoomDirection } from "@/shared/browser/wheel-zoom";
 
-// AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// import { createLogger } from "@/shared/logging/logger";
 
 import {
   createEmptyBlueprintLibraryDirectory,
@@ -74,112 +44,17 @@ import {
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
-// AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// const DEFAULT_BLUEPRINT_PREVIEW_VIEWPORT: BlueprintPreviewViewport = {
-//   zoom: 1,
-//   offsetX: 0,
-//   offsetY: 0,
-// };
 
 
-// AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// const BLUEPRINT_PREVIEW_ZOOM_FACTOR = 1.12;
-
-// AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// const MIN_BLUEPRINT_PREVIEW_ZOOM = 0.25;
-
-// AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// const MAX_BLUEPRINT_PREVIEW_ZOOM = 6;
-
-// AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// const previewLogger = createLogger("blueprint-preview");
 
 
-// AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// interface PreviewTouchPointerSnapshot {
-//   clientX: number;
-//   clientY: number;
-// }
 
 
-// AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// interface PreviewTouchGestureState {
-//   activePointers: Map<number, PreviewTouchPointerSnapshot>;
-//   pinchDistance: number | null;
-// }
 
 
-// Reason: 画布叠层已删除，更新时间文案不再显示，因此格式化函数没有活跃调用点。
-// Trigger: 用户要求去掉画布叠层，并且不要再找地方安排这些信息。
-// Evidence: blueprint-preview-dialog.tsx 中原先唯一消费格式化结果的 previewTimeSummary 已按同一轮需求归档删除。
-// Replacement: None
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// function formatBlueprintTimestamp(locale: string, value: string): string {
-//   const timestamp = new Date(value);
-//
-//   if (Number.isNaN(timestamp.getTime())) {
-//     return value;
-//   }
-//
-//   return new Intl.DateTimeFormat(locale, {
-//     month: "2-digit",
-//     day: "2-digit",
-//     hour: "2-digit",
-//     minute: "2-digit",
-//   }).format(timestamp);
-// }
+
+
+
 
 function resolveBlueprintFootprint(
   record: BlueprintLibraryRecord,
@@ -212,106 +87,14 @@ function shouldUseImmersiveMaximizedDialog(
   return screenProfile.deviceClass === "mobile" || screenProfile.deviceClass === "tablet";
 }
 
-// AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// function resolveBlueprintPreviewStageSize(element: HTMLDivElement) {
-//   const clientRect = element.getBoundingClientRect();
-//
-//   return {
-//     width: Math.max(1, Math.floor(clientRect.width || element.clientWidth || 0)),
-//     height: Math.max(1, Math.floor(clientRect.height || element.clientHeight || 0)),
-//   };
-// }
 
 
-// AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// function clampBlueprintPreviewZoom(value: number): number {
-//   if (!Number.isFinite(value)) {
-//     return DEFAULT_BLUEPRINT_PREVIEW_VIEWPORT.zoom;
-//   }
-//
-//   return Math.min(MAX_BLUEPRINT_PREVIEW_ZOOM, Math.max(MIN_BLUEPRINT_PREVIEW_ZOOM, value));
-// }
 
 
-// AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// function resolvePreviewTouchDistance(
-//   first: PreviewTouchPointerSnapshot,
-//   second: PreviewTouchPointerSnapshot,
-// ): number {
-//   return Math.hypot(
-//     second.clientX - first.clientX,
-//     second.clientY - first.clientY,
-//   );
-// }
 
 
-// AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// function resolveActivePreviewTouchDistance(
-//   gestureState: PreviewTouchGestureState,
-// ): number | null {
-//   const pointers = Array.from(gestureState.activePointers.values());
-//
-//   if (pointers.length < 2) {
-//     return null;
-//   }
-//
-//   const [firstPointer, secondPointer] = pointers;
-//
-//   if (firstPointer === undefined || secondPointer === undefined) {
-//     return null;
-//   }
-//
-//   return resolvePreviewTouchDistance(firstPointer, secondPointer);
-// }
 
 
-// AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// function mountBlueprintPreviewCanvas(
-//   host: HTMLDivElement,
-//   canvas: HTMLCanvasElement,
-// ) {
-//   canvas.ariaHidden = "true";
-//   canvas.dataset.blueprintPreviewCanvas = "true";
-//   canvas.style.display = "block";
-//   canvas.style.width = "100%";
-//   canvas.style.height = "100%";
-//   host.replaceChildren(canvas);
-// }
 
 
 function formatBlueprintFolderPath(options: {
@@ -379,76 +162,15 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
   const dialogState = controller.dialogState;
   const isPhoneLayout = appHost.state.screenProfile.deviceClass === "mobile";
   const isTabletLayout = appHost.state.screenProfile.deviceClass === "tablet";
-    // Reason: 画布叠层与更新时间文案已删除，locale 不再参与任何活跃格式化逻辑。
-  // Trigger: 用户要求去掉画布叠层并直接删除这些信息，而不是迁移显示位置。
-  // Evidence: formatBlueprintTimestamp 与 previewTimeSummary 已归档移除，locale 在当前组件内已无读取点。
-  // Replacement: None
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // const locale = appHost.state.settings.locale;
   const editor = appHost.workspace.editor;
   // 订阅 document 变化使蓝图放置按钮在切换基地后正确更新
   useEditorDocumentSnapshot(editor, selectDocumentBaseId, Object.is);
-// AI-REMOVED 2026-11-12:
-// Reason: 统一场景迁移后旧对象没有有效调用。
-// Trigger: REQ-048 P6 与 ESLint unused 审计。
-// Evidence: 当前调用由 Canvas 或 SceneViewInput 提供，原引用仅存于审计注释。
-// Replacement: CanvasActionImpl / SceneViewInput / 通用只读场景
-// Risk: Low
-// Human Review: Required
-// Original code:
-//   const renderHost = appHost.workspace.render;
   const previewCanvasHostRef = useRef<HTMLDivElement | null>(null);
-  // AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// const previewHandleRef = useRef<BlueprintPreviewHandle | null>(null);
 
-  // AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// const previewViewportRef = useRef<BlueprintPreviewViewport>(DEFAULT_BLUEPRINT_PREVIEW_VIEWPORT);
 
   const moveFolderInitializationRequestIdRef = useRef(0);
   const moveDirectoryRequestIdRef = useRef(0);
-  // AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// const dragStateRef = useRef<{
-//     pointerId: number;
-//     clientX: number;
-//     clientY: number;
-//   } | null>(null);
 
-  // AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// const touchGestureStateRef = useRef<PreviewTouchGestureState>({
-//     activePointers: new Map(),
-//     pinchDistance: null,
-//   });
 
   const [isDeleteConfirming, setIsDeleteConfirming] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -650,272 +372,20 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
     };
   }, [controller.canDelete, copy.moveFailed, currentMoveFolderId, dialogState.visible, isMoveMode, isMovePickerReady, record]);
 
-  // AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// const syncPreviewViewport = (viewport: Partial<BlueprintPreviewViewport>) => {
-//     previewViewportRef.current = {
-//       zoom: clampBlueprintPreviewZoom(viewport.zoom ?? previewViewportRef.current.zoom),
-//       offsetX: viewport.offsetX ?? previewViewportRef.current.offsetX,
-//       offsetY: viewport.offsetY ?? previewViewportRef.current.offsetY,
-//     };
-//
-//     if (renderHost === null || previewHandleRef.current === null) {
-//       return;
-//     }
-//
-//     renderHost.actions.updateBlueprintPreviewViewport(
-//       previewHandleRef.current,
-//       previewViewportRef.current,
-//     );
-//   };
 
 
-  // AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// const stopPreviewDrag = (pointerId?: number) => {
-//     if (pointerId !== undefined && dragStateRef.current?.pointerId !== pointerId) {
-//       return;
-//     }
-//
-//     dragStateRef.current = null;
-//   };
 
 
-  // AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// const resetPreviewTouchGestures = () => {
-//     touchGestureStateRef.current.activePointers.clear();
-//     touchGestureStateRef.current.pinchDistance = null;
-//   };
 
 
-  // AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// const syncPreviewTouchPinch = () => {
-//     const gestureState = touchGestureStateRef.current;
-//     const nextDistance = resolveActivePreviewTouchDistance(gestureState);
-//
-//     if (nextDistance === null || nextDistance <= 0) {
-//       gestureState.pinchDistance = null;
-//       return;
-//     }
-//
-//     const previousDistance = gestureState.pinchDistance;
-//
-//     if (previousDistance !== null && previousDistance > 0 && nextDistance !== previousDistance) {
-//       syncPreviewViewport({
-//         zoom: previewViewportRef.current.zoom * (nextDistance / previousDistance),
-//       });
-//     }
-//
-//     gestureState.pinchDistance = nextDistance;
-//   };
 
 
-  // AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// const finalizePreviewTouchGesture = () => {
-//     const gestureState = touchGestureStateRef.current;
-//
-//     if (gestureState.activePointers.size >= 2) {
-//       dragStateRef.current = null;
-//       gestureState.pinchDistance = resolveActivePreviewTouchDistance(gestureState);
-//       return;
-//     }
-//
-//     gestureState.pinchDistance = null;
-//
-//     const [remainingPointerEntry] = gestureState.activePointers.entries();
-//
-//     if (remainingPointerEntry === undefined) {
-//       dragStateRef.current = null;
-//       return;
-//     }
-//
-//     const [pointerId, pointer] = remainingPointerEntry;
-//     dragStateRef.current = {
-//       pointerId,
-//       clientX: pointer.clientX,
-//       clientY: pointer.clientY,
-//     };
-//   };
 
 
-  // AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// useEffect(() => {
-//     previewViewportRef.current = { ...DEFAULT_BLUEPRINT_PREVIEW_VIEWPORT };
-//     stopPreviewDrag();
-//     resetPreviewTouchGestures();
-//   }, [record?.blueprintId]);
 
 
-  // AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// useEffect(() => {
-//     const previewCanvasHost = previewCanvasHostRef.current;
-//
-//     if (!dialogState.visible || record === null || renderHost === null || previewCanvasHost === null) {
-//       return;
-//     }
-//
-//     let active = true;
-//     let mountedHandle: BlueprintPreviewHandle | null = null;
-//     const previewStageSize = resolveBlueprintPreviewStageSize(previewCanvasHost);
-//     const startedAt = performance.now();
-//     const diagnostics = () => ({
-//       blueprintId: record.blueprintId,
-//       entityCount: record.entityOrder.length,
-//       elapsedMs: Math.round(performance.now() - startedAt),
-//       stageSize: resolveBlueprintPreviewStageSize(previewCanvasHost),
-//       initialStageSize: previewStageSize,
-//       mountedHandle,
-//       canvasAttached: previewCanvasHost.querySelector("canvas") !== null,
-//       pageVisibility: document.visibilityState,
-//       hardwareConcurrency: navigator.hardwareConcurrency,
-//       plannerTask: appHost.workspace.blueprintPlanner?.queries.getTask() ?? null,
-//     });
-//     previewLogger.debug("开始初始化预览画布", diagnostics());
-//     const slowMountTimer = setTimeout(() => {
-//       if (active && mountedHandle === null) previewLogger.warn("预览画布初始化超过 5 秒", diagnostics());
-//     }, 5000);
-//     let detachContextListeners: (() => void) | null = null;
-//
-//     void renderHost.actions.mountBlueprintPreview({
-//       blueprint: record,
-//       width: previewStageSize.width,
-//       height: previewStageSize.height,
-//       viewport: previewViewportRef.current,
-//     }).then((handle) => {
-//       if (!active) {
-//         renderHost.actions.disposeBlueprintPreview(handle);
-//         return;
-//       }
-//
-//       mountedHandle = handle;
-//       previewHandleRef.current = handle;
-//       const canvas = renderHost.queries.getBlueprintPreviewCanvas(handle);
-//
-//       if (canvas !== null) {
-//         mountBlueprintPreviewCanvas(previewCanvasHost, canvas);
-//         const contextLost = () => previewLogger.error("预览 WebGL 上下文丢失", diagnostics());
-//         const contextRestored = () => previewLogger.warn("预览 WebGL 上下文已恢复", diagnostics());
-//         canvas.addEventListener("webglcontextlost", contextLost);
-//         canvas.addEventListener("webglcontextrestored", contextRestored);
-//         detachContextListeners = () => {
-//           canvas.removeEventListener("webglcontextlost", contextLost);
-//           canvas.removeEventListener("webglcontextrestored", contextRestored);
-//         };
-//       } else {
-//         previewLogger.error("预览初始化返回成功，但未取得画布", diagnostics());
-//       }
-//
-//       renderHost.actions.updateBlueprintPreviewViewport(handle, previewViewportRef.current);
-//       clearTimeout(slowMountTimer);
-//       previewLogger.debug("预览画布已挂载", diagnostics());
-//     }).catch((error: unknown) => {
-//       clearTimeout(slowMountTimer);
-//       if (active) previewLogger.error("预览画布初始化失败", { error, ...diagnostics() });
-//     });
-//
-//     return () => {
-//       active = false;
-//       clearTimeout(slowMountTimer);
-//       detachContextListeners?.();
-//       stopPreviewDrag();
-//       resetPreviewTouchGestures();
-//       previewHandleRef.current = null;
-//       previewCanvasHost.replaceChildren();
-//
-//       if (mountedHandle !== null) {
-//         renderHost.actions.disposeBlueprintPreview(mountedHandle);
-//       }
-//     };
-//   }, [appHost, dialogState.visible, record, renderHost]);
 
 
-  // AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// useEffect(() => {
-//     const previewCanvasHost = previewCanvasHostRef.current;
-//
-//     if (
-//       !dialogState.visible
-//       || previewCanvasHost === null
-//       || renderHost === null
-//       || typeof ResizeObserver === "undefined"
-//     ) {
-//       return;
-//     }
-//
-//     const resizeObserver = new ResizeObserver(() => {
-//       if (previewHandleRef.current === null) {
-//         return;
-//       }
-//
-//       const previewStageSize = resolveBlueprintPreviewStageSize(previewCanvasHost);
-//
-//       renderHost.actions.resizeBlueprintPreview(
-//         previewHandleRef.current,
-//         previewStageSize.width,
-//         previewStageSize.height,
-//       );
-//     });
-//
-//     resizeObserver.observe(previewCanvasHost);
-//
-//     return () => {
-//       resizeObserver.disconnect();
-//     };
-//   }, [dialogState.visible, renderHost, record?.blueprintId]);
 
 
   const previewDocument = useMemo(() => record === null ? null : createEmbedWorldDocument(record, appHost.workspace.registry), [appHost, record]);
@@ -937,18 +407,6 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
   });
   const isMoveTargetCurrent = currentMoveFolderId === record.parentFolderId;
   const activeErrorMessage = transferErrorMessage ?? moveErrorMessage ?? deleteErrorMessage ?? preview.error;
-    // Reason: 用户要求去掉画布叠层，并且不要再找地方安排这些信息。
-  // Trigger: 当前预览面板底部叠层继续显示“布局总览”、实体数、连线数、预估范围、初始坐标、地图、更新时间，和最新布局要求冲突。
-  // Evidence: 当前 blueprint-preview-overlay 直接消费这些派生文案，删除叠层后这些派生值不再有有效承载位置。
-  // Replacement: None
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // const formattedUpdatedAt = formatBlueprintTimestamp(locale, record.updatedAt);
-  // const previewSummary = `${copy.entities} ${record.entityOrder.length} · ${copy.links} ${record.slotLinks.length} · ${copy.footprint} ${footprint.width} x ${footprint.height}`;
-  // const previewContextSummary = `${copy.anchor} (${record.initialGridPoint.x}, ${record.initialGridPoint.y}) · ${copy.base} ${record.baseId}`;
-  // const previewTimeSummary = `${copy.updatedAt} ${formattedUpdatedAt}`;
   const canPlaceBlueprint = canPlaceBlueprintDocumentInCurrentBase(appHost.mainCanvas, record);
   const handlePlaceButtonPointerUp = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (!canPlaceBlueprint) {
@@ -1128,17 +586,6 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
   };
   const showDeleteAction = controller.canDelete;
   const showMoveAction = controller.canDelete;
-  // AI-REMOVED 2026-10-14:
-  // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
-  // Trigger: 用户要求 EDA 默认可用且不再需要开启。
-  // Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
-  // Replacement: 下方固定包含优化入口的操作数量计算。
-  // Risk: Low；规划任务与业务可用性校验保持原行为。
-  // Human Review: Required
-  //
-  // Original code:
-  //   const defaultActionCount = 3 + (showMoveAction ? 1 : 0) + (showDeleteAction ? 1 : 0)
-  //     + (appHost.blueprintPlannerDialog.enabled ? 1 : 0);
   const defaultActionCount = 4 + (showMoveAction ? 1 : 0) + (showDeleteAction ? 1 : 0);
   const actionsClassName = isDeleteConfirming
     ? "blueprint-preview-actions is-dual-action"
@@ -1147,138 +594,9 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
       : defaultActionCount === 2
         ? "blueprint-preview-actions is-dual-action"
       : "blueprint-preview-actions";
-  // AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// const handlePreviewWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
-//     event.preventDefault();
-//     event.stopPropagation();
-//
-//     const direction = resolveWheelZoomDirection(event.deltaY, appHost.internalState.settings.invertWheelZoom);
-//     if (direction === 0) return;
-//
-//     const zoomFactor = direction > 0
-//       ? BLUEPRINT_PREVIEW_ZOOM_FACTOR
-//       : 1 / BLUEPRINT_PREVIEW_ZOOM_FACTOR;
-//
-//     syncPreviewViewport({
-//       zoom: previewViewportRef.current.zoom * zoomFactor,
-//     });
-//   };
 
-  // AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// const handlePreviewPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-//     if (event.pointerType === "touch") {
-//       touchGestureStateRef.current.activePointers.set(event.pointerId, {
-//         clientX: event.clientX,
-//         clientY: event.clientY,
-//       });
-//       finalizePreviewTouchGesture();
-//       event.currentTarget.setPointerCapture?.(event.pointerId);
-//       event.preventDefault();
-//       event.stopPropagation();
-//       return;
-//     }
-//
-//     if (event.pointerType === "mouse" && event.button !== 0) {
-//       return;
-//     }
-//
-//     dragStateRef.current = {
-//       pointerId: event.pointerId,
-//       clientX: event.clientX,
-//       clientY: event.clientY,
-//     };
-//     event.currentTarget.setPointerCapture?.(event.pointerId);
-//     event.preventDefault();
-//     event.stopPropagation();
-//   };
 
-  // AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// const handlePreviewPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-//     if (event.pointerType === "touch") {
-//       if (!touchGestureStateRef.current.activePointers.has(event.pointerId)) {
-//         return;
-//       }
-//
-//       touchGestureStateRef.current.activePointers.set(event.pointerId, {
-//         clientX: event.clientX,
-//         clientY: event.clientY,
-//       });
-//
-//       if (touchGestureStateRef.current.activePointers.size >= 2) {
-//         dragStateRef.current = null;
-//         syncPreviewTouchPinch();
-//         event.preventDefault();
-//         event.stopPropagation();
-//         return;
-//       }
-//     }
-//
-//     const dragState = dragStateRef.current;
-//
-//     if (dragState === null || dragState.pointerId !== event.pointerId) {
-//       return;
-//     }
-//
-//     const deltaX = event.clientX - dragState.clientX;
-//     const deltaY = event.clientY - dragState.clientY;
-//
-//     if (deltaX === 0 && deltaY === 0) {
-//       return;
-//     }
-//
-//     dragStateRef.current = {
-//       pointerId: event.pointerId,
-//       clientX: event.clientX,
-//       clientY: event.clientY,
-//     };
-//     syncPreviewViewport({
-//       offsetX: previewViewportRef.current.offsetX + deltaX,
-//       offsetY: previewViewportRef.current.offsetY + deltaY,
-//     });
-//     event.preventDefault();
-//     event.stopPropagation();
-//   };
 
-  // AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// const handlePreviewPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
-//     if (event.pointerType === "touch") {
-//       touchGestureStateRef.current.activePointers.delete(event.pointerId);
-//       finalizePreviewTouchGesture();
-//       event.preventDefault();
-//       event.stopPropagation();
-//       return;
-//     }
-//
-//     stopPreviewDrag(event.pointerId);
-//   };
 
 
   const initialShellStyle: CSSProperties | undefined = dialogState.width === null && dialogState.height === null
@@ -1506,25 +824,6 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
                       >
                         {t("workbench.button.copyBlueprintToClipboard")}
                       </button>
-                      {/*
-                      AI-REMOVED 2026-10-14:
-                      Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
-                      Trigger: 用户要求 EDA 默认可用且不再需要开启。
-                      Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
-                      Replacement: EDA 入口直接显示，BlueprintPlannerDialogController 不再持有启用状态。
-                      Risk: Low；规划任务与业务可用性校验保持原行为。
-                      Human Review: Required
-
-                      Original code:
-                                            {appHost.blueprintPlannerDialog.enabled ? <button type="button" disabled={!record}
-                                              onClick={() => { if (record) { appHost.blueprintPlannerDialog.openBlueprint(record, resolveEffectiveActivityIds({ selectedActivityIds: appHost.internalState.settings.selectedActivityIds })); controller.close(); } }}
-                                              className={cm(styles, "save-blueprint-secondary-button")}
-                                              data-ui-button-id="blueprint-preview-optimize-button">{t("eda.optimize")}</button> : null}
-                      */}
-                      {appHost.blueprintPlannerDialog.blueprintPlanningEnabled ? <button type="button" disabled={!record}
-                        onClick={() => { if (record) { appHost.blueprintPlannerDialog.openBlueprint(record, resolveEffectiveActivityIds({ selectedActivityIds: appHost.internalState.settings.selectedActivityIds })); controller.close(); } }}
-                        className={cm(styles, "save-blueprint-secondary-button")}
-                        data-ui-button-id="blueprint-preview-optimize-button">{t("eda.optimize")}</button> : null}
                       {showMoveAction ? (
                         <button
                           className={cm(styles, "save-blueprint-secondary-button")}
@@ -1579,17 +878,3 @@ export const BlueprintPreviewDialog = observer(function BlueprintPreviewDialog({
   );
 });
 
-// AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// onLostPointerCapture={handlePreviewPointerUp}
-// onPointerCancel={handlePreviewPointerUp}
-// onPointerDown={handlePreviewPointerDown}
-// onPointerMove={handlePreviewPointerMove}
-// onPointerUp={handlePreviewPointerUp}
-// onWheel={handlePreviewWheel}

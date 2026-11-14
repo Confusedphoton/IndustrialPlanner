@@ -6,9 +6,6 @@ import {
 import type { SimulationDeviceOperatingStatus } from "@/domain/simulation";
 
 /** 每个可见设备独立保存播放进度；目标反转只在完整 idle 轮次结束后提交。 */
-/** AI-CORRECTION 2026-09-18: 播放目标改为设备展示 status；传统四阶段只是其中一种 manifest 路由。 */
-/** AI-CORRECTION 2026-10-15: 显式声明 immediate 的素材直接切换稳定片段；其他素材保留完整轮次与过渡规则。 */
-/** AI-CORRECTION 2026-10-16: 状态外观 visualKey 可选择同一播放器的稳定片段，不增加调度或逐帧仿真查询。 */
 export class DeviceAnimationState {
   private readonly definition: NormalizedDeviceSpriteAnimationDefinition;
   private currentStage: DeviceSpriteAnimationPhase;
@@ -36,14 +33,6 @@ export class DeviceAnimationState {
 
   public get frameIndex(): number {
     const clip = this.definition.clips[this.currentStage]!;
-    // AI-REMOVED 2026-09-10:
-    // Reason: 固定帧时长无法保留去重素材的逐帧停留时间。
-    // Trigger: v1.5 建筑素材接入。
-    // Evidence: 素材包含 30ms 至 1340ms 等不同帧时长。
-    // Replacement: 下方累计结束时刻的二分查找。
-    // Risk: Low；固定时长素材走同一时间表。Human Review: Required
-    // Original code:
-    // return Math.min(clip.frameCount - 1, Math.floor(this.stageElapsedMs / clip.frameDurationMs));
     let left = 0;
     let right = clip.frameCount - 1;
     while (left < right) {

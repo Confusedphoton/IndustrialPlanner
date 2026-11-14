@@ -1,9 +1,5 @@
-// AI-REMOVED 2026-10-03: Reason: 树表行样式已提取。Trigger: 共用树表。Evidence: 本文件不再使用 CSSProperties。
-// Replacement: production-planning-tree-table.tsx。Risk: Low。Human Review: Required
-// Original code: import type { CSSProperties } from "react";
 import { ProductionPlanningTreeTableView } from "./production-planning-tree-table";
 import { RecipeChoiceControls } from "./recipe-choice-controls";
-import { createBlueprintPlannerPlan } from "./blueprint-planner-adapter";
 import { formatPlannerCycleIssue } from "@/shared/planner-cycle";
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import { runInAction } from "mobx";
@@ -57,9 +53,6 @@ import {
   isWaterPurifierNodeRecipe,
   resolveProductionPlanningEntityIconSrc,
   resolveProductionPlanningModuleIconSrcs,
-  // AI-REMOVED 2026-10-03: Reason: 配方控件已提取。Trigger: 共用树表。Evidence: 无其他有效引用。
-  // Replacement: recipe-choice-controls.tsx。Risk: Low。Human Review: Required
-  // Original code: resolveProductionPlanningCandidateName,
   resolveProductionPlanningItemIconSrc,
   resolveProductionPlanningItemName,
   resolveProductionPlanningRecipeName,
@@ -79,9 +72,6 @@ import {
 import {
   createProductionPlanningRecipeCandidateId,
   normalizeProductionPlanningCandidateChoiceId,
-  // AI-REMOVED 2026-10-03: Reason: 类型随配方控件提取。Trigger: 共用配方选择。
-  // Evidence: 无剩余有效引用。Replacement: recipe-choice-controls.tsx。Risk: Low。Human Review: Required
-  // Original code: type ProductionPlanningCandidate,
 } from "./production-planning-candidate";
 import { ProductionFlowGraph } from "@/app/shell/production-planning/flow";
 import {
@@ -144,96 +134,12 @@ type ProductionPlanningTreeRow = {
   readonly sourceRowId: string | null;
 };
 
-// AI-REMOVED 2026-05-24:
-// Reason: 树表已收敛为 ledger row；当前有效行均为“配方/外部供给/处置动作 + 目标物品”，不再存在真实 item 行。
-// Trigger: 用户要求清理旧 item 死路线，移除树图节点分类。
-// Evidence: buildLedgerProductionPlanningTreeRows 只通过 ensureRecipeRow 创建行；碳块验收中详情面板没有进入 item 分支。
-// Replacement: ProductionPlanningTreeRow
-// Risk: Medium；树图类型收敛会影响所有 row.kind 分支，需通过类型检查和树图验收确认。
-// Human Review: Required
-//
-// Original code:
-// type ProductionPlanningTreeRow = ProductionPlanningTreeItemRow | ProductionPlanningTreeRecipeRow;
-//
-// type ProductionPlanningTreeRowBase = {
-//   readonly id: string;
-//   readonly depth: number;
-//   readonly parentIds: readonly string[];
-//   readonly childIds: readonly string[];
-// };
-//
-// type ProductionPlanningTreeItemRow = ProductionPlanningTreeRowBase & {
-//   readonly kind: "item";
-//   readonly itemId: string;
-//   readonly node: ProductionPlanningItemNode;
-//   readonly nodes: readonly ProductionPlanningItemNode[];
-//   readonly total: ProductionPlanningResult["itemTotals"][number] | null;
-//   readonly producerIds: readonly string[];
-//   readonly consumerIds: readonly string[];
-//   readonly isByproduct: boolean;
-// };
-//
-// type ProductionPlanningTreeRecipeRow = ProductionPlanningTreeRowBase & {
-//   readonly kind: "recipe";
-//   readonly recipeId: string;
-//   readonly targetItemId: string;
-//   readonly recipeNode: ProductionPlanningRecipeNode;
-//   readonly recipeNodes: readonly ProductionPlanningRecipeNode[];
-//   readonly total: ProductionPlanningResult["recipeTotals"][number] | null;
-//   readonly inputItemIds: readonly string[];
-//   readonly outputItemIds: readonly string[];
-//   readonly isByproduct: boolean;
-// };
 
 const PRODUCTION_PLANNING_EPSILON = 0.0001;
 const EXTERNAL_SUPPLY_RECIPE_ID_PREFIX = "external-supply:";
 const SHARED_DEMAND_RECIPE_ID_PREFIX = "shared-demand:";
 const EXTERNAL_SUPPLY_ENTITY_ID = "sp_hub_1";
 
-// AI-REMOVED 2026-10-26:
-// Reason: 新计算需要默认收起支线，不再预先收集全部支线物品并标记展开。
-// Trigger: 用户确认主链保持展开、支线默认收起，终端不显示箭头。
-// Evidence: 原收集器把零输入资源也加入展开列表，且同物品多个位置共用状态。
-// Replacement: 新计算使用空展开列表；支线能力与路径由 process-graph-builder.ts 统一生成。
-// Risk: Low；新计算重置支线状态，主链仍默认展开。
-// Human Review: Required
-// Original code:
-// /**
-//  * 从 plan 中收集所有可展开的工序图节点 ID。
-//  * 可展开节点 = 所有配方中作为非主原料（inputs[1:]）出现的 item。
-//  */
-// function collectAllProcessExpandableItemIds(plan: ProductionPlanningResult): string[] {
-//   const expandableIds = new Set<string>();
-//   const visited = new Set<string>();
-//
-//   function traverse(node: ProductionPlanningItemNode) {
-//     const itemId = node.itemId;
-//     if (itemId.length === 0 || visited.has(itemId)) return;
-//     visited.add(itemId);
-//
-//     const recipeNode = node.recipeNode;
-//     if (recipeNode !== null) {
-//       const inputs = recipeNode.inputs;
-//       // inputs[0] 是主原料，inputs[1:] 是可在工序图中展开的二级输入
-//       for (let i = 1; i < inputs.length; i++) {
-//         const inputItemId = inputs[i]!.itemId;
-//         // 外部供给的物品 recipeNode 为 null，不需要展开
-//         if (inputItemId.length > 0 && recipeNode.inputItems[i]?.recipeNode !== null) {
-//           expandableIds.add(inputItemId);
-//         }
-//       }
-//       for (const inputItem of recipeNode.inputItems) {
-//         traverse(inputItem);
-//       }
-//     }
-//   }
-//
-//   for (const root of plan.roots) {
-//     traverse(root);
-//   }
-//
-//   return [...expandableIds];
-// }
 
 export const ProductionPlanningPanel = observer(function ProductionPlanningPanel({
   appHost,
@@ -286,22 +192,6 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
   useEffect(() => hookPlannerIndexedDbPersistence(store), [store]);
   useEffect(() => {
     let active = true;
-    // AI-REMOVED 2026-08-29:
-    // Reason: 推荐模块目录读取必须同时维护 ready 状态，避免开启模块后在目录未完成快照时求解；重复读取没有意义。
-    // Trigger: ST2-RQ-019 推荐模块目录快照完整性约束。
-    // Evidence: 下方同一读取链在 finally 中设置 recommendedModulesReady。
-    // Replacement: 紧随其后的 readRecommendedModuleLibrary 调用。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // void readRecommendedModuleLibrary()
-    //   .then((library) => {
-    //     if (active) {
-    //       setRecommendedModules([...library.modules]);
-    //     }
-    //   })
-    //   .catch(() => undefined);
     void readRecommendedModuleLibrary()
       .then((library) => {
         if (active) {
@@ -329,16 +219,6 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     session,
     hydrated,
   } = store;
-  // AI-REMOVED 2026-05-21:
-  // Reason: 页面位置需要跟产线规划会话一起持久化，不能继续只放在组件内存状态。
-  // Trigger: 用户要求关闭后再打开恢复上次处于输入页还是计算结果页。
-  // Evidence: Search-First 显示现有 IndexedDB planner-state 已持久化输入、展示模式和视图模式，但 activeScreen 仍是本地 useState。
-  // Replacement: ProductionPlanningInputStore.session.activeScreen
-  // Risk: Low；计算结果仍由持久化输入重新计算，不直接持久化 plan。
-  // Human Review: Required
-  //
-  // Original code:
-  // const [activeScreen, setActiveScreen] = useState<ProductionPlanningScreen>("input");
   const activeScreen = session.activeScreen;
   const runtime = appHost.internalState.runtime;
   const newSessionRequested = runtime.productionPlanningNewSessionRequested;
@@ -351,7 +231,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
   })), [appHost, store, calculation]);
   const swipeStateRef = useRef<ProductionPlanningSwipeState | null>(null);
 
-  // 2026-10-29：等持久化读取完成再消费新建意图，避免迟到的旧会话覆盖空白任务。
+  // 等持久化读取完成再消费新建意图，避免迟到的旧会话覆盖空白任务。
   useLayoutEffect(() => {
     if (!hydrated || !newSessionRequested) return;
     runInAction(() => {
@@ -360,7 +240,6 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     });
     setCalculation(null);
   }, [hydrated, newSessionRequested, store, runtime]);
-  // AI-CORRECTION 2026-05-22:
   // 自然资源不再从 infiniteItemIds 补齐；缺失时走 null 配方（矿机/水泵）生产。
   // infiniteItemIds 现在仅包含 external-supply 模式下的污水。
   const infiniteItemIds = useMemo(() => {
@@ -440,21 +319,6 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     });
   };
 
-  // AI-REMOVED 2026-07-27:
-  // Reason: 用户要求将配方选择作为长期偏好持久化，不应在修改需求/供给配置时被动清空。
-  // Trigger: “修改配置再次计算时保留并总是使用上次手动选择的配方偏好”。
-  // Evidence: 该函数会在 updateDemandInput 中对任意配置变更清空 store.recipeChoices。
-  // Replacement: updateDemandInput 仅更新输入，不再触碰 recipeChoices。
-  // AI-CORRECTION 2026-10-30：目标物品集合变化时改为按剩余产线依赖清理；数量、供给与来源策略变化仍保留偏好。
-  // Risk: Low；旧偏好可能在当前配置下不可用，但求解器会回退到可用配方，不会中断计算。
-  // Human Review: Required
-  //
-  // Original code:
-  // const clearRecipeChoicesForDemandChange = () => {
-  //   if (Object.keys(store.recipeChoices).length > 0) {
-  //     store.recipeChoices = {};
-  //   }
-  // };
 
   const updateDemandInput = (mutate: () => void) => {
     const previousTargets = store.targets.map(clonePort);
@@ -517,13 +381,6 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
       plan,
     });
 
-    // 工序图默认全部展开
-    // AI-CORRECTION 2026-10-26：主链保持展开，新计算的所有支线默认收起。
-    // AI-REMOVED 2026-10-26:
-    // Reason: 新计算不再强制展开支线。Trigger: 用户选择支线默认收起。
-    // Evidence: 图构建器根据具体支线路径生成展开能力。
-    // Replacement: 下方空展开列表。Risk: Low。Human Review: Required
-    // Original code: const allExpanded = collectAllProcessExpandableItemIds(plan);
     runInAction(() => {
       store.session = { ...store.session, processExpandedItems: [] };
     });
@@ -637,84 +494,6 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     }
   };
 
-  // AI-REMOVED 2026-10-26:
-  // Reason: setCalculation updater 中写入 MobX 会在 React 渲染期间触发跨组件更新，且两条原料操作重复求解逻辑。
-  // Trigger: 工序图设置/移除原料时出现 Cannot update a component while rendering a different component。
-  // Evidence: 三屏开发验证 server.log；原 updater 内部调用 runInAction 更新 store.session。
-  // Replacement: updateCalculatedSupplies 在事件阶段统一求解并提交原料和展开状态。
-  // Risk: Low；求解输入仍来自当前 calculation 快照。Human Review: Required
-  // Original code:
-//   const handleCoverDemand = (itemId: string) => {
-//     const demandPerMinute = calculation?.plan.itemTotals.find((t) => t.itemId === itemId)?.demandPerMinute ?? 0;
-//     if (demandPerMinute <= 0) {
-//       return;
-//     }
-//
-//     const nextSupplies = [...store.supplies, createPort(itemId, demandPerMinute)];
-//     runInAction(() => {
-//       store.supplies = nextSupplies;
-//     });
-//     setCalculation((current) => {
-//       if (current === null) {
-//         return null;
-//       }
-//
-//       const nextPlan = computeProductionPlan({
-//         targets: current.targets,
-//         supplies: nextSupplies,
-//         infiniteItemIds: current.infiniteItemIds,
-//         recipeChoices: new Map(Object.entries(current.recipeChoices)),
-//         sourceConfig: current.sourceConfig,
-//         useModules: current.useModules,
-//       }, index);
-//
-//       // 工序图重新收集可展开项（外部供给的物品不再展开）
-//       const nextExpandedItems = collectAllProcessExpandableItemIds(nextPlan);
-//       runInAction(() => {
-//         store.session = { ...store.session, processExpandedItems: nextExpandedItems };
-//       });
-//
-//       return {
-//         ...current,
-//         supplies: nextSupplies,
-//         plan: nextPlan,
-//       };
-//     });
-//   };
-//
-//   const handleRemoveExternalSupply = (itemId: string) => {
-//     const nextSupplies = store.supplies.filter((s) => s.itemId !== itemId);
-//     runInAction(() => {
-//       store.supplies = nextSupplies;
-//     });
-//     setCalculation((current) => {
-//       if (current === null) {
-//         return null;
-//       }
-//
-//       const nextPlan = computeProductionPlan({
-//         targets: current.targets,
-//         supplies: nextSupplies,
-//         infiniteItemIds: current.infiniteItemIds,
-//         recipeChoices: new Map(Object.entries(current.recipeChoices)),
-//         sourceConfig: current.sourceConfig,
-//         useModules: current.useModules,
-//       }, index);
-//
-//       // 工序图重新收集可展开项（移除外部供给后可能恢复展开）
-//       const nextExpandedItems = collectAllProcessExpandableItemIds(nextPlan);
-//       runInAction(() => {
-//         store.session = { ...store.session, processExpandedItems: nextExpandedItems };
-//       });
-//
-//       return {
-//         ...current,
-//         supplies: nextSupplies,
-//         plan: nextPlan,
-//       };
-//     });
-//   };
-//
   const updateCalculatedSupplies = (nextSupplies: ProductionPlanningPort[]) => {
     const nextCalculation = calculation === null ? null : {
       ...calculation,
@@ -728,7 +507,6 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
         useModules: calculation.useModules,
       }, index),
     };
-    // AI-CORRECTION 2026-10-26：原料与工序图展开状态在事件阶段一起提交，React updater 保持无副作用。
     runInAction(() => {
       store.supplies = nextSupplies;
       if (nextCalculation !== null) {
@@ -835,20 +613,6 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     swipeStateRef.current = null;
   };
 
-  const openAutomaticPlanning = () => {
-    if (calculation === null || appHost.workspace.blueprintPlanner === null || appHost.blueprintPlannerDialog.taskLocked) return;
-    const document = appHost.workspace.editor?.document.getSnapshot();
-    if (document === undefined) return;
-    void appHost.blueprintPlannerDialog.open(createBlueprintPlannerPlan({
-      request: { targets: calculation.targets, supplies: calculation.supplies,
-        infiniteItemIds: calculation.infiniteItemIds, recipeChoices: new Map(Object.entries(calculation.recipeChoices)),
-        sourceConfig: calculation.sourceConfig, useModules: calculation.useModules },
-      index, sourceBaseId: document.baseId, name: "",
-      activeActivityIds: resolveEffectiveActivityIds({ selectedActivityIds }),
-    }));
-    appHost.internalActions.closeDialog("toolbox");
-  };
-
   const convertToModule = () => {
     if (calculation === null) {
       return;
@@ -861,18 +625,6 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
       translate: t,
     });
     onOpenGeneratedModuleEditor(nextModule);
-    // AI-REMOVED 2026-09-01:
-    // Reason: 产线规划生成的模块必须先作为草稿进入编辑器，用户确认保存后才写入模块库。
-    // Trigger: 用户反馈“转为模块”会静默创建未命名模块，仍需手动查找并编辑。
-    // Evidence: 当前路径直接 push customModules 后只切换 tab，没有向模块编辑器传递新模块。
-    // Replacement: onOpenGeneratedModuleEditor(nextModule)
-    // Risk: Low；取消编辑将不再残留未命名模块。
-    // Human Review: Required
-    //
-    // Original code:
-    // runInAction(() => {
-    //   appHost.internalState.workbench.toolbox.moduleBalancing.customModules.push(nextModule);
-    // });
     appHost.internalActions.setDialogTab("toolbox", "module-balancing");
     appHost.internalActions.setToolboxBottomDockCollapsed(false);
   };
@@ -933,14 +685,6 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
               disabled={calculation === null || calculation.plan.cycleIssues.length > 0} onClick={convertToModule}>
               <LucideBoxes /><span>{t("productionPlanning.convertToModule")}</span>
             </button>
-            <button type="button"
-              className={cm(styles, "production-planning-primary-button production-planning-auto-plan-button")}
-              disabled={calculation === null || calculation.useModules || calculation.plan.recipeTotals.some(entry => entry.module !== null)
-                || calculation.plan.cycleIssues.length > 0
-                || appHost.workspace.blueprintPlanner === null || appHost.blueprintPlannerDialog.taskLocked}
-              onClick={openAutomaticPlanning}>
-              <LucideFactory /><span>{t("eda.planThisLine")}</span>
-            </button>
           </>}
         </div>
       </div>
@@ -975,14 +719,6 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
               onPickItem={(id) => {
                 void requestItemSelection((itemId) => updateSupply(id, {
                   itemId,
-                  // AI-REMOVED 2026-10-03:
-                  // Reason: 自然资源与其他原料统一允许手动无限外供，切换物品应保留供给模式。
-                  // Trigger: 用户要求所有自然资源可点击无限供给。
-                  // Evidence: 原料切换回调会将自然资源的 isInfinite 强制重置为 false。
-                  // Replacement: updateSupply 保留当前原料行的 isInfinite。
-                  // Risk: Low；仅改变产线规划的显式外供。Human Review: Required
-                  // Original code:
-                  // ...(index.naturalResourceItemIds.has(itemId) ? { isInfinite: false } : {}),
                 }));
               }}
               onRemove={(id) => {
@@ -1003,37 +739,6 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
               t={t}
             />
           </div>
-          {/* AI-REMOVED 2026-10-26:
-          Reason: 输入页底栏由两页共用顶栏替代，避免功能入口分散。
-          Trigger: 用户要求模块 Switch 与计算按钮上移到树表工具所在顶栏。
-          Evidence: 原 input-footer 仅在输入页底部显示。
-          Replacement: ProductionPlanningPanel 共享 production-planning-toolbar。
-          Risk: Low；输入与计算逻辑保持复用。Human Review: Required
-          Original code:
-          <div className={cm(styles, "production-planning-input-footer")}>
-            <label className={cm(styles, "production-planning-module-toggle")}>
-              <input
-                type="checkbox"
-                checked={useModules}
-                onChange={(event) => {
-                  runInAction(() => {
-                    store.useModules = event.currentTarget.checked;
-                  });
-                }}
-              />
-              <span>{t("productionPlanning.useModules")}</span>
-            </label>
-            <button
-              type="button"
-              className={cm(styles, "production-planning-primary-button")}
-              disabled={targets.length === 0 || (useModules && !recommendedModulesReady)}
-              onClick={calculate}
-            >
-              <LucideCalculator />
-              <span>{t("productionPlanning.calculate")}</span>
-            </button>
-          </div>
-          */}
         </section>
 
         <section className={cm(styles, "production-planning-screen production-planning-workspace")}>
@@ -1086,28 +791,6 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
   );
 });
 
-// AI-REMOVED 2026-10-26:
-// Reason: 抽象流程图和文字标签无法说明实际按钮位置。
-// Trigger: 用户要求用接近真实界面的示意图帮助发现“设为原料”。
-// Evidence: 用户提供树表右侧详情截图并指出用户找不到按钮。
-// Replacement: RawMaterialGuide 的树表详情与工序图浮层示意。
-// Risk: Low；仅调整原料空状态引导。Human Review: Required
-// Original code:
-// function RawMaterialGuide({ t }: { t: (key: string) => string }) {
-//   return (
-//     <div className={cm(styles, "production-planning-material-guide")}>
-//       <div className={cm(styles, "production-planning-material-illustration")} aria-hidden="true">
-//         <span><LucideBox /></span><i /><span><LucidePackagePlus /></span><i /><span><LucideFactory /></span>
-//       </div>
-//       <p>{t("productionPlanning.materialGuide")}</p>
-//       <div className={cm(styles, "production-planning-material-guide-paths")}>
-//         <span><LucideListTree />{t("productionPlanning.viewTree")}<strong><LucideRepeat />{t("productionPlanning.coverDemand")}</strong></span>
-//         <span><LucideGitBranch />{t("productionPlanning.viewProcess")}<strong><LucideRepeat />{t("productionPlanning.coverDemand")}</strong></span>
-//       </div>
-//       <p>{t("productionPlanning.materialGuideResult")}</p>
-//     </div>
-//   );
-// }
 function RawMaterialGuide({ index, t }: { index: ProductionPlanningIndex; t: (key: string) => string }) {
   const itemIcon = resolveProductionPlanningItemIconSrc("item_gas_xiranite", index);
   const machineIcon = resolveProductionPlanningEntityIconSrc("transmuter_2_gastrans", index);
@@ -1234,14 +917,6 @@ function PortEditorRow({
   canToggleInfinite?: boolean;
   t: (key: string) => string;
 }) {
-  // AI-REMOVED 2026-10-03:
-  // Reason: 原料无限外供的可用性不再依赖自然资源分类。
-  // Trigger: 用户要求所有自然资源可点击无限供给。
-  // Evidence: 此变量只用于禁止自然资源显示与切换无限供给。
-  // Replacement: 下方 isInfinite 与按钮直接读取供给状态及回调。
-  // Risk: Low；自然资源分类仍用于自动配方选择。Human Review: Required
-  // Original code:
-  // const isNaturalResource = index.naturalResourceItemIds.has(line.itemId);
   const isInfinite = canToggleInfinite && line.isInfinite === true;
   const rowClassName = [
     "production-planning-line-row",
@@ -1325,53 +1000,6 @@ function SourcePolicyPanel({
         <h3><LucideInfinity /><span>{t("productionPlanning.sourcePolicy")}</span></h3>
       </div>
       <div className={cm(styles, "production-planning-source-policy")}>
-        {/* AI-REMOVED 2026-10-19:
-          Reason: 原料标题与图标是兄弟节点，卡片边框只包住标题。
-          Trigger: 用户反馈自然资源图标跑到卡片外，并要求同样展示农作物。
-          Evidence: SourcePolicyPanel 原结构中 icons 不在 source-pill 内。
-          Replacement: 下方共用的分类卡片，标题和图标均为卡片子节点。
-          Risk: Low。Human Review: Required
-          Original code:
-          <div className={cm(styles, "production-planning-source-pill")}>
-            <LucideBoxes />
-            <span>{t("productionPlanning.naturalResources")}</span>
-          </div>
-          <div className={cm(styles, "production-planning-natural-resource-icons")}>
-            {Array.from(index.naturalResourceItemIds).map((itemId) => (
-              <img
-                key={itemId}
-                alt=""
-                src={resolveProductionPlanningItemIconSrc(itemId, index)}
-                title={resolveProductionPlanningItemName(itemId, index, t)}
-              />
-            ))}
-          </div>
-        */}
-        {/* AI-REMOVED 2026-10-26:
-          Reason: 分类图标常驻占据来源策略区域，辅助信息需要按需展开。
-          Trigger: 用户确认自然资源和农作物默认收起，保留数量及查看入口。
-          Evidence: 旧分类卡片直接渲染全部图片，没有展开状态或交互入口。
-          Replacement: 下方带 aria-expanded 的分类按钮和按需渲染的图标列表。
-          Risk: Low；仅改变信息展示，不修改来源策略。Human Review: Required
-          Original code:
-        {[
-          { label: "productionPlanning.naturalResources", items: index.naturalResourceItemIds, icon: <LucideBoxes /> },
-          { label: "productionPlanning.crops", items: index.cropItemIds, icon: <LucideSprout /> },
-        ].map(({ label, items, icon }) => (
-          <div key={label} role="group" aria-label={t(label)} className={cm(styles, "production-planning-source-pill")}>
-            <div className={cm(styles, "production-planning-resource-label")}>
-              {icon}<span>{t(label)}</span>
-            </div>
-            <div className={cm(styles, "production-planning-natural-resource-icons")}>
-              {Array.from(items).map((itemId) => (
-                <img key={itemId} alt={resolveProductionPlanningItemName(itemId, index, t)}
-                  src={resolveProductionPlanningItemIconSrc(itemId, index)}
-                  title={resolveProductionPlanningItemName(itemId, index, t)} />
-              ))}
-            </div>
-          </div>
-        ))}
-        */}
         {[
           { label: "productionPlanning.naturalResources", items: index.naturalResourceItemIds, icon: <LucideBoxes /> },
           { label: "productionPlanning.crops", items: index.cropItemIds, icon: <LucideSprout /> },
@@ -1448,32 +1076,6 @@ function SourcePolicyPanel({
           onChange={(policy) => onUpdate({ waterPurifierPolicy: policy })}
           t={t}
         />
-        {/*
-        AI-REMOVED 2026-07-22:
-        Reason: 原生 checkbox 滑块与同一区域现有的二选一分段控件交互不一致。
-        Trigger: 用户明确指出该 switch 与其他 switch 不是同一种交互逻辑。
-        Evidence: SourcePolicyPanel 中水、酸、污水及净水节点策略均使用 production-planning-two-option-toggle。
-        Replacement: DeviceMinimumConsumptionToggle
-        Risk: Low；配置字段及默认值不变，仅统一交互形式。
-        Human Review: Required
-
-        AI-CORRECTION 2026-07-27: 设备最低消耗改为三态模式（不计算/小数计算/取整计算），
-        配置字段保持 includeDeviceMinimumConsumption，但类型从 boolean 升级为 mode string。
-
-        Original code:
-        <label className={cm(styles, "production-planning-switch-row")}>
-          <span>{t("productionPlanning.deviceMinimumConsumption")}</span>
-          <input
-            type="checkbox"
-            role="switch"
-            checked={sourceConfig.includeDeviceMinimumConsumption}
-            onChange={(event) => onUpdate({ includeDeviceMinimumConsumption: event.target.checked })}
-          />
-          <span className={cm(styles, "production-planning-switch-track")} aria-hidden="true">
-            <span className={cm(styles, "production-planning-switch-thumb")} />
-          </span>
-        </label>
-        */}
         <DeviceMinimumConsumptionToggle
           mode={sourceConfig.includeDeviceMinimumConsumption}
           onChange={(mode) => onUpdate({ includeDeviceMinimumConsumption: mode })}
@@ -1784,195 +1386,6 @@ function PlanGraph({
 }
 
 
-// AI-REMOVED 2026-10-03:
-// Reason: 产线规划和环境供料复用同一树表及配方交互。
-// Trigger: 用户要求统一 UI，禁止重复实现。
-// Evidence: 原组件包含通用折叠、选择与详情布局。
-// Replacement: production-planning-tree-table.tsx
-// Risk: 两个入口均需验证节点选择和配方切换。
-// Human Review: Required
-// Original code:
-// function ProductionPlanningTreeTable({
-//   displayMode,
-//   plan,
-//   index,
-//   useModules,
-//   recipeChoices,
-//   treeScrollTop,
-//   isTouch,
-//   onSelectRecipe,
-//   onRequestRecipeSelection,
-//   onCoverDemand,
-//   onRemoveExternalSupply,
-//   onTreeScrollTopChange,
-//   t,
-// }: {
-//   displayMode: ProductionPlanningDisplayMode;
-//   plan: ProductionPlanningResult;
-//   index: ProductionPlanningIndex;
-//   useModules: boolean;
-//   recipeChoices: ReadonlyMap<string, string>;
-//   treeScrollTop: number;
-//   isTouch: boolean;
-//   onSelectRecipe: (itemId: string, recipeId: string | null) => void;
-//   onRequestRecipeSelection: (itemId: string, recipes: readonly RecipeDefinition[]) => void;
-//   onCoverDemand: (itemId: string) => void;
-//   onRemoveExternalSupply: (itemId: string) => void;
-//   onTreeScrollTopChange: (scrollTop: number) => void;
-//   t: (key: string) => string;
-// }) {
-//   const rows = useMemo(() => buildProductionPlanningTreeRows(plan, displayMode), [displayMode, plan]);
-//   const rowById = useMemo(() => new Map(rows.map((row) => [row.id, row])), [rows]);
-//   const treePaneRef = useRef<HTMLDivElement | null>(null);
-//   const rowElementRefs = useRef(new Map<string, HTMLTableRowElement>());
-//   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
-//   const [collapsedRowIds, setCollapsedRowIds] = useState<Set<string>>(() => new Set());
-//   // 筛掉已不存在于当前树中的折叠行 ID
-//   const collapsibleRowIds = useMemo(
-//     () => new Set(rows.filter((row) => row.childIds.length > 0).map((row) => row.id)),
-//     [rows],
-//   );
-//   const effectiveCollapsedRowIds = useMemo(() => {
-//     if (collapsedRowIds.size === 0) return collapsedRowIds;
-//     const next = new Set<string>();
-//     for (const rowId of collapsedRowIds) {
-//       if (collapsibleRowIds.has(rowId)) next.add(rowId);
-//     }
-//     return next;
-//   }, [collapsedRowIds, collapsibleRowIds]);
-//   const visibleRows = useMemo(
-//     () => filterVisibleProductionPlanningTreeRows(rows, rowById, effectiveCollapsedRowIds),
-//     [effectiveCollapsedRowIds, rowById, rows],
-//   );
-//   const visibleRowIds = useMemo(() => new Set(visibleRows.map((row) => row.id)), [visibleRows]);
-//   // 确保选中行始终在可见范围内；不可见时回退到首行
-//   const selectedRow = useMemo(() => {
-//     if (selectedRowId !== null) {
-//       const row = rowById.get(selectedRowId);
-//       if (row !== undefined && visibleRowIds.has(selectedRowId)) return row;
-//     }
-//     return visibleRows[0] ?? null;
-//   }, [selectedRowId, rowById, visibleRowIds, visibleRows]);
-//
-//   useLayoutEffect(() => {
-//     const element = treePaneRef.current;
-//     if (element === null) {
-//       return;
-//     }
-//
-//     const maxScrollTop = Math.max(0, element.scrollHeight - element.clientHeight);
-//     element.scrollTop = Math.min(treeScrollTop, maxScrollTop);
-//   }, [treeScrollTop, visibleRows]);
-//
-//   const selectRow = (rowId: string) => {
-//     setSelectedRowId(rowId);
-//     requestAnimationFrame(() => {
-//       rowElementRefs.current.get(rowId)?.scrollIntoView({ block: "nearest" });
-//     });
-//   };
-//
-//   const toggleRowCollapsed = (rowId: string) => {
-//     const row = rowById.get(rowId);
-//     if (row === undefined || row.childIds.length === 0) {
-//       return;
-//     }
-//
-//     const nextCollapsed = !collapsedRowIds.has(rowId);
-//     setCollapsedRowIds((current) => {
-//       const next = new Set(current);
-//       if (next.has(rowId)) {
-//         next.delete(rowId);
-//       } else {
-//         next.add(rowId);
-//       }
-//       return next;
-//     });
-//
-//     if (
-//       nextCollapsed
-//       && selectedRowId !== null
-//       && selectedRowId !== rowId
-//       && isProductionPlanningTreeDescendant(rowById, rowId, selectedRowId)
-//     ) {
-//       setSelectedRowId(rowId);
-//     }
-//   };
-//
-//   if (rows.length === 0) {
-//     return <div className={cm(styles, "production-planning-empty")}>{t("productionPlanning.noRecipes")}</div>;
-//   }
-//
-//   const layoutClassName = [
-//     "production-planning-tree-table-layout",
-//     displayMode === "device" ? "is-device-mode" : "is-item-mode",
-//   ].join(" ");
-//
-//   return (
-//     <div className={cm(styles, layoutClassName)}>
-//       <div
-//         className={cm(styles, "production-planning-tree-table-pane")}
-//         onScroll={(event) => onTreeScrollTopChange(event.currentTarget.scrollTop)}
-//         ref={treePaneRef}
-//       >
-//         <table className={cm(styles, "production-planning-tree-table")}>
-//           <colgroup>
-//             <col className={cm(styles, "production-planning-tree-table-node-col")} />
-//             <col className={cm(styles, "production-planning-tree-table-rate-col")} />
-//           </colgroup>
-//           <thead>
-//             <tr>
-//               <th>{t("productionPlanning.node")}</th>
-//               <th>{t("productionPlanning.rate")}</th>
-//             </tr>
-//           </thead>
-//           <tbody>
-//             {visibleRows.map((row) => (
-//               <ProductionPlanningTreeTableRow
-//                 key={row.id}
-//                 row={row}
-//                 index={index}
-//                 useModules={useModules}
-//                 displayMode={displayMode}
-//                 collapsed={collapsedRowIds.has(row.id)}
-//                 selected={selectedRow?.id === row.id}
-//                 onSelect={() => selectRow(row.id)}
-//                 onToggleCollapsed={() => toggleRowCollapsed(row.id)}
-//                 setRowElement={(element) => {
-//                   if (element === null) {
-//                     rowElementRefs.current.delete(row.id);
-//                   } else {
-//                     rowElementRefs.current.set(row.id, element);
-//                   }
-//                 }}
-//                 t={t}
-//               />
-//             ))}
-//           </tbody>
-//         </table>
-//       </div>
-//       <aside className={cm(styles, "production-planning-tree-detail")}>
-//         {selectedRow !== null && (
-//           <ProductionPlanningTreeDetail
-//             row={selectedRow}
-//             rowById={rowById}
-//             index={index}
-//             useModules={useModules}
-//             displayMode={displayMode}
-//             recipeChoices={recipeChoices}
-//             isTouch={isTouch}
-//             onSelectRow={selectRow}
-//             onSelectRecipe={onSelectRecipe}
-//             onRequestRecipeSelection={onRequestRecipeSelection}
-//             onCoverDemand={onCoverDemand}
-//             onRemoveExternalSupply={onRemoveExternalSupply}
-//             t={t}
-//           />
-//         )}
-//       </aside>
-//     </div>
-//   );
-// }
-//
 function ProductionPlanningTreeTable({
   displayMode,
   plan,
@@ -2091,218 +1504,9 @@ function ProductionPlanningTreeRowChip({
 }
 
 
-// AI-REMOVED 2026-10-03:
-// Reason: 产线规划和环境供料复用同一树表及配方交互。
-// Trigger: 用户要求统一 UI，禁止重复实现。
-// Evidence: 原组件包含通用折叠、选择与详情布局。
-// Replacement: production-planning-tree-table.tsx
-// Risk: 两个入口均需验证节点选择和配方切换。
-// Human Review: Required
-// Original code:
-// function ProductionPlanningTreeTableRow({
-//   row,
-//   index,
-//   useModules,
-//   displayMode,
-//   collapsed,
-//   selected,
-//   onSelect,
-//   onToggleCollapsed,
-//   setRowElement,
-//   t,
-// }: {
-//   row: ProductionPlanningTreeRow;
-//   index: ProductionPlanningIndex;
-//   useModules: boolean;
-//   displayMode: ProductionPlanningDisplayMode;
-//   collapsed: boolean;
-//   selected: boolean;
-//   onSelect: () => void;
-//   onToggleCollapsed: () => void;
-//   setRowElement: (element: HTMLTableRowElement | null) => void;
-//   t: (key: string) => string;
-// }) {
-//   const className = [
-//     "production-planning-tree-table-row",
-//     row.isShared ? "is-shared" : "",
-//     selected ? "is-active" : "",
-//   ].filter(Boolean).join(" ");
-//
-//   const hasChildren = row.childIds.length > 0;
-//   const toggleLabel = collapsed ? t("action.expand") : t("action.collapse");
-//
-//   return (
-//     <tr className={cm(styles, className)} ref={setRowElement}>
-//       <td>
-//         <div
-//           className={cm(styles, "production-planning-tree-table-node-cell")}
-//           style={{ "--tree-depth": row.depth } as CSSProperties}
-//         >
-//           {hasChildren ? (
-//             <button
-//               type="button"
-//               className={cm(styles, "production-planning-tree-table-branch-button")}
-//               aria-expanded={!collapsed}
-//               aria-label={toggleLabel}
-//               title={toggleLabel}
-//               onClick={onToggleCollapsed}
-//             >
-//               <span className={cm(styles, "production-planning-tree-table-branch")} aria-hidden="true">
-//                 {collapsed ? "+" : "-"}
-//               </span>
-//             </button>
-//           ) : (
-//             <span className={cm(styles, "production-planning-tree-table-branch-spacer")} aria-hidden="true">
-//               <span className={cm(styles, "production-planning-tree-table-branch is-leaf")} />
-//             </span>
-//           )}
-//           <button
-//             type="button"
-//             className={cm(styles, "production-planning-tree-table-node-button")}
-//             aria-pressed={selected}
-//             onClick={onSelect}
-//           >
-//             {row.isSharedDemandReference ? (
-//               <div className={cm(styles, "production-planning-recipe-identity")}>
-//                 <img alt="" src={resolveProductionPlanningItemIconSrc(row.targetItemId, index)} />
-//                 <div>
-//                   <strong>{resolveProductionPlanningItemName(row.targetItemId, index, t)}</strong>
-//                   <span>
-//                     {row.isDeviceMinimumConsumption
-//                       ? `${t("productionPlanning.minimumConsumption")} · ${t("productionPlanning.sharedDemand")}`
-//                       : t("productionPlanning.sharedDemand")}
-//                   </span>
-//                 </div>
-//               </div>
-//             ) : isProductionPlanningDeviceMinimumConsumptionRecipeId(row.recipeId) ? (
-//               <div className={cm(styles, "production-planning-recipe-identity")}>
-//                 <img alt="" src={resolveProductionPlanningItemIconSrc(row.targetItemId, index)} />
-//                 <div>
-//                   <strong>{resolveProductionPlanningItemName(row.targetItemId, index, t)}</strong>
-//                   <span>{t("productionPlanning.deviceMinimumConsumptionNode")}</span>
-//                 </div>
-//               </div>
-//             ) : (
-//               <RecipeIdentity
-//                 recipeNode={row.recipeNode}
-//                 targetItemId={row.targetItemId}
-//                 displayMode={displayMode}
-//                 isDeviceMinimumConsumption={row.isDeviceMinimumConsumption}
-//                 index={index}
-//                 t={t}
-//               />
-//             )}
-//             {row.isShared && (
-//               <span className={cm(styles, "production-planning-tree-table-chip")}>
-//                 {t("productionPlanning.shared")}
-//               </span>
-//             )}
-//             {ProductionPlanningTreeRowChip({ row, index, useModules, t })}
-//           </button>
-//         </div>
-//       </td>
-//       <td>
-//         <ProductionPlanningTreeRowRate row={row} index={index} t={t} />
-//       </td>
-//     </tr>
-//   );
-// }
-
-/*
-AI-REMOVED 2026-05-22:
-Reason: 设备树节点现在定义为“设备 + 目标产物”pair，RecipeIdentity 已显示目标产物；继续追加输出物品 chip 会造成产物重复显示，并让设备模式误读成物品节点。
-Trigger: 用户指出设备模式不应继续出现物品 node。
-Evidence: ProductionPlanningTreeTableRow 在设备模式下只渲染 RecipeIdentity，速率列和详情仍展示产物流量与端口信息。
-Replacement: RecipeIdentity targetItemId subtitle + ProductionPlanningTreeRowRate
-Risk: Low；删除的是重复摘要 UI，不改变树结构和计算数据。
-Human Review: Required
-
-Original code:
-function renderFoldedOutputItems(
-  row: ProductionPlanningTreeRecipeRow,
-  index: ProductionPlanningIndex,
-  t: (key: string) => string,
-): ReactNode {
-  const outputs = row.total?.outputs ?? row.recipeNode.outputs;
-  if (outputs.length === 0) {
-    return null;
-  }
-
-  return (
-    <span className={cm(styles, "production-planning-tree-table-folded-items")}>
-      {outputs.map((port) => (
-        <span key={port.itemId} className={cm(styles, "production-planning-tree-table-folded-item-chip")}>
-          <img alt="" src={resolveProductionPlanningItemIconSrc(port.itemId, index)} />
-          <span>{resolveProductionPlanningItemName(port.itemId, index, t)}</span>
-          <span>{formatProductionFlow(port.perMinute)}/min</span>
-        </span>
-      ))}
-    </span>
-  );
-}
-*/
 
 
-// AI-REMOVED 2026-10-03:
-// Reason: 产线规划和环境供料复用同一树表及配方交互。
-// Trigger: 用户要求统一 UI，禁止重复实现。
-// Evidence: 原组件包含通用折叠、选择与详情布局。
-// Replacement: production-planning-tree-table.tsx
-// Risk: 两个入口均需验证节点选择和配方切换。
-// Human Review: Required
-// Original code:
-// function filterVisibleProductionPlanningTreeRows(
-//   rows: readonly ProductionPlanningTreeRow[],
-//   rowById: ReadonlyMap<string, ProductionPlanningTreeRow>,
-//   collapsedRowIds: ReadonlySet<string>,
-// ): ProductionPlanningTreeRow[] {
-//   if (collapsedRowIds.size === 0) {
-//     return [...rows];
-//   }
-//
-//   const hiddenRowIds = new Set<string>();
-//   for (const row of rows) {
-//     if (hiddenRowIds.has(row.id) || !collapsedRowIds.has(row.id)) {
-//       continue;
-//     }
-//
-//     collectProductionPlanningTreeDescendantIds(rowById, row.id, hiddenRowIds);
-//   }
-//
-//   return rows.filter((row) => !hiddenRowIds.has(row.id));
-// }
-//
-// function collectProductionPlanningTreeDescendantIds(
-//   rowById: ReadonlyMap<string, ProductionPlanningTreeRow>,
-//   rowId: string,
-//   result: Set<string>,
-// ): void {
-//   const row = rowById.get(rowId);
-//   if (row === undefined) {
-//     return;
-//   }
-//
-//   for (const childId of row.childIds) {
-//     const childRow = rowById.get(childId);
-//     if (childRow === undefined || childRow.parentIds.length !== 1 || result.has(childId)) {
-//       continue;
-//     }
-//
-//     result.add(childId);
-//     collectProductionPlanningTreeDescendantIds(rowById, childId, result);
-//   }
-// }
-//
-// function isProductionPlanningTreeDescendant(
-//   rowById: ReadonlyMap<string, ProductionPlanningTreeRow>,
-//   ancestorRowId: string,
-//   candidateRowId: string,
-// ): boolean {
-//   const descendantRowIds = new Set<string>();
-//   collectProductionPlanningTreeDescendantIds(rowById, ancestorRowId, descendantRowIds);
-//   return descendantRowIds.has(candidateRowId);
-// }
-//
+
 function ProductionPlanningTreeRowRate({
   row,
   index,
@@ -2537,10 +1741,10 @@ function ProductionPlanningTreeDetail({
   const normalSubtitle = displayMode === "item"
     ? (isExternal
       ? t("productionPlanning.externalSupply")
-      : `${moduleSourceName === null ? "" : `${moduleSourceName} · `}由 ${machineName} 产出`)
+      : `${moduleSourceName === null ? "" : `${moduleSourceName} · `}${t("productionPlanning.producedBy").replace("{machine}", machineName)}`)
     : (isExternal
       ? `${t("productionPlanning.produced")} ${productName}`
-      : `${moduleSourceName === null ? "" : `${moduleSourceName} · `}产出 ${productName}`);
+      : `${moduleSourceName === null ? "" : `${moduleSourceName} · `}${t("productionPlanning.produced")} ${productName}`);
   const subtitle = row.isDeviceMinimumConsumption
     ? `${t("productionPlanning.minimumConsumption")} · ${normalSubtitle}`
     : normalSubtitle;
@@ -2736,147 +1940,8 @@ function ProductionPlanningDeviceMinimumConsumptionDetail({
 }
 
 
-// AI-REMOVED 2026-10-03:
-// Reason: 产线规划和环境供料复用同一树表及配方交互。
-// Trigger: 用户要求统一 UI，禁止重复实现。
-// Evidence: 原组件包含通用折叠、选择与详情布局。
-// Replacement: recipe-choice-controls.tsx
-// Risk: 两个入口均需验证节点选择和配方切换。
-// Human Review: Required
-// Original code:
-// function RecipeChoiceControls({
-//   itemId,
-//   recipes,
-//   candidates,
-//   index,
-//   selectedRecipeId,
-//   onRequestRecipeSelection,
-//   onSelectRecipe,
-//   t,
-// }: {
-//   itemId: string;
-//   recipes: readonly RecipeDefinition[];
-//   candidates: readonly ProductionPlanningCandidate[];
-//   index: ProductionPlanningIndex;
-//   selectedRecipeId: string | null;
-//   onRequestRecipeSelection: (itemId: string, recipes: readonly RecipeDefinition[]) => void;
-//   onSelectRecipe: (itemId: string, recipeId: string | null) => void;
-//   t: (key: string) => string;
-// }) {
-//   if (itemId.length === 0 || candidates.length <= 1) {
-//     return null;
-//   }
-//
-//   const normalizedSelectedCandidateId = selectedRecipeId === null
-//     ? null
-//     : normalizeProductionPlanningCandidateChoiceId(selectedRecipeId);
-//   const selectedCandidate = normalizedSelectedCandidateId === null
-//     ? null
-//     : candidates.find((candidate) => candidate.id === normalizedSelectedCandidateId) ?? null;
-//   const label = selectedCandidate === null
-//     ? t("productionPlanning.autoRecipe")
-//     : resolveProductionPlanningCandidateName(selectedCandidate, index, t);
-//
-//   return (
-//     <div className={cm(styles, "production-planning-recipe-choice")}>
-//       <div className={cm(styles, "production-planning-recipe-choice-summary")}>
-//         <span>{t("productionPlanning.productionCandidate")}</span>
-//         <strong>{label}</strong>
-//       </div>
-//       <select
-//         className={cm(styles, "production-planning-recipe-choice-candidate")}
-//         aria-label={t("productionPlanning.productionCandidate")}
-//         value={selectedCandidate?.id ?? ""}
-//         onChange={(event) => onSelectRecipe(itemId, event.currentTarget.value || null)}
-//       >
-//         <option value="">{t("productionPlanning.autoRecipe")}</option>
-//         {candidates.map((candidate) => (
-//           <option key={candidate.id} value={candidate.id}>
-//             {resolveProductionPlanningCandidateName(candidate, index, t)}
-//           </option>
-//         ))}
-//       </select>
-//       <button
-//         type="button"
-//         className={cm(styles, "production-planning-icon-text-button production-planning-recipe-choice-compact-auto")}
-//         aria-pressed={selectedCandidate === null}
-//         onClick={() => onSelectRecipe(itemId, null)}
-//       >
-//         <LucideRepeat />
-//         <span>{t("productionPlanning.autoRecipe")}</span>
-//       </button>
-//       {recipes.length > 1 && (
-//         <button
-//           type="button"
-//           className={cm(styles, "production-planning-icon-text-button production-planning-recipe-choice-select")}
-//           onClick={() => onRequestRecipeSelection(itemId, recipes)}
-//         >
-//           <LucideListTree />
-//           <span>{t("productionPlanning.chooseRecipe")}</span>
-//         </button>
-//       )}
-//     </div>
-//   );
-// }
 
-// AI-REMOVED 2026-08-29:
-// Reason: 生产候选统一下拉框已经直接提供“自动”选项，原宽屏专用自动按钮与其重复。
-// Trigger: 模块与系统配方需要进入同一个手动候选控件。
-// Evidence: RecipeChoiceControls 现通过 production-planning-recipe-choice-candidate 展示自动、系统配方与模块。
-// Replacement: RecipeChoiceControls 内的 candidate select 与紧凑自动按钮。
-// Risk: Low；宽屏减少一个重复按钮，自动选择能力仍保留。
-// Human Review: Required
-//
-// Original code:
-// {selectedRecipeId !== null && (
-//   <button
-//     type="button"
-//     className={cm(styles, "production-planning-icon-text-button production-planning-recipe-choice-wide-auto")}
-//     onClick={() => onSelectRecipe(itemId, null)}
-//   >
-//     <LucideRepeat />
-//     <span>{t("productionPlanning.autoRecipe")}</span>
-//   </button>
-// )}
 
-// AI-REMOVED 2026-05-24:
-// Reason: ledger 树不再生成 item row，旧 item 详情和内嵌 select 无法从当前树表进入。
-// Trigger: 用户要求清理旧 item 死路线，配方选择改接现有 RecipePickerDialog。
-// Evidence: 碳块目标验收中详情面板进入的是 recipe + targetItemId 行，DOM 中没有旧 select。
-// Replacement: ProductionPlanningTreeDetail + RecipeChoiceControls
-// Risk: Medium；旧 item 指标卡片不再显示，当前 ledger 详情仍保留端口、关系、配方公式和外部供给按钮。
-// Human Review: Required
-//
-// Original code:
-// if (row.kind === "recipe") {
-//   ...
-// }
-//
-// const recipes = index.recipesByOutputItem.get(row.itemId) ?? [];
-// const total = row.total;
-// const producerRow = row.producerIds
-//   .map((rowId) => rowById.get(rowId) ?? null)
-//   .find((candidate): candidate is ProductionPlanningTreeRecipeRow => candidate?.kind === "recipe") ?? null;
-// const demandPerMinute = total?.demandPerMinute ?? row.node.demandPerMinute;
-// const suppliedPerMinute = total?.suppliedPerMinute ?? row.node.suppliedPerMinute;
-// const producedPerMinute = total?.producedPerMinute ?? row.node.producedPerMinute;
-// const unresolvedPerMinute = total?.unresolvedPerMinute ?? row.node.unresolvedPerMinute;
-//
-// return (
-//   <article className={cm(styles, "production-planning-item-detail")}>
-//     <div className={cm(styles, "production-planning-item-detail-header")}>
-//       <ItemIdentity itemId={row.itemId} index={index} t={t} />
-//       <NodeStatus node={row.node} t={t} />
-//     </div>
-//     <div className={cm(styles, "production-planning-node-metrics")}>
-//       <Metric label={t("productionPlanning.demand")} value={formatProductionFlow(demandPerMinute)} />
-//       <Metric label={t("productionPlanning.supply")} value={formatProductionFlow(suppliedPerMinute)} tone={suppliedPerMinute > 0 ? "good" : undefined} />
-//       <Metric label={t("productionPlanning.produced")} value={formatProductionFlow(producedPerMinute)} />
-//       <Metric label={t("productionPlanning.missing")} value={formatProductionFlow(unresolvedPerMinute)} tone={unresolvedPerMinute > 0 ? "bad" : undefined} />
-//     </div>
-//     ...
-//   </article>
-// );
 
 function ProductionPlanningTreeRelations({
   groups,
@@ -3052,25 +2117,6 @@ function RecipeIdentity({
   );
 }
 
-// AI-REMOVED 2026-09-01:
-// Reason: 产线规划模块图标已统一为物品图标数组，文件内单值解析会造成多处实现漂移。
-// Trigger: 用户要求模块使用 1～4 个物品组合图标。
-// Evidence: production-planning-model.ts 现统一导出 resolveProductionPlanningModuleIconSrcs。
-// Replacement: resolveProductionPlanningModuleIconSrcs
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// function resolveProductionPlanningModuleIconSrc(
-//   iconId: string,
-//   index: ProductionPlanningIndex,
-// ): string {
-//   if (index.entityById.has(iconId)) {
-//     return resolveProductionPlanningEntityIconSrc(iconId, index);
-//   }
-//
-//   return resolveProductionPlanningItemIconSrc(iconId, index);
-// }
 
 type MutableProductionPlanningTreeRow = {
   id: string;
@@ -3096,70 +2142,13 @@ type MutableProductionPlanningTreeRow = {
   sourceRowId: string | null;
 };
 
-// AI-REMOVED 2026-05-24:
-// Reason: mutable 树表中间态与最终态同步收敛为 ledger row，不再维护 item/recipe union。
-// Trigger: 用户要求清理旧 item 死路线并移除节点分类。
-// Evidence: ledger 构建器只创建 recipe row；MutableProductionPlanningTreeItemRow 无创建入口。
-// Replacement: MutableProductionPlanningTreeRow
-// Risk: Medium；需要类型检查覆盖全部 row.kind 分支清理。
-// Human Review: Required
-//
-// Original code:
-// type MutableProductionPlanningTreeRow = MutableProductionPlanningTreeItemRow | MutableProductionPlanningTreeRecipeRow;
-//
-// type MutableProductionPlanningTreeRowBase = {
-//   id: string;
-//   depth: number;
-//   order: number;
-//   parentIds: Set<string>;
-//   childIds: Set<string>;
-// };
-//
-// type MutableProductionPlanningTreeItemRow = MutableProductionPlanningTreeRowBase & {
-//   kind: "item";
-//   itemId: string;
-//   node: ProductionPlanningItemNode;
-//   nodes: ProductionPlanningItemNode[];
-//   total: ProductionPlanningResult["itemTotals"][number] | null;
-//   producerIds: Set<string>;
-//   consumerIds: Set<string>;
-//   isByproduct: boolean;
-// };
-//
-// type MutableProductionPlanningTreeRecipeRow = MutableProductionPlanningTreeRowBase & {
-//   kind: "recipe";
-//   recipeId: string;
-//   targetItemId: string;
-//   recipeNode: ProductionPlanningRecipeNode;
-//   recipeNodes: ProductionPlanningRecipeNode[];
-//   total: ProductionPlanningResult["recipeTotals"][number] | null;
-//   inputItemIds: Set<string>;
-//   outputItemIds: Set<string>;
-//   isByproduct: boolean;
-// };
 
-// AI-CORRECTION 2026-05-21: buildProductionPlanningTreeRows 现在按 displayMode 分发到两套独立逻辑；
 // 物品模式折叠 recipe 行（只保留 item 行），设备模式折叠中间 item 行（只保留 recipe + raw item 行）。
-// AI-CORRECTION 2026-05-22: 设备模式也折叠 item 行；树节点定义为“配方设备 + 目标产物”的 unique pair。
-// AI-CORRECTION 2026-05-22: 物品/设备模式现在共享同一套 unique pair 树；displayMode 只影响树表外显身份。
-// AI-CORRECTION 2026-07-23: 共享供给保持唯一真实节点并在原消费位置生成叶子引用；
 // 非共享设备最低消耗则直接复用真实供给节点，只增加最低消耗身份。
 export function buildProductionPlanningTreeRows(
   plan: ProductionPlanningResult,
   _displayMode: ProductionPlanningDisplayMode,
 ): ProductionPlanningTreeRow[] {
-  // AI-CORRECTION 2026-05-22:
-  // 树表改为先建立物品流 ledger 视图，再生成 pair 行；多输出、共享来源和处置配方不再复用递归 recipe 行的整包 outputs。
-  // AI-REMOVED 2026-05-22:
-  // Reason: 旧构建器把同一 recipe 的全部 outputs 塞入当前 target pair，导致多输出配方副产物标记污染目标行。
-  // Trigger: 用户指出“一个配方出两个物品应该生成两个设备×物品 pair，标记不应打错”。
-  // Evidence: 赫铜装备原件链路中“混合池×壤晶废液”被“惰性壤晶废液”的副产物状态污染。
-  // Replacement: buildLedgerProductionPlanningTreeRows
-  // Risk: Medium；树表结构来源从递归 recipeNode 改为 ledger 关系，流程图仍保留旧路径。
-  // Human Review: Required
-  //
-  // Original code:
-  // return buildDeviceProductPairTreeRows(plan);
   return buildLedgerProductionPlanningTreeRows(plan);
 }
 
@@ -3275,19 +2264,6 @@ function buildLedgerProductionPlanningTreeRows(plan: ProductionPlanningResult): 
   };
 
   const collectRowsFromItemNode = (node: ProductionPlanningItemNode): void => {
-    // AI-REMOVED 2026-05-22:
-    // Reason: 外部供给不是联产 surplus 来源，不能进入 producerRowIdsByItem，否则后续 supply.surplus 边会误连外部源。
-    // Trigger: ledger 树需要区分 finite/infinite external supply 与 reusable byproduct output。
-    // Evidence: connectItemSources 已对 node.supply.manual / node.supply.infinite 直接创建外部供给边；surplus 来源只应来自生产配方输出。
-    // Replacement: ensureExternalSupplyRow(node)
-    // Risk: Low；外部供给仍会在直接供给关系中显示，只是不再作为副产物来源。
-    // Human Review: Required
-    //
-    // Original code:
-    // const externalRow = ensureExternalSupplyRow(node);
-    // if (externalRow !== null) {
-    //   addProducerRowId(node.itemId, externalRow.id);
-    // }
     ensureExternalSupplyRow(node);
 
     if (node.recipeNode === null) {
@@ -3614,98 +2590,6 @@ function normalizeProductionPlanningTreeDemandRows(
   }
 }
 
-// AI-REMOVED 2026-10-16:
-// Reason: 需求引用扩展为共享与植物循环两种语义，统一构建器以避免重复树行和配方节点逻辑。
-// Trigger: 单线植物回流被错误标记为共享需求。
-// Evidence: 原构建器固定 isSharedDemandReference=true，无法表达循环内部引用。
-// Replacement: createProductionPlanningTreeDemandReferenceRow / createProductionPlanningTreeDemandRecipeNode
-// Risk: Low；引用流量与来源导航保持原语义。
-// Human Review: Required
-//
-// Original code:
-// function createProductionPlanningTreeSharedDemandReferenceRow({
-//   parentRow,
-//   sourceRow,
-//   consumedPerMinute,
-//   isDeviceMinimumConsumption,
-//   order,
-// }: {
-//   parentRow: MutableProductionPlanningTreeRow;
-//   sourceRow: MutableProductionPlanningTreeRow;
-//   consumedPerMinute: number;
-//   isDeviceMinimumConsumption: boolean;
-//   order: number;
-// }): MutableProductionPlanningTreeRow {
-//   const recipeId = `${SHARED_DEMAND_RECIPE_ID_PREFIX}${sourceRow.recipeId}`;
-//   const rowId = `${parentRow.id}:${recipeId}:target:${sourceRow.targetItemId}:${isDeviceMinimumConsumption ? "minimum" : "input"}`;
-//   const recipeNode = createProductionPlanningTreeSharedDemandRecipeNode(
-//     rowId,
-//     recipeId,
-//     sourceRow.targetItemId,
-//     consumedPerMinute,
-//   );
-//   // AI-REMOVED 2026-08-29:
-//   // Reason: 编辑目标匹配到错误的 recipeId 字段并生成了无效调用语法，且此作用域不存在 total。
-//   // Trigger: 将模块汇总节点的 recipeId 改为可空真实配方 ID。
-//   // Evidence: TypeScript 调用参数位置不能使用 recipeId: total.recipeId。
-//   // Replacement: 上方位置参数 recipeId；真正的汇总节点赋值位于 createProductionPlanningTreeSyntheticRecipeNode。
-//   // Risk: Low
-//   // Human Review: Required
-//   //
-//   // Original code:
-//   // recipeId: total.recipeId,
-//
-//   return {
-//     id: rowId,
-//     depth: 0,
-//     order,
-//     parentIds: new Set(),
-//     childIds: new Set(),
-//     demandReferenceIds: new Set(),
-//     recipeId,
-//     targetItemId: sourceRow.targetItemId,
-//     recipeNode,
-//     recipeNodes: [recipeNode],
-//     total: null,
-//     inputItemIds: new Set([sourceRow.targetItemId]),
-//     outputItemIds: new Set(),
-//     isByproduct: false,
-//     isShared: false,
-//     isSharedDemandReference: true,
-//     isDeviceMinimumConsumption,
-//     consumedPerMinute,
-//     sourceRowId: sourceRow.id,
-//   };
-// }
-//
-// function createProductionPlanningTreeSharedDemandRecipeNode(
-//   rowId: string,
-//   recipeId: string,
-//   itemId: string,
-//   consumedPerMinute: number,
-// ): ProductionPlanningRecipeNode {
-//   return {
-//     id: `${rowId}:recipe-node`,
-//     kind: "recipe",
-//     candidateId: recipeId,
-//     candidateSourceType: "system-recipe",
-//     module: null,
-//     recipeId,
-//     targetItemId: itemId,
-//     durationSeconds: 0,
-//     cyclesPerMinute: 0,
-//     deviceCount: 0,
-//     inputs: [{
-//       id: `${rowId}:input:${itemId}`,
-//       itemId,
-//       perMinute: consumedPerMinute,
-//     }],
-//     deviceMinimumConsumptionInputs: [],
-//     outputs: [],
-//     inputItems: [],
-//     deviceMinimumConsumptionItems: [],
-//   };
-// }
 
 function createProductionPlanningTreeDemandReferenceRow({
   parentRow,
@@ -3730,16 +2614,6 @@ function createProductionPlanningTreeDemandReferenceRow({
     sourceRow.targetItemId,
     consumedPerMinute,
   );
-  // AI-REMOVED 2026-08-29:
-  // Reason: 编辑目标匹配到错误的 recipeId 字段并生成了无效调用语法，且此作用域不存在 total。
-  // Trigger: 将模块汇总节点的 recipeId 改为可空真实配方 ID。
-  // Evidence: TypeScript 调用参数位置不能使用 recipeId: total.recipeId。
-  // Replacement: 上方位置参数 recipeId；真正的汇总节点赋值位于 createProductionPlanningTreeSyntheticRecipeNode。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // recipeId: total.recipeId,
 
   return {
     id: rowId,
@@ -3988,67 +2862,8 @@ function buildProductionPlanningTreeWaterPurifierSourceRowId(
   return `water-purifier-source:${waterPurifierRowId}:${producerRowId}`;
 }
 
-// AI-REMOVED 2026-05-23:
-// Reason: ledger 树构建器(buildLedgerProductionPlanningTreeRows)已接管全部树表行生成
-// Trigger: 清理死代码（kind=item 遗留来源）
-// Replacement: buildLedgerProductionPlanningTreeRows
-// Risk: Low
-// Human Review: Not Required
 
 
-// AI-REMOVED 2026-05-24:
-// Reason: 详情面板关系改用 childIds/parentIds，不再需要 jumpMap 单值映射
-// Trigger: 用户指出 jumpMap 是单值映射，表达不了多来源
-// Evidence: ProductionPlanningTreeDetail 中的 resolveRelatedRowIds 已替换为 row.childIds / row.parentIds
-// Replacement: row.childIds / row.parentIds
-// Risk: Low
-// Human Review: Not Required
-//
-// Original code:
-// type ProductionPlanningTreeJumpMap = ReadonlyMap<string, string>;
-//
-// function buildProductionPlanningTreeJumpMap(
-//   plan: ProductionPlanningResult,
-//   _displayMode: ProductionPlanningDisplayMode,
-// ): ProductionPlanningTreeJumpMap {
-//   const map = new Map<string, string>();
-//   const mapExternalSupply = (node: ProductionPlanningItemNode): void => {
-//     if (resolveProductionPlanningExternalSupplyPerMinute(node) <= PRODUCTION_PLANNING_EPSILON || node.recipeNode !== null) {
-//       return;
-//     }
-//     map.set(
-//       buildProductionPlanningTreeItemJumpKey(node.itemId),
-//       buildProductionPlanningTreeDeviceProductRowId(buildProductionPlanningExternalSupplyRecipeId(node.itemId), node.itemId),
-//     );
-//   };
-//   const walkRecipes = (recipeNode: ProductionPlanningRecipeNode): void => {
-//     for (const output of recipeNode.outputs) {
-//       map.set(
-//         buildProductionPlanningTreeItemJumpKey(output.itemId),
-//         buildProductionPlanningTreeDeviceProductRowId(recipeNode.recipeId, output.itemId),
-//       );
-//     }
-//     for (const child of recipeNode.inputItems) {
-//       if (child.recipeNode !== null) {
-//         map.set(
-//           buildProductionPlanningTreeItemJumpKey(child.itemId),
-//           buildProductionPlanningTreeDeviceProductRowId(child.recipeNode.recipeId, child.recipeNode.targetItemId),
-//         );
-//         walkRecipes(child.recipeNode);
-//       } else {
-//         mapExternalSupply(child);
-//       }
-//     }
-//   };
-//   for (const root of plan.roots) {
-//     if (root.recipeNode !== null) {
-//       walkRecipes(root.recipeNode);
-//     } else {
-//       mapExternalSupply(root);
-//     }
-//   }
-//   return map;
-// }
 
 function finalizeProductionPlanningTreeRows(
   rowById: ReadonlyMap<string, MutableProductionPlanningTreeRow>,
@@ -4138,44 +2953,11 @@ function resolveProductionPlanningLogisticsThroughput(kind: LogisticsKind): numb
   const secondsPerCell = kind === LOGISTICS_KIND.pipe
     ? PIPE_TRANSPORT_DURATION_SECONDS
     : BELT_TRANSPORT_DURATION_SECONDS;
-  // AI-CORRECTION 2026-07-30: 回滚 — 单件配方下 itemsPerCycle 恢复为 1。
   const itemsPerCycle = 1;
   return (60 * itemsPerCycle) / secondsPerCell;
 }
 
-/*
-AI-REMOVED 2026-07-23:
-Reason: 仅用周期倒数计算吞吐会在管道改为 1 秒双件配方后错误显示为 60/min。
-Trigger: 用户确认管道最高速度为 2/s，生产规划中的物流需求必须继续按 120/min 计算。
-Evidence: PIPE_TRANSPORT_DURATION_SECONDS=1，管道高优先级配方每周期运输 2 件。
-Replacement: resolveProductionPlanningLogisticsThroughput 按物流类型乘以 itemsPerCycle。
-Risk: Low；只修正规划界面的管道吞吐展示与数量估算。
-Human Review: Required
-// AI-CORRECTION 2026-07-30: 回滚 — 恢复 PIPE_TRANSPORT_DURATION_SECONDS=0.5 + 单件配方。
-// itemsPerCycle 恢复为 1，吞吐 = 60 * 1 / 0.5 = 120/min。
 
-Original code:
-return 60 / secondsPerCell;
-*/
-
-/*
-AI-REMOVED 2026-05-21:
-Reason: 速率列改为可读的设备数、主产量和物流需求三段式展示，旧字符串把配方循环次数显示成 `/min`，容易被误解为物品产量。
-Trigger: 用户要求速率列显示为 `设备数[设备图标] · 产量/min · 物流数[传送带/管道图标]`，界面单位只保留 `/min`。
-Evidence: ProductionPlanningTreeRowRate 现在直接渲染结构化 JSX，并按主产物速率计算向上取整的物流数量。
-Replacement: ProductionPlanningTreeRowRate / resolveProductionPlanningRecipeDisplayFlow / ProductionPlanningLogisticsRate
-Risk: Low；仅改变表格展示，不改变求解结果。
-Human Review: Required
-
-Original code:
-function formatProductionPlanningTreeRowRate(row: ProductionPlanningTreeRow): string {
-  if (row.kind === "item") {
-    return `${formatProductionFlow(row.total?.demandPerMinute ?? row.node.demandPerMinute)}/min`;
-  }
-
-  return `${formatProductionDeviceCount(row.total?.deviceCount ?? row.recipeNode.deviceCount)} · ${formatProductionFlow(row.total?.cyclesPerMinute ?? row.recipeNode.cyclesPerMinute)}/min`;
-}
-*/
 
 function finalizeProductionPlanningTreeRow(
   row: MutableProductionPlanningTreeRow,
@@ -4237,40 +3019,12 @@ function removeProductionPlanningTreeEdge(
   rowById.get(childId)?.parentIds.delete(parentId);
 }
 
-// AI-REMOVED 2026-05-24:
-// Reason: buildProductionPlanningTreeJumpMap 已删除，无调用方
-// Trigger: 详情面板关系改用 childIds/parentIds
-// Replacement: None
-// Risk: Low
-// Human Review: Not Required
-//
-// Original code:
-// function buildProductionPlanningTreeItemJumpKey(itemId: string): string {
-//   return `item:${itemId}`;
-// }
 
-// AI-REMOVED 2026-05-23:
-// Reason: 函数定义后从未被调用
-// Trigger: ESLint @typescript-eslint/no-unused-vars
-// Evidence: grep 全仓库无调用点
-// Replacement: None
-// Risk: Low — 仅用于构建 rowId，无副作用
-// Human Review: Not Required
-//
-// function buildProductionPlanningTreeRecipeRowId(recipeId: string): string {
-//   return `recipe:${recipeId}`;
-// }
 
 function buildProductionPlanningTreeDeviceProductRowId(recipeId: string, targetItemId: string): string {
   return `recipe:${recipeId}:target:${targetItemId}`;
 }
 
-// AI-REMOVED 2026-05-23:
-// Reason: ledger 树构建器(buildLedgerProductionPlanningTreeRows)已接管全部树表行生成
-// Trigger: 清理死代码（kind=item 遗留来源）
-// Replacement: buildLedgerProductionPlanningTreeRows
-// Risk: Low
-// Human Review: Not Required
 
 function createProductionPlanningTreeSyntheticRecipeNode(
   recipeId: string,
@@ -4461,112 +3215,7 @@ function FlowGraph({
   );
 }
 
-// AI-REMOVED 2026-05-19:
-// Reason: 产线规划的 flow 模式需要升级为真实画布流程图，旧实现只是顺序卡片列表，不满足“真正流程图”的需求。
-// Trigger: 用户要求参考 factoriolab 的 Sankey 布局，并用 DOM 实现节点/连线画布。
-// Evidence: 旧实现只渲染 production-planning-flow-step 网格卡片，没有节点坐标、边路径、回环或多输入多输出布局能力。
-// Replacement: src/app/shell/production-planning/flow/production-flow-graph.tsx
-// Risk: Low；tree 模式仍保留原 ItemTreeNode / RecipeCard，flow 模式由新组件接管。
-// Human Review: Required
-//
-// Original code:
-// function FlowCard({
-//   indexInFlow,
-//   children,
-// }: {
-//   indexInFlow: number;
-//   children: ReactNode;
-// }) {
-//   return (
-//     <div className={cm(styles, "production-planning-flow-step")}>
-//       <div className={cm(styles, "production-planning-flow-index")}>{indexInFlow + 1}</div>
-//       {children}
-//     </div>
-//   );
-// }
 
-// AI-REMOVED 2026-05-24:
-// Reason: RecipeCard 只挂在旧 item 详情的 producerRow 展示中；ledger 详情已直接展示当前 row 的配方公式和端口。
-// Trigger: 清理旧 item 死路线后 ESLint 确认 RecipeCard 不再有调用点。
-// Evidence: rg "<RecipeCard|function RecipeCard" 仅剩函数定义；当前详情使用 ProductionPlanningTreeDetail 内联配方展示。
-// Replacement: ProductionPlanningTreeDetail ledger detail body
-// Risk: Low；展示信息仍保留在 ledger 详情中。
-// Human Review: Required
-//
-// Original code:
-// function RecipeCard({
-//   recipeNode,
-//   index,
-//   t,
-// }: {
-//   recipeNode: ProductionPlanningRecipeNode;
-//   index: ProductionPlanningIndex;
-//   t: (key: string) => string;
-// }) {
-//   const recipe = index.recipeById.get(recipeNode.recipeId);
-//   const machine = recipe === undefined ? null : index.entityById.get(recipe.machineId) ?? null;
-//   const isExternal = isProductionPlanningExternalSupplyRecipeId(recipeNode.recipeId);
-//
-//   const title = isExternal
-//     ? t("productionPlanning.externalSupply")
-//     : recipe === undefined
-//       ? recipeNode.recipeId
-//       : resolveProductionPlanningRecipeName(recipe, index, t);
-//   const subtitle = isExternal && recipeNode.targetItemId.length > 0
-//     ? `${t("productionPlanning.produced")} ${resolveProductionPlanningItemName(recipeNode.targetItemId, index, t)}`
-//     : machine === null ? recipeNode.recipeId : t(machine.nameKey);
-//   const iconSrc = isExternal
-//     ? resolveProductionPlanningExternalSupplyIconSrc()
-//     : recipe === undefined
-//       ? "/device-icons/item_port_grinder_1.webp"
-//       : resolveProductionPlanningEntityIconSrc(recipe.machineId);
-//
-//   return (
-//     <article className={cm(styles, "production-planning-recipe-node")}>
-//       <div className={cm(styles, "production-planning-recipe-header")}>
-//         <img alt="" src={iconSrc} />
-//         <div>
-//           <h4>{title}</h4>
-//           <span>{subtitle}</span>
-//         </div>
-//       </div>
-//       <div className={cm(styles, "production-planning-recipe-meta")}>
-//         <Metric icon={<LucideClock3 />} label={t("productionPlanning.duration")} value={`${formatProductionFlow(recipeNode.durationSeconds)}s`} />
-//         <Metric icon={<LucideFactory />} label={t("productionPlanning.devices")} value={formatProductionDeviceCount(recipeNode.deviceCount)} />
-//         <Metric icon={<LucideGauge />} label={t("productionPlanning.cycles")} value={`${formatProductionFlow(recipeNode.cyclesPerMinute)}/min`} />
-//       </div>
-//       {recipe !== undefined && (
-//         <div className={cm(styles, "production-planning-recipe-formula")}>
-//           {recipe.inputs.map((input, i) => (
-//             <span key={`in-${input.itemId}`} className={cm(styles, "production-planning-recipe-formula-item")}>
-//               {i > 0 && <span className={cm(styles, "production-planning-recipe-formula-plus")}>+</span>}
-//               <span className={cm(styles, "production-planning-recipe-formula-icon")}>
-//                 <img alt="" src={resolveProductionPlanningItemIconSrc(input.itemId, index)} />
-//                 <span>{input.amount}</span>
-//               </span>
-//             </span>
-//           ))}
-//           <span className={cm(styles, "production-planning-recipe-formula-arrow")}>
-//             <span>▶▶</span>
-//             <span>{recipeNode.durationSeconds}{t("productionPlanning.second_short")}</span>
-//           </span>
-//           {recipe.outputs.map((output) => (
-//             <span key={`out-${output.itemId}`} className={cm(styles, "production-planning-recipe-formula-item")}>
-//               <span className={cm(styles, "production-planning-recipe-formula-icon")}>
-//                 <img alt="" src={resolveProductionPlanningItemIconSrc(output.itemId, index)} />
-//                 <span>{output.amount}</span>
-//               </span>
-//             </span>
-//           ))}
-//         </div>
-//       )}
-//       <div className={cm(styles, "production-planning-recipe-ports")}>
-//         <PortChipList title={t("productionPlanning.inputs")} ports={recipeNode.inputs} index={index} t={t} />
-//         <PortChipList title={t("productionPlanning.outputs")} ports={recipeNode.outputs} index={index} t={t} />
-//       </div>
-//     </article>
-//   );
-// }
 
 function resolveProductionPlanningExternalSupplyPerMinute(node: ProductionPlanningItemNode): number {
   return node.supply.manual + node.supply.infinite + node.supply.cycle;
@@ -4635,124 +3284,7 @@ function resolveProductionPlanningExternalSupplyIconSrc(): string {
   return createPublicAssetUrl(`3d-top-view/sprites/${EXTERNAL_SUPPLY_ENTITY_ID}.webp`);
 }
 
-// AI-REMOVED 2026-05-24:
-// Reason: ledger 树不再生成 item row，NodeStatus、RecipeSelect、ItemIdentity 只服务旧 item 详情分支。
-// Trigger: 用户要求清理旧 item 死路线，配方选择改为详情按钮 + RecipePickerDialog。
-// Evidence: 当前 buildLedgerProductionPlanningTreeRows 无 item row 创建入口；碳块验收中旧 select 不可达。
-// Replacement: RecipeChoiceControls + RecipeIdentity
-// Risk: Low；保留配方公式、端口和关系展示，旧 item 指标卡片不再作为可达 UI。
-// Human Review: Required
-//
-// Original code:
-// function NodeStatus({
-//   node,
-//   t,
-// }: {
-//   node: ProductionPlanningItemNode;
-//   t: (key: string) => string;
-// }) {
-//   if (node.unresolvedPerMinute > 0) {
-//     return (
-//       <span className={cm(styles, "production-planning-status is-bad")}>
-//         {node.blockedByCycle ? t("productionPlanning.blockedCycle") : t("productionPlanning.unresolved")}
-//       </span>
-//     );
-//   }
-//
-//   if (node.isCycleSource) {
-//     return <span className={cm(styles, "production-planning-status is-cycle")}>{t("productionPlanning.cycleSource")}</span>;
-//   }
-//
-//   if (node.isInfiniteSource) {
-//     return <span className={cm(styles, "production-planning-status is-good")}>{t("productionPlanning.infiniteSource")}</span>;
-//   }
-//
-//   if (node.suppliedPerMinute > 0 && node.producedPerMinute <= 0) {
-//     return <span className={cm(styles, "production-planning-status is-good")}>{t("productionPlanning.supplied")}</span>;
-//   }
-//
-//   return null;
-// }
-//
-// function RecipeSelect({
-//   itemId,
-//   recipes,
-//   index,
-//   selectedRecipeId,
-//   onSelectRecipe,
-//   t,
-// }: {
-//   itemId: string;
-//   recipes: readonly RecipeDefinition[];
-//   index: ProductionPlanningIndex;
-//   selectedRecipeId: string | null;
-//   onSelectRecipe: (itemId: string, recipeId: string | null) => void;
-//   t: (key: string) => string;
-// }) {
-//   return (
-//     <label className={cm(styles, "production-planning-recipe-select")}>
-//       <span>{t("productionPlanning.recipe")}</span>
-//       <select
-//         value={selectedRecipeId ?? ""}
-//         onChange={(event) => onSelectRecipe(itemId, event.currentTarget.value.length === 0 ? null : event.currentTarget.value)}
-//       >
-//         <option value="">{t("productionPlanning.autoRecipe")}</option>
-//         {recipes.map((recipe) => (
-//           <option key={recipe.id} value={recipe.id}>
-//             {resolveProductionPlanningRecipeName(recipe, index, t)}
-//             {isRecipeExcludedFromProductionPlanningAuto(recipe) ? ` · ${t("productionPlanning.manualOnly")}` : ""}
-//           </option>
-//         ))}
-//       </select>
-//     </label>
-//   );
-// }
-//
-// function ItemIdentity({
-//   itemId,
-//   index,
-//   t,
-// }: {
-//   itemId: string;
-//   index: ProductionPlanningIndex;
-//   t: (key: string) => string;
-// }) {
-//   return (
-//     <div className={cm(styles, "production-planning-item-identity")}>
-//       <img alt="" src={resolveProductionPlanningItemIconSrc(itemId, index)} />
-//       <strong>{resolveProductionPlanningItemName(itemId, index, t)}</strong>
-//     </div>
-//   );
-// }
 
-// AI-REMOVED 2026-05-24:
-// Reason: Metric 仅被旧 item 详情指标卡和 RecipeCard 使用；两者均随 item 死路线归档。
-// Trigger: 清理旧 item 死路线后 ESLint 确认 Metric 无调用点。
-// Evidence: rg "<Metric|function Metric" 仅剩注释和函数定义。
-// Replacement: ProductionPlanningTreeRowRate / PortChipList / ledger detail fields
-// Risk: Low；当前树表速率列和详情端口继续展示关键数值。
-// Human Review: Required
-//
-// Original code:
-// function Metric({
-//   icon,
-//   label,
-//   value,
-//   tone,
-// }: {
-//   icon?: ReactNode;
-//   label: string;
-//   value: string;
-//   tone?: "good" | "bad";
-// }) {
-//   return (
-//     <span className={cm(styles, ["production-planning-metric", tone === "good" ? "is-good" : "", tone === "bad" ? "is-bad" : ""].filter(Boolean).join(" "))}>
-//       {icon}
-//       <span>{label}</span>
-//       <strong>{value}</strong>
-//     </span>
-//   );
-// }
 
 function PortChipList({
   title,
@@ -4873,110 +3405,3 @@ function shouldIgnoreProductionPlanningSwipeStart(target: EventTarget | null): b
   return target.closest("button, input, select, textarea, [role='button'], [role='tab']") !== null;
 }
 
-// AI-REMOVED 2026-10-29:
-// Reason: 输入与结果共享的操作造成旧结果与模块配置不一致，主操作也未占据右上角。
-// Trigger: 用户确认计算前后两态及统一操作栏尺寸。
-// Evidence: 旧顶栏无条件渲染 Switch 和计算按钮，自动规划之后仍有两组视图控件。
-// Replacement: ProductionPlanningPanel 顶栏左右分组及两态条件渲染。
-// Risk: 需验证短屏与触控布局。Human Review: Required
-// Original code:
-//       <div className={cm(styles, "production-planning-toolbar")}>
-//         {activeScreen === "result" && <button
-//           type="button"
-//           className={cm(styles, "production-planning-back-button")}
-//           onClick={() => setActiveScreen("input")}
-//         >
-//           <LucideArrowLeft />
-//           <span>{t("productionPlanning.modify")}</span>
-//         </button>}
-//         <div className={cm(styles, "production-planning-toolbar-controls")}>
-//           <label className={cm(styles, "production-planning-module-toggle")}>
-//             <input
-//               type="checkbox"
-//               role="switch"
-//               checked={useModules}
-//               onChange={(event) => {
-//                 runInAction(() => {
-//                   store.useModules = event.currentTarget.checked;
-//                 });
-//               }}
-//             />
-//             <span className={cm(styles, "production-planning-switch-track")} aria-hidden="true">
-//               <span className={cm(styles, "production-planning-switch-thumb")} />
-//             </span>
-//             <span>{t("productionPlanning.useModules")}</span>
-//           </label>
-//           <button
-//             type="button"
-//             className={cm(styles, "production-planning-primary-button")}
-//             disabled={targets.length === 0 || (useModules && !recommendedModulesReady)}
-//             onClick={calculate}
-//           >
-//             <LucideCalculator />
-//             <span>{t("productionPlanning.calculate")}</span>
-//           </button>
-//           {activeScreen === "result" && <>
-//             <button
-//               type="button"
-//               className={cm(styles, "production-planning-icon-text-button production-planning-convert-module-button")}
-//               disabled={calculation === null}
-//               onClick={convertToModule}
-//             >
-//               <LucideBoxes />
-//               <span>{t("productionPlanning.convertToModule")}</span>
-//             </button>
-//               {/*
-//               AI-REMOVED 2026-10-14:
-//               Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
-//               Trigger: 用户要求 EDA 默认可用且不再需要开启。
-//               Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
-//               Replacement: EDA 入口直接显示，BlueprintPlannerDialogController 不再持有启用状态。
-//               Risk: Low；规划任务与业务可用性校验保持原行为。
-//               Human Review: Required
-//
-//               Original code:
-//                             {appHost.blueprintPlannerDialog.enabled ? <button type="button"
-//                               className={cm(styles, "production-planning-icon-text-button")}
-//                               disabled={useModules || calculation === null || calculation.plan.recipeTotals.some((entry) => entry.module !== null)
-//                                 || appHost.workspace.blueprintPlanner === null || appHost.blueprintPlannerDialog.taskLocked}
-//                               onClick={openAutomaticPlanning}>
-//                               <LucideFactory /><span>{t("eda.planThisLine")}</span>
-//                             </button> : null}
-//               */}
-//             <button type="button"
-//               className={cm(styles, "production-planning-primary-button production-planning-auto-plan-button")}
-//               disabled={useModules || calculation === null || calculation.plan.recipeTotals.some((entry) => entry.module !== null)
-//                 || appHost.workspace.blueprintPlanner === null || appHost.blueprintPlannerDialog.taskLocked}
-//               onClick={openAutomaticPlanning}>
-//               <LucideFactory /><span>{t("eda.planThisLine")}</span>
-//             </button>
-//             <SegmentedControl<ProductionPlanningDisplayMode>
-//               label={t("productionPlanning.displayMode")}
-//               value={displayMode}
-//               options={[
-//                 { value: "item", label: t("productionPlanning.modeItem"), icon: <LucideBox /> },
-//                 { value: "device", label: t("productionPlanning.modeDevice"), icon: <LucideFactory /> },
-//               ]}
-//               onChange={(v) => {
-//                 runInAction(() => {
-//                   store.displayMode = v;
-//                 });
-//               }}
-//             />
-//             <SegmentedControl<ProductionPlanningViewMode>
-//               label={t("productionPlanning.viewMode")}
-//               value={viewMode}
-//               options={[
-//                 { value: "tree", label: t("productionPlanning.viewTree"), icon: <LucideListTree /> },
-//                 { value: "flow", label: t("productionPlanning.viewFlow"), icon: <LucideWorkflow /> },
-//                 { value: "process", label: t("productionPlanning.viewProcess"), icon: <LucideGitBranch /> },
-//               ]}
-//               onChange={(v) => {
-//                 runInAction(() => {
-//                   store.viewMode = v;
-//                 });
-//               }}
-//             />
-//           </>}
-//         </div>
-//       </div>

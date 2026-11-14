@@ -18,32 +18,6 @@ import {
 
 describe("BeltVisualGeometry", () => {
   it("resolves a belt insertion from a strict belt output into a target device input", () => {
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //         {
-    //           id: "source-belt",
-    //           definitionId: "belt_straight_1x1",
-    //           position: { x: 0, y: 0 },
-    //           rotation: 0,
-    //           config: {},
-    //           tags: [],
-    //         },
-    //         {
-    //           id: "target-storager",
-    //           definitionId: "storager_1",
-    //           position: { x: 1, y: -1 },
-    //           rotation: 270,
-    //           config: {},
-    //           tags: [],
-    //         },
-    //       ]
     const ctx = createGeometryContext({
       entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-01-variant-1.schema7.json")),
     })
@@ -64,61 +38,9 @@ describe("BeltVisualGeometry", () => {
   })
 
   it("does not create insertion entries for belt-to-belt continuation or blueprint-style display", () => {
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //         {
-    //           id: "source-belt",
-    //           definitionId: "belt_straight_1x1",
-    //           position: { x: 0, y: 0 },
-    //           rotation: 0,
-    //           config: {},
-    //           tags: [],
-    //         },
-    //         {
-    //           id: "next-belt",
-    //           definitionId: "belt_straight_1x1",
-    //           position: { x: 1, y: 0 },
-    //           rotation: 0,
-    //           config: {},
-    //           tags: [],
-    //         },
-    //       ]
     const beltToBeltCtx = createGeometryContext({
       entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-02-variant-1.schema7.json")),
     })
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //         {
-    //           id: "source-belt",
-    //           definitionId: "belt_straight_1x1",
-    //           position: { x: 0, y: 0 },
-    //           rotation: 0,
-    //           config: {},
-    //           tags: [],
-    //         },
-    //         {
-    //           id: "target-storager",
-    //           definitionId: "storager_1",
-    //           position: { x: 1, y: -1 },
-    //           rotation: 270,
-    //           config: {},
-    //           tags: [],
-    //         },
-    //       ]
     const simplifiedCtx = createGeometryContext({
       simplifiedDeviceIcons: true,
       entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-03-variant-1.schema7.json")),
@@ -129,47 +51,9 @@ describe("BeltVisualGeometry", () => {
   })
 
   it("does not create extension entries when strict belts connect to general logistics devices", () => {
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //         createBeltEntity("source-belt", { x: 0, y: 0 }, 0),
-    //         {
-    //           id: "target-splitter",
-    //           definitionId: "log_splitter",
-    //           position: { x: 1, y: 0 },
-    //           rotation: 0,
-    //           config: {},
-    //           tags: [],
-    //         },
-    //       ]
     const beltToLogisticsCtx = createGeometryContext({
       entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-04-variant-1.schema7.json")),
     })
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //         {
-    //           id: "source-connector",
-    //           definitionId: "log_connector",
-    //           position: { x: -1, y: 0 },
-    //           rotation: 0,
-    //           config: {},
-    //           tags: [],
-    //         },
-    //         createBeltEntity("target-belt", { x: 0, y: 0 }, 0),
-    //       ]
     const logisticsToBeltCtx = createGeometryContext({
       entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-05-variant-1.schema7.json")),
     })
@@ -179,47 +63,9 @@ describe("BeltVisualGeometry", () => {
   })
 
   it("does not create extension entries when strict belts connect to the infinite solid device", () => {
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //         createBeltEntity("source-belt", { x: 0, y: 0 }, 0),
-    //         {
-    //           id: "target-infinite",
-    //           definitionId: "cheat_infinite_solid",
-    //           position: { x: 1, y: 0 },
-    //           rotation: 0,
-    //           config: {},
-    //           tags: [],
-    //         },
-    //       ]
     const beltToInfiniteCtx = createGeometryContext({
       entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-06-variant-1.schema7.json")),
     })
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //         {
-    //           id: "source-infinite",
-    //           definitionId: "cheat_infinite_solid",
-    //           position: { x: -1, y: 0 },
-    //           rotation: 0,
-    //           config: {},
-    //           tags: [],
-    //         },
-    //         createBeltEntity("target-belt", { x: 0, y: 0 }, 0),
-    //       ]
     const infiniteToBeltCtx = createGeometryContext({
       entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-07-variant-1.schema7.json")),
     })
@@ -229,32 +75,6 @@ describe("BeltVisualGeometry", () => {
   })
 
   it("resolves a device output protrusion into a strict belt input", () => {
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //         {
-    //           id: "source-storager",
-    //           definitionId: "storager_1",
-    //           position: { x: -3, y: 0 },
-    //           rotation: 270,
-    //           config: {},
-    //           tags: [],
-    //         },
-    //         {
-    //           id: "target-belt",
-    //           definitionId: "belt_straight_1x1",
-    //           position: { x: 0, y: 0 },
-    //           rotation: 0,
-    //           config: {},
-    //           tags: [],
-    //         },
-    //       ]
     const ctx = createGeometryContext({
       entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-08-variant-1.schema7.json")),
     })
@@ -302,19 +122,6 @@ describe("BeltVisualGeometry", () => {
   })
 
   it("resolves continuous phase offsets across connected strict belts", () => {
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //         createBeltEntity("belt-a", { x: 0, y: 0 }, 0),
-    //         createBeltEntity("belt-b", { x: 1, y: 0 }, 0),
-    //         createBeltEntity("belt-c", { x: 2, y: 0 }, 0),
-    //       ]
     const ctx = createGeometryContext({
       entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-visual-geometry/scene-09-variant-1.schema7.json")),
     })
@@ -394,65 +201,6 @@ function createBeltEntity(
   }
 }
 
-// AI-REMOVED 2026-11-12:
-// Reason: 物流装饰输入改为 SceneViewInput，退出假 Workspace 与集合。
-// Trigger: REQ-048 渲染契约迁移。
-// Evidence: 正式实现读取 source/presentation；已有版本化场景可直接组合真实会话。
-// Replacement: createRenderTestScene；原几何、颜色、缓存断言保留。
-// Risk: Low；绘制记录不替代浏览器像素验证。
-// Human Review: Required
-// Original code:
-// function createGeometryContext(options: {
-//   simplifiedDeviceIcons?: boolean;
-//   entities: Array<{
-//     id: string;
-//     definitionId: string;
-//     position: { x: number; y: number };
-//     rotation: 0 | 90 | 180 | 270;
-//     config: Record<string, unknown>;
-//     tags: string[];
-//   }>;
-// }) {
-//   const registry = createRegistryContract()
-//
-//   return {
-//     viewportState: {
-//       width: 200,
-//       height: 200,
-//       resolution: 1,
-//       centerX: 0.5,
-//       centerY: 0.5,
-//       gridCellPixelSize: 100,
-//     },
-//     viewportBounds: {
-//       left: 0,
-//       top: 0,
-//       width: 200,
-//       height: 200,
-//     },
-//     renderHost: {
-//       workspace: {
-//         app: {
-//           state: {
-//             settings: {
-//               gameUseBlueprintStyleDeviceImages: options.simplifiedDeviceIcons ?? false,
-//             },
-//           },
-//         },
-//         registry,
-//         editor: {
-//           queries: {
-//             listEntities: () => options.entities,
-//           },
-//         },
-//       } as never,
-//       textureManager: {
-//         getTexture: (async () => ({ width: 32, height: 32 })) as never,
-//       } as never,
-//     } as never,
-//     nowMs: 1000,
-//   }
-// }
 function createGeometryContext(options: { simplifiedDeviceIcons?: boolean; entities: WorldEntity[] }) {
   const scene = createRenderTestScene({ document: { ...createWorldDocument({ baseId: "wuling_protocol_core" }),
     entities: Object.fromEntries(options.entities.map(entity => [entity.id, entity])), entityOrder: options.entities.map(entity => entity.id) } });

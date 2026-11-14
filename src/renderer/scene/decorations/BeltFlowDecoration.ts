@@ -464,37 +464,6 @@ export function resolveBeltFlowMarks(
   ctx.profiler?.count("beltFlow.genArrowMarks-ms", Math.round((performance.now() - tArrowGen) * 100) / 100)
   ctx.profiler?.count("beltFlow.arrowMarkCount", arrowMarkCount)
 
-  // AI-REMOVED 2026-05-12:
-  // Reason: Arrow marks must survive while only the arrow tail remains inside the belt mask; per-tile generation removed marks as soon as their center left a tile.
-  // Trigger: User observed arrows disappearing abruptly after mask clipping fixed overdraw into empty cells and general logistics devices.
-  // Evidence: resolveRepeatingLocalDistances() excluded distanceCells >= entry.lengthCells, so drawBeltFlowMarks() never received the final partially visible arrow.
-  // Replacement: Chain-level arrow generation in resolveBeltFlowMarks(), using resolveBeltFlowMarkAtChainDistance().
-  // Risk: Low; chain-internal seams no longer generate duplicate endpoint arrows, and tests cover empty/general-logistics/admission boundaries.
-  // Human Review: Required
-  //
-  // Original code:
-  // for (const entry of entries) {
-  //   const arrowDistances = resolveRepeatingLocalDistances({
-  //     phaseOffsetCells: entry.phaseOffsetCells,
-  //     pathLengthCells: entry.lengthCells,
-  //     spacingCells: ARROW_SPACING_CELLS,
-  //     speedCellsPerSecond: BELT_VISUAL_SPEED_CELLS_PER_SECOND,
-  //     nowMs: ctx.nowMs,
-  //   })
-  //
-  //   for (const distanceCells of arrowDistances) {
-  //     const mark = resolveBeltFlowMark({
-  //       kind: "arrow",
-  //       ctx,
-  //       entry,
-  //       distanceCells,
-  //       lengthCells: 0,
-  //     })
-  //     if (mark !== null) {
-  //       marks.push(mark)
-  //     }
-  //   }
-  // }
 
   return marks
 }

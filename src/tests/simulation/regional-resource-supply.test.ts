@@ -6,44 +6,9 @@ import { buildRegionalWarehouseOutletTable } from "@/simulation/regional/warehou
 import { compileSimulationTopology } from "@/simulation/topology/compiler";
 import type { RegionalResourceSupplySetting } from "@/simulation/contracts/types";
 import { runBlueprintSimulation } from "./blueprint-runner";
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/regional-resource-supply/index.json
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// import {
-//   createBlueprint,
-//   createEntity,
-//   createWarehouseSlotLink,
-//   createWorldDocumentFromBlueprint,
-//   getFirstTickAtSimulationMilliseconds,
-//   getTick,
-// } from "./blueprint-test-helpers";
 import { createWorldDocumentFromBlueprint, getFirstTickAtSimulationMilliseconds, getTick } from "./blueprint-test-helpers";
-import { runRegionalBlueprintSimulation } from "./regional-blueprint-runner";
 import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 
-// AI-REMOVED 2026-09-08:
-// Reason: 多基地资源供给不再分别直连 Legacy/Dense 区域端口与 Session。
-// Trigger: 用户确认该行为应从公共区域 Runner 外部观察并纳入矩阵。
-// Evidence: 9500ms/10000ms 的仓库数量与统计足以验证提交边界，无需断言引擎 gateTickNumber。
-// Replacement: runRegionalBlueprintSimulation + SIMULATION_ENGINE_MATRIX。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import { DenseLocalRegionalBasePort } from "@/simulation/dense";
-// import { aggregateRegionalWarehouseStats } from "@/simulation/regional";
-// import {
-//   LocalRegionalBasePort,
-//   RegionalSimulationSession,
-//   type RegionalBaseTopologyInput,
-// } from "@/simulation/regional/session";
-// import { DENSE_STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
-// import type { RuntimeTickSnapshot } from "@/simulation/types";
 
 const FINITE_SOURCE_ORE: readonly RegionalResourceSupplySetting[] = [{
   itemId: "item_originium_ore",
@@ -54,15 +19,6 @@ const FINITE_SOURCE_ORE: readonly RegionalResourceSupplySetting[] = [{
 describe("地区资源供给", () => {
   describe.each(SIMULATION_ENGINE_MATRIX)("单基地运行行为 [%s]", (engineKind) => {
     it("每 10000ms 提交有限资源，并为固定及可配置无限资源投影独立状态", async () => {
-      // AI-REMOVED 2026-09-14:
-      // Reason: 场景构造已批量固化为带版本的蓝图文件。
-      // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-      // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-      // Replacement: src/tests/fixtures/blueprints/simulation/regional-resource-supply/index.json
-      // Risk: Low；断言与被测动作不变。
-      // Human Review: Required
-      // Original code:
-      // createBlueprint("regional-resource-single", [])
       const report = await runBlueprintSimulation({
         blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/regional-resource-supply/scene-01-regional-resource-single-7396c6c1.schema7.json"),
         maxDurationSeconds: 10.5,
@@ -90,44 +46,11 @@ describe("地区资源供给", () => {
         warehouseCount: 90,
       });
 
-      // AI-REMOVED 2026-09-08:
-      // Reason: 单基地资源提交边界绑定 Legacy tick 200/201。
-      // Trigger: 地区资源供给接入求解器矩阵并统一使用毫秒语义。
-      // Evidence: 两种引擎共同契约是 9500ms 尚未提交、10000ms 第一 tick 完成提交。
-      // Replacement: beforeBoundary 与 boundary。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // maxTickNumber: 201,
-      // expect(getTick(report, 200).warehouseStats?.items["item_originium_ore"]).toBeUndefined();
-      // expect(getTick(report, 201).warehouseStats?.items["item_originium_ore"]).toMatchObject({
-      //   infinite: false,
-      //   warehouseCount: 90,
-      // });
     });
   });
 
   it("有限地区 Profile 覆盖设备文档中的旧自然资源 ignoreStock", () => {
     const registry = createRegistryContract();
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/regional-resource-supply/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // createBlueprint(
-    //       "regional-resource-policy-precedence",
-    //       [
-    //         createEntity("unloader", "unloader_1", 51, 34, 270, {
-    //           "storageSlotGroups[0].slots[0].ignoreStock": true,
-    //         }),
-    //         createEntity("belt", "belt_straight_1x1", 52, 35),
-    //       ],
-    //       [createWarehouseSlotLink("unloader", "item_originium_ore")],
-    //     )
     const document = createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/regional-resource-supply/scene-02-regional-resource-policy-precedence-234650c4.schema7.json"));
     const topology = compileSimulationTopology({
       document,
@@ -148,50 +71,7 @@ describe("地区资源供给", () => {
     ]);
   });
 
-  describe.each(SIMULATION_ENGINE_MATRIX)("多基地运行行为 [%s]", (engineKind) => {
-    it("9500ms 前不注入，并在 10000ms 边界注入有限资源", async () => {
-      const report = await runRegionalBlueprintSimulation({
-        registry: createRegistryContract(),
-        engineKind,
-        scenario: {
-          name: "regional-resource-supply",
-          regionTag: "武陵",
-          currentBaseId: "wuling_protocol_core",
-          untilSeconds: 10,
-          timeoutMs: 30_000,
-          captureMilliseconds: [9_500],
-          regionalResources: [{
-            itemId: "item_originium_ore",
-            mode: "rate",
-            perMinute: 60,
-          }],
-        },
-      });
-      const beforeBoundary = report.captures[0]!;
-      const boundary = report.captures[1]!;
 
-      expect(report.captures).toHaveLength(2);
-      expect(report.baseIds.length).toBeGreaterThan(1);
-      expect(beforeBoundary.warehouseCounts["item_originium_ore"]).toBeUndefined();
-      expect(boundary.warehouseCounts["item_originium_ore"]).toBe(10);
-      expect(boundary.warehouseStats?.items["item_originium_ore"]).toMatchObject({
-        producedPerMinute: 60,
-        warehouseCount: 10,
-        infinite: false,
-      });
-      expect(boundary.warehouseStats?.items["item_liquid_water"]?.infinite).toBe(true);
-    });
-  });
-
-  // AI-REMOVED 2026-09-08:
-  // Reason: 旧用例分别直连 Legacy/Dense 区域端口和 Session，并断言内部 gate tick。
-  // Trigger: 用户要求改为恢复到公共 Runner 可见的外部行为，并完整纳入求解器矩阵。
-  // Evidence: 上方矩阵用例通过 9500ms/10000ms 的区域仓库数量与统计验证同一门禁契约。
-  // Replacement: describe.each(SIMULATION_ENGINE_MATRIX) 下的“多基地运行行为”。
-  // Risk: Low；不再单独覆盖各引擎端口的内部 tick 对齐字段。
-  // Human Review: Required
-  //
-  // Original code:
   /*
   it("多基地在同一 10 秒区域提交边界注入有限资源", async () => {
     const registry = createRegistryContract();

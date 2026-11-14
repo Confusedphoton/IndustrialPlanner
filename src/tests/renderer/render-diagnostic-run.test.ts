@@ -74,7 +74,6 @@ describe("渲染对照阶段采集", () => {
     expect(run.panOffset(12000, 400)).toBeCloseTo(-400);
     expect(run.panOffset(13000, 400)).toBeCloseTo(-400);
     // 原来 100 px 幅度 / 10 秒周期的速度为 40 px/s；幅度翻倍后应为 80 px/s。
-    // AI-CORRECTION 2026-09-16：本次幅度从 200 再翻倍至 400 px，速度从 80 提高至 240 px/s。
     expect(run.panOffset(8000, 400) - run.panOffset(7000, 400)).toBeCloseTo(240);
     run.advance(12000);
     expect(run.panOffset(12000, 400)).toBe(0);

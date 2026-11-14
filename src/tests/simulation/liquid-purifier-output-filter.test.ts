@@ -2,40 +2,7 @@ import { loadBlueprintVariantFromFile } from "./blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
-// AI-REMOVED 2026-09-08:
-// Reason: 8 秒提纯观察窗口改为直接使用仿真秒数，不再绑定 Legacy 20 TPS。
-// Trigger: 提纯机输出过滤蓝图测试纳入全引擎矩阵。
-// Evidence: 断言只读取八秒后的业务状态和期间发生的传输。
-// Replacement: maxDurationSeconds 与 getLastTick。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
 import { runBlueprintSimulation } from "./blueprint-runner";
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/liquid-purifier-output-filter/index.json
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// import {
-//   createBlueprint,
-//   createEntity,
-//   findSlotWithItem,
-//   getLastTick,
-// } from "./blueprint-test-helpers";
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/liquid-purifier-output-filter/index.json
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// import { createEntity, findSlotWithItem, getLastTick } from "./blueprint-test-helpers";
 import { findSlotWithItem, getLastTick } from "./blueprint-test-helpers";
 import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 
@@ -49,16 +16,6 @@ type LiquidPurifierRecipeCase = {
 
 const LIQUID_PURIFIER_ENTITY_ID = "liquid_purifier_1";
 const FINAL_DURATION_SECONDS = 8;
-// AI-REMOVED 2026-09-08:
-// Reason: FINAL_TICK 绑定 Legacy tick 编号。
-// Trigger: 提纯机输出过滤蓝图测试纳入全引擎矩阵。
-// Evidence: 同一八秒观察窗口在 Dense 中对应不同 tick 编号。
-// Replacement: FINAL_DURATION_SECONDS。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// const FINAL_TICK = 8 * STANDARD_TICK_RATE_PER_SECOND;
 
 const RECIPE_CASES: readonly LiquidPurifierRecipeCase[] = [
   {
@@ -83,7 +40,6 @@ const RECIPE_ENGINE_CASES = SIMULATION_ENGINE_MATRIX.flatMap((engineKind) =>
 
 describe("提纯机输出端口物品级过滤", () => {
   // TODO: demo 配方引入后 RECIPE_CASES 未同步更新，临时 skip，正式更新时恢复
-  // AI-CORRECTION 2026-07-16: 按要求恢复执行，用于暴露 RECIPE_CASES 与 registry 的差异。
   it("覆盖 registry 中当前全部提纯机配方", () => {
     const registry = createRegistryContract();
 
@@ -97,30 +53,6 @@ describe("提纯机输出端口物品级过滤", () => {
     "$engineKind: $recipeCase.name 的两个输出端口只输出各自允许的液体",
     async ({ engineKind, recipeCase }) => {
     const registry = createRegistryContract();
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/liquid-purifier-output-filter/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // createBlueprint(`liquid-purifier-output-filter-${recipeCase.inputItemId}`, [
-    //         ...createSingleConnectedPortEntities({
-    //           idPrefix: "left-only",
-    //           purifierX: 0,
-    //           purifierY: 8,
-    //           connectedPortLocalX: 1,
-    //           inputItemId: recipeCase.inputItemId,
-    //         }),
-    //         ...createSingleConnectedPortEntities({
-    //           idPrefix: "right-only",
-    //           purifierX: 20,
-    //           purifierY: 8,
-    //           connectedPortLocalX: 3,
-    //           inputItemId: recipeCase.inputItemId,
-    //         }),
-    //       ])
     const report = await runBlueprintSimulation({
       blueprint: loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/simulation/liquid-purifier-output-filter/index.json", "scene-01", { engineKind, recipeCase }),
       maxDurationSeconds: FINAL_DURATION_SECONDS,
@@ -145,40 +77,6 @@ describe("提纯机输出端口物品级过滤", () => {
   );
 });
 
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/liquid-purifier-output-filter/index.json
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// function createSingleConnectedPortEntities(options: {
-//   readonly idPrefix: string;
-//   readonly purifierX: number;
-//   readonly purifierY: number;
-//   readonly connectedPortLocalX: 1 | 3;
-//   readonly inputItemId: string;
-// }) {
-//   const portWorldX = options.purifierX + options.connectedPortLocalX;
-//   const portWorldY = options.purifierY;
-//   return [
-//     createEntity(
-//       `${options.idPrefix}-purifier`,
-//       LIQUID_PURIFIER_ENTITY_ID,
-//       options.purifierX,
-//       options.purifierY,
-//       90,
-//       {
-//         "storageSlotGroups[0].slots[0].initialItemType": options.inputItemId,
-//         "storageSlotGroups[0].slots[0].initialCount": 4,
-//       },
-//     ),
-//     createEntity(`${options.idPrefix}-power`, "power_diffuser_1", options.purifierX + 6, options.purifierY),
-//     createEntity(`${options.idPrefix}-pipe`, "pipe_straight_1x1", portWorldX, portWorldY - 1, 270),
-//     createEntity(`${options.idPrefix}-sink`, "udpipe_loader_1", portWorldX - 1, portWorldY - 4, 90),
-//   ];
-// }
 
 function collectTransferredItemsFromDevice(
   report: Awaited<ReturnType<typeof runBlueprintSimulation>>,

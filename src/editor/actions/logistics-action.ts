@@ -130,7 +130,7 @@ export function createEditorLogisticsActions(
 
       const routeOrder = options.routeOrder ?? "vertical-first";
 
-      // 2026-05-23: 设备源起笔时不生成路径 cell，
+      // 设备源起笔时不生成路径 cell，
       // 避免在鼠标悬浮阶段暴露多余的 1 格传送带/管道草稿。
       // moveLogisticEnd 首次调用时从 source 和 pointer 重新生成实际路径。
       if (source.type === "device-port") {
@@ -429,7 +429,6 @@ export function createEditorLogisticsActions(
       if (preview.length === 0) {
         return false;
       }
-      // AI-CORRECTION 2026-09-24: 物流路径自身可连接不等于所有管道节可放置；红色预览不得提交。
       const invalidPlacement = new Set(
         logisticsContext.state.collections[EntityCollectionType.invalidPlacement],
       );
@@ -464,7 +463,7 @@ export function createEditorLogisticsActions(
         );
       }
 
-      // 2026-05-31: 对历史累积的 entityOrder 重复条目做去重。
+      // 对历史累积的 entityOrder 重复条目做去重。
       nextEntityOrder = Array.from(new Set(nextEntityOrder));
 
       for (const previewDraft of previewDrafts) {
@@ -476,7 +475,7 @@ export function createEditorLogisticsActions(
           config: cloneEntityConfig(previewDraft.config),
           tags: [...previewDraft.tags],
         };
-        // 2026-05-31: 防御 entityOrder 重复——若已存在则跳过。
+        // 防御 entityOrder 重复——若已存在则跳过。
         if (!nextEntityOrder.includes(previewDraft.id)) {
           nextEntityOrder.push(previewDraft.id);
         }
@@ -864,17 +863,6 @@ function rebuildLogisticsDraft(options: {
     autoCreateSplittersAndConvergers: options.autoCreateSplittersAndConvergers,
   });
 
-  // AI-REMOVED 2026-09-15:
-  // Reason: 物流预览应由当前拓扑和鼠标位置决定，删除上一帧汇流器预览的拦截及专用状态。
-  // Trigger: 用户明确允许汇流器预览在鼠标移过交叉点后变为桥接器。
-  // Evidence: logistics-placement-complete.test.ts 中当前规划已生成 pipe_connector，历史状态却将草稿判为 unknown。
-  // Replacement: rebuildLogisticsDraft 中 resolveAutoDraftPlan 与 resolveInvalidReason 的当前规划结果。
-  // Risk: 传送带和管道共享此规则，需验证终点汇流、正交穿越及非法重叠。
-  // Human Review: Required
-  //
-  // Original code:
-  // const prevConvergerGridKey = options.context.state.internalTransientState.convergerEntityGridKey;
-  // let invalidatedByExtendingConverger = false;
   let effectiveInvalidReason = resolveInvalidReason({
     context: options.context,
     kind: options.kind,
@@ -885,51 +873,7 @@ function rebuildLogisticsDraft(options: {
     allowEmptyTarget: options.allowEmptyTarget,
   }) ?? autoDraftPlan.invalidReason;
 
-  // AI-REMOVED 2026-09-15:
-  // Reason: 物流预览应由当前拓扑和鼠标位置决定，删除上一帧汇流器预览的拦截及专用状态。
-  // Trigger: 用户明确允许汇流器预览在鼠标移过交叉点后变为桥接器。
-  // Evidence: logistics-placement-complete.test.ts 中当前规划已生成 pipe_connector，历史状态却将草稿判为 unknown。
-  // Replacement: rebuildLogisticsDraft 中 resolveAutoDraftPlan 与 resolveInvalidReason 的当前规划结果。
-  // Risk: 传送带和管道共享此规则，需验证终点汇流、正交穿越及非法重叠。
-  // Human Review: Required
-  //
-  // Original code:
-  // // 2026-05-23: 之前 rebuild 在终点处已形成汇流器虚影（替换了原物流段），
-  // // 本次延伸使得该 cell 不再是终点 → 禁止，防止汇流器被悄悄改写为桥接器。
-  // if (
-  //   prevConvergerGridKey !== null
-  //   && effectiveInvalidReason === null
-  // ) {
-  //   const prevConvergerCellIndex = cells.findIndex(
-  //     (cell) => gridPointKey(cell.gridPoint) === prevConvergerGridKey,
-  //   );
-  //   if (prevConvergerCellIndex >= 0 && prevConvergerCellIndex < cells.length - 1) {
-  //     effectiveInvalidReason = "unknown";
-  //     invalidatedByExtendingConverger = true;
-  //   }
-  // }
-  //
-  // const canApply = effectiveInvalidReason === null;
-  // // AI-CORRECTION 2026-06-19:
-  // // 从既有汇流器终点继续延伸而被拦截时，不得保留本轮重新规划出的汇流器虚影。
-  // const effectiveCellOverridesByGridKey = invalidatedByExtendingConverger
-  //   ? new Map<string, AutoDraftCellOverride>()
-  //   : autoDraftPlan.cellOverridesByGridKey;
-  //
-  // // 记录本次自动创建的汇流器（含实体替换）所在 cell，供下一帧检测延伸。
-  // let nextConvergerGridKey: string | null = null;
-  // for (const [key, override] of effectiveCellOverridesByGridKey) {
-  //   if (
-  //     override.definitionId.endsWith("_converger")
-  //     && autoDraftPlan.replacingEntityIds.length > 0
-  //   ) {
-  //     nextConvergerGridKey = key;
-  //     break;
-  //   }
-  // }
-  // options.context.state.internalTransientState.convergerEntityGridKey = nextConvergerGridKey;
 
-  // AI-CORRECTION 2026-09-15: 上述历史拦截已删除；每次预览直接采用当前拓扑与路径的校验、设备替换结果。
   let canApply = effectiveInvalidReason === null;
   const draftBuildResult = createDraftEntities({
     context: options.context,
@@ -942,7 +886,6 @@ function rebuildLogisticsDraft(options: {
   });
   const draftIds = draftBuildResult.draftIds;
 
-  // AI-CORRECTION 2026-09-24: 放置校验的红色重叠必须参与物流草稿的合法性判断。
   const placementValidationByEntityId = resolvePlacementValidations({
     document: currentDocument,
     state: options.context.state,
@@ -972,7 +915,6 @@ function rebuildLogisticsDraft(options: {
     ? null
     : draftBuildResult.draftIdByGridKey.get(gridPointKey(headCell.gridPoint)) ?? null;
   logisticsHead.replace(headDraftEntityId === null ? [] : [headDraftEntityId]);
-  // AI-CORRECTION 2026-09-24: 起点已有物流段也会在提交时被替换，放置校验须同步忽略该旧段。
   ghost.replace([...new Set([
     ...autoDraftPlan.replacingEntityIds,
     ...(options.replacingEntityId === null ? [] : [options.replacingEntityId]),
@@ -1073,7 +1015,6 @@ function createDraftEntities(options: {
       .filter((entity) => !options.previousPreviewDraftIds.has(entity.id))
       .map((entity) => entity.id),
   ]);
-  // AI-CORRECTION 2026-09-24: 候选试算不得推进正式草稿编号；仅实际重建时领取新批次号。
   const batchCounter = options.draftBatchCounter ?? options.context.nextDraftCounter();
   const draftEntities: DraftEntity[] = [];
   const draftIdByGridKey = new Map<string, string>();
@@ -1204,7 +1145,7 @@ function resolveInvalidReason(options: {
     }
   }
 
-  // 2026-05-24: 基地边界检测。
+  // 基地边界检测。
   // 传送带不可出 placeableArea，管道可出 placeableArea。
   // 任何物流类型都不可出 outerRing。
   const baseDefinition = resolveCurrentBaseDefinition({
@@ -1212,27 +1153,6 @@ function resolveInvalidReason(options: {
   });
   if (baseDefinition !== null) {
     const baseAreas = resolveBaseAreas(baseDefinition);
-    // AI-REMOVED 2026-09-26:
-    // Reason: 单矩形会允许物流跨越主基地与分区之间的空地。
-    // Trigger: 草稿箱增加不连续分区。
-    // Evidence: isGridPointInBaseArea 按每块区域独立判断。
-    // Replacement: 下方逐格调用共享区域几何。
-    // Risk: Low。
-    // Human Review: Required
-    // Original code:
-    // const placeableRect = {
-    //   x: 0,
-    //   y: 0,
-    //   width: baseDefinition.placeableArea.width,
-    //   height: baseDefinition.placeableArea.height,
-    // };
-    // const outerRing = baseDefinition.outerRing;
-    // const outerRingRect = {
-    //   x: -outerRing.left,
-    //   y: -outerRing.top,
-    //   width: baseDefinition.placeableArea.width + outerRing.left + outerRing.right,
-    //   height: baseDefinition.placeableArea.height + outerRing.top + outerRing.bottom,
-    // };
 
     for (const cell of options.cells) {
       const p = cell.gridPoint;
@@ -1322,7 +1242,6 @@ function doesFirstStepOverlapExistingLogistics(options: {
     return false;
   }
 
-  // AI-CORRECTION 2026-06-19:
   // 首步与旧传送带同入口重叠属于合法沿线覆盖，不应为了避让而翻转单拐路径顺序。
   // 只有入口不兼容的首步重叠才需要尝试另一种 routeOrder。
   if (options.kind === LOGISTICS_KIND.belt) {
@@ -1343,27 +1262,6 @@ function doesFirstStepOverlapExistingLogistics(options: {
   }
 
   return true;
-  // AI-REMOVED 2026-06-19:
-  // Reason: 仅按位置判定首步重叠会错误翻转合法的同入口沿线覆盖路径。
-  // Trigger: 人工物流完整测试要求从 (6,3) 沿旧带入口经过 (6,4)，保持纵向优先。
-  // Evidence: 旧逻辑将路径翻为横向优先，导致终点 (2,5) 从旧出口方向反向进入并被判头对头。
-  // Replacement: 上方基于现有物流 inputEdge 的兼容性判定。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // return currentDocument.entityOrder.some((entityId) => {
-  //   if (entityId === options.replacingEntityId) {
-  //     return false;
-  //   }
-  //
-  //   const entity = currentDocument.entities[entityId];
-  //   return (
-  //     entity !== undefined
-  //     && isOrdinaryLogisticsDefinitionId(entity.definitionId, options.kind)
-  //     && areGridPointsEqual(entity.position, firstStep)
-  //   );
-  // });
 }
 
 function resolvePreviewDrafts(options: {
@@ -1396,16 +1294,6 @@ function clearLogisticsDraftState(context: LogisticsActionContext | EditorAction
   context.state.internalTransientState.logisticsDraft = null;
   context.state.internalTransientState.logisticsDeviceRouteCycleSignature = null;
   context.state.internalTransientState.logisticsDeviceRouteCycleIndex = 0;
-  // AI-REMOVED 2026-09-15:
-  // Reason: 物流预览应由当前拓扑和鼠标位置决定，删除上一帧汇流器预览的拦截及专用状态。
-  // Trigger: 用户明确允许汇流器预览在鼠标移过交叉点后变为桥接器。
-  // Evidence: logistics-placement-complete.test.ts 中当前规划已生成 pipe_connector，历史状态却将草稿判为 unknown。
-  // Replacement: rebuildLogisticsDraft 中 resolveAutoDraftPlan 与 resolveInvalidReason 的当前规划结果。
-  // Risk: 传送带和管道共享此规则，需验证终点汇流、正交穿越及非法重叠。
-  // Human Review: Required
-  //
-  // Original code:
-  // context.state.internalTransientState.convergerEntityGridKey = null;
   syncPlacementValidationState({
     document: context.document.getSnapshot(),
     state: context.state,
@@ -1617,43 +1505,6 @@ function resolveRouteToDevice(options: {
   }
 
   candidates.sort(compareDeviceRouteCandidates);
-  // AI-REMOVED 2026-09-24:
-  // Reason: 旧轮转仅比较全局最短路线，可能跳过鼠标附近仍可用的输入端口。
-  // Trigger: 鼠标模式要求先按目标端口格距、再按当前 R 方向尝试合法路线。
-  // Evidence: 反应池 (7,6)/(8,6) 到 (6,9) 的两条回归用例；旧排序先选择穿源设备路径。
-  // Replacement: compareDeviceRouteCandidates 按端口距离和 R 方向排序，返回首个合法候选。
-  // Risk: 同代价候选不再由 R 跨端口轮转；同距端口顺序未规定。
-  // Human Review: Required
-  //
-  // Original code:
-  // const best = candidates[0];
-  // if (best === undefined) {
-  //   return null;
-  // }
-  // const bestCandidates = candidates.filter((candidate) =>
-  //   candidate.lengthScore === best.lengthScore
-  //   && candidate.bendScore === best.bendScore
-  // );
-  // const signature = [
-  //   options.sourceEntityId,
-  //   options.targetEndpoint.entityId,
-  //   options.targetEndpoint.portGroupId,
-  //   options.targetEndpoint.portId,
-  //   best.lengthScore,
-  //   best.bendScore,
-  //   ...bestCandidates.map((candidate) => candidate.signature),
-  // ].join(";");
-  // const state = options.context.state.internalTransientState;
-  // if (state.logisticsDeviceRouteCycleSignature === signature) {
-  //   if (options.preferredRouteOrder !== options.draft.routeOrder) {
-  //     state.logisticsDeviceRouteCycleIndex = (state.logisticsDeviceRouteCycleIndex + 1)
-  //       % bestCandidates.length;
-  //   }
-  // } else {
-  //   state.logisticsDeviceRouteCycleSignature = signature;
-  //   state.logisticsDeviceRouteCycleIndex = 0;
-  // }
-  // return bestCandidates[state.logisticsDeviceRouteCycleIndex % bestCandidates.length] ?? best;
   return candidates[0] ?? fallbackCandidate;
 }
 
@@ -1749,7 +1600,6 @@ function resolveAutoDraftPlan(options: {
       const sourceAxis = resolveEdgeAxis(options.source.edge);
       const existingAxis = resolveEdgeAxis(sourceInfo.inputEdge);
 
-      // AI-CORRECTION 2026-06-19:
       // 设备出口与旧物流正交时，只有新路径在首格沿设备输出轴直穿才生成桥接器。
       // 若首格立即转弯，则新弯道直接替换旧物流格。
       if (sourceAxis !== existingAxis) {
@@ -1794,13 +1644,11 @@ function resolveAutoDraftPlan(options: {
       document: currentDocument,
       entityId: options.source.entityId,
     });
-    // AI-CORRECTION 2026-07-22:
     // 单格路径接入相邻设备时没有 secondCell，分支方向应由设备目标写入的 firstCell.toEdge 决定。
     const firstStepEdge = secondCell === null
       ? firstCell.toEdge
       : resolveDirectionEdge(firstCell.gridPoint, secondCell.gridPoint);
     if (sourceInfo !== null && sourceInfo.inputConnected && sourceInfo.outputConnected) {
-      // AI-CORRECTION 2026-06-19:
       // 沿已有物流段原出口方向继续绘制属于合法复用，不应判非法或创建分流器。
       // 只有从其他方向拉出新分支时才按自动创建开关生成分流器。
       if (firstStepEdge !== null && firstStepEdge !== sourceInfo.outputEdge) {
@@ -1829,7 +1677,6 @@ function resolveAutoDraftPlan(options: {
       entityDefinitionMap: options.context.entityDefinitionMap,
       registryQueries: options.context.workspace.registry.queries,
       baseDefinitions: options.context.workspace.registry.baseDefinitions,
-      // AI-CORRECTION 2026-07-22:
       // 终点同格存在另一类普通物流时必须跳过它，继续识别下层同类物流目标。
       skipLogisticsKind: options.kind === LOGISTICS_KIND.belt
         ? LOGISTICS_KIND.pipe
@@ -1849,7 +1696,6 @@ function resolveAutoDraftPlan(options: {
       && targetInfo.entity.id !== options.replacingEntityId
       && options.target === null
     ) {
-      // AI-CORRECTION 2026-06-19:
       // 从已有物流段的出口方向反向拉入会形成头对头，不能创建汇流器或普通替换。
       if (
         options.kind === LOGISTICS_KIND.belt
@@ -1883,7 +1729,6 @@ function resolveAutoDraftPlan(options: {
           && !options.autoCreateSplittersAndConvergers
           && lastCell.fromEdge !== null
         ) {
-          // AI-CORRECTION 2026-06-19:
           // 关闭自动分/汇流时，终点允许替换已有传送带的入口并保留其出口。
           // 头对头已在上方由 fromEdge === outputEdge 拦截。
           const { shape, rotation } = resolveCellFromEdges(lastCell.fromEdge, targetInfo.outputEdge);
@@ -1912,7 +1757,6 @@ function resolveAutoDraftPlan(options: {
           replacingEntityIds.add(targetInfo.entity.id);
         }
       } else {
-        // AI-CORRECTION 2026-05-29:
         // 无合法上游 → 替换目标物流格为普通物流段（弯道/直道），
         // 使其入口方向与新拉入方向一致，出口方向保持原物流段出口方向。
         // 原行为：仅在 outputConnected 时创建汇流器，否则路径重叠变红。
@@ -1949,53 +1793,6 @@ function resolveAutoDraftPlan(options: {
     }
   }
 
-  // AI-REMOVED 2026-06-16:
-  // Reason: 设备到设备单格特例没有覆盖删除任一设备后的首格/末格跨越，已被统一端点桥接判定替代。
-  // Trigger: 用户指出同一蓝图删掉任意设备后，从远处拉过来或拉到远处也应创建桥接器。
-  // Evidence: 新增 PC/touch 回归覆盖 source device -> distant cell 与 distant cell -> target device；根因是端点相邻格未参与 connector 判定。
-  // Replacement: resolveConnectorCrossingAutoDraftCell + firstCell/lastCell 端点调用。
-  // Risk: Low - 原特例只覆盖 source/target 均为 device-port 且 cells.length=1 的窄场景。
-  // Human Review: Required
-  //
-  // Original code:
-  // if (
-  //   options.cells.length === 1
-  //   && options.source.type === "device-port"
-  //   && options.target?.type === "device-port"
-  // ) {
-  //   const cell = options.cells[0];
-  //   if (cell !== undefined) {
-  //     const entity = findTopEntityAtGridPoint({
-  //       gridPoint: cell.gridPoint,
-  //       document: currentDocument,
-  //       drafts: [],
-  //       entityDefinitionMap: options.context.entityDefinitionMap,
-  //       baseDefinitions: options.context.workspace.registry.baseDefinitions,
-  //     });
-  //     const info = entity === null
-  //       ? null
-  //       : resolveOrdinaryLogisticsConnectionInfo({
-  //           context: options.context,
-  //           kind: options.kind,
-  //           document: currentDocument,
-  //           entityId: entity.id,
-  //         });
-  //
-  //     if (info !== null && (info.inputConnected || info.outputConnected)) {
-  //       if (!isPerpendicularConnectorPass({ cell, info })) {
-  //         invalidReason = "unknown";
-  //       } else if (!options.autoCreateLogisticsDevices) {
-  //         invalidReason = "overlap-existing-logistics";
-  //       } else {
-  //         cellOverridesByGridKey.set(
-  //           gridPointKey(cell.gridPoint),
-  //           createAutoDeviceOverride(options.kind, "connector", null),
-  //         );
-  //         replacingEntityIds.add(info.entity.id);
-  //       }
-  //     }
-  //   }
-  // }
 
   if (
     lastCell !== null
@@ -2003,7 +1800,6 @@ function resolveAutoDraftPlan(options: {
     && (
       firstCell === null
       || gridPointKey(lastCell.gridPoint) !== gridPointKey(firstCell.gridPoint)
-      // AI-CORRECTION 2026-07-22:
       // 同一格既是既有物流源又连接设备目标时，源分支判定已经处理该格，不得再按桥接器重复分类。
       || (
         options.source.type !== "device-port"

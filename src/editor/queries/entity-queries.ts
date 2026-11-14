@@ -14,26 +14,6 @@ import {
   getRotatedGridFootprint,
 } from "@/shared/geometry/grid";
 
-// AI-REMOVED 2026-09-11:
-// Reason: 集合包围盒已统一由共享实体几何函数计算，不再直接组装 GridArea 并调用 getGridBoundingBox。
-// Trigger: 修复蓝图属性面板尺寸并消除编辑器、渲染器和面板之间的重复算法。
-// Evidence: resolveEntityGridGeometry 保留缺失实体或 definition 时跳过的既有语义。
-// Replacement: src/shared/geometry/entity-grid-geometry.ts resolveEntityGridGeometry
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import {
-//   getGridBoundingBox,
-//   getRotatedGridFootprint,
-//   type GridArea,
-// } from "@/shared/geometry/grid";
-// AI-REMOVED 2026-11-12: Reason: 供电查询统一复用；Trigger: REQ-048；Evidence: 调用迁入 entity-power；Replacement: resolvePowerRangeProviders；Risk: Low；Human Review: Required
-// Original code:
-// import {
-//   areGridRectsIntersecting,
-//   resolvePowerRangeGridRect,
-// } from "@/shared/geometry/power-range";
 import { isLogisticsDefinitionSuppressed } from "@/shared/logistics-suppression";
 
 import {
@@ -120,22 +100,6 @@ export function createEditorEntityQueries({
         baseDefinitions,
       });
 
-      // AI-REMOVED 2026-11-12: Reason: 只读源共用同一供电查询；Trigger: REQ-048；Evidence: 原函数嵌入 Editor；Replacement: resolvePowerRangeProviders；Risk: Low；Human Review: Required
-      // Original code:
-      // return entities.filter((entity) => {
-      // const definition = entityDefinitionMap.get(entity.definitionId);
-      // if (definition === undefined) {
-      // return false;
-      // }
-      //
-      // const powerRangeGridRect = resolvePowerRangeGridRect({
-      // entity,
-      // definition,
-      // });
-      //
-      // return powerRangeGridRect !== null
-      // && areGridRectsIntersecting(powerRangeGridRect, gridRect);
-      // });
       return resolvePowerRangeProviders(entities, workspace.registry, gridRect);
     },
     findEntityCollectionGridRect: (collectionType) => {

@@ -20,7 +20,6 @@ export interface SimulationQuery {
   getDeviceRuntimeStatus(deviceId: string): SimulationDeviceRuntimeStatusReadModel | null;
   getPipeFluidItemId(deviceId: string): string | null;
   /** 查询管道设备的 slot 是否当前有液体占用（O(1) 哈希查寻）。 */
-  /** AI-CORRECTION 2026-07-10: 管道可承载液体或气体，此查询表示当前是否有任意 fluid 物品占用。 */
   isPipeDeviceSlotOccupied(deviceId: string): boolean;
   /** 获取当前 tick 正在生效的气体扩散范围。 */
   getActiveEnvironmentRanges(): readonly SimulationEnvironmentRangeReadModel[];

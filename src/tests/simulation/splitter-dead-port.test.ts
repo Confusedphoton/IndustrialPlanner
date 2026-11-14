@@ -3,15 +3,6 @@ import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "./blueprint-runner";
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/splitter-dead-port/index.json
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// import { createBlueprint, createEntity, createWarehouseSlotLink } from "./blueprint-test-helpers";
 
 const MAX_TICK = 1800;
 
@@ -22,53 +13,10 @@ describe("分流器游标轮转 - 死端口不卡游标", () => {
     //     ├─ WEST  → 液体储存箱 A (6,6)            [roundRobinSeed=0，已连接]
     //     ├─ EAST  → [空地 — 死端口]               [roundRobinSeed=1，未连接]
     //     └─ SOUTH → 管道(9,8)→...→(9,12)→储存箱 B  [roundRobinSeed=2，已连接]
-    // AI-CORRECTION 2026-05-18: 分流器端口默认方向变更 (input E→N)。
     // 由旧 rot=270 改为新 rot=0，等效朝向不变。
     const storagerA = "storager-a";
     const storagerB = "storager-b";
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/splitter-dead-port/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // const splitter = "splitter";
 
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/splitter-dead-port/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // createBlueprint(
-    //       "splitter-dead-port-test",
-    //       [
-    //         // 水源 — 暗管出口 (8,2) rot=90 → 向东输出清水
-    //         createEntity("water-source", "udpipe_unloader_1", 8, 2, 270, {
-    //           "storageSlotGroups[0].slots[0].ignoreStock": true
-    //         }),
-    //         // 管道链: (9,5)→(9,6) → 分流器
-    //         createEntity("pipe-1", "pipe_straight_1x1", 9, 5, 90),
-    //         createEntity("pipe-2", "pipe_straight_1x1", 9, 6, 90),
-    //         // 分流器 (9,7) rot=0（原 rot=270，2026-05-18 端口方向变更后等效旋转）
-    //         createEntity(splitter, "pipe_splitter", 9, 7, 0),
-    //         // 消费者 A — 液体储存箱 (6,6) rot=180
-    //         createEntity(storagerA, "liquid_storager_1", 6, 6, 0),
-    //         // 管道链: (9,8)→...→(9,12)
-    //         createEntity("pipe-3", "pipe_straight_1x1", 9, 8, 90),
-    //         createEntity("pipe-4", "pipe_straight_1x1", 9, 9, 90),
-    //         createEntity("pipe-5", "pipe_straight_1x1", 9, 10, 90),
-    //         createEntity("pipe-6", "pipe_straight_1x1", 9, 11, 90),
-    //         createEntity("pipe-7", "pipe_straight_1x1", 9, 12, 90),
-    //         // 消费者 B — 液体储存箱 (8,13) rot=90
-    //         createEntity(storagerB, "liquid_storager_1", 8, 13, 270),
-    //       ],
-    //       [createWarehouseSlotLink("water-source", "item_liquid_water")],
-    //     )
     const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/splitter-dead-port/scene-01-splitter-dead-port-test-757c4db0.schema7.json");
 
     const report = await runBlueprintSimulation({

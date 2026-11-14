@@ -43,19 +43,6 @@ export function MobilePortraitGate({
 }) {
   const copy = MOBILE_PORTRAIT_GATE_COPY[appHost.state.settings.locale];
   const hideFullscreenButton = isStandalone && !resolveFullscreenSupport();
-  // AI-REMOVED 2026-08-23:
-  // Reason: Gate 不再直接调用全屏 API，统一组件必须区分不支持、拒绝和 standalone。
-  // Trigger: 用户要求 iPhone 点击全屏时展示 PWA 引导，并在不支持全屏的独立模式中隐藏按钮。
-  // Evidence: 直接调用 requestDocumentFullscreen 无法把失败原因传递给 PwaGateway。
-  // Replacement: 下方 FullscreenToggleButton。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // const fullscreenLabel = appHost.actions.translate("action.enterFullscreen");
-  // const handleFullscreenClick = () => {
-  //   requestDocumentFullscreen();
-  // };
 
   return (
     <OverlayStackLayer kind="system" layerId="mobile-portrait-gate" visible>
@@ -81,25 +68,6 @@ export function MobilePortraitGate({
               <p>{copy.description}</p>
               <p>{hideFullscreenButton ? copy.standaloneHint : copy.fullscreenHint}</p>
             </div>
-            {/*
-              AI-REMOVED 2026-08-23:
-              Reason: 竖屏 Gate 改为复用统一全屏能力检测和失败引导，避免 iPhone 继续调用不存在的 API。
-              Trigger: 用户反馈 iPhone 点击全屏无响应，并确认仅在点击时展示 PWA 引导。
-              Evidence: FullscreenToggleButton 已统一处理 standard/webkit API、standalone 和失败回调。
-              Replacement: 下方 FullscreenToggleButton。
-              Risk: Low；按钮视觉与文案仍由原 Gate 样式和翻译提供。
-              Human Review: Required
-
-              Original code:
-              <button
-              className={cm(styles, "mobile-portrait-gate-fullscreen")}
-              onClick={handleFullscreenClick}
-              type="button"
-            >
-              <WorkbenchIcon kind="expand" />
-              <span>{fullscreenLabel}</span>
-              </button>
-            */}
             <FullscreenToggleButton
               appHost={appHost}
               className={cm(styles, "mobile-portrait-gate-fullscreen")}

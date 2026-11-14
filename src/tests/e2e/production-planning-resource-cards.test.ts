@@ -1,9 +1,9 @@
 import { resolve } from "node:path";
 import { expect, SCREEN_PROFILES, test } from "./harness/fixture";
 
-// 2026-10-19：开发三屏验证完成后新增，仅回归真实 CSS 边界；分类及规划业务由 Vitest 验证。
+// 开发三屏验证完成后新增，仅回归真实 CSS 边界；分类及规划业务由 Vitest 验证。
 // 对应规则：.docs/common/产线规划自动配方规则.md
-// 2026-10-26：分类默认收起；开发三屏验证完成后补充折叠标题边界及原生键盘开合验证。
+// 分类默认收起；开发三屏验证完成后补充折叠标题边界及原生键盘开合验证。
 type ResourceCardBounds = { label: string; width: number; height: number; border: number; escaped: string[] };
 for (const profile of SCREEN_PROFILES) {
   test(`产线规划原料卡片包含标题与图标：${profile.name}`, async ({ browserSession, baseURL }) => {

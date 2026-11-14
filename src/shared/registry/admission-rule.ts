@@ -3,7 +3,6 @@ import type { EntityAdmissionRuleDefinition } from "@/domain/registry/types/enti
 /**
  * 解析实体 config 或端口声明中的准入口规则。
  *
- * AI-CORRECTION 2026-09-23: 原实现是 src/app/shell/inspector/admission-rule-inspector.tsx 的私有函数。
  * 基地问题检查与 Inspector 需要同一份 perMinuteLimit 解析语义，故上提为 shared 单一真源。
  */
 export function readAdmissionRule(value: unknown): EntityAdmissionRuleDefinition | null {

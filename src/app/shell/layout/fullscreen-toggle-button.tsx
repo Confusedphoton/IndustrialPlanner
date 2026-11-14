@@ -16,20 +16,6 @@ type FullscreenCapableElement = HTMLElement & {
 
 export type FullscreenActionResult = "completed" | "rejected" | "unsupported";
 
-// AI-REMOVED 2026-08-23:
-// Reason: 原 helper 无条件吞掉 Promise 拒绝，导致浏览器拒绝全屏时界面完全无反馈。
-// Trigger: 用户反馈 iPhone 点击全屏无响应，并要求在点击时展示明确引导。
-// Evidence: catch(() => undefined) 丢弃了唯一失败信号，且 API 不存在时同样静默返回。
-// Replacement: settleFullscreenAction，向调用方返回 completed/rejected/unsupported。
-// Risk: Low；调用时机仍保持在用户点击处理器内。
-// Human Review: Required
-//
-// Original code:
-// function settleFullscreenRequest(result: Promise<void> | void): void {
-//   if (result && typeof (result as Promise<void>).catch === "function") {
-//     void (result as Promise<void>).catch(() => undefined);
-//   }
-// }
 function settleFullscreenAction(action: (() => Promise<void> | void) | undefined): Promise<FullscreenActionResult> {
   if (!action) {
     return Promise.resolve("unsupported");

@@ -1,18 +1,18 @@
-import type { BlueprintPlannerFlow, BlueprintPlannerProductionPlan } from "@/domain/blueprint-planner";
-import type { RegistryContract } from "@/domain/registry/registry-contract";
-import { buildDeviceRunningConsumptionRecipesByMachine, resolveCompanionDeviceRunningConsumptionRecipe } from "./device-running-consumption";
-import { lookupText } from "./i18n";
+export interface PlannerFlow {
+  readonly itemId: string;
+  readonly perMinute: number;
+}
 
 export interface PlannerCycleIssue {
   readonly itemIds: readonly string[];
   readonly path: readonly string[];
-  readonly shortfalls: readonly BlueprintPlannerFlow[];
+  readonly shortfalls: readonly PlannerFlow[];
 }
 
 interface PlannerCycleInput {
-  readonly recipes: readonly { readonly inputs: readonly BlueprintPlannerFlow[]; readonly outputs: readonly BlueprintPlannerFlow[] }[];
-  readonly targets: readonly BlueprintPlannerFlow[];
-  readonly externalSupplies: readonly BlueprintPlannerFlow[];
+  readonly recipes: readonly { readonly inputs: readonly PlannerFlow[]; readonly outputs: readonly PlannerFlow[] }[];
+  readonly targets: readonly PlannerFlow[];
+  readonly externalSupplies: readonly PlannerFlow[];
   readonly infiniteItemIds: ReadonlySet<string>;
 }
 
@@ -21,7 +21,7 @@ export function findPlannerCycleIssues(input: PlannerCycleInput): PlannerCycleIs
   const epsilon = 1e-4;
   const edges = new Map<string, Set<string>>();
   const balance = new Map<string, number>();
-  const add = (flow: BlueprintPlannerFlow, direction: number) => {
+  const add = (flow: PlannerFlow, direction: number) => {
     balance.set(flow.itemId, (balance.get(flow.itemId) ?? 0) + direction * flow.perMinute);
   };
   for (const recipe of input.recipes) {
@@ -99,29 +99,4 @@ export function formatPlannerCycleIssue(issue: PlannerCycleIssue, itemName: (ite
   const path = issue.path.map(itemName).join(" → ");
   const missing = issue.shortfalls.map(flow => `${itemName(flow.itemId)} ${flow.perMinute.toFixed(2)}/min`).join("、");
   return `${labels.cycle}：${path}；${labels.missing} ${missing}`;
-}
-
-/** EDA 不信任导入任务声明的流量或错误标志，按 Registry 重建实际加工与整台运行消耗。 */
-export function assertPlannerTaskCycles(registry: RegistryContract, plan: BlueprintPlannerProductionPlan): void {
-  const consumption = buildDeviceRunningConsumptionRecipesByMachine(registry.recipeDefinitions);
-  const recipes = plan.recipes.flatMap(entry => {
-    const recipe = registry.queries.findRecipeDefinition(entry.recipeId);
-    if (!recipe) return [];
-    const running = resolveCompanionDeviceRunningConsumptionRecipe(recipe, consumption);
-    const count = Math.ceil(entry.deviceCount - 1e-6);
-    const cycles = recipe.environmentOutput ? count * 60 / recipe.durationSeconds : entry.cyclesPerMinute;
-    return [{
-      inputs: recipe.tags.includes("自然资源采集") ? [] : [
-        ...recipe.inputs.map(flow => ({ itemId: flow.itemId, perMinute: flow.amount * cycles })),
-        ...(running?.inputs ?? []).map(flow => ({ itemId: flow.itemId, perMinute: flow.amount * 60 / running!.durationSeconds * count })),
-      ],
-      outputs: recipe.outputs.map(flow => ({ itemId: flow.itemId, perMinute: flow.amount * cycles })),
-    }];
-  });
-  const issue = findPlannerCycleIssues({ recipes, targets: plan.targets, externalSupplies: plan.externalSupplies,
-    infiniteItemIds: new Set(plan.infiniteItemIds) })[0];
-  if (issue) throw new Error(formatPlannerCycleIssue(issue, itemId => {
-    const item = registry.queries.findItemDefinition(itemId);
-    return item ? lookupText("zh-CN", item.nameKey) ?? itemId : itemId;
-  }));
 }

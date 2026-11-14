@@ -12,20 +12,6 @@ import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/contracts/tick-rate"
 import type { CompiledSimulationTopology } from "@/simulation/contracts/types";
 import { compileSimulationTopology } from "@/simulation/topology/compiler";
 import { SimulationWorkerRuntime } from "@/simulation/legacy/worker-runtime";
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/belt-phase-gating/index.json
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// import {
-//   createBlueprint,
-//   createEntity,
-//   createWorldDocumentFromBlueprint,
-//   resolveFirstTickNumberAtSimulationMilliseconds,
-// } from "./blueprint-test-helpers";
 import { createWorldDocumentFromBlueprint, resolveFirstTickNumberAtSimulationMilliseconds } from "./blueprint-test-helpers";
 import { describeSimulationEngineMatrix } from "./simulation-engine-matrix";
 
@@ -74,29 +60,6 @@ describeSimulationEngineMatrix("belt phase gating host contract", (engineKind) =
       );
       expect((await host.internalActions.syncToTick(oneSecondTick)).status).toBe("ready");
       expect(hasHostTransfer(host, "device:storage", "device:belt2")).toBe(true);
-      // AI-REMOVED 2026-09-08:
-      // Reason: internal refresh 只刷新拓扑，不会把 Host runningState 切到 start，随后 patchRuntimeSlot 会被忽略。
-      // Trigger: Legacy 与 Dense Host 门禁用例均未观察到运行时补货。
-      // Evidence: 两个 Host 的 patchRuntimeSlot 都在 runningState === "stop" 时直接返回。
-      // Replacement: host.actions.start() 后 pause，再按毫秒相位同步。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // const started = await host.internalActions.refreshFromCurrentDocument();
-      // expect(started.status).toBe("started");
-      //
-      // AI-REMOVED 2026-09-08:
-      // Reason: 公共 start() 返回 Promise<void>，不存在可读取的 status 字段。
-      // Trigger: Host 门禁用例运行时报 Cannot read properties of undefined。
-      // Evidence: SimulationContract.actions.start 的返回契约为 void。
-      // Replacement: await host.actions.start()；启动成功由随后存在 topology 和 ready tick 共同验证。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // const started = await host.actions.start();
-      // expect(started.status).toBe("started");
     } finally {
       host.dispose();
     }
@@ -118,16 +81,6 @@ describeSimulationEngineMatrix("belt phase gating host contract", (engineKind) =
  *   因传送带相位门禁，belt2 不能立即在 tick 6 接收 B，必须等到下一个 20 tick 相位点 tick 21。
  */
 describe("传送带相位门禁", () => {
-  // AI-REMOVED 2026-09-08:
-  // Reason: 用例名称暴露 Legacy 的 20 tick 实现坐标，没有表达跨实现业务时间。
-  // Trigger: 用户要求固定 tick 1/41 一类设置统一改为毫秒数。
-  // Evidence: Legacy 的 20 tick 周期等价于 1000ms。
-  // Replacement: 下方 1000ms 门禁相位标题。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // it("非门禁时刻放入的物品，第二条传送带要等到 20 tick 相位点才第一次接到（标准帧率）", () => {
   it("非门禁时刻放入的物品，要等到 1000ms 门禁相位才第一次接到（Legacy 内部）", () => {
     const registry = createRegistryContract();
     const runtime = createRuntime(registry, STANDARD_SPEED);
@@ -138,7 +91,6 @@ describe("传送带相位门禁", () => {
     const collectThroughThreeSecondsTick = resolveLegacyFirstTick(3_000);
 
     // tick 1（相位点）：belt1 从 storage 槽位1 接走物品 A。
-    // AI-CORRECTION 2026-09-08: 下方 tick 1/5/6/21/61 分别由 0/200/250/1000/3000ms 换算。
     expect(receivesAt(runtime, zeroMillisecondTick, "device:storage", "device:belt1")).toBe(true);
 
     // tick 5（非门禁时刻，5-1=4 非 20 倍数）：向槽位2 放入物品 B。
@@ -266,27 +218,6 @@ function resolveLegacyFirstTick(elapsedMilliseconds: number): number {
 
 function createBeltPhaseGatingTopology(registry: RegistryContract): CompiledSimulationTopology {
   const document = createWorldDocumentFromBlueprint(createBeltPhaseGatingBlueprint());
-  // AI-REMOVED 2026-09-08:
-  // Reason: Host 契约测试与 Legacy Worker 实现测试应复用同一最小蓝图，避免场景漂移。
-  // Trigger: 用户要求门禁测试改为 Host 行为矩阵。
-  // Evidence: 原先内联设备与 Host 用例需要的设备完全相同。
-  // Replacement: createBeltPhaseGatingBlueprint。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // const document = createWorldDocumentFromBlueprint(
-  //   createBlueprint("belt-phase-gating", [
-  //     createEntity("storage", "storager_1", 0, 0, 0, {
-  //       "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
-  //       "storageSlotGroups[0].slots[0].initialCount": 1,
-  //     }),
-  //     createEntity("belt1", "belt_straight_1x1", 0, -1, 270),
-  //     createEntity("sink1", "storager_1", 0, -4, 0),
-  //     createEntity("belt2", "belt_straight_1x1", 1, -1, 270),
-  //     createEntity("sink2", "storager_1", 1, -4, 0),
-  //   ]),
-  // );
   return compileSimulationTopology({
     document,
     registry,
@@ -296,24 +227,6 @@ function createBeltPhaseGatingTopology(registry: RegistryContract): CompiledSimu
 }
 
 function createBeltPhaseGatingBlueprint() {
-  // AI-REMOVED 2026-09-14:
-  // Reason: 场景构造已批量固化为带版本的蓝图文件。
-  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-  // Replacement: src/tests/fixtures/blueprints/simulation/belt-phase-gating/index.json
-  // Risk: Low；断言与被测动作不变。
-  // Human Review: Required
-  // Original code:
-  // createBlueprint("belt-phase-gating", [
-  //     createEntity("storage", "storager_1", 0, 0, 0, {
-  //       "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
-  //       "storageSlotGroups[0].slots[0].initialCount": 1,
-  //     }),
-  //     createEntity("belt1", "belt_straight_1x1", 0, -1, 270),
-  //     createEntity("sink1", "storager_1", 0, -4, 0),
-  //     createEntity("belt2", "belt_straight_1x1", 1, -1, 270),
-  //     createEntity("sink2", "storager_1", 1, -4, 0),
-  //   ])
   return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/belt-phase-gating/scene-01-belt-phase-gating-23fe80d1.schema7.json");
 }
 
@@ -401,7 +314,6 @@ function createHostWorkspace(
     simulation: null,
     sync: null,
     audio: null,
-    blueprintPlanner: null,
   };
 }
 

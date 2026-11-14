@@ -1,12 +1,3 @@
-// AI-REMOVED 2026-10-09:
-// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
-// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
-// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
-// Replacement: None
-// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
-// Human Review: Required
-// Original code:
-// import { pausePlannerStorageForMigration, refreshPlannerStorageAfterMigration } from "../shell";
 import { reaction, runInAction } from "mobx";
 import { isDataMigrationFrozen } from "@/shared/data-migration";
 import { reportStorageFailure, runStorageEffect } from "@/shared/storage/storage-failure";
@@ -66,30 +57,10 @@ import {
 export const APP_SETTINGS_LOCAL_STORAGE_KEY = "v3-app-settings";
 export const WORKBENCH_STATE_LOCAL_STORAGE_KEY = "v3-workbench-state";
 
-// AI-REMOVED 2026-10-09:
-// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
-// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
-// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
-// Replacement: 页面刷新重新装配持久化
-// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
-// Human Review: Required
-// Original code:
-// const migrationLifecycles = new WeakMap<AppHost, { pause: () => Promise<void>; refresh: () => Promise<void> }>();
-// export async function pauseAppStorageForMigration(host: AppHost): Promise<void> { await migrationLifecycles.get(host)?.pause(); }
-// export async function refreshAppStorageAfterMigration(host: AppHost): Promise<void> { await migrationLifecycles.get(host)?.refresh(); }
 export function hookLocalstorage(appHost: AppHost): () => void {
   let disposed = false;
   let moduleBalancingHydrated = false;
   let moduleBalancingWriteQueue = Promise.resolve();
-// AI-REMOVED 2026-10-09:
-// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
-// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
-// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
-// Replacement: reportStorageFailure
-// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
-// Human Review: Required
-// Original code:
-//   let writeError: unknown = null;
   const persistModuleBalancing = (): void => {
     if (disposed || !moduleBalancingHydrated || isDataMigrationFrozen()) return;
     // 排队前冻结数据，避免异步读取期间收到后续编辑，旧任务写入新的可变对象。
@@ -160,15 +131,6 @@ export function hookLocalstorage(appHost: AppHost): () => void {
 
     persistModuleBalancing();
   }).catch(error => {
-// AI-REMOVED 2026-10-09:
-// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
-// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
-// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
-// Replacement: reportStorageFailure
-// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
-// Human Review: Required
-// Original code:
-//     writeError = error;
     moduleBalancingHydrated = false;
     if (!disposed) reportStorageFailure("module-balancing load", error);
   });
@@ -224,44 +186,7 @@ export function hookLocalstorage(appHost: AppHost): () => void {
     },
   );
 
-// AI-REMOVED 2026-10-09:
-// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
-// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
-// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
-// Replacement: 页面刷新
-// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
-// Human Review: Required
-// Original code:
-//   migrationLifecycles.set(appHost, {
-//     pause: async () => {
-//       await hydration; await moduleBalancingWriteQueue;
-//       await appHost.regionalSettings.flushForMigration();
-//       await pausePlannerStorageForMigration();
-//       if (writeError !== null) throw writeError;
-//     },
-//     refresh: async () => {
-//       const settings = readFromLocalStorage<AppSettingsReadWrite>(APP_SETTINGS_LOCAL_STORAGE_KEY);
-//       const workbench = readFromLocalStorage<unknown>(WORKBENCH_STATE_LOCAL_STORAGE_KEY);
-//       const modules = await loadModuleBalancingState();
-//       runInAction(() => {
-//         if (settings !== null) Object.assign(appHost.internalState.settings, normalizePersistedAppSettings(settings, appHost.internalState.settings));
-//         if (workbench !== null) Object.assign(appHost.internalState.workbench, normalizePersistedWorkbenchState(workbench, appHost.internalState.workbench));
-//         if (modules !== null) appHost.internalState.workbench.toolbox.moduleBalancing = modules;
-//       });
-//       await appHost.regionalSettings.hydrate();
-//       await refreshPlannerStorageAfterMigration();
-//     },
-//   });
   return () => {
-// AI-REMOVED 2026-10-09:
-// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
-// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
-// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
-// Replacement: None
-// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
-// Human Review: Required
-// Original code:
-//     migrationLifecycles.delete(appHost);
     disposed = true;
     disposeWorkbenchReaction();
     disposeAppSettingsReaction();
@@ -292,7 +217,6 @@ export function normalizePersistedAppSettings(
     locale: persistedAppSettings.locale === "zh-CN" || persistedAppSettings.locale === "en-US"
       ? persistedAppSettings.locale
       : fallback.locale,
-    // AI-CORRECTION 2026-11-13: 改用 src/app/theme 的 isAppThemeId，原硬编码判断为
     // persistedAppSettings.themeId === "ayu-light" || persistedAppSettings.themeId === "ayu-dark"。
     // Ayu Dark 已退出可选主题，旧设置迁移到 Graphite Dark。
     themeId: persistedAppSettings.themeId === "ayu-dark"
@@ -300,18 +224,6 @@ export function normalizePersistedAppSettings(
       : isAppThemeId(persistedAppSettings.themeId)
         ? persistedAppSettings.themeId
         : fallback.themeId,
-    // AI-REMOVED 2026-09-10:
-    // Reason: 操作模式总开关已废弃，不再保留关闭分支
-    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-    // Replacement: normalizePersistedAppSettings 的剩余字段白名单
-    // Risk: 历史 false 设置统一使用当前操作行为。
-    // Human Review: Required
-    //
-    // Original code:
-    // hypergryphOperationMode: typeof persistedAppSettings.hypergryphOperationMode === "boolean"
-    //   ? persistedAppSettings.hypergryphOperationMode
-    //   : fallback.hypergryphOperationMode,
     hypergryphImmediateMove: typeof persistedAppSettings.hypergryphImmediateMove === "boolean"
       ? persistedAppSettings.hypergryphImmediateMove
       : fallback.hypergryphImmediateMove,
@@ -562,11 +474,6 @@ function normalizePersistedToolboxState(
     : {};
 
   return {
-    // AI-REMOVED 2026-10-29: 新建意图不属于持久态；Trigger: 工作台存储协议应保持不变。
-    // Reason: 工作台只恢复已持久化的界面偏好。
-    // Evidence: run-vAcklj 的 14 项工作台存储断言要求旧协议保持不变。
-    // Replacement: RuntimeStateReadWriteImpl；Risk: Low；Human Review: Required
-    // Original code: productionPlanningNewSessionRequested: fallback.productionPlanningNewSessionRequested,
     dockPreference: isToolboxDockPreference(persistedToolboxState.dockPreference)
       ? persistedToolboxState.dockPreference
       : fallback.dockPreference,

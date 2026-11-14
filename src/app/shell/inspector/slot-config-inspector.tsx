@@ -104,7 +104,6 @@ export function SlotConfigInspector({
       if (recipe.machineId !== machineId) continue;
       if (recipe.tags.includes(TOOLBOX_HIDDEN_RECIPE_TAG)) continue;
       // 跳过 fluid 通配符等非具体物品
-      // AI-CORRECTION 2026-07-28: 域通配符已迁移为内部占位符，并统一通过共享解析器识别。
       for (const input of recipe.inputs) {
         if (resolveRecipeItemDomainFlags(input.itemId) === null) {
           itemIdSet.add(input.itemId);
@@ -143,18 +142,6 @@ export function SlotConfigInspector({
     >
       <span className={cm(styles, "slot-config-scope-switch-copy")}>
         <span>{translate("inspectorText.editMode")}</span>
-        {/*
-          AI-REMOVED 2026-06-04:
-          Reason: 开关控件已经表达开启/关闭状态，旁边文字重复表达同一信息。
-          Trigger: 用户要求文字、颜色、图标、边框等元素不能传递重复信息。
-          Evidence: InspectorPanel设计风格规范 2.5 明确“开关控件已经表达开/关时，不再显示开启/关闭文案”。
-          Replacement: checkbox visual state + aria-label
-          Risk: Low
-          Human Review: Required
-
-          Original code:
-          <strong>{editModeEnabled ? "开启" : "关闭"}</strong>
-        */}
       </span>
       <input
         aria-label={translate("inspectorText.editMode")}
@@ -179,18 +166,6 @@ export function SlotConfigInspector({
         title={translate("inspectorText.slots")}
         titleClassName="slot-config-panel-title"
       >
-        {/*
-          AI-REMOVED 2026-05-26:
-          Reason: inspector 卡片不再显示标题。
-          Trigger: 槽位配置 inspector 需求要求所有 inspector 无标题和副标题。
-          Evidence: 用户明确要求“所有inspector都没有标题和副标题”。
-          Replacement: slot-config-empty 只显示主体状态。
-          Risk: Low
-          Human Review: Required
-
-          Original code:
-          <h4>槽位配置</h4>
-        */}
         <div className={cm(styles, "slot-config-empty")}>{translate("inspectorText.noEditableSlots")}</div>
       </InspectorCollapsiblePanel>
     );
@@ -247,7 +222,7 @@ export function SlotConfigInspector({
     }
   };
 
-  // 2026-11-13：空槽位单击直接打开物品选择，选中后按槽位容量填满并立即写入，跳过槽位配置器。
+  // 空槽位单击直接打开物品选择，选中后按槽位容量填满并立即写入，跳过槽位配置器。
   const quickFillEmptySlot = async (
     row: EffectiveSlotRow,
     rows: readonly EffectiveSlotRow[],
@@ -351,44 +326,10 @@ export function SlotConfigInspector({
     roleGroupViews: readonly SlotConfigRoleGroupView[],
   ) => {
     const rows = roleGroupViews.flatMap((groupView) => groupView.rows);
-    /*
-      AI-REMOVED 2026-06-04:
-      Reason: filled/total 计数重复下方槽位列表可直接读取或数出的信息。
-      Trigger: 用户要求用户能从主区域直接数出的结果不再额外显示 summary。
-      Evidence: InspectorPanel设计风格规范 2.5 / 3.5。
-      Replacement: None
-      Risk: Low
-      Human Review: Required
-
-      Original code:
-      const filledCount = rows.filter((row) => row.displayItemId !== null).length;
-    */
     const roleIndexBySlotKey = new Map(
       rows.map((row, rowIndex) => [createRuntimeSlotKey(row.storageGroupId, row.slotId), rowIndex + 1]),
     );
-    // AI-REMOVED 2026-11-13:
-    // Reason: 空槽位名称改用 inspectorText.inputSlot/outputSlot 完整文案，角色简称不再使用。
-    // Trigger: 槽位配置界面国际化。
-    // Evidence: ESLint no-unused-vars。
-    // Replacement: 下方 emptySlotLabel 的 translate 调用。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // const roleLabel = role === "input" ? "输入" : "输出";
     const roleTitle = role === "input" ? translate("inspectorText.inputs") : translate("inspectorText.outputs");
-    /*
-      AI-REMOVED 2026-06-04:
-      Reason: 输入/输出角色图标与标题“原料输入 / 产物输出”重复表达角色。
-      Trigger: 用户要求图标与文字不能传递重复信息。
-      Evidence: 标题已直接表达列角色。
-      Replacement: slot-config-flow-column-header strong
-      Risk: Low
-      Human Review: Required
-
-      Original code:
-      const RoleIcon = role === "input" ? LucideDownload : LucideUpload;
-    */
 
     return (
       <section
@@ -396,32 +337,8 @@ export function SlotConfigInspector({
         data-slot-config-role={role}
       >
         <div className={cm(styles, "slot-config-flow-column-header")}>
-          {/*
-            AI-REMOVED 2026-06-04:
-            Reason: 输入/输出角色图标与标题“原料输入 / 产物输出”重复表达角色。
-            Trigger: 用户要求图标与文字不能传递重复信息。
-            Evidence: 标题已经直接表达列角色。
-            Replacement: slot-config-flow-column-header strong
-            Risk: Low
-            Human Review: Required
-
-            Original code:
-            <RoleIcon aria-hidden="true" />
-          */}
           <div>
             <strong>{roleTitle}</strong>
-            {/*
-              AI-REMOVED 2026-06-04:
-              Reason: “输入/输出槽位 (filled/total)”重复标题与下方槽位列表。
-              Trigger: 用户要求主区域可直接读出或数出的信息不重复显示。
-              Evidence: 下方列表已展示每个槽位及是否有物品。
-              Replacement: None
-              Risk: Low
-              Human Review: Required
-
-              Original code:
-              <span>{`${roleLabel}槽位 (${filledCount}/${rows.length})`}</span>
-            */}
           </div>
         </div>
         <div className={cm(styles, "slot-config-flow-slot-list")}>
@@ -452,7 +369,6 @@ export function SlotConfigInspector({
                     data-slot-number={row.displayIndex}
                     key={row.slotId}
                     onClick={() => {
-                      // AI-CORRECTION 2026-11-13：空且未锁定物品的槽位直接快速填充；其余仍打开槽位配置器。
                       if (row.displayItemId === null && row.lockItemId === null) {
                         void quickFillEmptySlot(row, groupView.rows);
                         return;
@@ -503,18 +419,6 @@ export function SlotConfigInspector({
     roleGroupViews: readonly SlotConfigRoleGroupView[],
   ) => {
     const rows = roleGroupViews.flatMap((groupView) => groupView.rows);
-    /*
-      AI-REMOVED 2026-06-04:
-      Reason: shared 槽位 filled/total 计数重复下方槽位列表。
-      Trigger: 用户要求可从主区域直接数出的信息不重复显示。
-      Evidence: InspectorPanel设计风格规范 2.5 / 3.5。
-      Replacement: None
-      Risk: Low
-      Human Review: Required
-
-      Original code:
-      const filledCount = rows.filter((row) => row.displayItemId !== null).length;
-    */
     const roleIndexBySlotKey = new Map(
       rows.map((row, rowIndex) => [createRuntimeSlotKey(row.storageGroupId, row.slotId), rowIndex + 1]),
     );
@@ -525,32 +429,8 @@ export function SlotConfigInspector({
         data-slot-config-role="shared"
       >
         <div className={cm(styles, "slot-config-flow-column-header")}>
-          {/*
-            AI-REMOVED 2026-06-04:
-            Reason: 共享角色图标与标题“混合缓冲”重复表达共享/混合语义。
-            Trigger: 用户要求图标与文字不能传递重复信息。
-            Evidence: 标题已直接表达该列角色。
-            Replacement: slot-config-flow-column-header strong
-            Risk: Low
-            Human Review: Required
-
-            Original code:
-            <LucideArrowLeftRight aria-hidden="true" />
-          */}
           <div>
             <strong>{translate("inspectorText.mixedBuffer")}</strong>
-            {/*
-              AI-REMOVED 2026-06-04:
-              Reason: “输入/输出共享槽位 (filled/total)”重复标题与下方槽位列表。
-              Trigger: 用户要求 summary 不重复主区域可直接读出或数出的信息。
-              Evidence: 下方列表已展示共享槽位内容。
-              Replacement: None
-              Risk: Low
-              Human Review: Required
-
-              Original code:
-              <span>{`输入/输出共享槽位 (${filledCount}/${rows.length})`}</span>
-            */}
           </div>
         </div>
         <div className={cm(styles, "slot-config-flow-slot-list")}>
@@ -581,7 +461,6 @@ export function SlotConfigInspector({
                     data-slot-number={row.displayIndex}
                     key={row.slotId}
                     onClick={() => {
-                      // AI-CORRECTION 2026-11-13：空且未锁定物品的槽位直接快速填充；其余仍打开槽位配置器。
                       if (row.displayItemId === null && row.lockItemId === null) {
                         void quickFillEmptySlot(row, groupView.rows);
                         return;
@@ -639,86 +518,11 @@ export function SlotConfigInspector({
       title={translate("inspectorText.slots")}
       titleClassName="slot-config-panel-title"
     >
-      {/*
-        AI-REMOVED 2026-05-31:
-        Reason: 槽位配置 UI 从正方形 tile 网格改为设计稿中的左右输入/输出流程布局。
-        Trigger: 用户要求按 inspector dialog 设计稿 1:1 调整槽位配置 UI。
-        Evidence: 设计稿使用蓝色输入栏、橙色输出栏和中间加工流向箭头。
-        Replacement: slot-config-flow-layout / slot-config-flow-column / slot-config-flow-slot。
-        Risk: Low
-        Human Review: Required
-
-        Original code:
-        {groupViews.map((groupView) => (
-          <section
-            className={cm(styles, "slot-config-group")}
-            data-slot-config-group={groupView.storageGroup.id}
-            data-slot-config-group-size={groupView.rows.length > 1 ? "multi" : "single"}
-            key={groupView.storageGroup.id}
-          >
-            <div className={cm(styles, "slot-config-tile-grid")} data-render-mode={mode}>
-              {groupView.rows.map((row) => {
-                const itemDefinition = row.displayItemId === null
-                  ? null
-                  : itemById.get(row.displayItemId) ?? null;
-                const itemLabel = itemDefinition === null ? "空槽位" : translate(itemDefinition.nameKey);
-                const iconSrc = itemDefinition === null ? null : resolveItemIconSrc(itemDefinition);
-
-                return (
-                  <button
-                    aria-label={`${row.displayIndex}. ${itemLabel}`}
-                    className={cm(styles, "slot-config-tile")}
-                    data-slot-action="open-slot-editor"
-                    data-slot-number={row.displayIndex}
-                    key={row.slotId}
-                    onClick={() => {
-                      openSlotEditor(row);
-                    }}
-                    title={itemLabel}
-                    type="button"
-                  >
-                    <span className={cm(styles, "slot-config-tile-index")}>{row.displayIndex}</span>
-                    {iconSrc === null ? (
-                      <span className={cm(styles, "slot-config-empty-frame")}>
-                        <LucidePlus aria-hidden="true" />
-                      </span>
-                    ) : (
-                      <>
-                        <img
-                          alt=""
-                          className={cm(styles, "slot-config-tile-icon")}
-                          draggable={false}
-                          src={iconSrc}
-                        />
-                        <span className={cm(styles, "slot-config-tile-badge")}>
-                          {row.ignoreStock ? "∞" : row.count}
-                        </span>
-                      </>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        ))}
-      */}
       {(inputGroupViews.length > 0 || outputGroupViews.length > 0) && (
         <>
           <div className={cm(styles, "slot-config-flow-layout")}>
             {renderSlotColumn("input", inputGroupViews)}
             <div className={cm(styles, "slot-config-flow-direction")} aria-label={translate("inspectorText.processingFlow")}>
-              {/*
-                AI-REMOVED 2026-06-04:
-                Reason: 流向文字与箭头图标重复表达加工流向。
-                Trigger: 用户要求文字与图标不能传递重复信息。
-                Evidence: 该容器保留 aria-label，视觉上由箭头和左右列位置表达流向。
-                Replacement: LucideChevronsRight + aria-label
-                Risk: Low
-                Human Review: Required
-
-                Original code:
-                <span>加工流向</span>
-              */}
               <LucideChevronsRight aria-hidden="true" />
             </div>
             {renderSlotColumn("output", outputGroupViews)}
@@ -787,67 +591,6 @@ export function SlotConfigInspector({
             </button>
             <div className={cm(styles, "slot-config-dialog-item-name")}>{editingItemLabel}</div>
             <label className={cm(styles, "slot-config-dialog-field")}>
-              {/*
-                AI-REMOVED 2026-06-07:
-                Reason: 数量输入、滑条和两个步进按钮挤在同一行，触发 CSS Grid 最小内容宽度，导致槽位弹窗在 tablet / mobile landscape 中横向溢出。
-                Trigger: 用户反馈槽位管理弹窗添加滑条后界面乱套，并要求按 InspectorPanel 设计规范整理。
-                Evidence: Playwright 三组 Screen Profile 基线截图显示 count row 将 dialog grid track 撑到 344px，超出 320px 弹窗；短屏下弹窗高度也超出视口。
-                Replacement: 下方 slot-config-dialog-count-row + slot-config-dialog-slider-row 两行布局。
-                Risk: Low
-                Human Review: Required
-
-                Original code:
-                <span>数量</span>
-                <div className={cm(styles, "slot-config-dialog-count-row")}>
-                  <button
-                    aria-label="减少数量"
-                    className={cm(styles, "slot-config-step-button")}
-                    disabled={draftItemId === null || draftCount <= 0}
-                    onClick={() => setDraftCount(clampCount(draftCount - 1, editingSlot.capacity))}
-                    type="button"
-                  >
-                    −
-                  </button>
-                  <input
-                    aria-label="数量滑条"
-                    className={cm(styles, "slot-config-dialog-range")}
-                    disabled={draftItemId === null}
-                    max={editingSlot.capacity}
-                    min={0}
-                    onChange={(event) => {
-                      setDraftCount(clampCount(Number(event.currentTarget.value), editingSlot.capacity));
-                    }}
-                    type="range"
-                    value={draftCount}
-                  />
-                  <button
-                    aria-label="增加数量"
-                    className={cm(styles, "slot-config-step-button")}
-                    disabled={draftItemId === null || draftCount >= editingSlot.capacity}
-                    onClick={() => setDraftCount(clampCount(draftCount + 1, editingSlot.capacity))}
-                    type="button"
-                  >
-                    +
-                  </button>
-                  <NumberInput
-                    className={cm(styles, "slot-config-count-input")}
-                    data-slot-dialog-input="count"
-                    disabled={draftItemId === null}
-                    max={editingSlot.capacity}
-                    min={0}
-                    value={draftCount}
-                    onCommit={(next) => {
-                      setDraftCount(clampCount(next, editingSlot.capacity));
-                    }}
-                    onRawChange={(raw) => {
-                      const next = Number(raw);
-                      if (Number.isFinite(next)) {
-                        setDraftCount(clampCount(next, editingSlot.capacity));
-                      }
-                    }}
-                  />
-                </div>
-              */}
               <div className={cm(styles, "slot-config-dialog-count-row")}>
                 <span>{translate("inspectorText.quantity")}</span>
                 <NumberInput
@@ -1015,47 +758,6 @@ function resolveStorageGroupFlowRole(
     return "input";
   }
 
-  /*
-    AI-REMOVED 2026-06-06:
-    Reason: 槽位配置的原料/产物归属应由 Recipe Channel 决定，端口方向只表达物流方向。
-    Trigger: 用户确认无 channel、不在任何 channel、或同时出现在多类 channel 集合内的槽位一律显示为混合。
-    Evidence: EntityDefinition 注释已明确“配方原料/产物角色由 Recipe Channel 声明”；旧实现会把无 channel 的纯物流槽位误显示为输入/输出。
-    Replacement: 上方 recipeChannels ingredientStorageGroupIds / productStorageGroupIds 判定。
-    Risk: Low
-    Human Review: Required
-
-    Original code:
-    const directions = new Set<"input" | "output">();
-
-    for (const binding of definition.portStorageBindings) {
-      if (binding.storageSlotGroupId !== storageGroupId) {
-        continue;
-      }
-
-      const portGroup = definition.portGroups.find((candidate) => candidate.id === binding.portGroupId);
-      if (portGroup === undefined) {
-        continue;
-      }
-
-      if (portGroup.direction === "bidirectional") {
-        directions.add("input");
-        directions.add("output");
-        continue;
-      }
-
-      directions.add(portGroup.direction);
-    }
-
-    if (directions.has("input") && directions.has("output")) {
-      return "shared";
-    }
-
-    if (directions.has("output")) {
-      return "output";
-    }
-
-    return "input";
-  */
   return "shared";
 }
 
@@ -1240,8 +942,6 @@ function canSelectItemForRow(
   );
 }
 
-// AI-CORRECTION 2026-05-16: domain 判定统一委托 RegistryQuery.isItemLiquid，不再本地推断。
-// AI-CORRECTION 2026-07-10: domain 判定升级为 resolveItemDomain，支持 gas 与 fluid。
 function matchesItemDomain(
   item: ItemDefinition,
   domain: EffectiveSlotRow["domain"],

@@ -53,16 +53,6 @@ export function buildSolveGraph(
       edgeId,
       shadowPull: "uncertain",
       shadowPush: "uncertain",
-      // AI-REMOVED 2026-06-12:
-      // Reason: currentThroughCount 是单 tick 临时限流状态，准入口上限改为 persistent admission counter。
-      // Trigger: 用户要求删除 per tick count。
-      // Evidence: RuntimeTickEdgeState.currentThroughCount 已注释化删除。
-      // Replacement: state.persistent.admissionCounters。
-      // Risk: Medium - stage-3 必须在实际搬运成功后增加 admission counter。
-      // Human Review: Required
-      //
-      // Original code:
-      // currentThroughCount: 0,
       sourceSlotId: null,
       targetSlotId: null,
       itemType: null,

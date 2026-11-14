@@ -1,6 +1,6 @@
 import type { WorldDocument, WorldEntity } from "../../document/world-document";
 import type { CanvasOperationAvailability, CanvasOperationId } from "../../shared/canvas-operation";
-import type { GridPoint } from "../../shared/grid";
+import type { GridPoint, GridRotation } from "../../shared/grid";
 import type { SceneSpace } from "../../shared/scene-space";
 import type { EditorHistoryActionDescriptor } from "../editor-history";
 
@@ -27,6 +27,8 @@ export interface SinglePlacementRequest {
   readonly centerGridPoint: GridPoint;
   readonly entityId?: string;
   readonly config?: Readonly<Record<string, unknown>>;
+  /** 初始朝向；仅对方形占地设备生效（非方形设备的落点按 0° 占地计算）。 */
+  readonly rotation?: GridRotation;
 }
 
 export type { CanvasOperationAvailability, CanvasOperationId } from "../../shared/canvas-operation";

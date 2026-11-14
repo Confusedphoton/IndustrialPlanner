@@ -13,16 +13,6 @@ import {
   type ProductionPlanningIndex,
   type ProductionPlanningResult,
 } from "../production-planning-model";
-// AI-REMOVED 2026-09-01:
-// Reason: 模块详情图标已统一由组合图标解析函数生成，不再在视图内分别判断实体与物品。
-// Trigger: ESLint 检出组合图标接入后遗留的未使用导入。
-// Evidence: expandedModuleIconSrcs 只调用 resolveProductionPlanningModuleIconSrcs。
-// Replacement: resolveProductionPlanningModuleIconSrcs import
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import { resolveProductionPlanningEntityIconSrc, resolveProductionPlanningItemIconSrc } from "../production-planning-model";
 import { buildProcessGraph } from "./process-graph-builder";
 import type { ProcessNode } from "./process-graph-model";
 import { RecipeDisplay } from "@/app/shell/shared/recipe-display";
@@ -167,7 +157,6 @@ export function ProcessGraphView({
   }, []);
 
   // Viewport anchoring: keep the toggled node at the same screen position
-  // AI-CORRECTION 2026-10-26：设置/移除原料也复用节点锚定，切断上游后保持被点击物品的位置。
   const anchorRef = useRef<{ itemId: string; branchId?: string; canvasX: number; canvasY: number } | null>(null);
 
   const anchorNode = useCallback((itemId: string, nodeCol: number, nodeRow: number, branchId?: string) => {
@@ -346,23 +335,7 @@ export function ProcessGraphView({
           const cx = nodeCenterX(node.col);
           const cy = nodeCenterY(node.row);
           const isDeviceNode = node.type === "device";
-          // AI-REMOVED 2026-10-26:
-          // Reason: 节点类型和物品 ID 展开标记不能证明存在可折叠子级。
-          // Trigger: 终端箭头点击后只消失，主链与支线共用展开状态。
-          // Evidence: 主链不读取展开列表，natural 终端也可能存在于旧展开集合。
-          // Replacement: ProcessNode.branch。Risk: Low。Human Review: Required
-          // Original code:
-          // const isExpandable = node.type === "secondary";
-          // const isCollapsible = expandedItemIds.has(node.itemId);
           const nodeKey = `${node.col}:${node.row}`;
-          // AI-REMOVED 2026-10-26:
-          // Reason: 无生产配方的原料节点也需要显示原料操作。
-          // Trigger: 用户要求通过工序图设置原料。
-          // Evidence: 原条件令自然资源和外供节点无法打开详情。
-          // Replacement: 非设备节点均可打开详情。Risk: Low。Human Review: Required
-          // Original code:
-          // const hasRecipe = node.candidateId !== undefined || (node.recipeId ?? node.expandedRecipeId) !== null;
-          // 设备节点不显示展开/收起和详情弹窗
           const showToggle = isDeviceNode ? undefined
             : node.branch !== undefined ? () => handleToggle(node)
             : undefined;
@@ -522,26 +495,6 @@ function ProcessNodeCard({
         </div>
       </div>
       {onToggle && (
-        /* AI-REMOVED 2026-10-26:
-        Reason: 旧 div 没有按钮语义、键盘支持或操作说明。
-        Trigger: 用户无法识别圆形箭头用途，并要求有效的支线展开/收起。
-        Evidence: 原节点只有 click handler，没有 title、aria-expanded 或可访问名称。
-        Replacement: 下方带操作名称的原生 button。Risk: Low。Human Review: Required
-        Original code:
-        <div
-          className={styles["process-node-expand"]}
-          style={{
-            left: nodeCenterX(node.col) - CELL_WIDTH / 2 - COL_GAP / 2 - 9,
-            top: cy - 9,
-          }}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggle();
-          }}
-        >
-          {isExpanded ? <LucideChevronDown /> : <LucideChevronRight />}
-        </div>
-        */
         <button
           type="button"
           className={styles["process-node-expand"]}
@@ -565,7 +518,7 @@ function ProcessNodeCard({
 }
 
 function nodeCenterX(col: number): number {
-  // 2026-10-26：卡片按中心定位，首列需预留半张卡片宽度，避免左侧图标被裁掉。
+  // 卡片按中心定位，首列需预留半张卡片宽度，避免左侧图标被裁掉。
   return NODE_PADDING + CELL_WIDTH / 2 + col * (CELL_WIDTH + COL_GAP);
 }
 

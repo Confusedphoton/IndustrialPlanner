@@ -59,7 +59,6 @@ describe("warehouse-item-link slot kind / itemFilterType consistency", () => {
           continue;
         }
 
-        // AI-CORRECTION 2026-07-28: 槽组与槽位均使用同一域位标志，不再需要字符串映射表。
         const expected = slotGroup.kind;
 
         for (const slot of slotGroup.slots) {

@@ -7,18 +7,6 @@ import {
 import { observer } from "mobx-react-lite";
 
 import type { AppHost } from "@/app/host/app-host";
-// AI-REMOVED 2026-08-19:
-// Reason: TimelineDialog 直接读取 SimulationState.simulationMode，不再读取 App 层模式副本。
-// Trigger: SimulationMode 单一事实源改造。
-// Evidence: App 层副本在 Action 拒绝切换时可能与实际仿真模式不一致。
-// Replacement: SIMULATION_MODE + simulation.state.simulationMode。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import { regionalSimulationUiState } from "@/app/state/regional-simulation-ui-state";
-// AI-CORRECTION 2026-09-20: 停止态的冲突判断读取 AppSettings，运行态才读取已固化的 SimulationMode。
-import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 import type { SimulationTimelineMark } from "@/domain/simulation/types/simulation-types";
 import {
   canUseWorkbenchBottomDock,
@@ -97,11 +85,7 @@ export const TimelineDialog = observer(function TimelineDialog({ appHost }: { ap
   const simulation = appHost.workspace.simulation;
   const timelineEnabled = simulation?.state.timeline.enabled ?? false;
   const simulationRunningState = simulation?.state.runningState ?? "stop";
-  // AI-CORRECTION 2026-09-20: 停止态使用 AppSettings 预判下一次会话，运行态使用已经固化的会话事实。
-  const regionalMultiBaseEnabled = simulation?.engineKind === "dense-v2"
-    && (simulationRunningState === "stop"
-      ? appHost.state.settings.regionalMultiBaseEnabled
-      : simulation.state.simulationMode === SIMULATION_MODE.regionalMultiBase);
+  const regionalMultiBaseEnabled = false;
   const discardedPageTimelineRecoveryPendingRef = useRef(
     dialogState.visible
     && typeof document !== "undefined"
@@ -146,21 +130,6 @@ export const TimelineDialog = observer(function TimelineDialog({ appHost }: { ap
       || simulation === null
       || regionalMultiBaseEnabled
       || timelineEnabled
-      // AI-REMOVED 2026-07-17:
-      // Reason: 持久化恢复的时间轴窗口必须能够从全新的 stop/idle 仿真状态重新启动。
-      // Trigger: 浏览器在后台丢弃页面后重载，时间轴窗口仍可见，但一直显示“时间轴不可用”。
-      // Evidence: openDialog("timeline") 会无条件调用 enableTimeline，且 enableTimeline 已负责启动尚未运行的仿真；此处额外拦截造成恢复路径与主动打开路径语义不一致。
-      // Replacement: 当前 effect 在窗口可见且时间轴未启用时统一调用 enableTimeline。
-      // Risk: Low；只影响已恢复为可见、但时间轴尚未启用的窗口。
-      // Human Review: Required
-      //
-      // Original code:
-      // || simulationRunningState === "stop"
-      // AI-CORRECTION 2026-07-17:
-      // 上述 Replacement 范围过宽。stop/idle 也可能由用户主动停止触发，只有当前页面由浏览器丢弃后重载，
-      // 且时间轴窗口在重载时已经可见，才允许消费一次恢复令牌并重新启用时间轴。
-      // AI-CORRECTION 2026-07-17:
-      // document.wasDiscarded 只证明页面被丢弃，不能证明丢弃前仿真正在运行；恢复令牌还必须来自页面隐藏瞬间的运行状态。
       || (
         simulationRunningState === "stop"
         && !discardedPageTimelineRecoveryPendingRef.current
@@ -244,72 +213,6 @@ export const TimelineBottomDock = observer(function TimelineBottomDock({ appHost
     return null;
   }
 
-  // AI-REMOVED 2026-07-14:
-  // Reason: 时间轴底部停靠态高度不应由用户拖拽调整，避免底部区域留下过大空白。
-  // Trigger: 用户要求时间轴停靠后也不可以调整高度。
-  // Evidence: resolveTimelineBottomDockGridHeight 现在对展开态返回 DEFAULT_TIMELINE_BOTTOM_DOCK_HEIGHT。
-  // Replacement: fixed height in resolveTimelineBottomDockGridHeight in this file.
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // const resizeCleanupRef = useRef<(() => void) | null>(null);
-  //
-  // useEffect(() => {
-  //   return () => {
-  //     resizeCleanupRef.current?.();
-  //   };
-  // }, []);
-  //
-  // const handleResizePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-  //   if (event.pointerType === "mouse" && event.button !== 0) {
-  //     return;
-  //   }
-  //
-  //   event.preventDefault();
-  //   event.stopPropagation();
-  //
-  //   const pointerId = event.pointerId;
-  //   const startY = event.clientY;
-  //   const originHeight = appHost.internalState.workbench.timelineBottomDockHeight;
-  //
-  //   resizeCleanupRef.current?.();
-  //   document.body.classList.add("is-resizing-timeline-bottom-dock");
-  //
-  //   const cleanup = () => {
-  //     document.body.classList.remove("is-resizing-timeline-bottom-dock");
-  //     window.removeEventListener("pointermove", handlePointerMove);
-  //     window.removeEventListener("pointerup", handlePointerEnd);
-  //     window.removeEventListener("pointercancel", handlePointerEnd);
-  //
-  //     if (resizeCleanupRef.current === cleanup) {
-  //       resizeCleanupRef.current = null;
-  //     }
-  //   };
-  //
-  //   const handlePointerMove = (moveEvent: PointerEvent) => {
-  //     if (moveEvent.pointerId !== pointerId) {
-  //       return;
-  //     }
-  //
-  //     appHost.internalActions.setTimelineBottomDockHeight(
-  //       originHeight + startY - moveEvent.clientY,
-  //     );
-  //   };
-  //
-  //   const handlePointerEnd = (endEvent: PointerEvent) => {
-  //     if (endEvent.pointerId !== pointerId) {
-  //       return;
-  //     }
-  //
-  //     cleanup();
-  //   };
-  //
-  //   window.addEventListener("pointermove", handlePointerMove);
-  //   window.addEventListener("pointerup", handlePointerEnd);
-  //   window.addEventListener("pointercancel", handlePointerEnd);
-  //   resizeCleanupRef.current = cleanup;
-  // };
 
   return (
     <section
@@ -318,25 +221,6 @@ export const TimelineBottomDock = observer(function TimelineBottomDock({ appHost
         ? "timeline-bottom-dock panel-surface is-collapsed"
         : "timeline-bottom-dock panel-surface")}
     >
-      {/* AI-REMOVED 2026-07-14:
-          Reason: 时间轴底部停靠态高度不应由用户拖拽调整，避免底部区域留下过大空白。
-          Trigger: 用户要求时间轴停靠后也不可以调整高度。
-          Evidence: resolveTimelineBottomDockGridHeight 现在对展开态返回 DEFAULT_TIMELINE_BOTTOM_DOCK_HEIGHT。
-          Replacement: fixed height in resolveTimelineBottomDockGridHeight in this file.
-          Risk: Low
-          Human Review: Required
-
-          Original code:
-          {timelineCollapsed ? null : (
-            <div
-              aria-label={t("timelineDialog.resizeBottomDock")}
-              className={cm(styles, "timeline-bottom-dock-resize-handle")}
-              onPointerDown={handleResizePointerDown}
-              role="separator"
-              title={t("timelineDialog.resizeBottomDock")}
-            />
-          )}
-      */}
       <header className={cm(styles, "timeline-bottom-dock-header")}>
         <div className={cm(styles, "timeline-bottom-dock-title")}>
           <h2 id="timeline-bottom-dock-title">{t("timelineDialog.title")}</h2>
@@ -402,10 +286,7 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
   const simulation = appHost.workspace.simulation;
   const timeline = simulation?.state.timeline ?? null;
   const debugMode = appHost.state.settings.debugMode;
-  const regionalMultiBaseEnabled = simulation?.engineKind === "dense-v2"
-    && (simulation.state.runningState === "stop"
-      ? appHost.state.settings.regionalMultiBaseEnabled
-      : simulation.state.simulationMode === SIMULATION_MODE.regionalMultiBase);
+  const regionalMultiBaseEnabled = false;
   const [dragTickNumber, setDragTickNumber] = useState<number | null>(null);
   const [dragWindowStartTickNumber, setDragWindowStartTickNumber] = useState<number | null>(null);
   const [pendingSeek, setPendingSeek] = useState<{
@@ -441,23 +322,6 @@ const TimelineRuler = observer(function TimelineRuler({ appHost }: { appHost: Ap
 
   simulationRef.current = simulation;
 
-  // AI-REMOVED 2026-08-19:
-  // Reason: 冲突态提前返回会让后续 useEffect 只在部分渲染执行，破坏 React Hook 调用顺序。
-  // Trigger: 开发审计发现 allBasesEnabled 切换会改变 TimelineRuler 的 Hook 数量。
-  // Evidence: 该分支原本位于三个 useEffect 之前；冲突态必须在所有 Hook 声明完成后返回。
-  // Replacement: 本组件全部 useEffect 之后的 regionalSimulationUiState.allBasesEnabled 分支。
-  // AI-CORRECTION 2026-08-19: 模式唯一事实源改为 simulation.state.simulationMode；原注释中的 allBasesEnabled 仅为历史名称。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // if (regionalSimulationUiState.allBasesEnabled) {
-  //   return (
-  //     <div className={cm(styles, "timeline-empty-state")}>
-  //       {t("timelineDialog.regionalMultiBaseConflict")}
-  //     </div>
-  //   );
-  // }
 
   useEffect(() => {
     if (timeline === null) {

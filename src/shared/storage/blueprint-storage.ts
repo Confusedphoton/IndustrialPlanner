@@ -35,16 +35,6 @@ export const BLUEPRINT_STORE_LOCATION: IndexedDbStoreLocation = {
 export interface BlueprintRecord extends BlueprintDocument {
   kind: "blueprint";
   parentFolderId: string | null;
-  // AI-REMOVED 2026-08-08:
-  // Reason: deletedAt 是同步墓碑元数据，不是蓝图业务属性。
-  // Trigger: 用户要求同步属性不得渗入主数据库对象。
-  // Evidence: 删除传播现在由 BlueprintSyncEntry 独立承载。
-  // Replacement: BlueprintSyncEntry.deletedAt。
-  // Risk: Low；同步功能仍通过独立条目保留删除时间。
-  // Human Review: Required
-  //
-  // Original code:
-  // deletedAt: string | null;
 }
 
 export interface BlueprintFolderRecord {
@@ -55,16 +45,6 @@ export interface BlueprintFolderRecord {
   parentFolderId: string | null;
   createdAt: string;
   updatedAt: string;
-  // AI-REMOVED 2026-08-08:
-  // Reason: deletedAt 是同步墓碑元数据，不是蓝图目录业务属性。
-  // Trigger: 用户要求同步属性不得渗入主数据库对象。
-  // Evidence: 删除传播现在由 BlueprintSyncEntry 独立承载。
-  // Replacement: BlueprintSyncEntry.deletedAt。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // deletedAt: string | null;
 }
 
 export type BlueprintStorageEntry = BlueprintRecord | BlueprintFolderRecord;
@@ -99,18 +79,6 @@ export interface SaveBlueprintOptions {
   parentFolderId?: string | null;
 }
 
-// AI-REMOVED 2026-08-08:
-// Reason: 业务读取不再暴露同步墓碑；同步模块使用 listBlueprintSyncEntries。
-// Trigger: 用户要求同步数据与业务对象彻底隔离。
-// Evidence: 已删除对象会从 blueprints store 物理移除。
-// Replacement: listBlueprintSyncEntries。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-// export interface BlueprintReadOptions {
-//   includeDeleted?: boolean;
-// }
 
 export async function createBlueprintFolder(
   input: CreateBlueprintFolderInput,
@@ -262,20 +230,6 @@ export async function deleteBlueprintDocument(
     throw new Error("Failed to remove deleted blueprint from business storage.");
   }
 
-  // AI-REMOVED 2026-08-08:
-  // Reason: 删除时间属于同步墓碑，不应伪装成蓝图业务内容的最后编辑时间。
-  // Trigger: 用户要求同步属性不得渗入蓝图主数据库对象。
-  // Evidence: updatedAt 被蓝图库用于展示和排序，而墓碑现在独立保存在 provider 同步 store。
-  // Replacement: 上方 writeActiveSyncTombstone；业务记录随后物理删除。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // return await writeBlueprintEntry(createBlueprintKey(blueprintId), {
-  //   ...record,
-  //   deletedAt,
-  //   updatedAt: deletedAt,
-  // });
   return record;
 }
 
@@ -330,20 +284,6 @@ export async function deleteBlueprintFolder(
     throw new Error("Failed to remove deleted blueprint folder from business storage.");
   }
 
-  // AI-REMOVED 2026-08-08:
-  // Reason: 文件夹删除时间属于同步墓碑，不是业务编辑时间。
-  // Trigger: 用户要求同步属性不得渗入蓝图主数据库对象。
-  // Evidence: 墓碑已迁入 provider 同步 store，主存储不再保留已删除文件夹。
-  // Replacement: 上方 writeActiveSyncTombstone；业务记录随后物理删除。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // return await writeBlueprintEntry(createFolderKey(rootFolder.folderId), {
-  //   ...rootFolder,
-  //   deletedAt,
-  //   updatedAt: deletedAt,
-  // });
   return rootFolder;
 }
 
@@ -438,24 +378,6 @@ export async function applyBlueprintSyncEntry<TValue extends BlueprintStorageEnt
   }
 }
 
-// AI-REMOVED 2026-08-08:
-// Reason: 旧入口把同步 deletedAt 合并进 BlueprintStorageEntry，导致业务对象与同步传输结构耦合。
-// Trigger: 用户要求同步属性全部收归同步存储。
-// Evidence: BlueprintRecord/BlueprintFolderRecord 已不再声明 deletedAt。
-// Replacement: listBlueprintSyncEntries + applyBlueprintSyncEntry。
-// Risk: Low；旧实验性调用点已统一迁移。
-// Human Review: Required
-//
-// Original code:
-// export async function upsertBlueprintStorageEntry(
-//   entry: BlueprintStorageEntry,
-// ): Promise<BlueprintStorageEntry | null> {
-//   const key = entry.kind === "blueprint"
-//     ? createBlueprintKey(entry.blueprintId)
-//     : createFolderKey(entry.folderId);
-//
-//   return await writeBlueprintEntry(key, entry);
-// }
 
 async function readBlueprintEntry(
   key: string,
@@ -815,14 +737,3 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-// AI-REMOVED 2026-09-28:
-// Reason: 过滤损坏条目会把读取错误当成空列表。
-// Trigger: 本地迁移恢复要求任何不可读原件都不能被静默覆盖。
-// Evidence: 审查复现高 schema 蓝图被覆盖后从业务列表消失。
-// Replacement: listBlueprintStorageEntries 的显式错误。
-// Risk: 损坏条目会阻止蓝图库加载，原始内容保持可恢复。
-// Human Review: Required
-// Original code:
-// return entries
-//   .map((entry) => normalizeBlueprintStorageEntry(entry))
-//   .filter((entry): entry is BlueprintStorageEntry => entry !== null);

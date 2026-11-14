@@ -22,52 +22,10 @@ import {
   createSnapshotStore,
   type SnapshotStoreReadWrite,
 } from "@/shared/snapshot/snapshot-store";
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/power-system/index.json
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// import {
-//   createBlueprint,
-//   createEntity,
-//   createWorldDocumentFromBlueprint,
-//   findSlot,
-//   getFirstTickAtSimulationMilliseconds,
-//   getDevice,
-//   getTick,
-//   resolveFirstTickNumberAtSimulationMilliseconds,
-// } from "./blueprint-test-helpers";
 import { createEntity, createWorldDocumentFromBlueprint, findSlot, getFirstTickAtSimulationMilliseconds, getDevice, getTick, resolveFirstTickNumberAtSimulationMilliseconds } from "./blueprint-test-helpers";
 import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 
-// AI-REMOVED 2026-09-08:
-// Reason: REQ-089 不再构造 Legacy Worker 私有 topology，也不再断言其缓存失效实现。
-// Trigger: 用户要求改为恢复供电立即生效的 Host 行为，并让整个 power-system 接入矩阵。
-// Evidence: powerConsumptionOverride 可通过真实文档稳定制造断电，powerMode 文档变更由 Host 转发给两种引擎。
-// Replacement: 下方 REQ-089 Host 行为矩阵。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
-// import { SimulationWorkerRuntime } from "@/simulation/worker-runtime";
-// import type { CompiledSimulationTopology } from "@/simulation/types";
-// import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
-// import { createSimulationTestRegistry } from "./simulation-test-registry";
 
-// AI-REMOVED 2026-09-08:
-// Reason: 供电、断电与拓扑刷新是生产 SimulationHost 的公共行为。
-// Trigger: 用户确认 power-system 全部接入矩阵。
-// Evidence: 本 describe 的用例均通过 Blueprint runner、SimulationHost 或 Editor→Host 真实链路观察行为。
-// Replacement: 下方 SIMULATION_ENGINE_MATRIX 参数化 describe。
-// Risk: Dense 可能暴露供电恢复或拓扑迁移差异。
-// Human Review: Required
-//
-// Original code:
-// describe("REQ-084: simulation power system", () => {
 describe.each(SIMULATION_ENGINE_MATRIX)("REQ-084: simulation power system [%s]", (engineKind) => {
   it("runs powered recipes and exposes total power demand through topology and snapshots", async () => {
     const report = await runBlueprintSimulation({
@@ -98,19 +56,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)("REQ-084: simulation power system [%s]",
         itemType: "item_iron_powder",
         count: 1,
       });
-    // AI-REMOVED 2026-09-08:
-    // Reason: 配方完成时间绑定 Legacy tick 41。
-    // Trigger: power-system 接入求解器矩阵并统一使用毫秒语义。
-    // Evidence: 两种引擎共同契约是 0ms 启动、2000ms 完成配方。
-    // Replacement: runningTick 与 completionTick 毫秒定位。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // const completionTick = 2 * STANDARD_TICK_RATE_PER_SECOND + 1;
-    // maxTickNumber: completionTick,
-    // expect(getDevice(report, 1, "grinder").channelRecipes["default"]).toMatchObject(...);
-    // expect(findSlot(report, completionTick, "grinder", "item_output_buffer", "output_slot_1"));
   });
 
   it("keeps out-of-range devices from starting new recipes", async () => {
@@ -124,8 +69,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)("REQ-084: simulation power system [%s]",
 
     expect(report.topology.totalPowerDemand).toBe(0);
     expect(completionTick.totalPowerDemand).toBe(0);
-    // AI-CORRECTION 2026-05-30: 无供电时 deviceSnapshot.channelRecipes 无 "default" key，
-    //   channelRecipes["default"] 返回 undefined（旧代码 flat recipeId 返回 null）。
     expect(getDevice(report, completionTick.tickNumber, "grinder").channelRecipes["default"])
       .toBeUndefined();
     expect(findSlot(
@@ -169,15 +112,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)("REQ-084: simulation power system [%s]",
       // 2. 在同一文档中新增供电桩（不替换整个文档，模拟用户放置行为）
       const currentDoc = documentStore.getSnapshot();
       const powerEntity = createEntity("power", "power_diffuser_1", 4, 0);
-      // AI-REMOVED 2026-09-14:
-      // Reason: 场景构造已批量固化为带版本的蓝图文件。
-      // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-      // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-      // Replacement: src/tests/fixtures/blueprints/collections/simulation/power-system/index.json
-      // Risk: Low；断言与被测动作不变。
-      // Human Review: Required
-      // Original code:
-      // { ...currentDoc.entities, [powerEntity.id]: powerEntity }
       const nextDoc: WorldDocument = {
         ...currentDoc,
         entities: loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/simulation/power-system/scene-01-variant-1.schema7.json").entities,
@@ -191,7 +125,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)("REQ-084: simulation power system [%s]",
         .toBe("in-power-range");
 
       // 4. 研磨机应恢复工作并产出（至少需要 2 秒即 40 ticks）
-      // AI-CORRECTION 2026-09-08: 恢复供电后的完成窗口改为公共 3500ms 相位，不再使用 Legacy tick 65。
       const completionTick = resolveFirstTickNumberAtSimulationMilliseconds(
         standardTickRate,
         3_500,
@@ -279,7 +212,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)("REQ-084: simulation power system [%s]",
     // 让 hookDocumentStorage 的异步初始化先执行完毕，避免后续覆盖测试文档。
     // hookDocumentStorage 中 resolveInitialDocument 在 lastDocumentId 为 null 时同步返回
     // createWorldDocument()，因此单次 microtask 即可完成。
-    // AI-CORRECTION 2026-09-08: 引擎矩阵分支必须隔离持久化入口，并以 documentKey 变化确认初始化完成；
     // 单次 microtask 只负责启动异步链，不能作为 Editor ready 契约。
     const bootstrapDocumentKey = editorHost.internalDocument.getSnapshot().documentKey;
     await Promise.resolve();
@@ -289,28 +221,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)("REQ-084: simulation power system [%s]",
       );
     }, { interval: 5 });
 
-    // 1. 设置只有研磨机（需要供电）的文档
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/power-system/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // const grinder = createTestEntity("grinder", "grinder_1", 0, 0, {
-    //       "storageSlotGroups[0].slots[0].initialItemType": "item_iron_nugget",
-    //       "storageSlotGroups[0].slots[0].initialCount": 1,
-    //     });
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections-extra/simulation/power-system/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [grinder]
     editorHost.internalDocument.setSnapshot(
       createTestDocument(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/simulation/power-system/scene-01-variant-1.schema7.json"))),
     );
@@ -339,19 +249,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)("REQ-084: simulation power system [%s]",
       const applied = editorHost.actions.applyPlacementDraft();
       expect(applied).toBe(true);
 
-      // 6. 等待 fire-and-forget 的 refreshFromCurrentDocument 完成。
-      //    注意：不可在此显式调用 refreshFromCurrentDocument，否则会修正 Bug 导致的错误拓扑。
-      //    用 setTimeout 确保所有 microtask（包括 runtime worker 的 loadTopology）已完成。
-      // AI-REMOVED 2026-09-08:
-      // Reason: 固定等待 50ms 不能表达拓扑刷新完成，在并发测试负载下存在竞态。
-      // Trigger: power-system 引擎矩阵中 Dense 分支读取到被迟到初始化覆盖的拓扑。
-      // Evidence: Dense 分支单独执行通过，跟随 Legacy 执行失败；documentHash 是实际刷新边界。
-      // Replacement: 下方 vi.waitFor 等待 documentHash 变化。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // await new Promise((resolve) => setTimeout(resolve, 50));
       await vi.waitFor(() => {
         expect(simulationHost.topology.getSnapshot()?.documentHash).not.toBe(
           topologyBefore?.documentHash,
@@ -443,15 +340,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)(
   },
 );
 
-// AI-REMOVED 2026-09-08:
-// Reason: 旧用例断言 Legacy Worker 的 tick 缓存失效机制，并绕过了生产 SimulationHost。
-// Trigger: 用户要求只验证恢复供电立即生效，并将 power-system 全部纳入求解器矩阵。
-// Evidence: 新用例通过文档 powerMode 切换观察断电状态和配方进度，Legacy 与 Dense 共用同一 Host 契约。
-// Replacement: 上方 REQ-089: power restoration takes effect 矩阵。
-// Risk: 旧用例额外覆盖“切回真实电力后再次冻结”，新公共契约聚焦用户指定的恢复供电行为。
-// Human Review: Required
-//
-// Original code:
 /*
 describe("REQ-089: power generation mode caching bug", () => {
   it("setPowerMode clears cached ticks so new mode takes effect immediately", () => {
@@ -626,27 +514,9 @@ function createEditorTestWorkspace(): WorkspaceContract {
     simulation: null,
     sync: null,
     audio: null,
-    blueprintPlanner: null,
   };
 }
 
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/power-system/index.json
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// function createTestEntity(
-//   id: string,
-//   definitionId: string,
-//   x: number,
-//   y: number,
-//   config: WorldEntity["config"] = {},
-// ): WorldEntity {
-//   return { id, definitionId, position: { x, y }, rotation: 0, config, tags: [] };
-// }
 
 function createTestDocument(entities: readonly WorldEntity[]): WorldDocument {
   return {
@@ -661,21 +531,6 @@ function createGrinderBlueprint(
   powerX: number,
   initialInputCount = 1,
 ): BlueprintDocument {
-  // AI-REMOVED 2026-09-14:
-  // Reason: 场景构造已批量固化为带版本的蓝图文件。
-  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-  // Replacement: src/tests/fixtures/blueprints/simulation/power-system/index.json
-  // Risk: Low；断言与被测动作不变。
-  // Human Review: Required
-  // Original code:
-  // createBlueprint(name, [
-  //     createEntity("grinder", "grinder_1", 0, 0, 0, {
-  //       "storageSlotGroups[0].slots[0].initialItemType": "item_iron_nugget",
-  //       "storageSlotGroups[0].slots[0].initialCount": initialInputCount,
-  //     }),
-  //     createEntity("power", "power_diffuser_1", powerX, 0),
-  //   ])
   return loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/simulation/power-system/index.json", "scene-01", { initialInputCount, name, powerX });
 }
 
@@ -690,20 +545,6 @@ function readHostStandardTickRate(
 }
 
 function createGrinderOnlyBlueprint(name: string): BlueprintDocument {
-  // AI-REMOVED 2026-09-14:
-  // Reason: 场景构造已批量固化为带版本的蓝图文件。
-  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-  // Replacement: src/tests/fixtures/blueprints/simulation/power-system/index.json
-  // Risk: Low；断言与被测动作不变。
-  // Human Review: Required
-  // Original code:
-  // createBlueprint(name, [
-  //     createEntity("grinder", "grinder_1", 0, 0, 0, {
-  //       "storageSlotGroups[0].slots[0].initialItemType": "item_iron_nugget",
-  //       "storageSlotGroups[0].slots[0].initialCount": 1,
-  //     }),
-  //   ])
   return loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/simulation/power-system/index.json", "scene-02", { name });
 }
 
@@ -725,7 +566,6 @@ function createHeadlessWorkspace(
     simulation: null,
     sync: null,
     audio: null,
-    blueprintPlanner: null,
   };
 }
 
@@ -754,7 +594,6 @@ function readGrinderProgressSeconds(
   if (status === null) {
     throw new Error("Expected grinder device runtime status.");
   }
-  // AI-CORRECTION 2026-05-30: channel id 为 "default"，非 "grind"。
   const grindStatus = status.channelRecipes["default"];
   if (grindStatus?.progressSeconds === null || grindStatus?.progressSeconds === undefined) {
     throw new Error("Expected grinder recipe to be running.");
@@ -765,8 +604,6 @@ function readGrinderProgressSeconds(
 function readGrinderRecipeId(
   host: ReturnType<typeof createSimulationHost>,
 ): string | null {
-  // AI-CORRECTION 2026-05-30: channel id 为 "default"，非 "grind"。
-  //   null ?? null 确保 channelRecipes 为空时返回 null 而非 undefined。
   return host.queries.getDeviceRuntimeStatus("grinder")?.channelRecipes["default"]?.recipeId ?? null;
 }
 

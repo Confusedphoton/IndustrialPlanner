@@ -23,6 +23,7 @@ import LucideTrash2 from "~icons/lucide/trash-2";
 import LucideX from "~icons/lucide/x";
 
 import styles from "./panels.module.scss";
+import { resolveBaseTagLabel } from "@/app/shell/shared/known-text-translation";
 
 export const RegionalResourcesCard = observer(function RegionalResourcesCard({
   appHost,
@@ -110,7 +111,7 @@ export const RegionalResourcesCard = observer(function RegionalResourcesCard({
       >
         <div className={cm(styles, "card-header regional-resources-header")}>
           <h3>{t("regionalResources.title")}</h3>
-          <span className={cm(styles, "regional-resources-region")}>{regionTag}</span>
+          <span className={cm(styles, "regional-resources-region")}>{resolveBaseTagLabel(regionTag, t)}</span>
         </div>
         <div className={cm(styles, "regional-resources-actions")}>
           <button

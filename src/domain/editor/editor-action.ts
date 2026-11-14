@@ -2,15 +2,6 @@ import type {
 	EntityCollectionType,
   EditorViewState,
 	MarqueeCollectionType,
-// AI-REMOVED 2026-11-12:
-// Reason: 相机属于独立 View，Editor 不再持有或驱动视口。
-// Trigger: REQ-048 已确认 D4 契约。
-// Evidence: 同源多视图需要独立相机，无头会话不创建动画驱动。
-// Replacement: editor-view-types.ts
-// Risk: 全部坐标、聚焦、持久化消费者需要迁移。
-// Human Review: Required
-// Original code:
-// 	MoveViewportByClientPixelVectorOptions,
 	EntityCollectionMemberOptions,
 	MoveCollectionToOptions,
 	RotateCollectionToSnapOnBuildingOptions,
@@ -31,60 +22,12 @@ import type { RegionRectOperation } from "./types/region-annotation-types";
 import type { SinglePlacementRequest } from "./types/editor-session-types";
 
 export interface EditorAction {
-	// AI-REMOVED 2026-11-12:
-// Reason: 相机属于独立 View，Editor 不再持有或驱动视口。
-// Trigger: REQ-048 已确认 D4 契约。
-// Evidence: 同源多视图需要独立相机，无头会话不创建动画驱动。
-// Replacement: EditorViewAction；App 聚焦几何
-// Risk: 全部坐标、聚焦、持久化消费者需要迁移。
-// Human Review: Required
-// Original code:
-// setViewportClientRect(clientRect: ClientPixelRect): void;
-	/// 平移画布用的
-	// AI-REMOVED 2026-11-12:
-// Reason: 相机属于独立 View，Editor 不再持有或驱动视口。
-// Trigger: REQ-048 已确认 D4 契约。
-// Evidence: 同源多视图需要独立相机，无头会话不创建动画驱动。
-// Replacement: EditorViewAction；App 聚焦几何
-// Risk: 全部坐标、聚焦、持久化消费者需要迁移。
-// Human Review: Required
-// Original code:
-// moveViewportByClientPixelVector(
-// 		options: MoveViewportByClientPixelVectorOptions,
-// 	): void;
-	// AI-REMOVED 2026-11-12:
-// Reason: 相机属于独立 View，Editor 不再持有或驱动视口。
-// Trigger: REQ-048 已确认 D4 契约。
-// Evidence: 同源多视图需要独立相机，无头会话不创建动画驱动。
-// Replacement: EditorViewAction；App 聚焦几何
-// Risk: 全部坐标、聚焦、持久化消费者需要迁移。
-// Human Review: Required
-// Original code:
-// zoom(step: number): void;
-	// AI-REMOVED 2026-11-12:
-// Reason: 相机属于独立 View，Editor 不再持有或驱动视口。
-// Trigger: REQ-048 已确认 D4 契约。
-// Evidence: 同源多视图需要独立相机，无头会话不创建动画驱动。
-// Replacement: EditorViewAction；App 聚焦几何
-// Risk: 全部坐标、聚焦、持久化消费者需要迁移。
-// Human Review: Required
-// Original code:
-// setViewportDisplayRotation(displayRotation: GridRotation): void;
 	/**
 	 * 平滑聚焦到指定实体：在约 0.75s 内将视口中心平移到实体中心、缩放到 gridSize=1。
 	 * 订正（2026-09-23）：目标缩放已由 gridSize=1（100%）提升到 252% 档，即 gridSize = 2^(4/3) ≈ 2.5198；
 	 * 上一行原文描述的「缩放到 gridSize=1」不再是当前行为。
 	 * 若动画期间用户手动操作了视口，动画立即终止。
 	 */
-	// AI-REMOVED 2026-11-12:
-// Reason: 相机属于独立 View，Editor 不再持有或驱动视口。
-// Trigger: REQ-048 已确认 D4 契约。
-// Evidence: 同源多视图需要独立相机，无头会话不创建动画驱动。
-// Replacement: EditorViewAction；App 聚焦几何
-// Risk: 全部坐标、聚焦、持久化消费者需要迁移。
-// Human Review: Required
-// Original code:
-// focusOnEntity(entityId: string, options?: { duration?: number }): void;
 
 	/** 更新鼠标 hover 位置，自动做 pixel→grid 转换和 entity 命中检测 */
 	setHoverPoint(clientPixel: ClientPixelPoint, viewport: EditorViewState): void;
@@ -173,15 +116,6 @@ export interface EditorAction {
 	selectRegion(regionId: string | null): void;
 	setRegionHovered(regionId: string | null): void;
 	setRegionVisible(regionId: string, visible: boolean): void;
-	// AI-REMOVED 2026-11-12:
-// Reason: 相机属于独立 View，Editor 不再持有或驱动视口。
-// Trigger: REQ-048 已确认 D4 契约。
-// Evidence: 同源多视图需要独立相机，无头会话不创建动画驱动。
-// Replacement: EditorViewAction；App 聚焦几何
-// Risk: 全部坐标、聚焦、持久化消费者需要迁移。
-// Human Review: Required
-// Original code:
-// focusOnRegion(regionId: string): void;
 	resetRegionInteraction(): void;
 
 	createLogisticsDraftStart(

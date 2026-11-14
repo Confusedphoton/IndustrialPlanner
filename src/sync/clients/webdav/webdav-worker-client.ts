@@ -1,8 +1,5 @@
 import {
   normalizeWebDavRootPath,
-  // AI-CORRECTION 2026-07-30: 以下类型别名来自 webdav-client.ts，底层指向 ../types。
-  // AI-CORRECTION 2026-08-13: 别名已删除（见 webdav-client.ts 的 AI-REMOVED 2026-08-13），
-  // 此处改为直接从 ../types 导入通用类型，行为不变。
 } from "./webdav-client";
 import type {
   WebDavWorkerOperation,
@@ -18,16 +15,6 @@ import type {
 import { attachWorkerRuntime } from "@/shared/worker/attach-worker-runtime";
 
 export interface WebDavWorkerStorageClientOptions extends SyncClientOptions {
-  // AI-REMOVED 2026-08-08:
-  // Reason: debugMode 已通过公共 Worker controlPort 发布，不再由 WebDAV 客户端逐请求读取。
-  // Trigger: ST2-RQ-009 单一调试开关与 Worker Runtime Contract。
-  // Evidence: attachWorkerRuntime() 在第一条业务消息前发送当前值并订阅后续变化。
-  // Replacement: src/shared/worker/attach-worker-runtime.ts。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // readonly readDebugEnabled?: () => boolean;
   readonly maxConcurrentRequests?: number;
   readonly onRequestActivityChange?: (
     activity: WebDavWorkerRequestActivity,
@@ -148,16 +135,6 @@ export function createWebDavWorkerStorageClient(
     const workerRequest: WebDavWorkerRequest = {
       requestId,
       clientOptions,
-      // AI-REMOVED 2026-08-08:
-      // Reason: 不再把调试状态混入业务请求协议。
-      // Trigger: ST2-RQ-009 controlPort 接管运行态设置同步。
-      // Evidence: bootstrap 是 Worker 收到的第一条消息。
-      // Replacement: attachWorkerRuntime(worker, "webdav")。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // debugEnabled: options.readDebugEnabled?.() === true,
       operation,
     };
 

@@ -107,18 +107,6 @@ export function isWorldEntityVisible(
 
 export const BELT_INSERTION_DEPTH_CELLS = 0.2
 
-// AI-REMOVED 2026-07-27:
-// Reason: renderer 不应维护 3 个传送带节 definition ID。
-// Trigger: 用户要求 registry 外只使用 RegistryQuery。
-// Evidence: RegistryQuery.isBelt 的定义正是 3 个传送带节。
-// Replacement: isStrictBeltDefinitionId 的 queries 参数。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// const STRICT_BELT_DEFINITION_IDS = new Set([
-//   "belt_straight_1x1", "belt_turn_cw_1x1", "belt_turn_ccw_1x1",
-// ])
 
 const EDGE_ORDER: readonly GridEdge[] = ["NORTH", "EAST", "SOUTH", "WEST"]
 

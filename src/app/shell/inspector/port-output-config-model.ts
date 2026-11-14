@@ -1,5 +1,7 @@
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import type { GridEdge, GridRotation } from "@/domain/shared/grid";
+import { resolveRotatedPortGeometry } from "@/shared/geometry/port";
 import {
   INSPECTOR_TYPE,
   type PortOutputConfigInspectorDeclaration,
@@ -108,7 +110,6 @@ export function resolveOutputGroupRows(
       }
     }
 
-    // AI-CORRECTION 2026-07-10: fluid 输出端口不是都可承载气体；标签按端口 acceptRule 区分液体/气体/流体。
     const kindLabel = resolveOutputKindLabel(portGroup);
 
     rows.push({
@@ -123,29 +124,6 @@ export function resolveOutputGroupRows(
   return rows;
 }
 
-/*
-  AI-REMOVED 2026-06-04:
-  Reason: 端口颜色不能按 P1/P2/P3 编号分色；编号已经由文字表达，颜色必须传递新增信息。
-  Trigger: 用户要求颜色按传送带/管道类型传递信息，并禁止颜色与文字重复表达同一语义。
-  Evidence: InspectorPanel设计风格规范已明确“端口色只表达类型，而不是端口编号”。
-  Replacement: resolvePortTone(portGroup) 按 portGroup.kind 返回 item/fluid。
-  Risk: Low
-  Human Review: Required
-
-  Original code:
-  export function resolvePortTone(index: number): "blue" | "green" | "orange" {
-    if (index === 0) {
-      return "blue";
-    }
-
-    if (index === 1) {
-      return "green";
-    }
-
-    return "orange";
-  }
-*/
-// AI-CORRECTION 2026-07-28: 返回值改为域位标志；端口物理色调由 portGroup.isPipe 单独决定。
 export function resolvePortTone(portGroup: PortGroupDefinition): ItemDomainFlags {
   return portGroup.kind;
 }
@@ -166,4 +144,47 @@ function resolveOutputKindLabel(portGroup: PortGroupDefinition): string {
     return "inspectorText.fluidOutput";
   }
   return "inspectorText.liquidOutput";
+}
+
+const OUTPUT_SIDE_KEYS: Readonly<Record<GridEdge, string>> = {
+  NORTH: "inspectorText.side.top",
+  EAST: "inspectorText.side.right",
+  SOUTH: "inspectorText.side.bottom",
+  WEST: "inspectorText.side.left",
+};
+
+/**
+ * 按端口在屏幕上的实际方位命名输出端口（如“右 1”“下”），取代与位置无关的 P# 序号。
+ * rotation 为设备朝向叠加视口旋转后的屏幕朝向；同侧多个端口按从左到右/从上到下编号，单个时不编号。
+ */
+export function resolveOutputPortSideLabels(options: {
+  readonly definition: EntityDefinition;
+  readonly rows: readonly OutputGroupRow[];
+  readonly rotation: GridRotation;
+  readonly translate: (key: string) => string;
+}): ReadonlyMap<string, string> {
+  const placed = options.rows.flatMap((row) => {
+    const port = row.portGroup.ports[0];
+    if (port === undefined) {
+      return [];
+    }
+    const geometry = resolveRotatedPortGeometry({
+      footprint: options.definition.footprint,
+      port,
+      rotation: options.rotation,
+    });
+    return [{ groupId: row.portGroup.id, edge: geometry.edge, x: geometry.cell.x, y: geometry.cell.y }];
+  });
+
+  const labels = new Map<string, string>();
+  for (const edge of Object.keys(OUTPUT_SIDE_KEYS) as GridEdge[]) {
+    const sameSide = placed
+      .filter((entry) => entry.edge === edge)
+      .sort((left, right) => (edge === "NORTH" || edge === "SOUTH" ? left.x - right.x : left.y - right.y));
+    sameSide.forEach((entry, index) => {
+      const side = options.translate(OUTPUT_SIDE_KEYS[edge]);
+      labels.set(entry.groupId, sameSide.length > 1 ? `${side} ${index + 1}` : side);
+    });
+  }
+  return labels;
 }

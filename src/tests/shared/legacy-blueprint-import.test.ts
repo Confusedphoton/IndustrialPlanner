@@ -160,59 +160,7 @@ describe("legacy-blueprint-import", () => {
     });
   });
 
-  // AI-REMOVED 2026-05-10:
-  // Reason: The warehouse-unloader blanket remap assertion was based on a false
-  //   hypothesis and would force the current system blueprints to migrate into an
-  //   incorrect direction.
-  // Trigger: The premium capsule legacy source already stores its top-row unloaders
-  //   at rotation=180, and the current migrated system blueprint preserves those
-  //   rotations to feed the belts below.
-  // Evidence: Legacy source and migrated public asset agree on the unloader line;
-  //   the added assertion contradicted that corpus.
-  // Replacement: The existing import tests remain the active coverage until a
-  //   version-gated warehouse-port migration rule is identified.
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // it("remaps legacy warehouse unloader rotation to the current port basis", () => {
-  //   const converted = convertLegacyBlueprintJson({
-  //     schema: "industrial-planner-blueprint",
-  //     name: "仓库取货口朝向兼容测试",
-  //     createdAt: "2026-03-04T15:00:38.701Z",
-  //     baseId: "wuling_tianwangping_aid",
-  //     devices: [
-  //       {
-  //         typeId: "item_port_unloader_1",
-  //         rotation: 0,
-  //         origin: { x: 6, y: 4 },
-  //         config: {},
-  //       },
-  //       {
-  //         typeId: "item_port_unloader_1",
-  //         rotation: 90,
-  //         origin: { x: 9, y: 4 },
-  //         config: {},
-  //       },
-  //     ],
-  //   }, {
-  //     entityIdPrefix: "warehouse_unloader_remap",
-  //   });
-  //
-  //   expect(converted?.entities).toMatchObject({
-  //     warehouse_unloader_remap_0001: {
-  //       definitionId: "item_port_unloader_1",
-  //       rotation: 180,
-  //     },
-  //     warehouse_unloader_remap_0002: {
-  //       definitionId: "item_port_unloader_1",
-  //       rotation: 270,
-  //     },
-  //   });
-  // });
 
-  // AI-CORRECTION 2026-05-10: item_port_unloader_1 的 registry 基准已改为
-  //   rotation=0 时端口朝南，因此旧版蓝图迁移重新需要 +180 度补偿。
   it("remaps legacy warehouse unloader rotation to the current port basis", () => {
     const converted = convertLegacyBlueprintJson({
       schema: "industrial-planner-blueprint",
@@ -300,7 +248,6 @@ describe("legacy-blueprint-import", () => {
       "storageSlotGroups[0].slots[0].ignoreStock": true,
       "storageSlotGroups[5].slots[0].ignoreStock": false,
     });
-    // AI-CORRECTION 2026-06-09: links 已迁移至 document.slotLinks，不再出现在 entity.config 中。
     expect(converted?.slotLinks).toHaveLength(2);
     expect(converted?.slotLinks).toContainEqual({
       id: "warehouse-link:protocol_core_0001:unbuffer_w2:slot_1",

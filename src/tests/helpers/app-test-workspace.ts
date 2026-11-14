@@ -17,7 +17,7 @@ export function createAppTestWorkspace() {
   const workspace: WorkspaceContract = {
     state: createWorkspaceState(), registry: createRegistryContract(),
     app: null, editor: null, render: null, simulation: null,
-    sync: null, audio: null, blueprintPlanner: null,
+    sync: null, audio: null,
   };
   const app = createAppTestHost(workspace);
   return { workspace, app };
@@ -28,17 +28,6 @@ export function createAppTestHost(workspace: WorkspaceContract, options: { mode?
   const sceneFactories = createSceneSessionFactories(workspace.registry);
   const mainView = getTestView(workspace);
   const app = createAppHost(workspace, { ...options, mainView, sceneFactories });
-  // AI-REMOVED 2026-11-12:
-  // Reason: Editor 测试装配统一拥有文档绑定，App 构造顺序不应重复注册。
-  // Trigger: REQ-048 测试组合根迁移。
-  // Evidence: 编辑器可以先于工作台创建和设置相机。
-  // Replacement: createEditorTestHost
-  // Risk: Low
-  // Human Review: Required
-  // Original code:
-  // const editor = workspace.editor;
-  // const releaseBinding = editor !== null && "internalDocumentWriter" in editor
-  //   ? bindTestMainView(editor as ReturnType<typeof createEditorHost>, mainView) : null;
   const dispose = app.dispose;
   app.dispose = () => { dispose(); mainView.dispose(); if (views.get(workspace) === mainView) views.delete(workspace); };
   return app;

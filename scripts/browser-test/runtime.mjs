@@ -148,7 +148,7 @@ export class BrowserRound {
       if (expired || code !== 0) throw new Error(`${executable} ${expired ? "超时" : `退出 ${code}`}；日志：${log}\n${output.slice(-6000)}`);
       return executable === "playwright-cli" ? cliResult(output) : output;
     } catch (error) {
-      // 2026-10-16：Playwright 报告不会展开嵌套 AggregateError，命令自身日志必须保留失败原因。
+      // Playwright 报告不会展开嵌套 AggregateError，命令自身日志必须保留失败原因。
       writes = writes.then(() => file.write(`\n[command failure] ${String(error)}\n`));
       throw error;
     } finally {
@@ -257,21 +257,6 @@ export class BrowserRound {
         try { process.kill(item.pid, "SIGTERM"); } catch (error) { if (error.code !== "ESRCH") errors.push(error); }
       }
     }
-    // AI-REMOVED 2026-10-05:
-    // Reason: detached daemon 的后代可能拥有独立进程组；需按 PID 与启动时刻核验归属。
-    // Trigger: 基座异常清理要求。Evidence: CLI daemon 会派生独立 Chromium 进程。
-    // Replacement: 上方 owned 与 terminateOwned。Risk: Low。Human Review: Required
-    // Original code:
-    //     for (const child of this.children) this.killGroup(child.pid, "SIGTERM");
-    //     const groups = new Set([...this.children].map(child => child.pid));
-    //     let remaining = [];
-    //     for (let attempt = 0; attempt < 30; attempt++) {
-    //       remaining = (await browserProcesses()).filter(item => groups.has(item.group)
-    //         || [...this.sessions.keys()].some(name => item.args.includes("cliDaemon.js") && item.args.includes(name)));
-    //       if (!remaining.length) break;
-    //       if (attempt === 15) for (const child of this.children) this.killGroup(child.pid, "SIGKILL");
-    //       await delay(100);
-    //     }
     await terminateOwned("SIGTERM");
     let remaining = [];
     for (let attempt = 0; attempt < 30; attempt++) {

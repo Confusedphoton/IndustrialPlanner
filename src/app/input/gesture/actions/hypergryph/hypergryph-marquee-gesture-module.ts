@@ -15,16 +15,6 @@ import { collectConnectedStrictLogisticsEntityIds } from "@/shared/transport-com
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { ALL_SHORTCUT_ACTIVE_TOOLS } from "../shortcut-route-matching";
-// AI-REMOVED 2026-09-10:
-// Reason: 操作模式总开关已废弃，不再保留关闭分支
-// Trigger: 用户要求彻底移除 hypergryphOperationMode。
-// Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-// Replacement: gesture-action-router.ts 的默认启用语义
-// Risk: 历史 false 设置统一使用当前操作行为。
-// Human Review: Required
-//
-// Original code:
-// import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 import { openOverlapEntityMenuIfNeeded } from "./overlap-entity-candidates";
 
 const MARQUEE_RIGHT_DOCK_OPERATION_IDS = [
@@ -45,26 +35,6 @@ const EMPTY_MARQUEE_RIGHT_DOCK_OPERATION_IDS = [
   "exit-marquee",
 ] as const;
 
-// AI-REMOVED 2026-08-22:
-// Reason: 框选手势现在声明功能与本次 presentation，不再直接声明按钮 ID。
-// Trigger: 用户要求呼起方只决定展示按钮、快捷键或两者。
-// Evidence: showMarqueeRightDockToolbar 将 operationIds 映射为逐项请求。
-// Replacement: MARQUEE_RIGHT_DOCK_OPERATION_IDS 与 EMPTY_MARQUEE_RIGHT_DOCK_OPERATION_IDS。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// const MARQUEE_RIGHT_DOCK_BUTTON_IDS = [
-//   "canvas-right-dock-toolbar-button-exit",
-//   "canvas-right-dock-toolbar-button-move",
-//   "canvas-right-dock-toolbar-button-copy",
-//   "canvas-right-dock-toolbar-button-save-blueprint",
-//   "canvas-right-dock-toolbar-button-delete",
-// ] as const;
-//
-// const EMPTY_MARQUEE_RIGHT_DOCK_BUTTON_IDS = [
-//   "canvas-right-dock-toolbar-button-exit",
-// ] as const;
 
 const MARQUEE_TOP_LEFT_BUTTON_IDS = [
   "canvas-top-left-corner-toolbar-button-toggle-pipe",
@@ -84,16 +54,6 @@ const TOGGLE_BELT_OFF = "canvas-top-left-corner-toolbar-button-toggle-belt-off";
 export function createHypergryphMarqueeGestureModule(): GestureMappingModule<AppHost> {
   return {
     id: "hypergryph-marquee-gesture",
-    // AI-REMOVED 2026-09-10:
-    // Reason: 操作模式总开关已废弃，不再保留关闭分支
-    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-    // Replacement: gesture-action-router.ts 的默认启用语义
-    // Risk: 历史 false 设置统一使用当前操作行为。
-    // Human Review: Required
-    //
-    // Original code:
-    // when: isHypergryphGestureEnabled,
     shortcutRoutes: [{
       id: "marquee.toggle",
       operation: "marquee-select",
@@ -156,15 +116,6 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
           }
           return { status: "handled" };
 
-        // AI-REMOVED 2026-08-30:
-        // Reason: X 由 marquee.toggle Route 执行；Escape 由更高优先级的固定取消 Route 执行。
-        // Trigger: ST2-RQ-020 固定与可配置键盘 Action 统一。
-        // Evidence: marquee.toggle 声明 canvas 全工具作用域；active-tool.cancel-to-select 声明取消工具域。
-        // Replacement: marquee.toggle and active-tool.cancel-to-select Shortcut Routes
-        // Risk: Low
-        // Human Review: Required
-        //
-        // Original code:
         /*
         case "key down":
           if (event.code === "Escape" && context.appHost.internalState.activeTool === "marquee") {
@@ -563,16 +514,6 @@ function updateMarqueeRange(options: {
 }
 
 function exitMarqueeToSelect(canvas: CanvasInteractionController): void {
-  // AI-REMOVED 2026-11-12:
-  // Reason: 真实工具切换同步触发 on-exit，再次清理导致取消动作执行两次。
-  // Trigger: REQ-048 统一 Canvas 输入生命周期；真实路由回归暴露重复取消。
-  // Evidence: X 退出调用本函数，setActiveTool 发布 on-exit 后又调用 cleanupMarquee。
-  // Replacement: 本模块 on-exit-active-tool 分支统一清理。
-  // Risk: 直接调用模块的测试需要实际工具生命周期；产品入口均经注册路由。
-  // Human Review: Required
-  // Original code:
-  // cleanupMarquee(canvas, editor);
-  // canvas.actions.hideCanvasTopLeftCornerToolbar();
   canvas.actions.setActiveTool("select");
 }
 
@@ -608,26 +549,6 @@ export function showMarqueeRightDockToolbar(
   );
 }
 
-// AI-REMOVED 2026-08-22:
-// Reason: 框选工具列刷新不再复用工具列级 mode，也不再传递按钮 ID。
-// Trigger: presentation 已成为逐项展示请求。
-// Evidence: 新实现从退出功能请求继承 presentation，并为每个 operationId 构造请求。
-// Replacement: 上方 showMarqueeRightDockToolbar 实现。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// export function showMarqueeRightDockToolbar(
-//   appHost: AppHost,
-//   editor: EditorContract | null,
-//   mode = appHost.internalState.runtime.canvasRightDockToolbar.mode,
-// ): void {
-//   const buttonIds = (editor?.state.collections.selection?.length ?? 0) > 0
-//     ? MARQUEE_RIGHT_DOCK_BUTTON_IDS
-//     : EMPTY_MARQUEE_RIGHT_DOCK_BUTTON_IDS;
-//
-//   appHost.internalActions.showCanvasRightDockToolbar(buttonIds, mode);
-// }
 
 function toggleEntityOrStrictLogisticsSegmentInSelection(options: {
   canvas: CanvasInteractionController;

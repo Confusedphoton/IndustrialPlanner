@@ -1,26 +1,6 @@
 import { configuredDeviceItemIds, runningDeviceItemIds, deviceLabelEntityId, selectedRecipeDeviceItemIds } from "@/shared/device-item-labels";
 import type { ScenePresentation } from "@/domain/document/scene-view-input";
 import { lookupText } from "@/shared/i18n";
-// AI-REMOVED 2026-11-12:
-// Reason: 直接 Assets 加载绕过视图的资源租约和异步刷新。
-// Trigger: REQ-048 按需绘制及多视图资源释放。
-// Evidence: Sprite 存在三个直接加载入口；缓存消费者需重新通知所属 View。
-// Replacement: TextureActions.getTexture，optional 保留装饰失败降级。
-// Risk: Low；不改变必要纹理失败策略。
-// Human Review: Required
-// Original code:
-// import {
-//   CanvasTextMetrics,
-//   Container,
-//   Graphics,
-//   Sprite,
-//   Text,
-//   TextStyle,
-//   Texture,
-//   TilingSprite,
-//   Assets,
-//   type TextStyleOptions,
-// } from "pixi.js"
 import { CanvasTextMetrics, Container, Graphics, Sprite, Text, TextStyle, Texture, TilingSprite, type TextStyleOptions } from "pixi.js";
 
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
@@ -55,11 +35,6 @@ import {
   resolveDeviceLabelIconTextureKey,
   isDeviceLogisticsEndpoint,
   shouldForceBlueprintDeviceTexture,
-  // AI-REMOVED 2026-09-05: REQ-025 本体和 mask 统一由 resolveDeviceBodyPresentation 选择。
-  // Evidence: syncDeviceTextures 同时决定静态纹理和动画资格。Replacement: resolveDeviceBodyPresentation。
-  // Risk: Low; Human Review: Required. Original code:
-  // resolveDeviceBodyTextureKey,
-  // resolveDeviceMaskTextureKey,
 } from "@/renderer/sprites/device-texture-key"
 import { applyBitmapTextureConfig, type RenderTextureConfig } from "@/renderer/texture/texture-config"
 import { createInsetItemIconTexture, isFallbackTexture, type DeviceAnimationTextures } from "../texture"
@@ -69,69 +44,18 @@ import {
   RenderSpriteSyncContext,
 } from "./render-sprite"
 import { BaseRenderSprite } from "./base-render-sprite"
-// AI-REMOVED 2026-10-13:
-// Reason: 设备断电提示的启用规则统一归 Registry Query。
-// Trigger: 用户要求 Renderer 不再持有储存箱 ID 与定时上传特例。
-// Evidence: RegistryQuery.isPowerWarningEnabled 已覆盖原设备和配置判断。
-// Replacement: 下方 shouldShowPowerDisconnectedIcon 调用 workspace.registry.queries。
-// Risk: Low - 供电覆盖和图标渲染保持原有行为。
-// Human Review: Required
-//
-// Original code:
-// import { shouldShowPowerDisconnectedIcon } from "./device-power-status"
 
 const DEGREE_TO_RADIAN = Math.PI / 180
 const POWER_DISCONNECTED_TEXTURE_KEY = "texture-power-disconnected"
 // 取自游戏截图“供电桩放置-触碰到设备.png”中断电插头实心区域的主色。
 const POWER_DISCONNECTED_ICON_TINT = 0xfea737
 
-// AI-REMOVED 2026-09-05:
-// Reason: 本体素材前缀收敛至统一展示解析入口。
-// Trigger: REQ-025 蓝图静态优先与可选动画。
-// Evidence: syncDeviceTextures 使用 resolveDeviceBodyPresentation。
-// Replacement: device-texture-key.ts。
-// Risk: Low; Human Review: Required.
-// Original code:
-// const BLUEPRINT_SPRITE_TEXTURE_PREFIX = "blueprint-sprite-"
-// const BLUEPRINT_MASK_TEXTURE_PREFIX = "blueprint-masks-"
-// AI-REMOVED 2026-07-27:
-// Reason: renderer 不应重复维护 8 个物流设备 definition ID。
-// Trigger: 用户要求 registry 外只通过 Query 判断；物流设备明确不包括传送带节和管道节。
-// Evidence: RegistryQuery.isBeltLogistics/isPipeLogistics 已覆盖蓝图预览范围。
-// Replacement: shouldForceBlueprintPreviewTexture。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// const FORCE_BLUEPRINT_PREVIEW_DEFINITION_IDS = new Set([
-//   "log_splitter", "log_converger", "log_connector", "log_admission",
-//   "pipe_splitter", "pipe_converger", "pipe_connector", "pipe_admission",
-// ])
 
 const DEFAULT_GHOST_ROOT_ALPHA = 0.2;
 const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1;
 const WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH = 4;
 
-// AI-REMOVED 2026-11-12:
-// Reason: 直接 Assets 加载绕过视图的资源租约和异步刷新。
-// Trigger: REQ-048 按需绘制及多视图资源释放。
-// Evidence: Sprite 存在三个直接加载入口；缓存消费者需重新通知所属 View。
-// Replacement: TextureActions.getTexture，optional 保留装饰失败降级。
-// Risk: Low；不改变必要纹理失败策略。
-// Human Review: Required
-// Original code:
-// const SCANLINE_TEXTURE_PATH = createPublicAssetUrl("textures/scanline-45deg-50opacity.webp");
 
-// 美术站遮罩专题的可平铺覆盖纹理；SHA-256: 4ec51651bceeb207556d734ac52af69fb06373a337c8a8fa1c205c0d1958f941。
-// AI-REMOVED 2026-11-12:
-// Reason: 直接 Assets 加载绕过视图的资源租约和异步刷新。
-// Trigger: REQ-048 按需绘制及多视图资源释放。
-// Evidence: Sprite 存在三个直接加载入口；缓存消费者需重新通知所属 View。
-// Replacement: TextureActions.getTexture，optional 保留装饰失败降级。
-// Risk: Low；不改变必要纹理失败策略。
-// Human Review: Required
-// Original code:
-// const BLUEPRINT_SELECTION_TEXTURE_PATH = createPublicAssetUrl("textures/blueprint-overlay-tile.webp");
 
 /** 扫描线超出设备边界的像素 padding（按 tile 个数 × 纹理原始宽度） */
 const SCANLINE_PADDING_TILES = 2;
@@ -141,26 +65,6 @@ const BLUEPRINT_SCANLINE_TINT = 0x666666;
 const SUPPRESSED_BELT_COLOR = 0xFFD54A;
 const SUPPRESSED_PIPE_COLOR = 0x448AFF;
 
-// AI-REMOVED 2026-06-14:
-// Reason: selection 不再使用 blueprint-mask 纹理，改为 scanline
-// Trigger: 用户需求"线框+扫描线线"
-// Replacement: drawSelectionOverlay 走 scanline 路径
-// Risk: Low
-// Human Review: Not Required
-//
-// Original code:
-// const BLUEPRINT_MASK_TEXTURE_PATH = "/textures/blueprint-mask-50opacity.png";
-// AI-REMOVED 2026-08-26:
-// Reason: 单设备 preview 改为复用 selection 的响应式橙色焦点描边，不再使用固定 1px 半透明白框。
-// Trigger: 用户反馈蓝图样式下关联设备的橙框压过当前操作虚影，无法辨认操作焦点。
-// Evidence: preview 与 selection 在交互上互斥；关联设备仍保留原扫描线，只移除焦点描边。
-// Replacement: drawScanlineOverlay 中的 resolveSelectionCollectionOverlayColor / resolveSelectionCollectionOverlayStrokeWidth。
-// Risk: Low；preview 描边会随缩放在 1px 到 4px 之间变化，并与 selection 保持一致。
-// Human Review: Required
-//
-// Original code:
-// const PREVIEW_BORDER_WIDTH = 1;
-// const PREVIEW_BORDER_ALPHA = 0.5;
 
 // ---- Fallback 精灵纹理 ----
 const FALLBACK_SPRITE_TEXTURE_PATH = createPublicAssetUrl("textures/missing-sprite-texture.webp");
@@ -236,58 +140,14 @@ const DEVICE_LABEL_MIN_TEXT_WIDTH = 24;
 const DEVICE_LABEL_GAP = 2;
 const DEVICE_LABEL_LINE_HEIGHT_RATIO = 1.16;
 const DEVICE_LABEL_DEFAULT_TEXT_COLOR = 0xffffff;
-// AI-REMOVED 2026-09-12:
-// Reason: 3D Top 设备名称不再使用描边与旧的柔化下投影，改为匹配白色 avatar 的东南硬投影。
-// Trigger: 用户要求设备名称文字使用与图片相同的阴影，且只在 3D Top 下生效。
-// Evidence: createDeviceNameTextStyle 的非蓝图分支是 3D Top 标签文字的唯一样式入口。
-// Replacement: DEVICE_LABEL_TOP_VIEW_SHADOW_COLOR 与配套阴影参数。
-// Risk: Low；蓝图分支仍保持黑色无阴影。
-// Human Review: Required
-//
-// Original code:
-// const DEVICE_LABEL_DEFAULT_STROKE_COLOR = 0x20242a;
 const DEVICE_LABEL_TOP_VIEW_SHADOW_COLOR = 0x4c4c4c;
 const DEVICE_LABEL_TOP_VIEW_SHADOW_ALPHA = 0.72;
-// AI-CORRECTION 2026-09-12: 游戏内覆盖文字使用全向深色轮廓与独立右下硬阴影；阴影不再承担轮廓职责。
 const DEVICE_LABEL_TOP_VIEW_OUTLINE_COLOR = 0x252525;
 const DEVICE_LABEL_TOP_VIEW_OUTLINE_ALPHA = 0.96;
 const DEVICE_LABEL_TOP_VIEW_OUTLINE_WIDTH_RATIO = 0.12;
 const DEVICE_LABEL_TOP_VIEW_SHADOW_OFFSET_RATIO = 0.08;
 const DEVICE_LABEL_BLUEPRINT_TEXT_COLOR = 0x111111;
 
-// AI-REMOVED 2026-06-14:
-// Reason: 边缘流光特效已移除
-// Trigger: 用户需求"不再做流光特效"
-// Replacement: None
-// Risk: Low
-// Human Review: Not Required
-//
-// Original code:
-// const FLOW_GLOW_TEXTURE_PATH = "/textures/flow-glow.png";
-// AI-REMOVED 2026-06-14:
-// Reason: 未使用，ESLint no-unused-vars；resolveFlowGlowBorderWidth 被注释删除后无引用
-// Trigger: ESLint 检查报错（resolveFlowGlowBorderWidth 注释后级联暴露）
-// Evidence: 全局搜索仅在被注释的 resolveFlowGlowBorderWidth 中有引用
-// Replacement: None
-// Risk: Low — 边缘流光线宽参数，等待流光功能实现后恢复
-// Human Review: Not Required
-//
-// Original code:
-// /** 边缘流光内边框粗细（px），默认 5px */
-// /** 2026-05-05: 现改为动态计算后的上限值，真实线宽按实体渲染后最长边的 8% 决定，并夹取到 1-5px。 */
-// const FLOW_GLOW_BORDER_MAX_WIDTH = 5;
-// const FLOW_GLOW_BORDER_MIN_WIDTH = 1;
-// AI-REMOVED 2026-06-14:
-// Reason: 未使用，ESLint no-unused-vars
-// Trigger: ESLint 检查报错
-// Evidence: 全局搜索无引用，功能可能未实现或重构遗留
-// Replacement: None
-// Risk: Low — 仅用于流光滑动动画，当前无调用者
-// Human Review: Not Required
-//
-// Original code:
-// /** 流光滑动周期（ms） */
-// const FLOW_GLOW_SCROLL_INTERVAL_MS = 5000;
 
 type PortGroupDefinition = EntityDefinition["portGroups"][number];
 type PortDefinition = PortGroupDefinition["ports"][number];
@@ -331,7 +191,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private readonly deviceNameText: Text
   private currentLayout: RenderSpriteLayout | null = null
   /** 足迹（不含 spriteOffset）在视口中的布局，用于绘制线框。仅有 spriteOffset 的设备才需要计算。 */
-  /** AI-CORRECTION 2026-07-11: 该布局现在也作为设备信息层的居中基准，避免图标/名称跟随偏移后的精灵中心。 */
   private currentFootprintLayout: { x: number; y: number; width: number; height: number } | null = null
   private disposed = false
   private isTextureReady = false
@@ -369,14 +228,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private animationWasHidden = false
   private animationStableResetPending = false
   private discardNextAnimationDelta = true
-  // AI-REMOVED 2026-09-05:
-  // Reason: 已正式放置的非工作设备同样需要播放 close_idle，不能增加首次仿真门槛。
-  // Trigger: REQ-025 非工作态与草稿静态边界审阅。
-  // Evidence: entity/originalEntityId 与 collections 已完整排除草稿。
-  // Replacement: syncDeviceAnimationInputs 的正式实体判定。
-  // Risk: Low; Human Review: Required.
-  // Original code:
-  // private hasEnteredRuntime = false
 
   /** 扫描线 TilingSprite，完全由 GenericDeviceSprite 自己管理 */
   protected readonly scanlineTiling: TilingSprite;
@@ -387,11 +238,9 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private readonly scanlineRectMask: Graphics;
 
   /** preview 白色固定宽度边框线 */
-  /** AI-CORRECTION 2026-08-26: preview 边框现为与 selection 一致的响应式橙色焦点描边。 */
   private readonly previewBorderGraphics: Graphics;
 
   /** selection 特效：blueprint mask 平铺 + device mask 裁剪 */
-  /** AI-CORRECTION 2026-05-10: 开启蓝图样式设备图片后，此处裁剪遮罩改为 blueprint-view/sprite-masks；关闭时仍使用 device mask。 */
   private readonly selectionEffectRoot: Container;
   private readonly selectionMask: Sprite;
   protected readonly selectionTiling: TilingSprite;
@@ -402,25 +251,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   /** 蓝图模式下框选特效的矩形遮罩，替代 selectionMask 纹理遮罩 */
   private readonly selectionRectMask: Graphics;
 
-  // AI-REMOVED 2026-06-14:
-  // Reason: 边缘流光特效改为扫描线+线框方案
-  // Trigger: 用户需求"线框+扫描线线，不再做流光特效"
-  // Evidence: 单选改用 drawSelectionOverlay (扫描线+drawCollectionOverlayStroke)
-  // Replacement: selection 特效统一走 drawSelectionOverlay 的扫描线+线框路径
-  // Risk: Low
-  // Human Review: Not Required
-  //
-  // Original code:
-  // /** 边缘流光特效 */
-  // private readonly flowGlowEffectRoot: Container;
-  // /** 内边框底色 Graphics */
-  // private readonly flowGlowBorderGraphics: Graphics;
-  // /** 矩形遮罩 Graphics，将流光裁剪到设备矩形区域内 */
-  // private readonly flowGlowMask: Graphics;
-  // /** 扇形光束 TilingSprite，从设备中心旋转，纹理平铺填充 */
-  // private readonly flowGlowBeam: TilingSprite;
-  // private flowGlowTexture: Texture | null = null;
-  // private flowGlowTextureLoadStarted = false;
 
   private defaultCollectionOverlayGraphics: Graphics | null = null;
 
@@ -525,7 +355,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.scanlineRectMask.renderable = false;
 
     // preview 白色固定边框线，位于扫描线之上
-    // AI-CORRECTION 2026-08-26: 边框现改为 selection 橙色焦点描边；扫描线保持原样。
     this.previewBorderGraphics = new Graphics({ roundPixels: true });
     this.previewBorderGraphics.visible = false;
 
@@ -536,7 +365,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.getRootOfLayer("overlay").addChild(this.previewEffectRoot)
 
     // selection 特效：blueprint mask 平铺 + device mask 裁剪
-    // AI-CORRECTION 2026-05-10: 开启蓝图样式设备图片后，此处裁剪遮罩改为 blueprint-view/sprite-masks；关闭时仍使用 device mask。
     this.selectionEffectRoot = new Container()
     this.selectionEffectRoot.visible = false
 
@@ -561,33 +389,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.selectionEffectRoot.addChild(this.selectionRectMask)
     this.getRootOfLayer("overlay").addChild(this.selectionEffectRoot)
 
-    // AI-REMOVED 2026-06-14:
-    // Reason: 边缘流光特效改为扫描线+线框方案
-    // Trigger: 用户需求"线框+扫描线线，不再做流光特效"
-    // Evidence: 单选改用 drawSelectionOverlay (扫描线+drawCollectionOverlayStroke)
-    // Replacement: selection 特效统一走 drawSelectionOverlay 的扫描线+线框路径
-    // Risk: Low
-    // Human Review: Not Required
-    //
-    // Original code:
-    // // 边缘流光特效：内边框底色 + 扇形光束从中心旋转，矩形遮罩裁剪
-    // this.flowGlowEffectRoot = new Container()
-    // this.flowGlowEffectRoot.visible = false
-    //
-    // this.flowGlowBorderGraphics = new Graphics({ roundPixels: true });
-    //
-    // this.flowGlowMask = new Graphics({ roundPixels: true });
-    // this.flowGlowEffectRoot.addChild(this.flowGlowMask);
-    // this.flowGlowEffectRoot.mask = this.flowGlowMask;
-    //
-    // this.flowGlowBeam = new TilingSprite({ texture: Texture.EMPTY, width: 0, height: 0 });
-    // this.flowGlowBeam.anchor.set(0.5);
-    // this.flowGlowBeam.roundPixels = true;
-    // this.flowGlowBeam.visible = false;
-    //
-    // this.flowGlowEffectRoot.addChild(this.flowGlowBorderGraphics);
-    // this.flowGlowEffectRoot.addChild(this.flowGlowBeam);
-    // this.getRootOfLayer("overlay").addChild(this.flowGlowEffectRoot);
 
     this.portOverlayRoot = new Container()
     this.portOverlayRoot.visible = false
@@ -600,16 +401,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
   ): void {
-    // AI-REMOVED 2026-09-16:
-    // Reason: 根节点平移统一交由 BaseRenderSprite，覆盖普通设备和物流设备。
-    // Trigger: 浏览器计数显示大部分完整布局调用来自物流精灵。
-    // Evidence: pan 中 syncLayoutCalls 3789 / syncPositionCalls 1381。
-    // Replacement: BaseRenderSprite.syncLayout。
-    // Risk: 通过真实浏览器全量布局像素对照验证。
-    // Human Review: Required
-    // Original code:
-    // 完整布局回到绝对屏幕坐标，清除先前纯平移累积的根节点变换。
-    // for (const root of this.getAllRoots()) { root.x = 0; root.y = 0 }
     this.currentLayout = layout
     this.currentGridCellPixelSize = this.resolveWorkspaceGridCellPixelSize(context)
     this.currentFootprintLayout = this.computeFootprintLayout(layout, context)
@@ -629,23 +420,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.applyLayout(layout)
   }
 
-  // AI-REMOVED 2026-09-16:
-  // Reason: 纯平移能力上移至所有精灵共用的基类。
-  // Trigger: 物流设备也需复用平移路径。
-  // Evidence: 移动屏幕不改变精灵本地几何。
-  // Replacement: BaseRenderSprite.syncPosition。
-  // Risk: 子类异步纹理回调仍使用最近完整布局。
-  // Human Review: Required
-  // Original code:
-  //   public syncPosition(layout: RenderSpriteLayout): void {
-  //     if (this.currentLayout === null) return
-  //     // 子节点及异步纹理回调继续使用最后一次完整布局；平移由父节点统一承担。
-  //     for (const root of this.getAllRoots()) {
-  //       root.x = layout.x - this.currentLayout.x
-  //       root.y = layout.y - this.currentLayout.y
-  //     }
-  //   }
-  //
   public syncRuntime(
     layout: RenderSpriteLayout,
     context: RenderSpriteSyncContext,
@@ -702,9 +476,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.previewBorderGraphics.visible = false;
     this.previewEffectRoot.visible = false;
     this.selectionEffectRoot.visible = false;
-    // AI-REMOVED 2026-06-14: 边缘流光特效已移除
-    // this.flowGlowBorderGraphics.clear();
-    // this.flowGlowEffectRoot.visible = false;
     this.portOverlayRoot.visible = false;
     this.hidePortChevronSprites();
     this.hidePortCrossSprites();
@@ -752,7 +523,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     }
 
     // 单元素 preview：使用白色系动画遮罩
-    // AI-CORRECTION 2026-08-26: 扫描线继续沿用原色，边框改为 selection 橙色以标记唯一操作焦点。
     // 2026-08-22 订正：该分支现在表示普通移动或非 move 的单元素预览；批量移动的单元素预览由上方蓝色特效分支处理。
     this.drawScanlineOverlay(layout, context);
   }
@@ -767,12 +537,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     this.loadScanlineTexture();
 
-    // AI-CORRECTION 2026-06-09:
-    // Reason: invalid 红色边框已统一迁移至 InvalidPlacementDecoration（基于 footprint 布局），
-    // 精灵层 scanline overlay 不再根据 invalidPlacement 切换颜色，始终为白色预览特效。
-    // AI-CORRECTION 2026-08-25: 蓝图样式改用中性灰扫描线以增强浅色画布对比；普通精灵仍保持白色。
-    // AI-CORRECTION 2026-08-26: 上述“白色预览特效”仅指扫描线；preview 边框现使用 selection 橙色。
-    // 原始逻辑（2026-05-24 版）根据 invalidPlacement 切换白/红色，已被当前装饰层替代。
     const borderColor = this.resolveSelectionCollectionOverlayColor(context);
     const useBlueprintStyle = resolveDeviceBodyPresentation(this.definition, context.input.presentation.getSnapshot(), {
       forceBlueprint: this.shouldForceBlueprintPreviewTexture(context),
@@ -799,32 +563,17 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     // 蓝图模式下使用 footprint 矩形遮罩，替代 blueprint-masks 纹理遮罩
     // 因为蓝图精灵是大块透明线框图，对应 mask 同样大面积透明，会错误裁剪扫描线
-    // AI-CORRECTION 2026-05-25: Pixi v8 WebGL 下 Graphics 矩形 mask 会把蓝图样式的 TilingSprite 裁成不可见；现在直接用 TilingSprite 自身尺寸作为 footprint 矩形裁剪。
     if (useBlueprintStyle) {
       this.scanlineTiling.width = layout.width;
       this.scanlineTiling.height = layout.height;
       this.scanlineRectMask.clear();
-      // AI-REMOVED 2026-05-25:
-      // Reason: Pixi v8 WebGL 中该 Graphics mask 会导致蓝图样式扫描线完全不可见。
-      // Trigger: 用户反馈采种机、种植机等蓝图样式设备在框选/预览时没有蓝图特效；Playwright 截图复现。
-      // Evidence: 蓝图样式下 TilingSprite 本身已经按 footprint 矩形布局，移除 mask 后矩形特效不再依赖透明 sprite mask。
-      // Replacement: 当前分支的 scanlineTiling.mask = null 与 width/height = layout 尺寸。
-      // Risk: Low；蓝图样式扫描线不再带额外 padding，但可见区域符合 footprint 矩形。
-      // Human Review: Required
-      //
-      // Original code:
-      // this.scanlineRectMask
-      //   .rect(layout.x, layout.y, layout.width, layout.height)
-      //   .fill({ color: 0xffffff });
-      // this.scanlineTiling.mask = this.scanlineRectMask;
       this.scanlineTiling.mask = null;
     } else {
       this.scanlineTiling.mask = this.previewMask;
     }
 
     // 固定宽度边框线，50% 不透明度。始终为白色预览边框，红色 invalid 边框由 InvalidPlacementDecoration 统一绘制。
-    // AI-CORRECTION 2026-08-26: preview 现使用 selection 的橙色与响应式线宽；invalid 红框仍由 InvalidPlacementDecoration 覆盖。
-    // 2026-06-14: 边框改用足迹布局（不含 spriteOffset），避免仓库等大偏移设备边框超出 footprint。
+    // 边框改用足迹布局（不含 spriteOffset），避免仓库等大偏移设备边框超出 footprint。
     this.previewBorderGraphics.visible = true;
     const borderLayout = this.currentFootprintLayout ?? layout;
     this.previewBorderGraphics
@@ -860,22 +609,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       return;
     }
 
-    // AI-REMOVED 2026-06-14:
-    // Reason: 边缘流光特效改为扫描线+线框方案
-    // Trigger: 用户需求"线框+扫描线线，不再做流光特效"
-    // Evidence: 单选/多选/marquee 统一走此路径
-    // Replacement: 扫描线平铺 + drawCollectionOverlayStroke 线框
-    // Risk: Low
-    // Human Review: Not Required
-    //
-    // Original code (流光分支):
-    // if (this.shouldDrawFlowGlowOverlay(context)) {
-    //   this.drawFlowGlowOverlay(layout, context);
-    //   return;
-    // }
 
     // 加载扫描线纹理（与 preview 共用同一纹理）
-    // AI-CORRECTION 2026-09-25: 批量选择及其移动预览改用蓝图遮罩；关联高亮仍使用扫描线。
     const useBlueprintSelectionMask = drawFocusBorder && (
       context.input.presentation.getSnapshot().activeTool === "marquee"
       || context.input.presentation.getSnapshot().moveKind === "batch"
@@ -902,8 +637,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.selectionTiling.texture = useBlueprintSelectionMask
       ? this.selectionTexture ?? Texture.EMPTY
       : this.scanlineTexture ?? Texture.EMPTY;
-    // AI-CORRECTION 2026-08-25: 蓝图样式的选中扫描线与预览扫描线统一使用中性灰；普通精灵继续使用白色。
-    // AI-CORRECTION 2026-09-25: 蓝图遮罩保留素材自身的蓝色，仅扫描线使用上述灰色或白色着色。
     this.selectionTiling.tint = useBlueprintSelectionMask
       ? 0xffffff
       : useBlueprintStyle
@@ -911,22 +644,18 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       : DEFAULT_SCANLINE_TINT;
 
     // 扫描线水平滚动（复用 SCANLINE_SCROLL_INTERVAL_MS 周期）
-    // AI-CORRECTION 2026-09-25: 蓝图遮罩是静态平铺素材，只有扫描线继续滚动。
     const phase = (context.time.nowMs % SCANLINE_SCROLL_INTERVAL_MS) / SCANLINE_SCROLL_INTERVAL_MS;
     this.selectionTiling.tilePosition.x = useBlueprintSelectionMask ? 0 : phase * tilePixelSize;
 
     // 蓝图模式下使用 footprint 矩形遮罩，替代 blueprint-masks 纹理遮罩
     if (useBlueprintStyle) {
       this.selectionRectMask.clear();
-      // AI-REMOVED 2026-05-25: 已由更早提交处理
       this.selectionTiling.mask = null;
     } else {
       this.selectionTiling.mask = this.selectionMask;
     }
 
     // 线框（足迹布局，不含 spriteOffset）
-    // AI-CORRECTION 2026-08-26: selection/marquee 保留线框；供电、气体关联目标仅保留同强度扫描线。
-    // AI-CORRECTION 2026-09-25: 批量选择及其移动预览由蓝图遮罩标记焦点，不再绘制橙色线框。
     if (drawFocusBorder && !useBlueprintSelectionMask) {
       const strokeLayout = this.currentFootprintLayout ?? layout;
       this.drawCollectionOverlayStroke({
@@ -961,7 +690,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       this.drawScanlineOverlay(layout, context);
     }
 
-    // AI-CORRECTION 2026-06-18:
     // 端口箭头与红叉改由 PortOverlayDecoration 全局计算和绘制。
     // 旧方法保留用于删除审计，但不再由每个设备 sprite 重复执行端口拓扑判断。
     if (context.portOverlayManagedGlobally !== true) {
@@ -1111,26 +839,12 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       this.invalidateVisualSync();
     }).catch(() => {
       // 蓝图遮罩资源加载失败时仍保留选中线框。
-      // AI-CORRECTION 2026-09-25: 批量蓝图模式不再绘制线框，素材加载失败时仅保留设备本体。
     });
   }
 
   private syncDeviceTextures(context?: RenderSpriteSyncContext): void {
     const forceBlueprintPreview = context !== undefined
       && this.shouldForceBlueprintPreviewTexture(context)
-    // AI-REMOVED 2026-09-05:
-    // Reason: 本体、mask 和动画资格必须使用同一蓝图优先规则。
-    // Trigger: REQ-025 播放设备动画开关。
-    // Evidence: 独立纹理键不能表达可选动画与 preview 静态限制。
-    // Replacement: 下方 resolveDeviceBodyPresentation。
-    // Risk: Low; Human Review: Required.
-    // Original code:
-    // const bodyTextureKey = forceBlueprintPreview
-    //   ? `${BLUEPRINT_SPRITE_TEXTURE_PREFIX}${this.spriteId}`
-    //   : resolveDeviceBodyTextureKey(this.spriteId, this.renderHost.workspace.app)
-    // const maskTextureKey = forceBlueprintPreview
-    //   ? `${BLUEPRINT_MASK_TEXTURE_PREFIX}${this.spriteId}`
-    //   : resolveDeviceMaskTextureKey(this.spriteId, this.renderHost.workspace.app)
     const visualKey = this.definition.stateMachine === undefined ? null
       : context?.input.simulation?.queries.getDeviceRuntimeStatus(this.entityId)?.deviceState?.visualKey ?? null
     const presentation = resolveDeviceBodyPresentation(this.definition, this.renderHost.input.presentation.getSnapshot(), {
@@ -1185,7 +899,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       }
       // TextureManager 加载失败时返回 16×16 红色 fallback，Promise 不 reject。
       // 通过尺寸判断 body 纹理是否为 fallback，若是则走自定义 fallback 渲染。
-      // AI-CORRECTION 2026-09-05: REQ-025 允许任意合法帧尺寸；改查资源系统的回退身份，避免误判真实 16×16 首帧。
       if (isFallbackTexture(bodyTexture)) {
         this.staticMaskTexture = isFallbackTexture(previewMaskTexture) ? null : previewMaskTexture
         void this.loadFallbackTexture(activeLoadVersion, true)
@@ -1235,15 +948,12 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   }
 
   /** 只在低频同步时读取仿真输入，逐帧播放不查询 Registry 或 Runtime。 */
-  /** AI-CORRECTION 2026-09-18: 低频输入现为互斥设备展示 status，不再从配方推进聚合 working。 */
-  /** AI-CORRECTION 2026-10-16: 同次同步复用已读取的 visualKey，状态变化时才切换已有动画片段。 */
   private syncDeviceAnimationInputs(context?: RenderSpriteSyncContext, visualKey: string | null = null): boolean {
     if (this.definition.spriteAnimation === undefined || context === undefined) {
       return false
     }
     const simulation = context.input.simulation
     const continuouslyAnimated = this.renderHost.input.source.registry.queries.isProtocolCore(this.definition.id)
-    // AI-CORRECTION 2026-09-14: 协议核心的动画是常驻场景表现，不读取仿真运行、暂停或时间线状态。
     const seeking = !continuouslyAnimated && (simulation?.state.timeline?.isSeeking ?? false)
     const paused = !continuouslyAnimated && (simulation?.state.runningState === "pause" || seeking)
     const cursor = continuouslyAnimated ? null : simulation?.state.timeline?.cursorTickNumber ?? null
@@ -1260,14 +970,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       : simulation?.queries.getDeviceOperatingStatus(this.entityId) ?? "closed"
     const previousVisualKey = this.animationVisualKey
     if (!seeking) this.animationVisualKey = visualKey
-    // AI-REMOVED 2026-09-05: 首次 Runtime 门槛已移除，正式非工作设备允许 close_idle。
-    // Trigger: REQ-025 边界审阅。Evidence: 下方真实实体判定。Replacement: None。
-    // Risk: Low; Human Review: Required. Original code:
-    // if (status !== null) {
-    //   this.hasEnteredRuntime = true
-    // }
-    // 普通暂停保留目标；seek 落点即使仍暂停，也需要读取新的工作状态。
-    // AI-CORRECTION 2026-10-16: 暂停只冻结播放时间；新快照的外观仍立即同步，避免静态图与动画形态不一致。
     if (!paused || seekFinished || cursorRewound || pausedCursorChanged || this.animationState === null) {
       this.animationStatus = status
     }
@@ -1295,28 +997,11 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       && !(collections?.[EntityCollectionType.preview]?.contains(this.entityId) ?? false)
       && !(collections?.[EntityCollectionType.ghost]?.contains(this.entityId) ?? false)
       && this.currentSuppressedAccessoryFamily === null
-      // AI-REMOVED 2026-09-05: 正式非工作设备允许 close_idle；首次 Runtime 门槛不属于用户需求。
-      // Trigger: REQ-025 边界审阅。Evidence: 上方正式实体和草稿判定。Replacement: None。
-      // Risk: Low; Human Review: Required. Original code:
-      // && this.hasEnteredRuntime
   }
 
   private syncDeviceAnimationResource(animation: EntityDefinition["spriteAnimation"] | null): void {
     if (animation == null) {
       if (this.animationRequested) {
-        // AI-REMOVED 2026-09-06:
-        // Reason: 动画关闭或延迟加载时必须使用离线切出的独立静态素材，不得从动画 atlas 借用首帧。
-        // Trigger: 用户要求静态 fallback 与将来的动画素材延迟加载完全解耦。
-        // Evidence: 离线发布链已将 open 首帧独立写入 3d-top-view/sprites；此赋值会让运行时回退依赖 atlas。
-        // Replacement: 下方清空动画后只接受 staticBodyTexture；其未就绪时保持 Texture.EMPTY 并隐藏本体。
-        // Risk: 独立静态文件尚未加载完成时，设备本体会短暂隐藏。
-        // Human Review: Required
-        //
-        // Original code:
-        // // atlas 可能先于独立静态文件完成；关闭时仍须立即显示 open 首帧。
-        // this.staticBodyTexture ??= this.animationTextures?.clips.open[0] ?? null
-        // AI-CORRECTION 2026-09-06: 动画显示前现在会预先准备现有 missing-sprite fallback；
-        // 因此独立静态素材尚未就绪时应显示 fallback，上述“保持 Texture.EMPTY 并隐藏”不再是正常路径。
         this.animationLoadVersion += 1
         this.animationFrameLoadVersion += 1
         this.animationFrameLoadKey = null
@@ -1329,20 +1014,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
         this.animationStableResetPending = false
         this.isTextureReady = this.staticBodyTexture !== null
         if (!this.isTextureReady) {
-          // AI-REMOVED 2026-09-06:
-          // Reason: 独立静态素材未就绪时应进入既有 missing-sprite fallback，不应强制隐藏设备。
-          // Trigger: 用户明确指定复用当前 fallback。
-          // Evidence: loadFallbackTexture 已负责按 footprint 生成本体和 mask，并在完成后恢复可见性。
-          // Replacement: loadFallbackTexture(this.textureLoadVersion, true)。
-          // Risk: fallback 资源本身也加载失败时，仍会进入既有的最终隐藏降级。
-          // Human Review: Required
-          //
-          // Original code:
-          // this.body.texture = Texture.EMPTY
-          // this.previewMask.texture = Texture.EMPTY
-          // this.selectionMask.texture = Texture.EMPTY
-          // this.body.visible = false
-          // this.deviceLabelRoot.visible = false
           void this.loadFallbackTexture(this.textureLoadVersion, true)
         }
         this.applyDevicePresentationTextures()
@@ -1409,7 +1080,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
         this.applyDevicePresentationTextures()
         return
       }
-      // 2026-10-18：首帧准备期间可能已切换暂停快照，挂载前按最新输入收敛，不能提交加载前的旧播放器目标。
+      // 首帧准备期间可能已切换暂停快照，挂载前按最新输入收敛，不能提交加载前的旧播放器目标。
       animationState.reset(this.animationStatus, true, this.animationVisualKey)
       this.animationTextures = textures
       this.animationState = animationState
@@ -1500,7 +1171,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     this.animationVisible = visible
     if (!visible) {
       // 离屏页可被预算回收；先解除 Sprite 对分页子纹理的引用，重新入屏时按原动画状态取帧。
-      // AI-CORRECTION 2026-09-13: 已取消预算回收；最后同类实例离屏超过 20 秒才释放整套分页。
       this.body.texture = this.staticBodyTexture ?? Texture.EMPTY
     }
     this.animationTextures?.setVisible(visible)
@@ -1513,8 +1183,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
   /**
    * 当设备 3D-top 精灵纹理加载失败时，使用 missing-sprite-texture.png 生成 fallback。
-   * AI-CORRECTION 2026-08-31: 当前 fallback 发布素材为 lossless WebP，路径是 missing-sprite-texture.webp。
-   * AI-CORRECTION 2026-10-01: 蓝图精灵加载失败时也使用此 fallback；原始纹理恢复后会替换它。
    * 按 footprint 比例裁剪原图（保持高度，左右均匀裁切），内收 padding 后外描边。
    */
   private async loadFallbackTexture(
@@ -1635,13 +1303,10 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     const showDeviceIconSetting = avatarHidden ? false : (app.settings.gameShowDeviceIcons ?? false);
 
     // 仿真正运行中：尝试获取主要产物
-    // AI-CORRECTION 2026-11-13: 无仿真的场景可声明计划生产的主要产物，与运行中设备共用标签。
     const primaryOutputIds = this.resolvePrimaryOutputItemIds();
     const showPowerDisconnected = this.shouldShowPowerDisconnectedIcon();
 
     // 主要产物存在 → 始终显示（不受 showDeviceIcon 设置控制）
-    // AI-CORRECTION 2026-10-13: 主要产物仍不受显示设置控制；供电覆盖缺失时由断电图标优先替代。
-    // AI-CORRECTION 2026-10-15: 断电提示改为独立图标，不再替代主要产物或设备 avatar。
     const hasPrimaryOutput = primaryOutputIds !== null && primaryOutputIds.length > 0;
 
     if (!this.isTextureReady || (!showDeviceName && !showDeviceIconSetting && !hasPrimaryOutput && !showPowerDisconnected)) {
@@ -1667,18 +1332,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     this.deviceLabelRoot.visible = true;
 
-    // 处理图标区域：主要产物 或 普通设备图标
-    // AI-CORRECTION 2026-10-13: 供电范围外的耗电设备优先显示红色断开插头，位置与主要产物一致，且不受仿真开关限制。
-    // AI-CORRECTION 2026-10-15: 黄色断开插头独立置于标签上方，avatar 与主要产物保持原有显示规则。
-    // AI-REMOVED 2026-10-15:
-    // Reason: 断电提示不应给设备 avatar 染色。
-    // Trigger: 断电时原 avatar 消失且插头偏红。
-    // Evidence: 此前 deviceIcon 同时承载 avatar 和断电纹理。
-    // Replacement: 独立的 powerDisconnectedIcon。
-    // Risk: Low
-    // Human Review: Required
-    // Original code:
-    // this.deviceIcon.tint = showPowerDisconnected ? POWER_DISCONNECTED_ICON_TINT : 0xffffff;
     if (hasPrimaryOutput) {
       this.deviceIcon.visible = false;
       this.syncPrimaryOutputSprites(primaryOutputIds, labelLayout);
@@ -1856,64 +1509,12 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   /**
    * 查询仿真运行时该设备正在执行的配方的 primaryOutputs。
    * 返回 null 表示无主要产物可显示（仿真未运行 / 无运行中配方 / 配方无 primaryOutputs）。
-   * AI-CORRECTION 2026-11-13: 无仿真时读取场景声明的主要产物；不伪造运行状态，移动虚影沿用原实体声明。
    */
-  // AI-REMOVED 2026-11-13:
-  // Reason: 标签统一覆盖生产、明确供料及运行运输物品。
-  // Trigger: REQ-047 供料设备无物品标签。Evidence: 旧入口只读取 primaryOutputs。
-  // Replacement: 下方共用物品解析。Risk: 静态预览及移动虚影需回归。Human Review: Required。
-  // Original code:
-  //   private resolvePrimaryOutputItemIds(): readonly string[] | null {
-  //     const simulation = this.renderHost.input.simulation;
-  //     if (!simulation) {
-  //       const source = this.renderHost.input.source;
-  //       const entity = source.queries.getEntityById(this.entityId);
-  //       const entityId = entity && "originalEntityId" in entity && typeof entity.originalEntityId === "string"
-  //         ? entity.originalEntityId : this.entityId;
-  //       return this.renderHost.input.overlay.getSnapshot()?.deviceItemIds[entityId] ?? null;
-  //     }
-  //     if (simulation.state.runningState === "stop") {
-  //       return null;
-  //     }
-  //
-  //     const status = simulation.queries.getDeviceRuntimeStatus(this.entityId);
-  //     if (!status) {
-  //       return null;
-  //     }
-  //
-  //     const channelRecipes = status.channelRecipes;
-  //     if (!channelRecipes) {
-  //       return null;
-  //     }
-  //
-  //     const recipeDefs = this.renderHost.input.source.registry.recipeDefinitions;
-  //
-  //     for (const channelKey of Object.keys(channelRecipes)) {
-  //       const channel = channelRecipes[channelKey];
-  //       if (!channel || !channel.recipeId) {
-  //         continue;
-  //       }
-  //
-  //       // 仅处理正在运行的 channel（running 或 waiting-output）
-  //       if (channel.state !== "running" && channel.state !== "waiting-output") {
-  //         continue;
-  //       }
-  //
-  //       const recipe = recipeDefs.find((r) => r.id === channel.recipeId);
-  //       if (recipe && recipe.primaryOutputs && recipe.primaryOutputs.length > 0) {
-  //         return recipe.primaryOutputs;
-  //       }
-  //     }
-  //
-  //     return null;
-  //   }
-  // AI-CORRECTION 2026-11-13: 供料配置在停止时也可显示；运输物品只读真实运行输出槽。
   private resolvePrimaryOutputItemIds(): readonly string[] | null {
     const { source, simulation } = this.renderHost.input;
     const entity = source.queries.getEntityById(this.entityId);
     const entityId = deviceLabelEntityId(entity, this.entityId);
     if (!simulation) return this.renderHost.input.overlay.getSnapshot()?.deviceItemIds[entityId] ?? null;
-    // AI-CORRECTION 2026-11-13：非运行状态下优先显示设备已选配方的产物，其次为仓库链接物品。
     const selected = selectedRecipeDeviceItemIds(entity, source.registry);
     const configured = selected.length > 0
       ? selected
@@ -1936,7 +1537,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     const circleTex = getPrimaryOutputCircleTexture(textureConfig);
     const plusTex = getPrimaryOutputPlusTexture(textureConfig);
     // 物品图标内接于圆：正方形边长 = 直径 / √2，再 -4px 减少空白
-    // AI-CORRECTION 2026-08-20: 圆圈现为方形物品纹理的内接圆，纹理边长等于圆直径；透明边缘由统一整像素裁边处理。
     const itemIconInsideSize = iconSize;
     const plusWidth = iconSize * PRIMARY_OUTPUT_PLUS_WIDTH_RATIO;
     const gapWidth = iconSize * 0.04;
@@ -1950,17 +1550,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       || this.currentPrimaryOutputItemIds.some((id, i) => id !== itemIds[i])
     ) {
       this.currentPrimaryOutputItemIds = [...itemIds];
-      // AI-REMOVED 2026-10-07:
-      // Reason: 重置请求版本不能识别旧纹理，还会使快速来回切换时的旧请求复用版本号。
-      // Trigger: 粉碎机产物切换为蓝铁粉末后仍显示赤铜粉末图标。
-      // Evidence: syncPrimaryOutputItemIcon 原缓存判断只比较已更新的产物 ID，未核对实际纹理 key。
-      // Replacement: syncPrimaryOutputItemIcon 按纹理 key 更新图标，请求版本保持递增；下方使已移除位置的请求失效。
-      // Risk: Low - 图标切换期间暂时隐藏旧纹理。
-      // Human Review: Required
-      //
-      // Original code:
-      // 重置 item icon 加载版本，触发重新加载
-      // this.primaryOutputIconLoadVersions = itemIds.map(() => 0);
       for (let index = itemIds.length; index < this.primaryOutputIconTextureKeys.length; index += 1) {
         this.primaryOutputIconTextureKeys[index] = null;
         this.primaryOutputIconLoadVersions[index] = (this.primaryOutputIconLoadVersions[index] ?? 0) + 1;
@@ -2041,7 +1630,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     sprite.anchor.set(0.5);
 
     // 如果当前位置已有正确纹理，直接显示
-    // AI-CORRECTION 2026-10-07: 按实际请求的纹理 key 判断缓存；相同 key 正在加载时复用请求并保持图标隐藏。
     if (this.primaryOutputIconTextureKeys[index] === textureKey) {
       sprite.visible = sprite.texture !== Texture.EMPTY;
       return;
@@ -2132,163 +1720,9 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     }
   }
 
-  // AI-REMOVED 2026-06-14:
-  // Reason: selection 不再使用 blueprint-mask 纹理，改为 scanline 扫描线
-  // Trigger: 用户需求"线框+扫描线线"
-  // Replacement: drawSelectionOverlay 直接调用 loadScanlineTexture() 加载扫描线纹理
-  // Risk: Low
-  // Human Review: Not Required
-  //
-  // Original code:
-  // private loadSelectionTexture(): void {
-  //   if (this.selectionTextureLoadStarted) {
-  //     return;
-  //   }
-  //
-  //   this.selectionTextureLoadStarted = true;
-  //
-  //   void Assets.load<Texture>(BLUEPRINT_MASK_TEXTURE_PATH).then((texture) => {
-  //     if (this.disposed) {
-  //       return;
-  //     }
-  //
-  //     this.selectionTexture = texture;
-  //     this.selectionTiling.texture = texture;
-  //   }).catch(() => {
-  //     // blueprint mask 纹理加载失败，无伤大雅
-  //   });
-  // }
 
-  // AI-REMOVED 2026-06-14:
-  // Reason: 边缘流光特效改为扫描线+线框方案
-  // Trigger: 用户需求"线框+扫描线线，不再做流光特效"
-  // Replacement: None；selection 统一走 drawSelectionOverlay 的扫描线+线框路径
-  // Risk: Low
-  // Human Review: Not Required
-  //
-  // Original code:
-  // private shouldDrawFlowGlowOverlay(context: RenderSpriteSyncContext): boolean {
-  //   const collections = context.workspace.editor?.state.collections;
-  //   if (!collections) {
-  //     return false;
-  //   }
-  //
-  //   // 只有自己处于 selection 中
-  //   const selectionCollection = collections[EntityCollectionType.selection];
-  //   if (!isOnlyEntityInCollection(selectionCollection, this.entityId)) {
-  //     return false;
-  //   }
-  //
-  //   // 不是 marquee 模式
-  //   const activeTool = context.workspace.app?.state.activeTool;
-  //   if (activeTool === "marquee" || activeTool === "move") {
-  //     return false;
-  //   }
-  //
-  //   return true;
-  // }
 
-  // AI-REMOVED 2026-06-14:
-  // Reason: 边缘流光特效改为扫描线+线框方案
-  // Trigger: 用户需求"线框+扫描线线，不再做流光特效"
-  // Replacement: None；selection 统一走 drawSelectionOverlay 的扫描线+线框路径
-  // Risk: Low
-  // Human Review: Not Required
-  //
-  // Original code:
-  // private drawFlowGlowOverlay(
-  //   layout: RenderSpriteLayout,
-  //   context: RenderSpriteSyncContext,
-  // ): void {
-  //   if (!this.isTextureReady) {
-  //     return;
-  //   }
-  //
-  //   this.loadFlowGlowTexture();
-  //
-  //   const bw = resolveFlowGlowBorderWidth(layout);
-  //   const x0 = layout.x;
-  //   const y0 = layout.y;
-  //   const w = layout.width;
-  //   const h = layout.height;
-  //   const cx = x0 + w / 2;
-  //   const cy = y0 + h / 2;
-  //   const halfBw = bw / 2;
-  //
-  //   // 1. 内边框底色（向内缩进半线宽 stroke）
-  //   this.flowGlowBorderGraphics.clear();
-  //   const strokeColor = resolveAppThemeColorNumber(
-  //     context.theme,
-  //     context.theme.renderer.flowGlowStrokeColorKey,
-  //   );
-  //   this.flowGlowBorderGraphics
-  //     .rect(x0 + halfBw, y0 + halfBw, w - bw, h - bw)
-  //     .stroke({ width: bw, color: strokeColor });
-  //
-  //   // 2. 矩形边框环遮罩：光束只在边缘边框区域可见（挖空内部）
-  //   this.flowGlowMask.clear();
-  //   this.flowGlowMask
-  //     .rect(x0, y0, w, h).fill({ color: 0xffffff })
-  //     .rect(x0 + bw, y0 + bw, w - 2 * bw, h - 2 * bw).cut();
-  //
-  //   // 3. 扇形光束 TilingSprite：从设备中心旋转，纹理平铺
-  //   if (this.flowGlowTexture !== null) {
-  //     const texSize = this.flowGlowTexture.width; // 512
-  //
-  //     // 边长至少覆盖设备对角线，确保旋转 45° 时仍填满矩形
-  //     const diag = Math.sqrt(w * w + h * h);
-  //     const tileSize = Math.max(diag, texSize);
-  //
-  //     // 旋转相位：一个周期完成 360° 旋转
-  //     const phase = ((context.time.nowMs % FLOW_GLOW_SCROLL_INTERVAL_MS) / FLOW_GLOW_SCROLL_INTERVAL_MS);
-  //     const rotation = phase * Math.PI * 2;
-  //
-  //     const tintColor = resolveAppThemeColorNumber(
-  //       context.theme,
-  //       context.theme.renderer.flowGlowTintColorKey,
-  //     );
-  //
-  //     this.flowGlowBeam.visible = true;
-  //     this.flowGlowBeam.x = cx;
-  //     this.flowGlowBeam.y = cy;
-  //     this.flowGlowBeam.width = tileSize;
-  //     this.flowGlowBeam.height = tileSize;
-  //     this.flowGlowBeam.tileScale.set(1);
-  //     this.flowGlowBeam.rotation = rotation;
-  //     this.flowGlowBeam.tint = tintColor;
-  //   } else {
-  //     this.flowGlowBeam.visible = false;
-  //   }
-  //
-  //   this.flowGlowEffectRoot.visible = true;
-  // }
 
-  // AI-REMOVED 2026-06-14:
-  // Reason: 边缘流光特效改为扫描线+线框方案
-  // Trigger: 用户需求"线框+扫描线线，不再做流光特效"
-  // Replacement: None；selection 统一走 drawSelectionOverlay 的扫描线+线框路径
-  // Risk: Low
-  // Human Review: Not Required
-  //
-  // Original code:
-  // private loadFlowGlowTexture(): void {
-  //   if (this.flowGlowTextureLoadStarted) {
-  //     return;
-  //   }
-  //
-  //   this.flowGlowTextureLoadStarted = true;
-  //
-  //   void Assets.load<Texture>(FLOW_GLOW_TEXTURE_PATH).then((texture) => {
-  //     if (this.disposed) {
-  //       return;
-  //     }
-  //
-  //     this.flowGlowTexture = texture;
-  //     this.flowGlowBeam.texture = texture;
-  //   }).catch(() => {
-  //     // flow-glow 纹理加载失败，无伤大雅
-  //   });
-  // }
 
   private loadPortChevronTextures(useMobile: boolean): void {
     // 同变体已加载，跳过
@@ -2440,7 +1874,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     // 绘制红叉
     if (portCrossSpecs.length > 0 && this.isPortCrossTextureReady && this.portCrossTexture !== null) {
-      // AI-CORRECTION 2026-06-18: 实机端口叉号使用高亮橙红色而非纯红色，配合贴图中的 alpha 柔光还原发光标记。
       const crossTint = 0xff4b24;
 
       for (let index = 0; index < portCrossSpecs.length; index += 1) {
@@ -2510,7 +1943,6 @@ export class GenericDeviceSprite extends BaseRenderSprite {
    * - pipe → "fluid"
    * - 非物流模式返回 null
    */
-  // AI-CORRECTION 2026-07-28: 返回值同时携带域位标志与显式 isPipe，物理类型不再由 kind 推断。
   private resolveLogisticsPortKindFilter(
     context: RenderSpriteSyncContext,
   ): LogisticsPortFilter | null {
@@ -2566,46 +1998,10 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   }
 
   private shouldDrawLogisticsEndpointOverlay(context: RenderSpriteSyncContext): boolean {
-    // AI-REMOVED 2026-10-06:
-    // Reason: 端点判断收敛到布局与纹理共用的显示策略，避免两处规则分叉。
-    // Trigger: 管道准入口蓝图预览被俯视画布拉成 1×3。
-    // Evidence: 原布局只检查全局设置，纹理还检查 preview 与物流端点。
-    // Replacement: device-texture-key.ts 的 isDeviceLogisticsEndpoint。
-    // Risk: Low；保留 source/target 的 device-port 语义。
-    // Human Review: Required
-    // Original code:
-    // const draft = context.workspace.editor?.queries?.resolveLogisticsDraftState?.();
-    // const sourceEntityId = draft?.source?.type === "device-port"
-    //   ? draft.source.entityId
-    //   : null;
-    // const targetEntityId = draft?.target?.type === "device-port"
-    //   ? draft.target.entityId
-    //   : null;
-    // return this.entityId === sourceEntityId || this.entityId === targetEntityId;
     return isDeviceLogisticsEndpoint(this.entityId, context.input);
   }
 
   private shouldForceBlueprintPreviewTexture(context: RenderSpriteSyncContext): boolean {
-    // 这里只强制处理 8 个物流设备；传送带物流设备不包括传送带节，
-    // 管道物流设备不包括管道节。
-    // AI-REMOVED 2026-10-06:
-    // Reason: 私有强制蓝图判断无法供场景布局复用，迁至共享的 Renderer 显示策略。
-    // Trigger: 管道准入口预览使用蓝图纹理却保留 1×3 俯视布局。
-    // Evidence: scene 与 sprite 分别按全局设置和交互状态选择素材范围。
-    // Replacement: device-texture-key.ts 的 shouldForceBlueprintDeviceTexture。
-    // Risk: Low；仍通过 RegistryQuery 限定八种物流设备。
-    // Human Review: Required
-    // Original code:
-    // const queries = this.renderHost.workspace.registry.queries
-    // if (
-    //   !queries.isBeltLogistics(this.definition.id)
-    //   && !queries.isPipeLogistics(this.definition.id)
-    // ) {
-    //   return false
-    // }
-    // const collections = context.workspace.editor?.state.collections
-    // const isPreview = collections?.[EntityCollectionType.preview]?.contains(this.entityId) ?? false
-    // return isPreview || this.shouldDrawLogisticsEndpointOverlay(context)
     return shouldForceBlueprintDeviceTexture(
       this.entityId,
       this.definition.id,
@@ -2845,21 +2241,6 @@ function createDeviceNameTextStyle(options: {
     wordWrap: true,
     wordWrapWidth: options.wordWrapWidth,
     lineHeight: options.fontSize * DEVICE_LABEL_LINE_HEIGHT_RATIO,
-    // AI-REMOVED 2026-09-12:
-    // Reason: 白色文字改用与 avatar 相同的东南硬投影，旧描边会叠加成双重边缘。
-    // Trigger: 用户要求仅在 3D Top 下让设备名称文字匹配图片阴影。
-    // Evidence: 本分支仅在 useBlueprintStyle=false 时执行；蓝图文字分支不受影响。
-    // Replacement: 下方 dropShadow。
-    // Risk: Low；浅色背景下的可读性改由 72% 深灰硬投影保证。
-    // Human Review: Required
-    //
-    // Original code:
-    // stroke: {
-    //   color: DEVICE_LABEL_DEFAULT_STROKE_COLOR,
-    //   width: Math.max(1, Math.round(options.fontSize * 0.16)),
-    //   alpha: 0.42,
-    // },
-    // AI-CORRECTION 2026-09-12: 对照游戏内“暗管入口”“提纯机”覆盖层后，确认右下阴影不能替代全向轮廓；新增高不透明度细描边以恢复复杂背景上的辨识度。
     stroke: {
       color: DEVICE_LABEL_TOP_VIEW_OUTLINE_COLOR,
       width: Math.max(1, options.fontSize * DEVICE_LABEL_TOP_VIEW_OUTLINE_WIDTH_RATIO),
@@ -3138,20 +2519,6 @@ function resolveEffectiveSpriteOffsetForPortOverlay(
   app: ScenePresentation | null,
   forceBlueprint: boolean,
 ): { x: number; y: number; width: number; height: number } | undefined {
-  // AI-REMOVED 2026-10-06:
-  // Reason: 端口覆盖层必须按实际素材范围反算 footprint，不能独立只读全局偏好。
-  // Trigger: 修复管道准入口强制蓝图预览的 1×3 拉伸。
-  // Evidence: 预览布局改为一格后，继续减去 topView 偏移会导致端口错位。
-  // Replacement: 下方 resolveDeviceBodyPresentation.spriteOffset。
-  // Risk: Low；保留显式 blueprint 偏移支持。
-  // Human Review: Required
-  // Original code:
-  // if (definition.spriteOffset === undefined) {
-  //   return undefined;
-  // }
-  // return readSimplifiedDeviceIconPreference(app)
-  //   ? definition.spriteOffset.blueprint
-  //   : definition.spriteOffset.topView;
   return resolveDeviceBodyPresentation(definition, app, {
     forceBlueprint,
     allowAnimation: false,
@@ -3389,23 +2756,6 @@ function resolveWorldEntitySelectionStrokeWidth(gridCellPixelSize: number): numb
   );
 }
 
-// AI-REMOVED 2026-06-14:
-// Reason: 未使用，ESLint no-unused-vars
-// Trigger: ESLint 检查报错
-// Evidence: 全局搜索无调用者，与 resolveWorldEntitySelectionStrokeWidth 结构对称但无引用
-// Replacement: None
-// Risk: Low — 边缘流光线宽计算，当前无调用者
-// Human Review: Not Required
-//
-// Original code:
-// function resolveFlowGlowBorderWidth(layout: Pick<RenderSpriteLayout, "width" | "height">): number {
-//   const width = Math.max(layout.width, layout.height) * 0.08;
-//
-//   return Math.max(
-//     FLOW_GLOW_BORDER_MIN_WIDTH,
-//     Math.min(FLOW_GLOW_BORDER_MAX_WIDTH, width),
-//   );
-// }
 
 function resolveInnerStrokeRect(
   layout: RenderSpriteLayout,

@@ -7,15 +7,6 @@ import {
   readFromIndexedDb,
   saveToIndexedDb,
 } from "@/shared/storage";
-// AI-REMOVED 2026-10-08:
-// Reason: 收敛全局迁移入口，避免重复调度及旧缓存覆盖。
-// Trigger: REQ-041 用户授权统一迁移。
-// Evidence: 启动、导入和保存调用链审查。
-// Replacement: 共享文档 codec
-// Risk: 需回归迁移失败与恢复。
-// Human Review: Required
-// Original code:
-// import { migrateBlueprintDocumentState } from "@/shared/blueprint-device-id-migration";
 import { normalizeWorldDocument } from "@/shared/storage/world-document-storage";
 export { normalizeWorldDocument } from "@/shared/storage/world-document-storage";
 import { reaction, runInAction } from "mobx";
@@ -116,17 +107,6 @@ export function hookDocumentStorage(
     void (async () => {
       await repository.ready();
       if (disposed || serial !== scopeSerial) return;
-      // AI-REMOVED 2026-09-24:
-      // Reason: 首次建表竞态已由共享 IndexedDB 开库边界处理，预载不应等待无关文档的保存。
-      // Trigger: REQ-038 首次保存失败导致整个区域预载被阻断。
-      // Evidence: 真实浏览器捕获并发升级后缺少 worddocument 的 NotFoundError。
-      // Replacement: browser-storage.ts openIndexedDbStores；下方 retain 仍在释放缓存前等待保存。
-      // Risk: Low；预载读取不发布当前画布，释放仍受持久化结果约束。
-      // Human Review: Required
-      //
-      // Original code:
-      // await repository.flush();
-      // if (disposed || serial !== scopeSerial) return;
       if (enabled) await repository.readMany(baseIds);
       if (disposed || serial !== scopeSerial) return;
       await repository.retain(baseIds, () => serial === scopeSerial);
@@ -162,62 +142,6 @@ export function hookDocumentStorage(
   };
 }
 
-// AI-REMOVED 2026-09-24:
-// Reason: 单活动文档专用保存队列由 Editor 区域文档管理统一接管。
-// Trigger: REQ-038 要求驻留文档、切换复用和跨文档保存不能互相覆盖。
-// Evidence: 原 writeQueue 只订阅当前文档，后台修改无法共享顺序控制。
-// Replacement: EditorDocumentRepository 与上方 hookDocumentStorage。
-// Risk: 保存顺序、初始化和关闭时未保存内容必须通过真实浏览器验证。
-// Human Review: Required
-//
-// Original code:
-// export function hookDocumentStorage(editorHost: EditorHost): () => void {
-//   let disposed = false;
-//   let unsubscribeDocument: (() => void) | null = null;
-//   let writeQueue = Promise.resolve();
-//
-//   const enqueueWrite = (
-//     document: WorldDocument,
-//   ): void => {
-//     writeQueue = writeQueue
-//       .catch(() => undefined)
-//       .then(() => writeWorldDocument(document));
-//   };
-//
-//   const initialization = (async () => {
-//     const initialDocument = await resolveInitialDocument(editorHost);
-//
-//     if (disposed) {
-//       return;
-//     }
-//
-//     rememberLatestWorldDocument(editorHost, initialDocument);
-//     editorHost.internalDocument.setSnapshot(initialDocument);
-//     enqueueWrite(initialDocument);
-//
-//     unsubscribeDocument = editorHost.internalDocument.subscribe((document) => {
-//       rememberLatestWorldDocument(editorHost, document);
-//       enqueueWrite(document);
-//     });
-//   })();
-//
-//   documentStorageFlushers.set(editorHost, async () => {
-//     await initialization;
-//     let pending: Promise<void>;
-//     do {
-//       pending = writeQueue;
-//       await pending;
-//     } while (pending !== writeQueue);
-//   });
-//
-//   return () => {
-//     disposed = true;
-//     unsubscribeDocument?.();
-//     unsubscribeDocument = null;
-//     documentStorageFlushers.delete(editorHost);
-//   };
-// }
-//
 
 async function resolveInitialDocument(
   editorHost: EditorRuntimeHost,
@@ -262,7 +186,6 @@ async function resolveInitialDocument(
   }
 
   // 确保协议核心实体在首次加载时即存在，与 loadLatestBaseDocument 路径保持一致。
-  // AI-CORRECTION 2026-10-11: 草稿箱仅首次新建初始化核心，已有文档允许没有核心或包含多个核心。
   const result = ensureProtocolCoreEntity({
     document,
     queries: editorHost.services.registry.queries,
@@ -479,92 +402,3 @@ function timestampToNumber(value: string): number {
   return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
-// AI-REMOVED 2026-10-08:
-// Reason: 收敛全局迁移入口，避免重复调度及旧缓存覆盖。
-// Trigger: REQ-041 用户授权统一迁移。
-// Evidence: 启动、导入和保存调用链审查。
-// Replacement: shared/storage/world-document-storage.ts
-// Risk: 需回归迁移失败与恢复。
-// Human Review: Required
-// Original code:
-// export function normalizeWorldDocument(
-//   value: unknown,
-// ): WorldDocument | null {
-//   if (!isWorldDocumentLike(value)) {
-//     return null;
-//   }
-//
-//   // 2026-05-31: 反序列化时对 entityOrder 做去重，作为历史数据修复的最后防线。
-//   const migration = migrateBlueprintDocumentState({
-//     baseId: value.baseId,
-//     entities: value.entities,
-//     entityOrder: value.entityOrder,
-//     slotLinks: value.slotLinks,
-//     regions: value.regions,
-//   }, value.schemaVersion);
-//
-//   if (migration === null) {
-//     return null;
-//   }
-//
-//   // 2026-07-23: 清理 entityOrder 中 entities 已不存在的无效 ID，
-//   // 修复历史删除操作未同步清理 entityOrder 导致计数虚高的问题。
-//   const validEntityOrder = Array.from(new Set(migration.entityOrder))
-//     .filter((entityId) => entityId in migration.entities);
-//
-//   return {
-//     ...value,
-//     schemaVersion: migration.schemaVersion,
-//     entities: migration.entities,
-//     entityOrder: validEntityOrder,
-//     slotLinks: [...migration.slotLinks],
-//     regions: migration.regions,
-//   };
-// }
-//
-// function isWorldDocumentLike(
-//   value: unknown,
-// ): value is WorldDocument {
-//   return (
-//     isRecord(value) &&
-//     typeof value.schemaVersion === "number" &&
-//     typeof value.documentKey === "string" &&
-//     value.documentKey.trim() !== "" &&
-//     typeof value.baseId === "string" &&
-//     isRecord(value.meta) &&
-//     isRecord(value.entities) &&
-//     Array.isArray(value.entityOrder) &&
-//     Array.isArray(value.slotLinks) &&
-//     (value.schemaVersion < 7 || Array.isArray(value.regions)) &&
-//     isWorldDocumentSettingsLike(value.documentSettings)
-//   );
-// }
-//
-// function isWorldDocumentSettingsLike(
-//   value: unknown,
-// ): value is WorldDocument["documentSettings"] {
-//   return (
-//     isRecord(value)
-//     && isWorldDocumentViewportSettingsLike(value.viewport)
-//   );
-// }
-//
-// function isWorldDocumentViewportSettingsLike(
-//   value: unknown,
-// ): value is WorldDocument["documentSettings"]["viewport"] {
-//   return (
-//     isRecord(value)
-//     && isRecord(value.center)
-//     && typeof value.center.x === "number"
-//     && Number.isFinite(value.center.x)
-//     && typeof value.center.y === "number"
-//     && Number.isFinite(value.center.y)
-//     && typeof value.gridSize === "number"
-//     && Number.isFinite(value.gridSize)
-//     && value.gridSize > 0
-//   );
-// }
-//
-// function isRecord(value: unknown): value is Record<string, unknown> {
-//   return typeof value === "object" && value !== null;
-// }

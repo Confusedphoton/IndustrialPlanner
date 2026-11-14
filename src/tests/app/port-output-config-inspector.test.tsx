@@ -9,15 +9,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AppHost } from "@/app/host/app-host";
 import { PortOutputConfigInspector } from "@/app/shell/inspector/port-output-config-inspector";
-// AI-REMOVED 2026-11-12:
-// Reason: Inspector 的相机入口迁至真实 Canvas，旧 App/Editor 桩不再符合契约。
-// Trigger: REQ-048 View 迁移。
-// Evidence: 两个 Inspector 读取 mainCanvas.view；配置写入需验证真实 Editor。
-// Replacement: createAppTestHost/createEditorTestHost 与版本化场景。
-// Risk: 保留端口、筛选和动作断言；布局另由浏览器验证。
-// Human Review: Required
-// Original code:
-// import { WorkbenchEncyclopediaPickerController } from "@/app/shell/state/encyclopedia-picker-state";
 
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { WorldEntity } from "@/domain/document/world-document";
@@ -37,7 +28,6 @@ function createWorkspace(): WorkspaceContract {
     simulation: null,
     sync: null,
     audio: null,
-    blueprintPlanner: null,
   };
 }
 
@@ -269,7 +259,7 @@ describe("PortOutputConfigInspector", () => {
     expect(container.querySelector("[data-port-output-locator='item_output']")?.getAttribute("data-locator-rotation")).toBe("180");
     expect(container.querySelectorAll("[data-port-output-locator='item_output'] [data-selected-port-id]").length).toBe(4);
     expect(container.querySelectorAll("[data-port-output-locator='fluid_output_a'] [data-selected-port-id]").length).toBe(1);
-    expect(container.querySelector("[data-port-output-locator='item_output']")?.textContent).toContain("P1");
+    expect(container.querySelector("[data-port-output-locator='item_output']")?.textContent).toContain("上");
     expect(container.querySelector("[data-port-group-id='item_output']")?.getAttribute("data-is-pipe")).toBe("false");
     expect(container.querySelector("[data-port-group-id='fluid_output_a']")?.getAttribute("data-is-pipe")).toBe("true");
     expect(container.querySelector("[data-port-group-id='item_output']")?.hasAttribute("data-port-tone")).toBe(false);
@@ -307,44 +297,6 @@ function createEmptyEntity(id: string, definitionId: string): WorldEntity {
   return { id, definitionId, position: { x: 0, y: 0 }, rotation: 0, config: {}, tags: [] };
 }
 
-// AI-REMOVED 2026-11-12:
-// Reason: Inspector 的相机入口迁至真实 Canvas，旧 App/Editor 桩不再符合契约。
-// Trigger: REQ-048 View 迁移。
-// Evidence: 两个 Inspector 读取 mainCanvas.view；配置写入需验证真实 Editor。
-// Replacement: createAppTestHost/createEditorTestHost 与版本化场景。
-// Risk: 保留端口、筛选和动作断言；布局另由浏览器验证。
-// Human Review: Required
-// Original code:
-// function buildAppHost(
-//   workspace: WorkspaceContract,
-//   _entity: WorldEntity,
-//   options: {
-//     displayRotation?: 0 | 90 | 180 | 270;
-//     deviceClass?: "desktop" | "tablet" | "mobile";
-//   } = {},
-// ): AppHost {
-//   const picker = new WorkbenchEncyclopediaPickerController(() => ({ desktopCategory: "all", mobileSelectedCategories: [] }));
-//   return {
-//     state: {
-//       screenProfile: {
-//         deviceClass: options.deviceClass ?? "desktop",
-//       },
-//     },
-//     workspace: {
-//       ...workspace,
-//       editor: {
-//         state: {
-//           viewport: {
-//             displayRotation: options.displayRotation ?? 0,
-//           },
-//         },
-//         actions: { patchEntityConfig: vi.fn(), deleteEntityConfigKeys: vi.fn() },
-//       },
-//     },
-//     encyclopediaPicker: picker,
-//     actions: { translate: (key: string) => key },
-//   } as unknown as AppHost;
-// }
 function buildAppHost(workspace: WorkspaceContract, _entity: WorldEntity, options: { displayRotation?: 0 | 90 | 180 | 270; deviceClass?: "desktop" | "tablet" | "mobile" } = {}): AppHost {
   const editor = createEditorTestHost(workspace, { persistence: "memory", initialDocument: createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/req048/inspector-input.schema7.json")) });
   const app = createAppTestHost(workspace); cleanups.push(() => { app.dispose(); editor.dispose(); });
@@ -353,40 +305,6 @@ function buildAppHost(workspace: WorkspaceContract, _entity: WorldEntity, option
   return app;
 }
 
-// AI-REMOVED 2026-11-12:
-// Reason: Inspector 的相机入口迁至真实 Canvas，旧 App/Editor 桩不再符合契约。
-// Trigger: REQ-048 View 迁移。
-// Evidence: 两个 Inspector 读取 mainCanvas.view；配置写入需验证真实 Editor。
-// Replacement: createAppTestHost/createEditorTestHost 与版本化场景。
-// Risk: 保留端口、筛选和动作断言；布局另由浏览器验证。
-// Human Review: Required
-// Original code:
-// function buildAppHostWithEditor(
-//   workspace: WorkspaceContract, entity: WorldEntity,
-//   patch: ReturnType<typeof vi.fn>, del: ReturnType<typeof vi.fn>,
-// ): AppHost {
-//   const picker = new WorkbenchEncyclopediaPickerController(() => ({ desktopCategory: "all", mobileSelectedCategories: [] }));
-//   return {
-//     state: {
-//       screenProfile: {
-//         deviceClass: "desktop",
-//       },
-//     },
-//     workspace: {
-//       ...workspace,
-//       editor: {
-//         state: {
-//           viewport: {
-//             displayRotation: 0,
-//           },
-//         },
-//         actions: { patchEntityConfig: patch, deleteEntityConfigKeys: del },
-//       },
-//     },
-//     encyclopediaPicker: picker,
-//     actions: { translate: (key: string) => key },
-//   } as unknown as AppHost;
-// }
 function buildAppHostWithEditor(workspace: WorkspaceContract, entity: WorldEntity, patch: ReturnType<typeof vi.fn>, del: ReturnType<typeof vi.fn>): AppHost {
   const app = buildAppHost(workspace, entity); const editor = workspace.editor!;
   const originalPatch = editor.actions.patchEntityConfig, originalDelete = editor.actions.deleteEntityConfigKeys;

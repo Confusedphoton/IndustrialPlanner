@@ -27,17 +27,6 @@ interface GuideGroup {
 
 interface SettingsSnapshot {
   /** 鹰角操作模式总开关 */
-  // AI-CORRECTION 2026-09-10: 总开关已移除；操作说明仅取决于独立行为设置。
-  // AI-REMOVED 2026-09-10:
-  // Reason: 操作模式总开关已废弃，不再保留关闭分支
-  // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-  // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-  // Replacement: SettingsSnapshot 中保留的独立行为设置
-  // Risk: 历史 false 设置统一使用当前操作行为。
-  // Human Review: Required
-  //
-  // Original code:
-  // hg: boolean;
   /** 立即拖动（左键拖拽选中设备直接移动） */
   immediateMove: boolean;
   /** 立即框选（左键拖拽空白区域直接框选） */
@@ -47,7 +36,7 @@ interface SettingsSnapshot {
 function buildGuideData(
   resolveShortcut: ShortcutResolver,
   ss: SettingsSnapshot,
-  // 2026-11-13：操作说明文案改走 i18n。
+  // 操作说明文案改走 i18n。
   tr: (key: string) => string,
 ): GuideGroup[] {
   const s = (key: string): string => resolveShortcut(key);
@@ -58,13 +47,11 @@ function buildGuideData(
   // ── 根据设置推导 PC 端操作说明 ──
 
   // 平移画布：鹰角模式下若"立即框选"未开，左键拖空白也会平移
-  // AI-CORRECTION 2026-09-10: 总开关已移除；操作说明仅取决于独立行为设置。
   const panPC: string = !ss.immediateMarquee
     ? tr("guide.leftDragEmptySpaceMiddleDrag")
     : tr("guide.middleDrag");
 
   // 框选：鹰角模式下若"立即框选"未开，需要先进入批量选择模式
-  // AI-CORRECTION 2026-09-10: 总开关已移除；操作说明仅取决于独立行为设置。
   const marqueePC: string = !ss.immediateMarquee
     ? tr("guide.enterBatchSelectThenLeftDrag")
     : tr("guide.leftDragARectangle");
@@ -178,16 +165,6 @@ interface OperationGuideContentProps {
 export function OperationGuideContent({ deviceClass, getShortcut, settings, translate }: OperationGuideContentProps) {
   const settingsSnapshot = useMemo<SettingsSnapshot>(
     () => ({
-      // AI-REMOVED 2026-09-10:
-      // Reason: 操作模式总开关已废弃，不再保留关闭分支
-      // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-      // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-      // Replacement: settingsSnapshot 中保留的独立行为设置
-      // Risk: 历史 false 设置统一使用当前操作行为。
-      // Human Review: Required
-      //
-      // Original code:
-      // hg: settings.hypergryphOperationMode,
       immediateMove: settings.hypergryphImmediateMove,
       immediateMarquee: settings.hypergryphImmediateMarquee,
     }),

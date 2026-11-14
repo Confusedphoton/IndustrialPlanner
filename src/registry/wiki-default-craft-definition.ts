@@ -5,8 +5,6 @@ export interface WikiDefaultCraftDefinition {
 }
 
 /** AKEData 1.5.3@9885010-4 TableCfg/WikiDefaultCraftTable.json 的无损规范化映射。 */
-// AI-CORRECTION 2026-10-29：保留原表映射；下方赤铜块条目是用户指定的项目默认，sourceCraftId 使用本地稳定 ID，不声称来自原表。
-// AI-CORRECTION 2026-11-04：用户指定清水搅拌液化息壤、紫晶矿冶炼紫晶纤维优先；这两项同属项目默认，sourceCraftId 使用配方稳定 ID，不声称来自原表。
 export const WIKI_DEFAULT_CRAFT_DEFINITIONS: readonly WikiDefaultCraftDefinition[] = [
   {
     itemId: "item_copper_nugget",

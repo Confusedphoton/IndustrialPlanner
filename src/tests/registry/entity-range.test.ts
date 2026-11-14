@@ -13,7 +13,6 @@ describe("范围注册与洒水机", () => {
     expect(sprinkler.portGroups[0]!.ports[0]).toMatchObject({ localCellX: 0, localCellY: 1, edge: "WEST" });
     expect(sprinkler.ranges![0]).toMatchObject({ coverage: "intersects", localRect: { x: 3, y: -1, width: 4, height: 5 } });
     const plots = registry.entityDefinitions.filter((definition) => definition.id.startsWith("soil_"));
-    // AI-CORRECTION 2026-10-15: 新增十二种缘缘庄田块，沿用统一灌溉资格。
     expect(plots).toHaveLength(22);
     expect(plots.every((plot) => plot.tags.includes("AcceptsIrrigation"))).toBe(true);
     expect(sprinkler.recipeChannels).toMatchObject([{ startPolicy: "environment-demand" }]);

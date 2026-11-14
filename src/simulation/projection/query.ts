@@ -224,20 +224,6 @@ export function createSimulationQueries(context: SimulationQueryContext): Simula
           gridRect: { ...diffusion.gridRect },
         }));
     },
-    // AI-REMOVED 2026-09-17:
-    // Reason: Dense 区域执行投影包含整张复合图，公开展示只能返回当前 topology 所属基地的气体范围。
-    // Trigger: 用户明确要求气体扩散与空间判定不得跨基地，当前编辑基地单独生成展示投影。
-    // Evidence: SimulationQueryContext.getTopology 在区域模式下保持当前基地拓扑。
-    // Replacement: 上方按 topology.devices 过滤后的映射。
-    // Risk: Low；单基地 topology 包含全部可见扩散源，行为不变。
-    // Human Review: Required
-    //
-    // Original code:
-    // getActiveGasDiffusionRanges: () => context.getPresentation()?.getGasDiffusions().map((diffusion) => ({
-    //   sourceDeviceId: diffusion.sourceDeviceId,
-    //   gasItemId: diffusion.gasItemId,
-    //   gridRect: { ...diffusion.gridRect },
-    // })) ?? [],
     getDeviceActiveGasItemIds: (deviceId) => {
       const topology = context.getTopology();
       const presentation = context.getPresentation();
@@ -395,7 +381,6 @@ function resolveDeviceRuntimeStatus(options: {
     return null;
   }
 
-  // AI-CORRECTION 2026-05-29: 新增 channelRecipes 映射所有 channel 运行时状态。
   const channelRecipes: Record<string, SimulationDeviceRuntimeChannelRecipeStatus | null> = {};
   if (deviceSnapshot.channelRecipes) {
     for (const [chId, chRecipe] of Object.entries(deviceSnapshot.channelRecipes)) {
@@ -418,51 +403,13 @@ function resolveDeviceRuntimeStatus(options: {
     }
   }
 
-  // AI-REMOVED 2026-05-30:
-  // Reason: recipeId/progressSeconds/desiredSeconds 已从 SimulationDeviceRuntimeStatusReadModel 中移除。
-  // Trigger: 接口字段迁移到 channelRecipes。
-  // Evidence: 接口中已删除，所有调用方已迁移到 channelRecipes。
-  // Replacement: channelRecipes
-  // Risk: Low
-  // Human Review: Not Required
-  //
-  // Original code:
-  //   recipeId: deviceSnapshot.recipe?.recipeId ?? null,
-  //   progressSeconds: deviceSnapshot.recipe === null
-  //     ? null
-  //     : convertSimulationTicksToSeconds(deviceSnapshot.recipe.progressTicks),
-  //   desiredSeconds: deviceSnapshot.recipe === null
-  //     ? null
-  //     : convertSimulationTicksToSeconds(deviceSnapshot.recipe.durationTicks),
   return {
     channelRecipes,
     ...(deviceSnapshot.deviceState === undefined ? {} : { deviceState: deviceSnapshot.deviceState }),
     ...(deviceSnapshot.cultivation === undefined ? {} : { cultivation: deviceSnapshot.cultivation }),
-    // AI-REMOVED 2026-07-23:
-    // Reason: 设备状态不再投影已删除的分钟计量 read model。
-    // Trigger: Inspector 改为直接读取真实消耗槽。
-    // Evidence: 下方 slotItems 已提供 count/reserved，channelRecipes 提供运行状态。
-    // Replacement: slotItems + channelRecipes。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // meteredConsumption: deviceSnapshot.meteredConsumption === null
-    //   ? null
-    //   : {
-    //       currentWindowCount: deviceSnapshot.meteredConsumption.currentCount,
-    //       currentWindowItemId: deviceSnapshot.meteredConsumption.currentItemId,
-    //       previousWindowCount: deviceSnapshot.meteredConsumption.previousWindowCount,
-    //       previousWindowItemId: deviceSnapshot.meteredConsumption.previousWindowItemId
-    //         ?? (deviceSnapshot.meteredConsumption.previousWindowCount > 0
-    //           ? deviceSnapshot.meteredConsumption.activeEffectItemId
-    //           : null)
-    //         ?? null,
-    //     },
     admissionCounters: Object.fromEntries(
       Object.entries(deviceSnapshot.admissionCounters ?? {}).map(([portRef, counter]) => {
         const windowTicks = options.topology!.standardTickRate * 10;
-        // AI-CORRECTION 2026-08-04: 窗口对齐起点复用 resolveCounterWindowStartTick 逻辑（tick 1 相位）。
         const currentWindowStartTick = options.topology!.standardTickRate > 0
           ? 1 + Math.floor(Math.max(0, currentTickNumber - 1) / windowTicks) * windowTicks
           : 1;
@@ -558,7 +505,6 @@ function resolveDeviceRuntimeSlotItems(options: {
     const itemIndex = itemIndexesByGroup[slot.groupIndex];
     if (itemIndex === undefined) {
       const item: SimulationDeviceRuntimeSlotItemReadModel = {
-        // AI-CORRECTION 2026-05-13: slotType removed. viewRole alone determines slot role for display.
         storageGroupId: slot.storageGroupId,
         slotId: slot.slotId,
         viewRole: slot.viewRole,
@@ -624,7 +570,6 @@ function compileDeviceRuntimeSlotLayout(options: {
       layout.push({
         compiledSlotId,
         groupIndex,
-        // AI-CORRECTION 2026-05-13: slotType removed. viewRole alone determines slot role for display.
         storageGroupId,
         slotId: sourceSlotId,
         viewRole: isShareCapSlot ? node.viewRole : "single-view",
@@ -635,60 +580,3 @@ function compileDeviceRuntimeSlotLayout(options: {
   return layout;
 }
 
-// AI-REMOVED 2026-09-25:
-// Reason: 节点遍历、真实槽位分组和展示元数据仅依赖拓扑，不应在每次设备查询中重建。
-// Trigger: Dense 性能退化优化，要求运行结果完全一致。
-// Evidence: after-index-cache CPU profile 中 resolveDeviceRuntimeSlotItems 占 2.71 秒；重复分组还产生临时 Map 和字符串。
-// Replacement: compileDeviceRuntimeSlotLayout 按 topology 缓存布局；resolveDeviceRuntimeSlotItems 逐次读取实时值。
-// Risk: 缓存依赖 topology 引用变化；拓扑更新时必须清空，输出顺序仍按首个可见槽位确定。
-// Human Review: Required
-//
-// Original code:
-// function resolveDeviceRuntimeSlotItems(options: {
-//   topology: CompiledSimulationTopology;
-//   compiledDeviceId: string;
-//   presentation: SimulationPresentationProjection;
-//   shareCapSlotIds: Set<string> | null;
-// }): SimulationDeviceRuntimeSlotItemReadModel[] {
-//   const device = options.topology.devices[options.compiledDeviceId];
-//   if (device === undefined) {
-//     return [];
-//   }
-//
-//   const shareCapSlotIds = options.shareCapSlotIds ?? new Set<string>();
-//   const slotItemsByRealSlotKey = new Map<string, SimulationDeviceRuntimeSlotItemReadModel>();
-//   for (const nodeId of device.nodeIds) {
-//     const node = options.topology.nodes[nodeId];
-//     if (node === undefined) {
-//       continue;
-//     }
-//
-//     for (const compiledSlotId of node.slotIds) {
-//       const compiledSlot = options.topology.slots[compiledSlotId];
-//       const slotSnapshot = options.presentation.getSlot(compiledSlotId);
-//       if (compiledSlot === undefined || slotSnapshot === null) {
-//         continue;
-//       }
-//
-//       const isShareCapSlot = shareCapSlotIds.has(compiledSlotId);
-//       const storageGroupId = compiledSlot.sourceStorageSlotGroupId ?? "synthetic";
-//       const sourceSlotId = compiledSlot.sourceSlotId ?? compiledSlot.id;
-//       const realSlotKey = isShareCapSlot
-//         ? compiledSlotId
-//         : `${storageGroupId}:${sourceSlotId}`;
-//       const existing = slotItemsByRealSlotKey.get(realSlotKey);
-//       slotItemsByRealSlotKey.set(realSlotKey, {
-//         // AI-CORRECTION 2026-05-13: slotType removed. viewRole alone determines slot role for display.
-//         storageGroupId,
-//         slotId: sourceSlotId,
-//         viewRole: isShareCapSlot ? node.viewRole : "single-view",
-//         itemType: existing?.itemType ?? slotSnapshot.itemType,
-//         count: Math.max(existing?.count ?? 0, slotSnapshot.count),
-//         reserved: Math.max(existing?.reserved ?? 0, slotSnapshot.reserved),
-//         ignoreStock: (existing?.ignoreStock ?? false) || slotSnapshot.ignoreStock,
-//       });
-//     }
-//   }
-//
-//   return [...slotItemsByRealSlotKey.values()];
-// }

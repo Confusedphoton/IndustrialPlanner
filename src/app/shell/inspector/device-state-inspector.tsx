@@ -59,15 +59,6 @@ export function DeviceStateInspector({ definition, runtimeStatus, runtimeSample,
           <strong>{translate(state.nameKey)}</strong>
           <span className={styles["device-state-status"]}>{status}</span>
         </span>
-        {/* AI-REMOVED 2026-10-15:
-          Reason: 分支状态数组位置不能表示种植阶段序号。
-          Trigger: 普通成长可转向成熟或育种后成长。
-          Evidence: 有序 transitions 包含互斥路径。
-          Replacement: 当前状态名称和独立进度条。
-          Risk: Low
-          Human Review: Required
-          Original code: <span>阶段 {stateIndex + 1} / {machine.states.length}</span>
-        */}
       </div>
       <div className={styles["progress-bar"]} role="progressbar" aria-label={translate("inspectorText.stageProgress")}
         aria-valuemin={0} aria-valuemax={duration} aria-valuenow={progress}>

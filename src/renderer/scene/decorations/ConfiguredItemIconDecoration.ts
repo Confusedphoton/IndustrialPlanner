@@ -26,16 +26,6 @@ import {
 
 const WAREHOUSE_PICKUP_DEFINITION_ID = "unloader_1";
 
-// AI-REMOVED 2026-07-27:
-// Reason: renderer 不应维护传送带准入口和管道准入口 definition ID。
-// Trigger: 用户要求 registry 外只使用 Query，并将两族角色解析统一为 resolveLogisticsRole。
-// Evidence: RegistryQuery.resolveLogisticsRole 对两种准入口均返回 "admission"。
-// Replacement: AdmissionItemIconEntityCache.resolve 的 isAdmissionDefinition。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// const ADMISSION_DEFINITION_IDS = new Set(["log_admission", "pipe_admission"]);
 
 interface ConfiguredItemIconView {
   readonly root: Container;
@@ -56,27 +46,12 @@ interface ConfiguredItemIconDecoration extends DecorationLayer {
  * 物品准入口图标 Decoration。
  *
  * 当准入口设备（item_log_admission / item_pipe_admission）设置了准入物品时，
- * AI-CORRECTION 2026-07-19: 当前设备定义 ID 为 log_admission / pipe_admission；上行保留迁移前名称。
  * 在设备中心渲染 圆圈 + 物品图标，与主要产物图标样式一致。
- * AI-CORRECTION 2026-07-24: 准入口被压制时，对应物品图标也隐藏。
- * AI-CORRECTION 2026-08-20: Decoration 已泛化为已配置物品圆圈，同时覆盖准入口与仓库取货口。
  */
 export function createConfiguredItemIconDecoration(): ConfiguredItemIconDecoration {
   const container = new Container();
   const views: ConfiguredItemIconView[] = [];
 
-  // 缓存
-  // AI-REMOVED 2026-07-15:
-  // Reason: 旧缓存键只包含 document snapshot，遗漏了移动和放置 preview 草稿。
-  // Trigger: 配置物品的准入口移动后，图标会延迟出现或在取消后残留，直到平移视口写入 document 才刷新。
-  // Evidence: editor.queries.listEntities() 同时返回 document entities 与 state.drafts；移动/取消仅更新 state.drafts。
-  // Replacement: AdmissionItemIconEntityCache（document snapshot + preview 草稿实体引用）。
-  // Risk: Low - 仅改变准入口图标缓存失效条件。
-  // Human Review: Required
-  //
-  // Original code:
-  // let cachedDocumentSnapshot: unknown = null;
-  // let admissionEntities: WorldEntity[] | null = null;
   const configuredItemIconEntityCache = createConfiguredItemIconEntityCache();
   let textureConfig: RenderTextureConfig | null = null;
   let destroyed = false;
@@ -119,41 +94,6 @@ export function createConfiguredItemIconDecoration(): ConfiguredItemIconDecorati
     return view;
   };
 
-  // AI-REMOVED 2026-07-15:
-  // Reason: 旧 resolver 仅比较 document snapshot，导致草稿实体被遗漏或过期保留。
-  // Trigger: 用户报告移动准入口虚影上的物品圆圈延迟出现、取消后残留，pan 后才刷新。
-  // Evidence: Playwright 在移动端和桌面端均复现：视口持久化改变 document 后会缓存 move-draft，取消不改变 document 因而残留。
-  // Replacement: 下方 resolveAdmissionEntities（document snapshot + preview 草稿实体引用）。
-  // Risk: Low - 仅改变缓存失效条件。
-  // Human Review: Required
-  //
-  // Original code:
-  // const resolveAdmissionEntities = (
-  //   ctx: DecorationSyncContext,
-  // ): readonly WorldEntity[] => {
-  //   const editor = ctx.renderHost.workspace.editor;
-  //   if (editor === null || editor.document === undefined) {
-  //     return [];
-  //   }
-  //
-  //   const snapshot = editor.document.getSnapshot();
-  //   if (snapshot === null) {
-  //     return [];
-  //   }
-  //
-  //   // 文档未变化时复用缓存
-  //   if (cachedDocumentSnapshot === snapshot && admissionEntities !== null) {
-  //     return admissionEntities;
-  //   }
-  //
-  //   cachedDocumentSnapshot = snapshot;
-  //
-  //   admissionEntities = editor.queries.listEntities().filter((entity) =>
-  //     ADMISSION_DEFINITION_IDS.has(entity.definitionId),
-  //   );
-  //
-  //   return admissionEntities;
-  // };
   const resolveConfiguredItemIconEntities = (options: {
     ctx: DecorationSyncContext;
     entities: readonly WorldEntity[];
@@ -294,7 +234,7 @@ export function createConfiguredItemIconDecoration(): ConfiguredItemIconDecorati
       let viewIndex = 0;
 
       for (const entity of entities) {
-        // 2026-11-13：主画布和计划覆盖由 GenericDeviceSprite 共用标签，普通静态预览保留配置圆框。
+        // 主画布和计划覆盖由 GenericDeviceSprite 共用标签，普通静态预览保留配置圆框。
         if (entity.definitionId === WAREHOUSE_PICKUP_DEFINITION_ID
           && (ctx.renderHost.input.simulation !== null
             || ctx.renderHost.input.overlay.getSnapshot()?.deviceItemIds[resolveDocumentEntityId(entity)]?.length)) continue;
@@ -349,7 +289,6 @@ export function createConfiguredItemIconDecoration(): ConfiguredItemIconDecorati
         view.circle.height = iconSize;
 
         // 物品图标：先布局尺寸（每帧更新），纹理异步加载
-        // AI-CORRECTION 2026-08-20: 圆圈现为方形物品纹理的内接圆，纹理边长等于圆直径；透明边缘由统一整像素裁边处理。
         const insideSize = iconSize;
         view.icon.width = insideSize;
         view.icon.height = insideSize;

@@ -10,30 +10,6 @@ import {
   RecipeItemDomainId,
 } from "@/domain/shared/item-domain-flags";
 import { createRegistryContract } from "@/registry";
-// AI-REMOVED 2026-08-19:
-// Reason: Registry 定义测试不再查询 SimulationMode 覆盖配置。
-// Trigger: 用户要求删除 simulationModeConfigs 及对应基础设施。
-// Evidence: 本测试只验证基础 simulationBehaviors；两个模式的编译结果由 regional-base-runtime 覆盖。
-// Replacement: None
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
-// AI-REMOVED 2026-08-19:
-// Reason: 暗管入口销毁配方已退出，定义测试不再断言任意流体配方占位 ID 和隐藏配方标签。
-// Trigger: 用户要求暗管入口在所有模式下提交仓库并抛弃销毁机制。
-// Evidence: 下方用例改为断言两个旧 recipe ID 均未注册。
-// Replacement: registry.queries.findRecipeDefinition 空值断言。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import {
-//   FLUID_DOMAIN_RECIPE_ITEM_ID,
-//   FluidDomain,
-// } from "@/domain/shared/item-domain-flags";
-// import { TOOLBOX_HIDDEN_RECIPE_TAG } from "@/shared/registry/recipe-visibility";
 
 function getEntity(id: string) {
   const registry = createRegistryContract();
@@ -59,54 +35,6 @@ describe("dark pipe definitions", () => {
         storageSlotGroupIds: ["loader_buffer"],
       }]);
       expect(registry.queries.findEntityDefinition(definitionId)).toBe(definition);
-      // AI-REMOVED 2026-08-19:
-      // Reason: Registry API 与 EntityDefinition 已彻底移除 SimulationMode 覆盖配置。
-      // Trigger: 用户要求删除 simulationModeConfigs 及对应基础设施。
-      // Evidence: 基础 behavior 断言继续覆盖设备声明；区域 Runtime 测试覆盖双模式编译结果。
-      // Replacement: 上方 findEntityDefinition 基础查询断言。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // expect(definition.simulationModeConfigs).toBeUndefined();
-      // expect(registry.queries.resolveEntitySimulationModeConfig(
-      //   definitionId,
-      //   SIMULATION_MODE.singleBase,
-      // )).toBeNull();
-      // expect(registry.queries.resolveEntitySimulationModeConfig(
-      //   definitionId,
-      //   SIMULATION_MODE.regionalMultiBase,
-      // )).toBeNull();
-      // AI-REMOVED 2026-08-19:
-      // Reason: 暗管入口行为已从两个重复的模式配置提升为单一基础 behavior。
-      // Trigger: 用户要求公共 behavior 不再伪装成模式差异。
-      // Evidence: definition.simulationBehaviors 现为唯一声明；区域 Runtime 测试继续断言两个模式编译结果一致。
-      // Replacement: 上方基础 behavior、空 simulationModeConfigs 与空模式查询断言。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // expect(registry.queries.resolveEntitySimulationModeConfig(
-      //   definitionId,
-      //   SIMULATION_MODE.singleBase,
-      // )).toEqual({
-      //   behaviors: [{
-      //     type: ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting,
-      //     strategy: ENTITY_INPUT_ROUTING_STRATEGY.warehouseSinkWhenUnlinked,
-      //     storageSlotGroupIds: ["loader_buffer"],
-      //   }],
-      // });
-      // expect(registry.queries.resolveEntitySimulationModeConfig(
-      //   definitionId,
-      //   SIMULATION_MODE.regionalMultiBase,
-      // )).toEqual({
-      //   behaviors: [{
-      //     type: ENTITY_SIMULATION_BEHAVIOR_TYPE.inputRouting,
-      //     strategy: ENTITY_INPUT_ROUTING_STRATEGY.warehouseSinkWhenUnlinked,
-      //     storageSlotGroupIds: ["loader_buffer"],
-      //   }],
-      // });
-      // expect(definition.simulationModeConfigs).toBeDefined();
     },
   );
 

@@ -63,9 +63,6 @@ export function createEditableSceneSource(id: string, editor: EditorRuntimeHost)
     document: editor.document.getSnapshot(),
     space: resolveEditorSceneSpace(editor.services, editor.document.getSnapshot()),
     interaction: {
-// AI-REMOVED 2026-11-12: Reason: 相机移至 View；Trigger: REQ-048 D4；Evidence: 旧 viewport 已退役；Replacement: EditorView；Risk: 消费者待迁移；Human Review: Required
-// Original code:
-//       viewport: editor.state.viewport,
       collections: editor.state.collections, regionAnnotations: editor.state.regionAnnotations,
       hoverTarget: editor.state.hoverTarget, marqueeGridRect: editor.state.marqueeGridRect,
       suppressBelts: editor.state.suppressBelts, suppressPipes: editor.state.suppressPipes,

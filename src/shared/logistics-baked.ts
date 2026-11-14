@@ -22,15 +22,6 @@ export interface LogisticsBakedManifest {
   sceneTransmission?: { glassLinearRGB: [number, number, number]; reflectionEncodingScale: number };
   staticResources: Record<string, string>;
   parametersByResourceId: Record<string, Record<string, number>>;
-  // AI-REMOVED 2026-09-14:
-  // Reason: baked manifest 是物流纹理协议，不应复制 Registry 的物品视觉元数据。
-  // Trigger: 用户要求 ItemDefinition.fluidColors 成为唯一运行时颜色来源。
-  // Evidence: 当前公开 manifest 仅有 2 项，而独立美术表与 Registry 均覆盖 20 项。
-  // Replacement: LogisticsPipeRoute.fluidColors，来源为 Registry ItemDefinition。
-  // Risk: Low
-  // Human Review: Required
-  // Original code:
-  // fluidProfiles: Record<string, { phase: 'liquid' | 'gas'; colors: Record<'body' | 'skin' | 'skin2' | 'splash', string> }>;
   cycle: { fillCellsPerSecond: number; drainDuration: number; refillDuration: number; edgeWidth: number };
   fluidPlayback: { referenceShader: { vertex: string; fragment: string } };
   endpointConnector: { composite: string; whitening: string };
@@ -127,14 +118,5 @@ export interface LogisticsPipeRoute {
   seconds: number;
   flowing: boolean;
   fluidColors: ItemDefinition['fluidColors'] | null;
-  // AI-REMOVED 2026-09-14:
-  // Reason: 路线不再缓存从 tag 或 manifest 解析出的单色副本。
-  // Trigger: Registry.fluidColors 成为唯一运行时颜色来源。
-  // Evidence: baked flow 已能按路线引用完整分层档案。
-  // Replacement: fluidColors。
-  // Risk: Low
-  // Human Review: Required
-  // Original code:
-  // color: string;
   gas: boolean;
 }

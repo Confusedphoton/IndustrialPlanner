@@ -14,15 +14,6 @@ import {
 import type { AppHost } from "@/app/host/app-host";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
-// AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// import type { BlueprintPreviewHandle, BlueprintPreviewViewport } from "@/domain/renderer";
 
 import {
   createEmptyBlueprintLibraryDirectory,
@@ -37,19 +28,6 @@ import {
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
-// AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// const DEFAULT_SAVE_BLUEPRINT_PREVIEW_VIEWPORT: BlueprintPreviewViewport = {
-//   zoom: 1,
-//   offsetX: 0,
-//   offsetY: 0,
-// };
 
 
 function shouldUseImmersiveMaximizedDialog(
@@ -73,43 +51,8 @@ function createDefaultBlueprintName(locale: AppHost["state"]["settings"]["locale
     : `Untitled Blueprint-${timestamp}`;
 }
 
-// AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// function resolveBlueprintPreviewStageSize(element: HTMLDivElement) {
-//   const clientRect = element.getBoundingClientRect();
-//
-//   return {
-//     width: Math.max(1, Math.floor(clientRect.width || element.clientWidth || 0)),
-//     height: Math.max(1, Math.floor(clientRect.height || element.clientHeight || 0)),
-//   };
-// }
 
 
-// AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// function mountSaveBlueprintPreviewCanvas(
-//   host: HTMLDivElement,
-//   canvas: HTMLCanvasElement,
-// ) {
-//   canvas.ariaHidden = "true";
-//   canvas.dataset.saveBlueprintPreviewCanvas = "true";
-//   canvas.style.display = "block";
-//   canvas.style.width = "100%";
-//   canvas.style.height = "100%";
-//   host.replaceChildren(canvas);
-// }
 
 
 function formatBlueprintFolderPath(options: {
@@ -194,15 +137,6 @@ export const SaveBlueprintDialog = observer(function SaveBlueprintDialog({
   const isTabletLayout = appHost.state.screenProfile.deviceClass === "tablet";
   const canSaveSelection = canSaveSelectionAsBlueprint(appHost.workspace);
   const previewCanvasHostRef = useRef<HTMLDivElement | null>(null);
-  // AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// const previewHandleRef = useRef<BlueprintPreviewHandle | null>(null);
 
   const folderInitializationRequestIdRef = useRef(0);
   const folderDirectoryRequestIdRef = useRef(0);
@@ -414,99 +348,8 @@ export const SaveBlueprintDialog = observer(function SaveBlueprintDialog({
     };
   }, [copy.folderLoadFailed, currentFolderId, dialogState.visible, isFolderPickerReady]);
 
-  // AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// useEffect(() => {
-//     const previewCanvasHost = previewCanvasHostRef.current;
-//
-//     if (!dialogState.visible || previewBlueprint === null || renderHost === null || previewCanvasHost === null) {
-//       return;
-//     }
-//
-//     let active = true;
-//     let mountedHandle: BlueprintPreviewHandle | null = null;
-//     const previewStageSize = resolveBlueprintPreviewStageSize(previewCanvasHost);
-//
-//     void renderHost.actions.mountBlueprintPreview({
-//       blueprint: previewBlueprint,
-//       width: previewStageSize.width,
-//       height: previewStageSize.height,
-//       viewport: DEFAULT_SAVE_BLUEPRINT_PREVIEW_VIEWPORT,
-//     }).then((handle) => {
-//       if (!active) {
-//         renderHost.actions.disposeBlueprintPreview(handle);
-//         return;
-//       }
-//
-//       mountedHandle = handle;
-//       previewHandleRef.current = handle;
-//       const canvas = renderHost.queries.getBlueprintPreviewCanvas(handle);
-//
-//       if (canvas !== null) {
-//         mountSaveBlueprintPreviewCanvas(previewCanvasHost, canvas);
-//       }
-//
-//       renderHost.actions.updateBlueprintPreviewViewport(handle, DEFAULT_SAVE_BLUEPRINT_PREVIEW_VIEWPORT);
-//     });
-//
-//     return () => {
-//       active = false;
-//       previewHandleRef.current = null;
-//       previewCanvasHost.replaceChildren();
-//
-//       if (mountedHandle !== null) {
-//         renderHost.actions.disposeBlueprintPreview(mountedHandle);
-//       }
-//     };
-//   }, [dialogState.visible, previewBlueprint, renderHost]);
 
 
-  // AI-REMOVED 2026-11-12:
-// Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
-// Trigger: REQ-048 D5/D6 静态预览规则。
-// Evidence: useReadonlyCanvas 已统一加载、尺寸、内容替换和销毁。
-// Replacement: useReadonlyCanvas
-// Risk: 预览不再支持拖动缩放；外围保存、放置和导出不变。
-// Human Review: Required
-// Original code:
-// useEffect(() => {
-//     const previewCanvasHost = previewCanvasHostRef.current;
-//
-//     if (
-//       !dialogState.visible
-//       || previewCanvasHost === null
-//       || renderHost === null
-//       || typeof ResizeObserver === "undefined"
-//     ) {
-//       return;
-//     }
-//
-//     const resizeObserver = new ResizeObserver(() => {
-//       if (previewHandleRef.current === null) {
-//         return;
-//       }
-//
-//       const previewStageSize = resolveBlueprintPreviewStageSize(previewCanvasHost);
-//
-//       renderHost.actions.resizeBlueprintPreview(
-//         previewHandleRef.current,
-//         previewStageSize.width,
-//         previewStageSize.height,
-//       );
-//     });
-//
-//     resizeObserver.observe(previewCanvasHost);
-//
-//     return () => {
-//       resizeObserver.disconnect();
-//     };
-//   }, [dialogState.visible, previewBlueprint, renderHost]);
 
 
   const previewDocument = useMemo(() => previewBlueprint === null ? null : createEmbedWorldDocument(previewBlueprint, appHost.workspace.registry), [appHost, previewBlueprint]);

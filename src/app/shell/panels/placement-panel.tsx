@@ -40,18 +40,6 @@ import { cm } from "@/app/shell/shared/css-module-class";
 
 const DEVICE_SHORTCUT_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] as const;
 const COMPACT_DEVICE_LABEL_MAX_WIDTH = 6.5;
-// AI-REMOVED 2026-07-21:
-// Reason: 变体菜单触发区域改为独立下拉按钮，主按钮 hover/长按不再打开菜单。
-// Trigger: 新设计要求放置主体与尾部下拉按钮分离。
-// Evidence: PlacementDeviceButton 现在只在 placement-entity-variant-trigger 上调用 openVariantMenu。
-// Replacement: PlacementDeviceButton 的 toggleVariantMenu 和 triggerButtonRef。
-// Risk: Low；触屏端仍可直接点击尾部按钮打开菜单。
-// Human Review: Required
-//
-// Original code:
-// const PLACEMENT_VARIANT_LONG_PRESS_MS = 500;
-// const PLACEMENT_VARIANT_LONG_PRESS_MOVE_SLOP_PX = 8;
-// const PLACEMENT_VARIANT_HOVER_CLOSE_DELAY_MS = 140;
 
 function estimateDeviceLabelWidth(label: string): number {
   let width = 0;
@@ -63,32 +51,6 @@ function estimateDeviceLabelWidth(label: string): number {
 
 // ─── 设备图标路径映射 ───
 function resolveDeviceIconPath(definition: EntityDefinition): string {
-  // AI-REMOVED 2026-08-20:
-  // Reason: 放置面板改为读取 EntityDefinition.iconPath，局部 ID 映射与 spriteId 回退均不再有效。
-  // Trigger: 用户要求图标文件与设备 ID、spriteId 解耦，并由 definition 持有完整路径。
-  // Evidence: Registry 已为全部设备显式声明 iconPath；液体填充器的特殊路径已迁入其 definition。
-  // Replacement: 下方 createEntityIconAssetUrl(definition.iconPath)。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // // 特殊映射：entity id 与图标文件名不一致的情况
-  // const SPECIAL_ICON_MAP: Record<string, string> = {
-  //   // AI-REMOVED 2026-08-14:
-  //   // Reason: 三个无限作弊设备现在使用各自的 device-icon 资源，entity id 已与资源文件名统一。
-  //   // Trigger: 用户要求无限气、无限水、无限箱分别使用指定透明图标。
-  //   // Evidence: public/device-icons/cheat_infinite_{gas,liquid,solid}.webp 与 registry spriteId 同名。
-  //   // Replacement: resolveDeviceIconPath 的 definition.spriteId 回退路径。
-  //   // Risk: Low
-  //   // Human Review: Required
-  //   //
-  //   // Original code:
-  //   // "cheat_infinite_solid": "item_port_unloader_1",
-  //   // "cheat_infinite_liquid": "item_port_water_pump_1",
-  //   // "cheat_infinite_gas": "gas_pump_1",
-  //   "liquid_filling_pd_mc_1": "item_port_filling_pd_mc_1",
-  // };
-  // return createDeviceIconAssetUrl(SPECIAL_ICON_MAP[definition.id] ?? definition.spriteId);
   return createEntityIconAssetUrl(definition.iconPath);
 }
 
@@ -238,35 +200,6 @@ function buildPlacementDeviceSections(appHost: AppHost): readonly PlacementSecti
   return deviceSections;
 }
 
-// AI-REMOVED 2026-07-21:
-// Reason: 放置面板不再用端帽 mask 表达变体，改为直接显示 mode 图片。
-// Trigger: 新设计要求尾部为普通样式图标加下拉按钮。
-// Evidence: entityVariant.iconPath 现在由 registry 指向 MachineMode 图标，并通过 img 渲染。
-// AI-CORRECTION 2026-07-21: MachineMode PNG 是白色 mask，当前通过普通小图标 mask 着色渲染。
-// Replacement: resolveVariantModeIconSrc。
-// Risk: Low；菜单与按钮仍使用同一 EntityVariantDefinition.iconPath。
-// Human Review: Required
-//
-// Original code:
-// const VARIANT_CAP_COLOR_BY_NAME: Readonly<Record<string, string>> = {
-//   normal: "var(--placement-variant-cap-solid)",
-//   solidtrans: "var(--placement-variant-cap-solid)",
-//   liquid: "var(--placement-variant-cap-liquid)",
-//   liquidtrans: "var(--placement-variant-cap-liquid)",
-//   gas: "var(--placement-variant-cap-gas)",
-//   gastrans: "var(--placement-variant-cap-gas)",
-// };
-//
-// function resolveVariantCapStyle(entityVariant: EntityVariantDefinition): CSSProperties {
-//   const maskImage = `url("${createPublicAssetUrl(entityVariant.iconPath)}")`;
-//
-//   return {
-//     backgroundColor: VARIANT_CAP_COLOR_BY_NAME[entityVariant.variantName]
-//       ?? "var(--placement-button-bg-end)",
-//     maskImage,
-//     WebkitMaskImage: maskImage,
-//   };
-// }
 
 function resolveVariantModeIconSrc(entityVariant: EntityVariantDefinition): string {
   return createPublicAssetUrl(entityVariant.iconPath);
@@ -367,23 +300,6 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
   const mainButtonRef = useRef<HTMLButtonElement | null>(null);
   const triggerButtonRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
-  // AI-REMOVED 2026-07-21:
-  // Reason: 菜单不再由主按钮 hover/长按控制，相关计时状态不再参与交互。
-  // Trigger: 新设计要求尾部独立下拉按钮是唯一展开入口。
-  // Evidence: 主按钮仅保留放置事件，触发按钮通过 triggerButtonRef 作为菜单锚点。
-  // Replacement: triggerButtonRef。
-  // Risk: Low；外部点击、Esc、resize/scroll 关闭逻辑仍保留。
-  // Human Review: Required
-  //
-  // Original code:
-  // const hoverCloseTimerRef = useRef<number | null>(null);
-  // const longPressTimerRef = useRef<number | null>(null);
-  // const longPressPointerRef = useRef<{
-  //   readonly pointerId: number;
-  //   readonly startX: number;
-  //   readonly startY: number;
-  // } | null>(null);
-  // const openedByLongPressRef = useRef(false);
   const t = appHost.actions.translate;
   const baseId = useEditorDocumentSnapshot(appHost.workspace.editor, selectDocumentBaseId, Object.is);
   const entityVariant = button.entityVariant;
@@ -424,22 +340,6 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
     setMenuAnchor(null);
   };
 
-  // AI-REMOVED 2026-07-21:
-  // Reason: 主按钮 hover/长按打开菜单的行为已被尾部下拉按钮替代。
-  // Trigger: 新设计要求下拉触发区域不再是主按钮任意位置。
-  // Evidence: openVariantMenu 仅读取 triggerButtonRef，主按钮 pointer 事件不再调用菜单逻辑。
-  // Replacement: toggleVariantMenu。
-  // Risk: Low；键盘和指针仍可通过真实 button 打开菜单。
-  // Human Review: Required
-  //
-  // Original code:
-  // const cancelHoverClose = () => { ... };
-  // const scheduleHoverClose = () => { ... };
-  // const clearLongPressTimer = () => { ... };
-  // const startLongPress = (event: ReactPointerEvent<HTMLButtonElement>) => { ... };
-  // const handleLongPressPointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => { ... };
-  // const finishLongPress = (event: ReactPointerEvent<HTMLButtonElement>): boolean => { ... };
-  // const cancelLongPress = (event: ReactPointerEvent<HTMLButtonElement>) => { ... };
 
   useEffect(() => {
     if (!isMenuOpen) {
@@ -476,19 +376,6 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
     };
   }, [isMenuOpen]);
 
-  // AI-REMOVED 2026-07-21:
-  // Reason: hover/长按计时器已随旧触发方式删除，不再需要卸载清理。
-  // Trigger: 菜单展开入口收敛为尾部下拉按钮。
-  // Evidence: 组件不再创建 hoverCloseTimerRef 或 longPressTimerRef。
-  // Replacement: None。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // useEffect(() => () => {
-  //   cancelHoverClose();
-  //   clearLongPressTimer();
-  // }, []);
 
   const handleVariantSelection = (
     definition: EntityDefinition,
@@ -521,235 +408,6 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
     triggerPlacementDeviceFromKeyboard(appHost, definition.id, event);
   };
 
-  // AI-REMOVED 2026-11-13:
-  // Reason: 设备条目的外观由共用组件承载，支持有限数量和紧凑配置。
-  // Trigger: 用户要求人工摆放与主放置面板复用设备按钮。
-  // Evidence: 两个入口都需要设备图标、名称和独立尾部控件。
-  // Replacement: PlacementPaletteRow；本组件继续持有主工作台手势、快捷键和变体菜单。
-  // Risk: 主面板 DOM 类名、ref 与事件均保留，需三屏验证。Human Review: Required
-  // Original code:
-  //   return (
-  //     <div
-  //       className={cm(
-  //         styles,
-  //         entityVariant === undefined
-  //           ? "placement-device-button-shell"
-  //           : "placement-device-button-shell has-entity-variant",
-  //       )}
-  //       ref={shellRef}
-  //     >
-  //       {/* AI-REMOVED 2026-07-21:
-  //           Reason: 主按钮区域不再负责展开变体菜单，避免放置与展开边界混杂。
-  //           Trigger: 新设计要求尾部下拉按钮是唯一菜单触发区域。
-  //           Evidence: 下方 placement-entity-variant-trigger 是独立 button。
-  //           Replacement: placement-entity-variant-trigger 的 pointer/key handlers。
-  //           Risk: Low。
-  //           Human Review: Required
-  //
-  //           Original code:
-  //           onPointerEnter={(event) => { ... openVariantMenu(); }}
-  //           onPointerLeave={(event) => { ... scheduleHoverClose(); }}
-  //       */}
-  //       <button
-  //         aria-pressed={isActive ? isActive : undefined}
-  //         className={cm(styles, className, entityVariant === undefined ? null : "has-entity-variant")}
-  //         data-ui-button-id={button.uiButtonId}
-  //         onPointerDown={onButtonPointerDown}
-  //         onPointerUp={(event) => {
-  //           onButtonPointerUp(event, button, true);
-  //         }}
-  //         ref={mainButtonRef}
-  //         type="button"
-  //       >
-  //         <span className={cm(styles, "button-icon")} aria-hidden="true">
-  //           <img
-  //             alt=""
-  //             className={cm(styles, "button-icon-image")}
-  //             src={definition === undefined ? "" : resolveDeviceIconPath(definition)}
-  //           />
-  //         </span>
-  //         <span className={cm(styles, labelClassName)}>{buttonLabel}</span>
-  //         {/* AI-REMOVED 2026-08-03:
-  //             Reason: 设备快捷键提示不再直接渲染文字。
-  //             Trigger: ST2-RQ-002 快捷键图片化展示。
-  //             Evidence: 下方 KeyboardShortcutPrompt 使用 input-prompts SVG。
-  //             Replacement: 下方 showDeviceHotkey 分支。
-  //             Risk: Low
-  //             Human Review: Required
-  //
-  //             Original code:
-  //             {showDeviceHotkey ? <span className={cm(styles, "placement-button-hotkey")}>{hotkey}</span> : null}
-  //         */}
-  //         {showDeviceHotkey ? (
-  //           <span className={cm(styles, "placement-button-hotkey")}>
-  //             <KeyboardShortcutPrompt shortcut={hotkey ?? ""} size="small" />
-  //           </span>
-  //         ) : null}
-  //         {/* AI-REMOVED 2026-07-21:
-  //             Reason: 变体端帽已替换为尾部独立 mode 图标下拉按钮。
-  //             Trigger: 新设计要求去掉端帽，只在下拉按钮显示 mode 图标。
-  //             Evidence: placement-entity-variant-trigger 内渲染 placement-entity-variant-mode-icon。
-  //             Replacement: placement-entity-variant-trigger。
-  //             Risk: Low。
-  //             Human Review: Required
-  //
-  //             Original code:
-  //             {entityVariant === undefined ? null : (
-  //               <span
-  //                 aria-hidden="true"
-  //                 className={cm(styles, "placement-entity-variant-cap")}
-  //                 style={resolveVariantCapStyle(entityVariant)}
-  //                 title={variantLongName ?? undefined}
-  //               />
-  //             )}
-  //         */}
-  //       </button>
-  //       {entityVariant !== undefined && !canOpenVariantMenu ? (
-  //         <span
-  //           aria-hidden="true"
-  //           className={cm(styles, "placement-entity-variant-indicator")}
-  //           data-entity-variant-name={entityVariant.variantName}
-  //           title={variantLongName ?? undefined}
-  //         >
-  //           <span
-  //             className={cm(styles, "placement-entity-variant-mode-icon")}
-  //             data-machine-mode-icon="true"
-  //             style={resolveVariantModeIconStyle(entityVariant)}
-  //           />
-  //         </span>
-  //       ) : null}
-  //       {canOpenVariantMenu ? (
-  //         <button
-  //           aria-expanded={isMenuOpen}
-  //           aria-haspopup="menu"
-  //           aria-label={variantLongName ?? buttonLabel}
-  //           className={cm(styles, "placement-entity-variant-trigger")}
-  //           data-entity-variant-name={entityVariant.variantName}
-  //           data-ui-button-id={`${button.uiButtonId}-variant-trigger`}
-  //           onKeyDown={(event) => {
-  //             if (event.key !== "Enter" && event.key !== " ") {
-  //               return;
-  //             }
-  //             event.preventDefault();
-  //             toggleVariantMenu();
-  //           }}
-  //           onPointerDown={(event) => {
-  //             event.stopPropagation();
-  //             onButtonPointerDown(event);
-  //           }}
-  //           onPointerUp={(event) => {
-  //             event.stopPropagation();
-  //             if (event.pointerType === "mouse" && event.button !== 0) {
-  //               return;
-  //             }
-  //             toggleVariantMenu();
-  //           }}
-  //           ref={triggerButtonRef}
-  //           title={variantLongName ?? undefined}
-  //           type="button"
-  //         >
-  //           <span
-  //             aria-hidden="true"
-  //             className={cm(styles, "placement-entity-variant-mode-icon")}
-  //             data-machine-mode-icon="true"
-  //             style={resolveVariantModeIconStyle(entityVariant as EntityVariantDefinition)}
-  //           />
-  //           <LucideChevronDown className={cm(styles, "placement-entity-variant-chevron")} aria-hidden="true" />
-  //         </button>
-  //       ) : null}
-  //       <OverlayStackLayer
-  //         kind="system"
-  //         layerId={`placement-variant-menu-${craftGroupKey ?? deviceId}`}
-  //         visible={isMenuOpen}
-  //       >
-  //         {({ zIndex }) => (
-  //           <div className={cm(styles, "placement-variant-menu-layer")} style={{ zIndex }}>
-  //             {/* AI-REMOVED 2026-07-19:
-  //                 Reason: 全屏 backdrop 会截获鼠标命中，破坏主按钮到浮层菜单的 hover 链路。
-  //                 Trigger: PC 端悬停主按钮任意位置显示菜单，并允许鼠标移入菜单。
-  //                 Evidence: 真实浏览器中全屏命中层会让主按钮立即收到 pointerleave；外部关闭已由 document pointerdown 处理。
-  //                 Replacement: PlacementDeviceButton 的 handleDocumentPointerDown。
-  //                 Risk: Low；外部点击会在关闭菜单后继续传递给原目标，符合普通弹出菜单行为。
-  //                 Human Review: Required
-  //
-  //                 Original code:
-  //                 <div
-  //                   aria-hidden="true"
-  //                   className={cm(styles, "placement-variant-menu-backdrop")}
-  //                   onPointerDown={() => setMenuAnchor(null)}
-  //                 />
-  //             */}
-  //             <div
-  //               aria-label={buttonLabel}
-  //               className={cm(styles, "placement-variant-menu")}
-  //               onPointerDown={(event) => event.stopPropagation()}
-  //               ref={menuRef}
-  //               role="menu"
-  //               style={resolveVariantMenuStyle(menuAnchor as DOMRect, variantDefinitions.length)}
-  //             >
-  //               {variantDefinitions.map((definition) => {
-  //                 const variantName = resolveEntityVariantName(definition);
-  //                 const variantDefinition = variantName === null
-  //                   ? undefined
-  //                   : appHost.workspace.registry.entityVariantDefinitions[variantName];
-  //                 if (variantDefinition === undefined) {
-  //                   return null;
-  //                 }
-  //
-  //                 const isSelected = definition.id === deviceId;
-  //                 const menuItemLabel = `${t(definition.nameKey)} · ${t(variantDefinition.longNameKey)}`;
-  //
-  //                 return (
-  //                   <button
-  //                     aria-checked={isSelected}
-  //                     className={cm(
-  //                       styles,
-  //                       isSelected
-  //                         ? "placement-variant-menu-item is-selected"
-  //                         : "placement-variant-menu-item",
-  //                     )}
-  //                     data-entity-variant-name={variantName}
-  //                     key={definition.id}
-  //                     onKeyDown={(event) => handleVariantSelectionKeyDown(definition, event)}
-  //                     onPointerDown={onButtonPointerDown}
-  //                     onPointerUp={(event) => handleVariantSelection(definition, event)}
-  //                     role="menuitemradio"
-  //                     type="button"
-  //                   >
-  //                     <span className={cm(styles, "placement-variant-menu-icon")} aria-hidden="true">
-  //                       <span
-  //                         className={cm(styles, "placement-entity-variant-mode-icon")}
-  //                         data-machine-mode-icon="true"
-  //                         style={resolveVariantModeIconStyle(variantDefinition)}
-  //                       />
-  //                     </span>
-  //                     <span className={cm(styles, "placement-variant-menu-label")}>{menuItemLabel}</span>
-  //                     {/* AI-REMOVED 2026-07-21:
-  //                         Reason: 菜单项头部图标改为 mode 图标，不再渲染尾部端帽。
-  //                         Trigger: 新设计要求打开的菜单里头部图标是 mode 图标。
-  //                         Evidence: placement-variant-menu-icon 现在使用 resolveVariantModeIconSrc。
-  //                         AI-CORRECTION 2026-07-21: MachineMode PNG 为白色 mask，当前由 placement-entity-variant-mode-icon 以 mask 样式渲染。
-  //                         Replacement: placement-variant-menu-icon img。
-  //                         AI-CORRECTION 2026-07-21: 实际替代实现是 placement-variant-menu-icon 内的 placement-entity-variant-mode-icon span。
-  //                         Risk: Low。
-  //                         Human Review: Required
-  //
-  //                         Original code:
-  //                         <span
-  //                           aria-hidden="true"
-  //                           className={cm(styles, "placement-entity-variant-cap placement-variant-menu-cap")}
-  //                           style={resolveVariantCapStyle(variantDefinition)}
-  //                         />
-  //                     */}
-  //                   </button>
-  //                 );
-  //               })}
-  //             </div>
-  //           </div>
-  //         )}
-  //       </OverlayStackLayer>
-  //     </div>
-  //   );
   return (
     <PlacementPaletteRow
       className={cm(styles, entityVariant === undefined ? "placement-device-button-shell" : "placement-device-button-shell has-entity-variant")}
@@ -768,40 +426,11 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
         ref: mainButtonRef,
       }}
       buttonSuffix={<>
-        {/* AI-REMOVED 2026-08-03:
-            Reason: 设备快捷键提示不再直接渲染文字。
-            Trigger: ST2-RQ-002 快捷键图片化展示。
-            Evidence: 下方 KeyboardShortcutPrompt 使用 input-prompts SVG。
-            Replacement: 下方 showDeviceHotkey 分支。
-            Risk: Low
-            Human Review: Required
-
-            Original code:
-            {showDeviceHotkey ? <span className={cm(styles, "placement-button-hotkey")}>{hotkey}</span> : null}
-        */}
         {showDeviceHotkey ? (
           <span className={cm(styles, "placement-button-hotkey")}>
             <KeyboardShortcutPrompt shortcut={hotkey ?? ""} size="small" />
           </span>
         ) : null}
-        {/* AI-REMOVED 2026-07-21:
-            Reason: 变体端帽已替换为尾部独立 mode 图标下拉按钮。
-            Trigger: 新设计要求去掉端帽，只在下拉按钮显示 mode 图标。
-            Evidence: placement-entity-variant-trigger 内渲染 placement-entity-variant-mode-icon。
-            Replacement: placement-entity-variant-trigger。
-            Risk: Low。
-            Human Review: Required
-
-            Original code:
-            {entityVariant === undefined ? null : (
-              <span
-                aria-hidden="true"
-                className={cm(styles, "placement-entity-variant-cap")}
-                style={resolveVariantCapStyle(entityVariant)}
-                title={variantLongName ?? undefined}
-              />
-            )}
-        */}
       </>}
     >
       {entityVariant !== undefined && !canOpenVariantMenu ? (
@@ -864,21 +493,6 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
       >
         {({ zIndex }) => (
           <div className={cm(styles, "placement-variant-menu-layer")} style={{ zIndex }}>
-            {/* AI-REMOVED 2026-07-19:
-                Reason: 全屏 backdrop 会截获鼠标命中，破坏主按钮到浮层菜单的 hover 链路。
-                Trigger: PC 端悬停主按钮任意位置显示菜单，并允许鼠标移入菜单。
-                Evidence: 真实浏览器中全屏命中层会让主按钮立即收到 pointerleave；外部关闭已由 document pointerdown 处理。
-                Replacement: PlacementDeviceButton 的 handleDocumentPointerDown。
-                Risk: Low；外部点击会在关闭菜单后继续传递给原目标，符合普通弹出菜单行为。
-                Human Review: Required
-
-                Original code:
-                <div
-                  aria-hidden="true"
-                  className={cm(styles, "placement-variant-menu-backdrop")}
-                  onPointerDown={() => setMenuAnchor(null)}
-                />
-            */}
             <div
               aria-label={buttonLabel}
               className={cm(styles, "placement-variant-menu")}
@@ -924,23 +538,6 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
                       />
                     </span>
                     <span className={cm(styles, "placement-variant-menu-label")}>{menuItemLabel}</span>
-                    {/* AI-REMOVED 2026-07-21:
-                        Reason: 菜单项头部图标改为 mode 图标，不再渲染尾部端帽。
-                        Trigger: 新设计要求打开的菜单里头部图标是 mode 图标。
-                        Evidence: placement-variant-menu-icon 现在使用 resolveVariantModeIconSrc。
-                        AI-CORRECTION 2026-07-21: MachineMode PNG 为白色 mask，当前由 placement-entity-variant-mode-icon 以 mask 样式渲染。
-                        Replacement: placement-variant-menu-icon img。
-                        AI-CORRECTION 2026-07-21: 实际替代实现是 placement-variant-menu-icon 内的 placement-entity-variant-mode-icon span。
-                        Risk: Low。
-                        Human Review: Required
-
-                        Original code:
-                        <span
-                          aria-hidden="true"
-                          className={cm(styles, "placement-entity-variant-cap placement-variant-menu-cap")}
-                          style={resolveVariantCapStyle(variantDefinition)}
-                        />
-                    */}
                   </button>
                 );
               })}
@@ -960,9 +557,12 @@ export const PlacementPanel = observer(function PlacementPanel({
   active?: boolean;
 }) {
   const t = appHost.actions.translate;
-  // 2026-11-13：设备搜索。输入即过滤，Enter 放置首个匹配，Esc 清空；画布上按 “/” 聚焦。
+  // 设备搜索。输入即过滤，Enter 放置首个匹配，Esc 清空；画布上按 “/” 聚焦。
   const [deviceQuery, setDeviceQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  // 最近放置的设备（本机 localStorage），以及分类跳转用的分组节点。
+  const [recentDeviceIds, setRecentDeviceIds] = useState<readonly string[]>(() => readRecentPlacementDevices());
+  const sectionElementsRef = useRef(new Map<string, HTMLElement>());
   useEffect(() => {
     if (!active) {
       return;
@@ -1001,6 +601,13 @@ export const PlacementPanel = observer(function PlacementPanel({
     button: Pick<PlacementButtonDefinition, "uiButtonId">,
     isDeviceButton: boolean,
   ) => {
+    if (isDeviceButton && (event.pointerType !== "mouse" || event.button === 0)) {
+      setRecentDeviceIds(recordRecentPlacementDevice(button.uiButtonId.replace("placement-", "")));
+      // 从面板选择设备时清除配方树带入的放置配置，避免旧配方带到新放置。
+      runInAction(() => {
+        appHost.mainCanvas.state.runtime.singlePlacementConfig = null;
+      });
+    }
     const uiButtonId = isDeviceButton
       ? `ui-left-dock-placement-mode-${button.uiButtonId.replace("placement-", "")}-${event.pointerType === "mouse" ? "mouse-tap" : "touch-tap"}`
       : button.uiButtonId;
@@ -1060,17 +667,6 @@ export const PlacementPanel = observer(function PlacementPanel({
           {button.iconSrc ? <img alt="" className={cm(styles, "button-icon-image")} src={button.iconSrc} /> : null}
         </span>
         {isTouchLayout ? null : <span className={cm(styles, "placement-button-label")}>{buttonLabel}</span>}
-        {/* AI-REMOVED 2026-08-03:
-            Reason: 操作按钮快捷键提示不再直接渲染文字。
-            Trigger: ST2-RQ-002 快捷键图片化展示。
-            Evidence: 下方 KeyboardShortcutPrompt 使用 input-prompts SVG。
-            Replacement: 下方快捷键提示分支。
-            Risk: Low
-            Human Review: Required
-
-            Original code:
-            <span className={cm(styles, "placement-button-hotkey")}>{hotkey}</span>
-        */}
         {!isTouchLayout && showShortcutHints && hotkey ? (
           <span className={cm(styles, "placement-button-hotkey")}>
             <KeyboardShortcutPrompt shortcut={hotkey} size="small" />
@@ -1082,6 +678,8 @@ export const PlacementPanel = observer(function PlacementPanel({
 
   return (
     <div className={cm(styles, "placement-panel")}>
+      {/* 触控布局的操作按钮组自身吸顶，搜索头部不再吸顶以免重叠。 */}
+      <div className={cm(styles, isTouchLayout ? "placement-panel-sticky-header is-static" : "placement-panel-sticky-header")}>
       <input
         aria-label={t("placement.search")}
         className={cm(styles, "placement-search-input")}
@@ -1094,6 +692,7 @@ export const PlacementPanel = observer(function PlacementPanel({
             return;
           }
           if (event.key === "Enter" && firstMatchedDeviceId !== null) {
+            setRecentDeviceIds(recordRecentPlacementDevice(firstMatchedDeviceId));
             appHost.gestureAdapter.handleUiButtonMouseTap({
               uiButtonId: `ui-left-dock-placement-mode-${firstMatchedDeviceId}-mouse-tap`,
               button: 0,
@@ -1112,6 +711,23 @@ export const PlacementPanel = observer(function PlacementPanel({
         type="search"
         value={deviceQuery}
       />
+      {normalizedDeviceQuery.length === 0 && deviceSections.length > 1 ? (
+        <nav aria-label={t("placement.jumpToCategory")} className={cm(styles, "placement-category-chips")}>
+          {deviceSections.map((section) => (
+            <button
+              className={cm(styles, "placement-category-chip")}
+              key={section.titleKey}
+              onClick={() => {
+                sectionElementsRef.current.get(section.titleKey)?.scrollIntoView({ block: "start", behavior: "smooth" });
+              }}
+              type="button"
+            >
+              {t(section.titleKey)}
+            </button>
+          ))}
+        </nav>
+      ) : null}
+      </div>
       <section
         aria-label={isTouchLayout ? t("workbench.section.operation") : undefined}
         aria-labelledby={isTouchLayout ? undefined : "placement-operation-section"}
@@ -1135,6 +751,48 @@ export const PlacementPanel = observer(function PlacementPanel({
 
       <div aria-hidden="true" className={cm(styles, "placement-panel-divider")} />
 
+      {normalizedDeviceQuery.length === 0 ? (() => {
+        const recentButtons = resolveRecentPlacementButtons(deviceSections, recentDeviceIds);
+        if (recentButtons.length === 0) {
+          return null;
+        }
+        return (
+          <>
+          <section aria-labelledby="placement-recent-section" className={cm(styles, "placement-panel-group")}>
+            <div className={cm(styles, "placement-panel-group-header")}>
+              <h3 id="placement-recent-section">{t("placement.recent")}</h3>
+            </div>
+            <div className={cm(styles, "placement-button-list is-tile-grid")}>
+              {recentButtons.map((button) => {
+                const deviceId = button.uiButtonId.replace("placement-", "");
+                const activePlacementDeviceId = appHost.mainCanvas.state.runtime.singlePlacementDeviceId;
+                const isActive = appHost.mainCanvas.state.activeTool === "single-placement"
+                  && (activePlacementDeviceId === deviceId
+                    || (appHost.state.settings.collapseDeviceModes
+                      && button.variantDefinitions?.some((definition) => definition.id === activePlacementDeviceId) === true));
+                return (
+                  <PlacementDeviceButton
+                    appHost={appHost}
+                    button={button}
+                    buttonLabel={t(button.labelKey)}
+                    deviceId={deviceId}
+                    hotkey={null}
+                    isActive={isActive}
+                    key={`recent-${button.uiButtonId}`}
+                    labelClassName="placement-button-label"
+                    onButtonPointerDown={handleButtonPointerDown}
+                    onButtonPointerUp={handleButtonPointerUp}
+                    showDeviceHotkey={false}
+                  />
+                );
+              })}
+            </div>
+          </section>
+          <div aria-hidden="true" className={cm(styles, "placement-panel-divider")} />
+          </>
+        );
+      })() : null}
+
       {deviceSections.map((section, sectionIndex) => {
         const sectionTitleId = `placement-device-section-${sectionIndex}`;
         const isPlacementGroupActive = (
@@ -1150,30 +808,26 @@ export const PlacementPanel = observer(function PlacementPanel({
             {sectionIndex > 0 ? <div aria-hidden="true" className={cm(styles, "placement-panel-divider")} /> : null}
             <section
               aria-labelledby={sectionTitleId}
+              ref={(element) => {
+                if (element === null) {
+                  sectionElementsRef.current.delete(section.titleKey);
+                } else {
+                  sectionElementsRef.current.set(section.titleKey, element);
+                }
+              }}
               className={cm(styles, isPlacementGroupActive
                 ? "placement-panel-group is-placement-group-active"
                 : "placement-panel-group")}
             >
               <div className={cm(styles, "placement-panel-group-header")}>
                 <h3 id={sectionTitleId}>{t(section.titleKey)}</h3>
-                {/* AI-REMOVED 2026-08-03:
-                    Reason: 分组快捷键提示不再直接渲染文字。
-                    Trigger: ST2-RQ-002 快捷键图片化展示。
-                    Evidence: 下方 KeyboardShortcutPrompt 使用 input-prompts SVG。
-                    Replacement: 下方分组快捷键提示分支。
-                    Risk: Low
-                    Human Review: Required
-
-                    Original code:
-                    <span className={cm(styles, "placement-panel-group-shortcut")}>{section.shortcutKey}</span>
-                */}
                 {showShortcutHints && section.shortcutKey ? (
                   <span className={cm(styles, "placement-panel-group-shortcut")}>
                     <KeyboardShortcutPrompt shortcut={section.shortcutKey} size="small" />
                   </span>
                 ) : null}
               </div>
-              <div className={cm(styles, isTouchLayout ? "placement-button-list is-single-column" : "placement-button-list")}>
+              <div className={cm(styles, "placement-button-list is-tile-grid")}>
                 {section.buttons.map((button, buttonIndex) => {
                   const buttonLabel = t(button.labelKey);
                   const hotkey = button.hotkey
@@ -1224,7 +878,7 @@ export const PlacementPanel = observer(function PlacementPanel({
   );
 });
 
-/** 2026-11-13：按设备名称（当前语言）与设备 ID 过滤放置面板分组，空分组隐藏。 */
+/** 按设备名称（当前语言）与设备 ID 过滤放置面板分组，空分组隐藏。 */
 function filterPlacementDeviceSections(
   sections: readonly PlacementSectionDefinition[],
   normalizedQuery: string,
@@ -1257,4 +911,51 @@ function isEditableEventTarget(target: EventTarget | null): boolean {
     || target.tagName === "INPUT"
     || target.tagName === "TEXTAREA"
     || target.tagName === "SELECT";
+}
+
+// ─── 2026-11-13：最近放置的设备 ───
+
+const RECENT_PLACEMENT_STORAGE_KEY = "industrial-planner-recent-placements";
+const MAX_RECENT_PLACEMENT_DEVICES = 8;
+
+function readRecentPlacementDevices(): readonly string[] {
+  try {
+    const raw = window.localStorage.getItem(RECENT_PLACEMENT_STORAGE_KEY);
+    const parsed: unknown = raw === null ? [] : JSON.parse(raw);
+    return Array.isArray(parsed)
+      ? parsed.filter((entry): entry is string => typeof entry === "string").slice(0, MAX_RECENT_PLACEMENT_DEVICES)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function recordRecentPlacementDevice(deviceId: string): readonly string[] {
+  const next = [deviceId, ...readRecentPlacementDevices().filter((entry) => entry !== deviceId)]
+    .slice(0, MAX_RECENT_PLACEMENT_DEVICES);
+  try {
+    window.localStorage.setItem(RECENT_PLACEMENT_STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    // localStorage may be unavailable in private contexts.
+  }
+  return next;
+}
+
+/** 将最近设备 ID 映射回当前基地可用的放置按钮；折叠模式下变体归并到同一按钮。 */
+function resolveRecentPlacementButtons(
+  sections: readonly PlacementSectionDefinition[],
+  recentDeviceIds: readonly string[],
+): readonly PlacementButtonDefinition[] {
+  const buttons = sections.flatMap((section) => section.buttons);
+  const resolved: PlacementButtonDefinition[] = [];
+  for (const deviceId of recentDeviceIds) {
+    const button = buttons.find((candidate) => (
+      candidate.uiButtonId === `placement-${deviceId}`
+      || candidate.variantDefinitions?.some((definition) => definition.id === deviceId) === true
+    ));
+    if (button !== undefined && !resolved.includes(button)) {
+      resolved.push(button);
+    }
+  }
+  return resolved;
 }

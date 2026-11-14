@@ -225,14 +225,6 @@ describe("createPixiRenderDiagnostics", () => {
     const texture = new Texture({ source: new TextureSource({ width: 32, height: 16, label: "/page.webp" }) })
     const profiler = new TexturePerfDiagnostics(() => ({
       activeSessions: 0, loadingPages: 0, residentDecodedBytes: 0, residentMasks: 0, residentPages: 0,
-      // AI-REMOVED 2026-09-13:
-      // Reason: 测试契约从预算选择/即时回收改为全量驻留与 20 秒离屏期限。
-      // Trigger: 用户明确调整动画驻留规则，执行测试前同步原行为断言。
-      // Evidence: DeviceAnimationTextureCache 已取消预算与 5 秒回收。
-      // Replacement: 下方全量驻留诊断快照
-      // Risk: Low; Human Review: Required
-      // Original code:
-      // residency: { budgetBytes: 512, reservedBytes: 0, overBudgetBytes: 0, visibleSessions: 0, visibleAssets: 0, queuedPages: 0, totalsSinceCreation: {}, assets: [], omittedAssets: 0 },
       residency: { mode: "full-set" as const, offscreenGraceMs: 20_000, retainedSetBytes: 0, retainedAssets: 0, visibleSessions: 0, visibleAssets: 0, queuedPages: 0, totalsSinceCreation: {}, assets: [], omittedAssets: 0 },
     }))
     const failure = new Error("upload failed")

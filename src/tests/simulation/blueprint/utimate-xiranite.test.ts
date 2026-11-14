@@ -16,7 +16,6 @@ const WARMUP_SECONDS = 120; // 2 分钟预热
 const WINDOW_SECONDS = 60; // 1 分钟窗口（20 tick/s × 60s）
 const OBSERVATION_SECONDS = 120; // 预热后观察 2 分钟
 const WINDOW_STEP_SECONDS = 5;   // 窗口滑动步长
-// AI-CORRECTION 2026-09-04: 上述窗口统一改用秒，运行后按 topology.standardTickRate 换算，不再固定假设 20 TPS。
 const EXPECTED_XIRANITE_PER_MINUTE = 210;
 
 describe.each(BLUEPRINT_SIMULATION_ENGINE_KINDS)(
@@ -71,7 +70,6 @@ describe.each(BLUEPRINT_SIMULATION_ENGINE_KINDS)(
     }
 
     // 滑动窗口验证：步长 WINDOW_STEP=100 tick
-    // AI-CORRECTION 2026-09-04: 当前步长为 WINDOW_STEP_SECONDS，并按本次引擎返回的 standardTickRate 换算。
     const slidingWindowStartMin = warmupTicks;
     const slidingWindowStartMax = maxTick - windowSize + 1;
     const results: { windowStart: number; produced: number }[] = [];

@@ -15,32 +15,7 @@ import {
   isSyncProviderTargetActive,
   readActiveSyncProvider,
 } from "./sync-provider-activation";
-// AI-REMOVED 2026-08-08:
-// Reason: Cloudflare 墓碑作用域必须跟随可共享的真实远端目标，不能绑定本地 owner。
-// Trigger: 用户明确要求不同浏览器使用相同空间名称共享。
-// Evidence: owner scope 会让两个浏览器为相同 spaceName 生成不同墓碑作用域。
-// Replacement: apiBase + spaceName。
-// Risk: Low。
-// Human Review: Required
-// AI-CORRECTION 2026-08-23: 账户模式使用 OAuth session 中的账户 spaceId；
-// 未登录的账户模式不生成匿名墓碑，避免退出或会话失效后静默污染匿名空间。
-//
-// Original code:
-// import {
-//   createLocalSyncOwnerScopeKey,
-//   ensureLocalSyncOwnerState,
-// } from "./sync-owner-storage";
 
-// AI-REMOVED 2026-08-24:
-// Reason: provider 选择不再等于同步激活，墓碑只能绑定已确认的活动 provider。
-// Trigger: 用户要求切换同步方式后在完成配置前不得生效。
-// Evidence: shared sync-provider-activation 已提供 readActiveSyncProvider。
-// Replacement: readActiveSyncProvider import。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-// const SYNC_PROVIDER_STORAGE_KEY = "v3-sync-provider";
 const SYNC_DATABASE_NAME = "v3-industrial-planner";
 // 同步连接设置 store：与 src/sync/storage/sync-connection-settings.ts 保持一致。
 const SYNC_CONNECTION_SETTINGS_LOCATION = {
@@ -272,23 +247,6 @@ async function resolveActiveSyncTombstoneScope(): Promise<ActiveSyncTombstoneSco
   };
 }
 
-// AI-REMOVED 2026-08-24:
-// Reason: 直接读取旧 provider key 会把 pending 选择误当成活动同步目标。
-// Trigger: 用户要求 provider 切换进入待配置态，确认前不得生成同步墓碑。
-// Evidence: readActiveSyncProvider 只在 activation.state=active 时返回 provider。
-// Replacement: src/shared/storage/sync-provider-activation.ts readActiveSyncProvider。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-// function readActiveSyncProvider(): ActiveSyncProvider | null {
-//   try {
-//     const provider = globalThis.localStorage?.getItem(SYNC_PROVIDER_STORAGE_KEY);
-//     return provider === "cloudflare" || provider === "webdav" ? provider : null;
-//   } catch {
-//     return null;
-//   }
-// }
 
 function createTombstoneStorageKey(options: {
   readonly scopeKey: string;

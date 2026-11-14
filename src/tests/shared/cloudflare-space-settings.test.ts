@@ -33,17 +33,6 @@ describe("Cloudflare 首次空间初始化", () => {
       cloudflareProviderSelected: false,
     });
 
-    // AI-REMOVED 2026-08-24:
-    // Reason: 未确认 Cloudflare 的新用户不再获得随机 Space ID。
-    // Trigger: provider 两阶段激活行为变更。
-    // Evidence: initializeCloudflareSpaceSettings 返回空目标且不写远端。
-    // Replacement: 下方空目标断言。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // expect(settings.spaceName).toMatch(/^space-/);
-    // expect(settings.spaceName).not.toBe(DEFAULT_CLOUDFLARE_SPACE_NAME);
     expect(settings).toEqual({
       spaceName: "",
       remoteMode: "anonymous",

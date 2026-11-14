@@ -177,15 +177,6 @@ describe("ST2-RQ-024 real tick recipe progress", () => {
       config: {},
       tags: [],
     };
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/document-scenes/simulation/real-tick-recipe-progress/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // { grinder }
     document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/document-scenes/simulation/real-tick-recipe-progress/scene-01-variant-1.schema7.json").entities;
     document.entityOrder = [grinder.id];
 
@@ -209,22 +200,6 @@ function createRunningSimulationState(): SimulationState {
     runningState: "start",
     simulationMode: "single-base",
     simulationSpeed: 2,
-    // AI-REMOVED 2026-09-12:
-    // Reason: SimulationState 测试夹具同步移除已退役的性能统计与公共缓存字段。
-    // Trigger: 用户确认性能诊断改由 SimulationQuery 返回。
-    // Evidence: SimulationState contract 已不再声明 statistics / bufferSize。
-    // Replacement: SimulationQuery.getPerformanceDiagnostics 的宿主级测试。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // statistics: {
-    //   tickPerSecond: 0,
-    //   targetTickPerSecond: 0,
-    //   baseBatteryJoules: 0,
-    //   baseBatteryCapacity: 0,
-    // },
-    // bufferSize: 0,
     timeline: {
       enabled: false,
       readiness: "idle",

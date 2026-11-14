@@ -39,16 +39,6 @@ function createTestEntityDefinition(options: {
             localCellY: 0,
             edge: "NORTH",
             acceptRule: { base: { kind: "domain", flags: ItemDomainFlag.Solid }, exclude: [] },
-            // AI-REMOVED 2026-06-12:
-            // Reason: PortDefinition.count per-tick 限流字段已删除。
-            // Trigger: 用户确认文档没有 per tick count。
-            // Evidence: 编译器不再读取 port.count。
-            // Replacement: None - 该 fixture 只测试 recipe channel role 编译。
-            // Risk: Low
-            // Human Review: Required
-            //
-            // Original code:
-            // count: "unlimited",
             priorityGroup: 5,
             roundRobinSeed: 0,
           },
@@ -95,24 +85,6 @@ function compileTestEntity(definition: EntityDefinition) {
   const registry = createRegistryContract();
   registry.entityDefinitions = [...registry.entityDefinitions, definition];
 
-  // AI-REMOVED 2026-09-14:
-  // Reason: 场景构造已批量固化为带版本的蓝图文件。
-  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-  // Replacement: src/tests/fixtures/blueprints/collections/simulation/recipe-channel-role-compiler/index.json
-  // Risk: Low；断言与被测动作不变。
-  // Human Review: Required
-  // Original code:
-  // {
-  //       machine: {
-  //         id: "machine",
-  //         definitionId: definition.id,
-  //         position: { x: 0, y: 0 },
-  //         rotation: 0,
-  //         config: {},
-  //         tags: [],
-  //       },
-  //     }
   const document: WorldDocument = {
     ...createWorldDocument(),
     entities: loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/collections/simulation/recipe-channel-role-compiler/index.json", "scene-01", { definition }).entities,

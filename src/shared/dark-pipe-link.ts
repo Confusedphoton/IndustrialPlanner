@@ -8,36 +8,9 @@ import type {
   WorldDocument,
   WorldEntity,
 } from "@/domain/document/world-document";
-// AI-REMOVED 2026-08-19:
-// Reason: 暗管入口不再通过 recipe channel 销毁流体，创建直连无需读取 EntityDefinition 生成 manualRecipeOnly 配置。
-// Trigger: 用户明确要求暗管入口在所有仿真模式下提交仓库并抛弃销毁机制。
-// Evidence: getDarkPipeManualRecipeOnlyPatch 已退出，文件内不再消费 EntityDefinition。
-// Replacement: None
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 
 export type DarkPipeRole = "inlet" | "outlet";
 
-// AI-REMOVED 2026-09-25:
-// Reason: 关系类型成为 Editor 的公共查询结果，统一迁入 Domain。
-// Trigger: REQ-038 D02、D03 已获用户确认。
-// Evidence: EditorQuery.getRegionalDarkPipeLinks 需要闭合的 Domain 类型引用。
-// Replacement: src/domain/shared/dark-pipe-link.ts。
-// Risk: Low；属性和只读语义保持不变。
-// Human Review: Required
-// Original code:
-// export interface RegionalDarkPipeEndpoint {
-//   readonly baseId: string;
-//   readonly entityId: string;
-// }
-// export interface RegionalDarkPipeLink {
-//   readonly id: string;
-//   readonly inlet: RegionalDarkPipeEndpoint;
-//   readonly outlet: RegionalDarkPipeEndpoint;
-// }
 
 export const DARK_PIPE_LINK_TOOL: ActiveTool = "dark-pipe-link";
 
@@ -279,25 +252,3 @@ export function resolveDarkPipeLinkedEntityId(
   return link.source.entityId === entityId ? link.target.entityId : link.source.entityId;
 }
 
-// AI-REMOVED 2026-08-19:
-// Reason: manualRecipeOnly 只用于暗管直连时停用隐藏销毁配方；销毁配方退出后不应继续写入无效配置。
-// Trigger: 用户明确要求暗管入口在所有仿真模式下提交仓库并抛弃销毁机制。
-// Evidence: udpipe_loader_1/2 的 recipeChannels 现为空，未直连入仓由 warehouse-sink-when-unlinked behavior 决定。
-// Replacement: createEditorDarkPipeLinkActions 创建链接时直接清空入口遗留 config。
-// Risk: 旧文档中的 manualRecipeOnly 键仍可被读取，但不会参与任何 channel 编译。
-// Human Review: Required
-//
-// Original code:
-// export function getDarkPipeManualRecipeOnlyPatch(definition: EntityDefinition): Record<string, true> {
-//   const role = resolveDarkPipeRole(definition.id);
-//   if (role !== "inlet") {
-//     return {};
-//   }
-//
-//   return Object.fromEntries(
-//     definition.recipeChannels.map((_, index) => [
-//       `recipeChannels[${index}].manualRecipeOnly`,
-//       true,
-//     ]),
-//   );
-// }

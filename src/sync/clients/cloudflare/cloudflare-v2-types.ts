@@ -1,7 +1,6 @@
 // cf-sync-v2 协议类型定义。
 // 对应后端 /home/coder/IndustrialPlanner-Backend/packages/sync/src/space_model.ts
 // 协议版本: cf-sync-v2，直接 HTTP fetch，不需要 Web Worker。
-// AI-CORRECTION 2026-08-12: 协议本身与执行线程无关；浏览器生产链路现由 Dedicated Worker 发起 fetch。
 
 export const CF_SYNC_V2_PROTOCOL = "cf-sync-v2";
 

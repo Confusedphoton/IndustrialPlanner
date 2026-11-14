@@ -1,5 +1,4 @@
 import { RemoteAssetUnavailableError } from "../remote-types";
-// AI-CORRECTION 2026-08-12:
 // cf-sync-v2 的网络、JSON/UTF-8、哈希和两阶段提交已迁入 Dedicated Worker。
 // 本文件只保留 SyncRemote 值语义适配、assetId codec 以及业务同步状态编排。
 
@@ -171,44 +170,12 @@ class CloudflareV2SyncLocalState implements SyncLocalState {
 class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
   private planCache: CfV2LoadPlanResult | null = null;
   private latestCommittedRevision: CfV2Revision | null;
-  // AI-REMOVED 2026-08-25:
-  // Reason: 引擎常规同步已恢复为全部 adapter 的完整 plan 分类，不再存在用 collection 集合
-  //   补救局部 scope 的合法路径；继续保留该门禁会使成功 commit 无法推进全局 revision。
-  // Trigger: 本地 A 上传、远端 B 变化并存时，上传成功后更新检查仍重复命中旧 revision。
-  // Evidence: sync-service.resolveRegularSyncRequests 现始终发出无 scope 的全部 adapter 请求。
-  // Replacement: complete() 在完整同步事务成功后直接推进 plan/commit revision。
-  // Risk: Low；CloudflareV2SyncRemoteSession 仅由执行完整分类的同步引擎创建。
-  // Human Review: Required
-  //
-  // Original code:
-  // /** 仅完整处理过的 collection 才能参与全局 applied revision 推进。 */
-  // private readonly appliedCompleteCollectionIds = new Set<string>();
-  // AI-REMOVED 2026-08-13:
-  // Reason: 同步编排已改为“先下载、后上传、单次 commit”，不再有同会话多批次顺序上传。
-  // Trigger: sync-model.md 要求上传基线固定为下载阶段开始前 plan 的最新 revision。
-  // Evidence: 新引擎每个 run 只 commit 一次；本字段让后续批次以本会话提交的 revision 为基线，与新语义冲突。
-  // Replacement: getObservedRemoteRevision 直接返回 plan revision。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // private sessionCommittedRevision: CfV2Revision | null = null;
   private pendingJournalAck: boolean;
 
   public constructor(
     private readonly workerClient: CloudflareV2WorkerBridge,
     private readonly config: CfV2WorkerConfig,
     public readonly localState: SyncLocalState,
-    // AI-REMOVED 2026-08-25:
-    // Reason: session 不再用 run reason/collection 到齐状态决定全局 revision。
-    // Trigger: CF 同步恢复完整 plan 分类，complete() 成为唯一推进边界。
-    // Evidence: context 的唯一活动读取来自已移除的 allCollectionsApplied 与 local-change 特判。
-    // Replacement: 保留普通参数 `_context` 以维持构造签名，provider 不再持久持有它。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // private readonly context: SyncRemoteSessionContext,
     _context: SyncRemoteSessionContext,
     private readonly onActivity: ((activity: CloudflareV2WorkerActivity) => void) | undefined,
     recovery: CfV2TransactionRecoveryResult,
@@ -234,15 +201,6 @@ class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
 
   public async refreshIndexes(collections: readonly SyncRemoteCollection[]): Promise<void> {
     this.planCache = null;
-    // AI-REMOVED 2026-08-13:
-    // Reason: 与 sessionCommittedRevision 字段一并移除（见上）。
-    // Trigger: 新编排不再有同会话多批次上传基线。
-    // Replacement: None。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // this.sessionCommittedRevision = null;
     await this.prefetchIndexes(collections);
   }
 
@@ -251,16 +209,6 @@ class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
     if (plan === null) {
       return { revision: 0, entries: {}, committedAt: null };
     }
-    // AI-REMOVED 2026-08-22:
-    // Reason: 只按 assetType 过滤会把共享 planner-state 命名空间中的生产计划和区域设置混入彼此索引。
-    // Trigger: regional-settings/default 错读 planner-state/default 的生产计划 JSON。
-    // Evidence: SyncRemoteAssetIdCodec 现已声明 acceptsRemoteAssetId 作为 collection 归属边界。
-    // Replacement: 下方同时按 assetType 与 codec 归属过滤。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // const assets = plan.assets.filter((asset) => asset.assetType === collection.assetType);
     const assets = plan.assets.filter((asset) =>
       asset.assetType === collection.assetType
       && (collection.assetIdCodec.acceptsRemoteAssetId?.(asset.assetId) ?? true)
@@ -287,7 +235,6 @@ class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
     });
     const entries: RemoteCollectionIndex["entries"] = {};
     mappedAssets.forEach((mapped, index) => {
-      // AI-CORRECTION 2026-08-13: fallback 口径（未映射/未知）时不得与本地口径 hash 比较。
       const comparableHash = comparableHashes[index];
       entries[mapped.adapterAssetId] = {
         revision: toAdapterRevision(mapped.asset.lastModifiedRevision),
@@ -327,7 +274,6 @@ class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
       if (error instanceof CfV2HttpError && error.code === "invalid_asset_content") {
         throw new RemoteAssetUnavailableError(error.message);
       }
-      // AI-CORRECTION 2026-08-13: 下载 409 与写 409 同语义，转换为引擎可识别的整轮重启信号。
       if (error instanceof CfV2HttpError && error.status === 409) {
         // 定位埋点：把后端 error code 带进重启日志，区分 409 的具体语义。
         throw new RemoteDownloadStaleError(
@@ -377,16 +323,6 @@ class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
       return;
     }
 
-    // AI-REMOVED 2026-08-25:
-    // Reason: complete() 不再按 collection 到齐情况决定全局 revision，集合登记失去语义。
-    // Trigger: 常规同步恢复完整 plan 分类，局部 scope 不再是 CF 成功事务的合法形态。
-    // Evidence: sync-service.resolveRegularSyncRequests 对所有 adapter 使用无 scope 请求。
-    // Replacement: complete() 的事务成功边界。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // this.appliedCompleteCollectionIds.add(result.collection.adapterId);
     if (result.collectionRevision !== null) {
       await this.localState.setRemoteRevision(
         result.collection.stateKey,
@@ -408,49 +344,6 @@ class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
   }
 
   public async complete(options?: SyncRemoteCompleteOptions): Promise<void> {
-    // AI-REMOVED 2026-08-25:
-    // Reason: collection 到齐门禁是对局部 local-change scope 的补救；它只能阻止漏变更，
-    //   却同时造成成功 commit 后全局 revision 不前推、下一轮重复 plan 和伪下载阶段。
-    // Trigger: 同步引擎已恢复“每轮完整 plan、全部资源分类”的原设计不变量。
-    // Evidence: sync-service.resolveRegularSyncRequests 始终覆盖全部 adapter，初始同步 scope
-    //   也由互补请求覆盖完整 collection；只有完整事务成功后才调用 complete()。
-    // Replacement: 下方直接选择 latestCommittedRevision 或本轮 plan revision。
-    // Risk: Low；若未来重新引入局部 CF 同步，必须在引擎层建立独立游标，不能复用全局 revision。
-    // Human Review: Required
-    //
-    // Original code:
-    // const allCollectionsApplied = this.context.collections.every((collection) =>
-    //   this.appliedCompleteCollectionIds.has(collection.adapterId)
-    // );
-    // AI-REMOVED 2026-08-22:
-    // Reason: 仅依据 run reason 或本轮 commit 推进全局 revision，会把未进入局部 scope 的
-    //   其他 collection/资产一并标记为已读取。
-    // Trigger: 非当前基地远端变化在另一个局部上传完成后被小检查永久跳过。
-    // Evidence: markApplied 已提供 scopeComplete，但旧 complete 未验证所有 collection 是否完整处理。
-    // Replacement: 下方仅在 allCollectionsApplied 时选择 targetRevision；上传日志确认继续独立执行。
-    // Risk: Medium；局部上传后会保守地保留旧 applied revision，下一轮小检查将再次拉取确认。
-    // Human Review: Required
-    // AI-CORRECTION 2026-08-24: 上述“小检查”现统一称为“更新检查”。
-    //
-    // Original code:
-    // const targetRevision = this.latestCommittedRevision
-    //   ?? (this.context.reason === "local-change" ? null : this.planCache?.revision ?? null);
-    // AI-CORRECTION 2026-08-25: 上述 2026-08-22 的局部 scope 门禁已由完整 plan 不变量取代；
-    // 成功 commit 必须推进到 commit revision，无上传的完整分类推进到 plan revision。
-    // AI-REMOVED 2026-08-25:
-    // Reason: allCollectionsApplied 门禁已删除，条件表达式不再成立。
-    // Trigger: 常规同步不再允许局部 CF scope。
-    // Evidence: sync-service.resolveRegularSyncRequests 的无 scope 全 adapter 请求。
-    // Replacement: 下方 targetRevision。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // const targetRevision = allCollectionsApplied
-    //   ? this.latestCommittedRevision ?? this.planCache?.revision ?? null
-    //   : null;
-    // AI-CORRECTION 2026-09-01: 未来业务 schema 使本轮语义分类不完整时，
-    // 仍确认已完成的上传日志，但不推进全局 applied revision。
     if (options?.advanceAppliedRevision !== false) {
       const targetRevision = this.latestCommittedRevision
         ?? this.planCache?.revision
@@ -473,17 +366,6 @@ class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
   }
 
   public getObservedRemoteRevision(): CfV2Revision | null {
-    // AI-REMOVED 2026-08-13:
-    // Reason: 同一会话内多批次顺序上传的基线机制已被“单次 commit”取代。
-    // Trigger: sync-model.md 上传基线 = 下载阶段开始前 plan 的最新 revision。
-    // Replacement: 直接返回 plan revision。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // if (this.sessionCommittedRevision !== null) {
-    //   return this.sessionCommittedRevision;
-    // }
     return this.planCache?.revision ?? null;
   }
 
@@ -493,15 +375,6 @@ class CloudflareV2SyncRemoteSession implements SyncRemoteSession {
 
   public registerCommittedRevision(revision: CfV2Revision): void {
     this.latestCommittedRevision = revision;
-    // AI-REMOVED 2026-08-13:
-    // Reason: 与 sessionCommittedRevision 字段一并移除（见上）。
-    // Trigger: 新编排单次 commit。
-    // Replacement: latestCommittedRevision 继续用于 complete() 的 applied revision。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // this.sessionCommittedRevision = revision;
     this.pendingJournalAck = true;
   }
 
@@ -661,7 +534,6 @@ function translateWriteError(error: unknown): unknown {
         };
       }));
     }
-    // AI-CORRECTION 2026-08-13: 后端所有 commit 409（revision_mismatch / space_locked /
     // batch_cancelled / uploads_incomplete 等）语义均为“丢弃本次完整操作从头开始”，
     // 统一转换为引擎的整轮重启信号，不再依赖 details.conflicts 结构。
     return new RemoteWriteConflictError([{

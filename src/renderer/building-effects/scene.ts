@@ -12,16 +12,6 @@ import {
   resolveBuildingEffectScene,
   resolveEffectFrame,
   syncStateHeightSurfaces,
-  // AI-REMOVED 2026-09-25:
-  // Reason: 所有端口特效直接使用场景时钟推进。
-  // Trigger: 用户明确要求 on/off 动画始终播放。
-  // Evidence: 原函数在断开或空管时返回 null，导致静态帧。
-  // Replacement: 下方 resolveEffectFrame(..., options.nowMs)。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // resolveEffectPlaybackTimeMs,
   selectRingEffectPlacements,
   type EffectScene,
 } from './placements';
@@ -98,17 +88,6 @@ export class BuildingEffectsScene {
     }
     const nextFrames = new Map<string, number>();
     for (const effect of this.activeEffects) {
-      // AI-REMOVED 2026-09-25:
-      // Reason: 端口 on/off 特效不再依赖管道流体状态冻结播放。
-      // Trigger: 用户明确要求连接和断开状态都持续播放。
-      // Evidence: resolveEffectPlaybackTimeMs 对断开端口必定返回 null。
-      // Replacement: 下方统一使用 options.nowMs。
-      // Risk: Low；动画相位与管道运输组不再同步。
-      // Human Review: Required
-      //
-      // Original code:
-      // const timeMs = resolveEffectPlaybackTimeMs(effect, options.materials, options.nowMs);
-      // nextFrames.set(effect.id, resolveEffectFrame(manifest.effects[effect.resourceId]!, timeMs));
       nextFrames.set(effect.id, resolveEffectFrame(manifest.effects[effect.resourceId]!, options.nowMs));
     }
     const syncSignature = `${version}:${this.heightVersion}:${this.ringSignature}:${assets.revision}:${JSON.stringify(options.bounds)}:${[...nextFrames].map(([id, frame]) => `${id}:${frame}`).join('|')}`;
@@ -147,22 +126,6 @@ export class BuildingEffectsScene {
     }
     const signature = `${version}:${this.heightVersion}:${assets.revision}:${[...groups].map(([key, group]) => `${key}:${group.placements.map((p) => p.id).join(',')}`).join('|')}`;
     if (signature !== this.batchSignature) {
-      // AI-REMOVED 2026-09-16:
-      // Reason: 可见组变化不应销毁全部特效网格。
-      // Trigger: 拖动与虚影移动触发大量重建。
-      // Evidence: Scene.sync 的整体 batchSignature 变化会 clearBatches。
-      // Replacement: 下方按组几何签名和高度纹理身份复用批次。
-      // Risk: 保持实例顺序、遮挡贴图和透明绘制顺序。
-      // Human Review: Required
-      // Original code:
-      //       this.clearBatches();
-      //       for (const [key, group] of groups) {
-      //         const resource = manifest.effects[group.resourceId]!;
-      //         const batch = new BuildingEffectBatch(this.container, group.placements, resource, group.tile,
-      //           this.height.get(group.tile, assets, retainedHeights)!, assets.template(resource.height)!,
-      //           assets.color(resource.pages[group.page]!.file)!, group.page, manifest.heightMin, manifest.heightMax);
-      //         this.batches.set(key, { batch, resourceId: group.resourceId, frame: group.frame });
-      //       }
 
       for (const [key, previous] of this.batches) {
         if (!groups.has(key)) { previous.batch.destroy(); this.batches.delete(key); }

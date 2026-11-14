@@ -222,24 +222,6 @@ function createOutputPlan(sourceManifest) {
   return { pagesByPhase, mappingsBySource };
 }
 
-// AI-REMOVED 2026-09-11:
-// Reason: 此辅助函数只有测试调用，未参与真实发布；时长断言仅与自身比较，不能验证需求。
-// Trigger: 统一验证实际 publisher 的逐帧反射、排序、时长与遮罩行为。
-// Evidence: 全仓引用仅在此测试；真实发布使用 copyFrameToPage/mergeFrameAlpha/extractFrame。
-// Replacement: src/tests/scripts/device-sprite-animation.test.ts 中实际文件发布回归测试。
-// Risk: Low；正式发布入口的覆盖已由实际产物断言补齐。
-// Human Review: Required
-//
-// Original code:
-// export function transformRgbaFrameRows(frame, width, height, transform = null) {
-//   if (transform !== 'flip-top-bottom') return Buffer.from(frame);
-//   const rowBytes = width * 4;
-//   const output = Buffer.alloc(frame.length);
-//   for (let y = 0; y < height; y += 1) {
-//     frame.copy(output, y * rowBytes, (height - 1 - y) * rowBytes, (height - y) * rowBytes);
-//   }
-//   return output;
-// }
 
 function copyFrameToPage(sourceData, sourceWidth, sourceFrameIndex, sourceColumns, page, localFrameIndex, frameWidth, frameHeight, frameTransform = null) {
   page.buffer ??= Buffer.alloc(page.columns * frameWidth * page.rows * frameHeight * 4);
@@ -317,7 +299,6 @@ function extractFrame(sourceData, sourceWidth, sourceLeft, sourceTop, frameWidth
 }
 
 /** 每帧独立缩小，防止滤波读取相邻帧或污染分页尾部的透明空格。 */
-// AI-CORRECTION 2026-09-20: 输入帧已经是网站物理像素；这里只按 target/source 倍率生成目标页。
 async function resizePageFrames(page, frameWidth, frameHeight, resolution) {
   const width = frameWidth * resolution;
   const height = frameHeight * resolution;
@@ -343,7 +324,6 @@ async function encodeCompletedPage(page, outputDirectory, frameWidth, frameHeigh
     return;
   }
   const pixels = resolution === 1 ? page.buffer : await resizePageFrames(page, frameWidth, frameHeight, resolution);
-  // AI-CORRECTION 2026-10-16: 网站已交付有损颜色原件，重排后必须无损编码，避免重复量化改变原像素。
   await sharp(pixels, {
     raw: {
       width: page.columns * frameWidth * resolution,
@@ -383,7 +363,6 @@ async function publishOneAnimation({
 
   try {
     for (const sourceDefinition of sourceManifest.sources.values()) {
-      // AI-CORRECTION 2026-09-19: 来源证明与本地文件解析解耦；网站原件只存在于显式传入的临时批次根目录。
       const assetRoot = path.resolve(sourceAssetRoot ?? sourceRoot);
       if (sourceAssetRoot !== undefined && sourceDefinition.sourcePath === null) {
         throw new Error(`${spriteId}/${sourceDefinition.file} has no website source path`);
@@ -567,14 +546,6 @@ export async function publishPaginatedDeviceSpriteAnimations({
   resolution = BUILDING_ASSET_PUBLISH_RESOLUTIONS[0],
   animationProtocol,
   readRegistryAnimationDefinitions,
-  // AI-REMOVED 2026-09-11:
-  // Reason: 未声明动画的源目录不得通过例外名单绕过 Registry 校验。
-  // Trigger: 资源准备需与正式发布区分。
-  // Evidence: import-building-top-view-v15.mjs 已提供 --prepare-only。
-  // Replacement: 下方 bySpriteId 严格校验。
-  // Risk: Low; Human Review: Required
-  // Original code:
-  // allowUnregisteredSourceIds = new Set(),
 }) {
   const {
     getDeviceSpriteAnimationSignature,

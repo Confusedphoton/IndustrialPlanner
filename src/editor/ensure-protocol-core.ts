@@ -5,11 +5,7 @@ import { allowsFreeProtocolCorePlacement, PRIMARY_PROTOCOL_CORE_DEFINITION_ID, r
 
 /**
  * 确保文档中包含协议核心实体（item_port_sp_hub_1）。
- * AI-CORRECTION 2026-07-19: 当前协议核心设备定义 ID 为 sp_hub_1；上行保留迁移前名称。
  * 如果已存在则直接返回原文档，否则在 (0,0) 注入核心并置顶 entityOrder。
- * AI-CORRECTION 2026-09-18: 核心类型由基地决定；已有错误类型原位替换，多余核心同步清理。
- * AI-CORRECTION 2026-10-10: 无核心基地不注入核心，并清理已有核心及关联连线。
- * AI-CORRECTION 2026-10-11: 带草稿箱标记的基地仅新建时初始化主核心；加载已有文档不补回、不归一化、不去重。
  */
 export function ensureProtocolCoreEntity(options: {
   document: WorldDocument;
@@ -79,22 +75,6 @@ export function ensureProtocolCoreEntity(options: {
     };
   }
 
-  // AI-REMOVED 2026-09-18:
-  // Reason: 任意一种协议核心都不再足以满足基地约束；必须核对该基地指定的核心类型。
-  // Trigger: 武陵与四号谷地各六个非协议核心区基地改用次级协议核心。
-  // AI-CORRECTION 2026-09-18: 上行“各六个”应为各三个、合计六个基地。
-  // Evidence: resolveProtocolCoreDefinitionIdForBase 为八个基地给出唯一目标类型。
-  // Replacement: 上方 protocolCoreEntityIds 归一化分支。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // const hasProtocolCore = Object.values(options.document.entities)
-  //   .some((entity) => options.queries.isProtocolCore(entity.definitionId));
-  //
-  // if (hasProtocolCore) {
-  //   return options.document;
-  // }
 
   const entityId = `protocol-core:${options.document.baseId}`;
 

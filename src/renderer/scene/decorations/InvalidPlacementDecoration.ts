@@ -57,15 +57,6 @@ export function createInvalidPlacementDecoration(): DecorationLayer {
         return;
       }
 
-      // AI-REMOVED 2026-11-12:
-      // Reason: 编辑冲突与业务冲突应取并集，空编辑集合不能遮住 EDA overlay。
-      // Trigger: REQ-048 冲突草稿显示。
-      // Evidence: 空数组不触发 ?? 后备分支。
-      // Replacement: sync 入口的 invalidEntityIds。
-      // Risk: Low
-      // Human Review: Required
-      // Original code:
-      // const invalidEntityIds = source.snapshot.getSnapshot().interaction?.collections[EntityCollectionType.invalidPlacement] ?? ctx.renderHost.input.overlay.getSnapshot()?.invalidEntityIds ?? [];
       ctx.profiler?.count("invalidPlacement.entityIds", invalidEntityIds.length);
       const activeTextEntityIds = new Set<string>();
       const entityDefinitionMap = measureDecorationStep(
@@ -84,20 +75,6 @@ export function createInvalidPlacementDecoration(): DecorationLayer {
 
       measureDecorationStep(ctx, "invalidPlacement.syncEntities", () => {
         for (const entityId of invalidEntityIds) {
-          // AI-REMOVED 2026-07-11:
-          // Reason: 净水节点等特殊放置规则需要在 preview 阶段直接用 InvalidPlacementDecoration 绘制 footprint 红框和原因文本。
-          // Trigger: 用户明确要求不可放置 preview 使用 decoration 红框，而不是只依赖 preview 扫描线或问题列表。
-          // Evidence: editor placement validation 已将不可放置 preview 放入 invalidPlacement collection；跳过 preview 会导致画布不显示原因。
-          // Replacement: 当前循环继续处理 preview entity，并复用 drawInvalidPlacementStroke / syncReasonToast。
-          // Risk: Medium；preview overlap 也会显示红框，符合“不可放置显示红框”的新要求。
-          // Human Review: Required
-          //
-          // Original code:
-          // 预览阶段（拿起/拖拽放置中）不显示红色 invalid 边框和 toast，
-          // 此时精灵层的白色扫描线 preview 特效已足够了。
-          // if (previewCollection?.contains(entityId)) {
-          //   continue;
-          // }
 
           const entity = source.queries.getEntityById(entityId);
           if (entity === null) {
@@ -128,13 +105,6 @@ export function createInvalidPlacementDecoration(): DecorationLayer {
             continue;
           }
 
-          // AI-CORRECTION 2026-07-11:
-          // Reason: 2026-06-09 的订正已被新的 preview 不可放置提示需求覆盖；
-          // 此处现在同时绘制已提交实体和 preview 实体的 invalid footprint 红框。
-          // AI-CORRECTION 2026-06-09:
-          // Reason: 预览阶段（preview collection）的实体已由上述 continue 跳过，
-          // 此处仅绘制已放下/已提交实体的 invalid 红色边框。
-          // 原始注释（2026-05-24）未区分 preview 阶段，现已精简。
           drawInvalidPlacementStroke({
             graphics,
             layout,
@@ -196,8 +166,6 @@ export function resolveInvalidPlacementToastReasonText(options: {
   return primaryReason.message;
 }
 
-// AI-RESTORED 2026-05-24:
-// Reason: 用户要求已提交实体的 invalid placement 也显示红色边框。
 function drawInvalidPlacementStroke(options: {
   graphics: Graphics;
   layout: { x: number; y: number; width: number; height: number };

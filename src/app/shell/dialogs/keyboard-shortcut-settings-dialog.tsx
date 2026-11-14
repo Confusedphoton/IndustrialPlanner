@@ -11,16 +11,6 @@ import {
 import type { AppHost } from "@/app/host";
 import type { ShortcutRouteConflict } from "@/app/input/gesture/actions";
 import { DialogShell, KeyboardShortcutPrompt, canRenderKeyboardShortcut } from "@/app/shell/shared";
-// AI-REMOVED 2026-08-30:
-// Reason: KeyboardShortcutSettingDefinition 已由 ShortcutActionSpec 替代，不再直接引用 UiKey。
-// Trigger: ST2-RQ-020 Action registry 单一事实源。
-// Evidence: KEYBOARD_SHORTCUT_SETTINGS 直接引用 SHORTCUT_ACTION_SPECS。
-// Replacement: ShortcutActionSpec.labelKey in keyboard-shortcut-manager.ts
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import type { UiKey } from "@/shared/i18n";
 
 import styles from "./keyboard-shortcut-settings-dialog.module.scss";
 
@@ -52,15 +42,6 @@ interface KeyboardShortcutSettingsDialogProps {
   readonly onClose: () => void;
 }
 
-// AI-REMOVED 2026-08-30:
-// Reason: 设置页 Action 列表与默认值必须统一读取 ActionSpec，不能继续维护第二份 28 项清单。
-// Trigger: ST2-RQ-020 Action registry 单一事实源。
-// Evidence: SHORTCUT_ACTION_SPECS 同时提供 id、labelKey、group 与 defaultBindings。
-// Replacement: KEYBOARD_SHORTCUT_SETTINGS derived from SHORTCUT_ACTION_SPECS
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
 /*
 interface KeyboardShortcutSettingDefinition {
   readonly id: ShortcutKeyId;
@@ -98,7 +79,6 @@ export const KEYBOARD_SHORTCUT_SETTINGS: readonly KeyboardShortcutSettingDefinit
   { id: SHORTCUT_KEY.TOGGLE_BASE_PANEL, labelKey: "settingsField.shortcut-toggle-base-panel" },
 ];
 */
-// AI-CORRECTION 2026-08-31: 统一 registry 纳入固定 Action 后，设置页只从
 // CONFIGURABLE_SHORTCUT_ACTION_SPECS 派生；SHORTCUT_ACTION_SPECS 仅用于解析全部冲突 Action 名称。
 export const KEYBOARD_SHORTCUT_SETTINGS = CONFIGURABLE_SHORTCUT_ACTION_SPECS;
 
@@ -543,40 +523,6 @@ function KeyboardShortcutResetDialog({
   );
 }
 
-// AI-REMOVED 2026-08-30:
-// Reason: 设置页不得再用规范化字符串全局查重，必须查询可执行 Route 的作用域与触发集合交集。
-// Trigger: ST2-RQ-020 核心冲突规则。
-// Evidence: commitCapturedBinding 调用 gestureActionRouter.findShortcutConflicts，并返回全部冲突。
-// Replacement: GestureActionRouter.findShortcutConflicts
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// function findKeybindingConflict(options: {
-//   readonly appHost: AppHost;
-//   readonly currentShortcutId: ShortcutKeyId;
-//   readonly currentSlotIndex: 0 | 1;
-//   readonly nextBinding: string;
-// }): ShortcutConflict | null {
-//   const normalizedCandidate = normalizeKeybindingForConflict(options.nextBinding);
-//   if (normalizedCandidate === null) return null;
-//   for (const setting of KEYBOARD_SHORTCUT_SETTINGS) {
-//     const slots = splitShortcutSlots(options.appHost.internalActions.getKeyboardShortcutFor(setting.id));
-//     for (const [slotIndex, binding] of slots.entries()) {
-//       if (setting.id === options.currentShortcutId && slotIndex === options.currentSlotIndex) continue;
-//       if (normalizeKeybindingForConflict(binding) === normalizedCandidate) {
-//         return {
-//           conflictingShortcutId: setting.id,
-//           conflictingSlotIndex: slotIndex as 0 | 1,
-//           currentShortcutId: options.currentShortcutId,
-//           currentSlotIndex: options.currentSlotIndex,
-//           nextBinding: options.nextBinding,
-//         };
-//       }
-//     }
-//   }
-//   return null;
-// }
 
 function splitShortcutSlots(value: string): [string, string] {
   const [first = "", second = ""] = value.split(";", 2);
@@ -644,15 +590,6 @@ function hasOtherActiveModifier(event: KeyboardEvent, currentModifier: string): 
     || (currentModifier !== "Meta" && event.metaKey);
 }
 
-// AI-REMOVED 2026-08-30:
-// Reason: 字符串规范化查重无法表达 Route 作用域与触发策略，已由 Router 的有限状态求交替代。
-// Trigger: ST2-RQ-020 冲突公式 scopeOverlap && triggerOverlap。
-// Evidence: shortcutTriggerSetsOverlap 枚举 modifier 状态，shortcutScopesIntersect 求稳定作用域交集。
-// Replacement: shortcut-route-matching.ts and GestureActionRouter.findShortcutConflicts
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
 /*
 function normalizeKeybindingForConflict(binding: string): string | null {
   const tokens = binding

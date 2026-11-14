@@ -1,16 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import { createRegistryContract } from "@/registry";
-// AI-REMOVED 2026-10-13:
-// Reason: 设备启用规则已迁入 Registry Query，原 Renderer 函数不再执行。
-// Trigger: 用户确认 Registry 统一持有断电提示特例。
-// Evidence: GenericDeviceSprite 已改用 isPowerWarningEnabled 与现有供电覆盖组合。
-// Replacement: 下方通过真实 registry.queries.isPowerWarningEnabled 保留原场景断言。
-// Risk: Low - 原断言期望值保持不变。
-// Human Review: Required
-//
-// Original code:
-// import { shouldShowPowerDisconnectedIcon } from "@/renderer/sprites/device-power-status";
 import { collectPoweredEntityIds } from "@/shared/geometry/power-range";
 import { getBlueprintEntityArray, loadBlueprintFromFile } from "@/tests/simulation/blueprint-test-helpers";
 

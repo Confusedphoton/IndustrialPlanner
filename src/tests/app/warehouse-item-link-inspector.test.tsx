@@ -9,15 +9,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AppHost } from "@/app/host/app-host";
 import { WarehouseItemLinkInspector } from "@/app/shell/inspector/warehouse-item-link-inspector";
-// AI-REMOVED 2026-11-12:
-// Reason: Inspector 的相机入口迁至真实 Canvas，旧 App/Editor 桩不再符合契约。
-// Trigger: REQ-048 View 迁移。
-// Evidence: 两个 Inspector 读取 mainCanvas.view；配置写入需验证真实 Editor。
-// Replacement: createAppTestHost/createEditorTestHost 与版本化场景。
-// Risk: 保留端口、筛选和动作断言；布局另由浏览器验证。
-// Human Review: Required
-// Original code:
-// import { WorkbenchEncyclopediaPickerController } from "@/app/shell/state/encyclopedia-picker-state";
 
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { WorldEntity } from "@/domain/document/world-document";
@@ -41,7 +32,6 @@ function createWorkspace(): WorkspaceContract {
     simulation: null,
     sync: null,
     audio: null,
-    blueprintPlanner: null,
   };
 }
 
@@ -82,7 +72,7 @@ describe("WarehouseItemLinkInspector", () => {
 
     expect(container.querySelectorAll(".warehouse-link-row").length).toBe(1);
     expect(container.querySelector(".slot-config-row")).toBeNull();
-    expect(container.textContent).toContain("P1");
+    expect(container.textContent).toContain("下");
     expect(container.querySelector<HTMLButtonElement>(".warehouse-link-infinity-button")?.disabled).toBe(true);
     expect(container.querySelector<HTMLButtonElement>("[data-slot-action='clear-item']")?.disabled).toBe(true);
   });
@@ -108,7 +98,7 @@ describe("WarehouseItemLinkInspector", () => {
     const labels = Array.from(container.querySelectorAll(".warehouse-link-row .port-output-locator-label"))
       .map((element) => element.textContent);
 
-    expect(labels).toEqual(["P2", "P1"]);
+    expect(labels).toEqual(["下 1", "下 2"]);
     expect(container.querySelector(".warehouse-link-slot")).toBeNull();
   });
 
@@ -138,7 +128,7 @@ describe("WarehouseItemLinkInspector", () => {
       .map((element) => element.textContent);
     expect(declarations).toHaveLength(1);
     expect(container.querySelectorAll(".warehouse-link-row").length).toBe(6);
-    expect(labels).toEqual(["P1", "P2", "P3", "P4", "P5", "P6"]);
+    expect(labels).toEqual(["左 1", "左 2", "左 3", "右 1", "右 2", "右 3"]);
 
     act(() => {
       container
@@ -152,7 +142,7 @@ describe("WarehouseItemLinkInspector", () => {
       await Promise.resolve();
     });
 
-    // 2026-06-09: warehouse link 不再写入 entity.config，改为调用 createWarehouseSlotLink action
+    // warehouse link 不再写入 entity.config，改为调用 createWarehouseSlotLink action
     expect(createWarehouseSlotLink).toHaveBeenCalledWith({
       entityId: "protocol-core-link",
       storageSlotGroupId: "unbuffer_e2",
@@ -219,56 +209,13 @@ describe("WarehouseItemLinkInspector", () => {
     });
     expect(patchEntityConfig).not.toHaveBeenCalled();
 
-    // 2026-06-09: 清除链接现在调用 removeWarehouseSlotLink 而非 deleteEntityConfigKeys
+    // 清除链接现在调用 removeWarehouseSlotLink 而非 deleteEntityConfigKeys
     // 注：clear-link 按钮在有 item 时才可用，此实体无 item（slotLinks 为空），按钮 disabled
     const clearButton = container.querySelector<HTMLButtonElement>("[data-slot-action='clear-item']");
     expect(clearButton?.disabled).toBe(true);
   });
 });
 
-// AI-REMOVED 2026-11-12:
-// Reason: Inspector 的相机入口迁至真实 Canvas，旧 App/Editor 桩不再符合契约。
-// Trigger: REQ-048 View 迁移。
-// Evidence: 两个 Inspector 读取 mainCanvas.view；配置写入需验证真实 Editor。
-// Replacement: createAppTestHost/createEditorTestHost 与版本化场景。
-// Risk: 保留端口、筛选和动作断言；布局另由浏览器验证。
-// Human Review: Required
-// Original code:
-// function buildAppHost(
-//   workspace: WorkspaceContract,
-//   patchEntityConfig = vi.fn(),
-//   deleteEntityConfigKeys = vi.fn(),
-//   createWarehouseSlotLink = vi.fn(() => true),
-//   removeWarehouseSlotLink = vi.fn(() => true),
-// ): AppHost {
-//   const picker = new WorkbenchEncyclopediaPickerController(() => ({
-//     desktopCategory: "all",
-//     mobileSelectedCategories: [],
-//   }));
-//
-//   return {
-//     state: {
-//       screenProfile: {
-//         deviceClass: "desktop",
-//       },
-//     },
-//     workspace: {
-//       ...workspace,
-//       editor: {
-//         actions: {
-//           patchEntityConfig,
-//           deleteEntityConfigKeys,
-//           createWarehouseSlotLink,
-//           removeWarehouseSlotLink,
-//         },
-//       },
-//     },
-//     encyclopediaPicker: picker,
-//     actions: {
-//       translate: (key: string) => key,
-//     },
-//   } as unknown as AppHost;
-// }
 function buildAppHost(workspace: WorkspaceContract, patchEntityConfig = vi.fn(), deleteEntityConfigKeys = vi.fn(), createWarehouseSlotLink = vi.fn(() => true), removeWarehouseSlotLink = vi.fn(() => true)): AppHost {
   const editor = createEditorTestHost(workspace, { persistence: "memory", initialDocument: createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/req048/inspector-input.schema7.json")) });
   const app = createAppTestHost(workspace); cleanups.push(() => { app.dispose(); editor.dispose(); });
@@ -387,16 +334,6 @@ function createTestPort(
       base: { kind: "domain", flags: ItemDomainFlag.Solid },
       exclude: [],
     },
-    // AI-REMOVED 2026-06-12:
-    // Reason: PortDefinition.count per-tick 限流字段已删除。
-    // Trigger: 用户确认 per tick count 不属于设计文档。
-    // Evidence: 仿真已改为 admissionRule 跨 tick counter。
-    // Replacement: None - 此测试端口 fixture 仅用于 inspector row 定位。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // count: 1,
     priorityGroup: 5,
     roundRobinSeed: 0,
   };
@@ -412,17 +349,6 @@ function createTestSlot(
     initialItemType: null,
     initialCount: 0,
     ignoreStock: false,
-    // AI-REMOVED 2026-06-06:
-    // Reason: StorageSlotDefinition 不再包含 submitMode / submitIntervalSeconds。
-    // Trigger: 用户要求 submit mode 机制彻底删除。
-    // Evidence: src/domain/registry/types/entity-definition.ts 已删除槽位提交字段。
-    // Replacement: None in this domain slot stub.
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // submitMode: "never",
-    // submitIntervalSeconds: null,
     itemFilter: "type",
     itemFilterType: ItemDomainFlag.Solid,
   };

@@ -10,6 +10,7 @@ import type { EditorBaseDocumentSummary } from "@/domain/editor/editor-document"
 import type { BaseDefinition } from "@/domain/registry/types/base-definition";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import { resolveBaseDisplayName, resolveBaseTagLabel } from "@/app/shell/shared/known-text-translation";
 
 function shouldUseImmersiveMaximizedDialog(
   screenProfile: AppHost["state"]["screenProfile"],
@@ -130,33 +131,6 @@ export const BaseSelectDialog = observer(function BaseSelectDialog({
         return;
       }
 
-      // AI-REMOVED 2026-09-23:
-      // Reason: 基地切换同步逻辑需要覆盖所有文档切换路径，并更新渲染器候选高亮。
-      // Trigger: 同区域跨基地选点时，旧候选 ID 不属于新画布。
-      // Evidence: DarkPipeLinkSelectionDecoration 读取 candidateEntityIds 绘制候选高亮。
-      // Replacement: WorkbenchApp 的 editor.document 订阅。
-      // Risk: Low
-      // Human Review: Required
-      // Original code:
-      // const linkState = appHost.internalState.toolInfo.darkPipeLink;
-      // if (linkState !== null && selectedBaseId !== linkState.sourceBaseId) {
-      //   const sourceBase = appHost.workspace.registry.baseDefinitions.find(
-      //     (base) => base.id === linkState.sourceBaseId,
-      //   );
-      //   const targetBase = appHost.workspace.registry.baseDefinitions.find(
-      //     (base) => base.id === selectedBaseId,
-      //   );
-      //   if (
-      //     !appHost.state.settings.regionalMultiBaseEnabled
-      //     || sourceBase === undefined
-      //     || targetBase === undefined
-      //     || sourceBase.tag !== targetBase.tag
-      //   ) {
-      //     appHost.internalActions.setActiveTool(linkState.returnTool === "dark-pipe-link"
-      //       ? "select"
-      //       : linkState.returnTool);
-      //   }
-      // }
       appHost.internalActions.closeDialog("base-select");
     } finally {
       setIsSubmitting(false);
@@ -205,7 +179,7 @@ export const BaseSelectDialog = observer(function BaseSelectDialog({
         <div className={cm(styles, "base-select-group-list")}>
           {groupedBases.map((group) => (
             <section className={cm(styles, "base-select-group")} key={group.tag}>
-              <h3>{group.tag}</h3>
+              <h3>{resolveBaseTagLabel(group.tag, t)}</h3>
               <div className={cm(styles, "base-select-option-list")}>
                 {group.bases.map((baseDefinition) => {
                   const summary = summaryByBaseId.get(baseDefinition.id);
@@ -227,7 +201,7 @@ export const BaseSelectDialog = observer(function BaseSelectDialog({
                       type="button"
                     >
                       <span className={cm(styles, "base-select-option-main")}>
-                        <span className={cm(styles, "base-select-option-name")}>{baseDefinition.name}</span>
+                        <span className={cm(styles, "base-select-option-name")}>{resolveBaseDisplayName(baseDefinition, t)}</span>
                         <span className={cm(styles, "base-select-option-meta")}>
                           <span className={cm(styles, "base-select-option-meta-line")}>{meta.entityLine}</span>
                           <span className={cm(styles, "base-select-option-meta-line")}>{meta.timeLine}</span>
@@ -268,7 +242,7 @@ export const BaseSelectDialog = observer(function BaseSelectDialog({
   );
 });
 
-function groupBaseDefinitionsByTag(
+export function groupBaseDefinitionsByTag(
   baseDefinitions: readonly BaseDefinition[],
 ): Array<{ tag: string; bases: BaseDefinition[] }> {
   const TAG_ORDER: Record<string, number> = { "四号谷地": 0, "武陵": 1, "草稿箱": 100 };

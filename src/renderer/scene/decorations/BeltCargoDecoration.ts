@@ -20,16 +20,6 @@ import {
 import {
   Container,
   Graphics,
-  // AI-REMOVED 2026-08-20:
-  // Reason: 物品纹理裁边已统一进入 renderer/texture，不再由传送带 Decoration 构造 Rectangle。
-  // Trigger: 用户要求传送带、当前产物圆圈与准入口圆圈共享整像素裁边规则。
-  // Evidence: createInsetItemIconTexture 已成为三个渲染入口的唯一裁边实现。
-  // Replacement: src/renderer/texture/item-icon-texture.ts
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // Rectangle,
   RenderTexture,
   Sprite,
   Texture,
@@ -61,16 +51,6 @@ import { BeltCargoEntryAnimation } from "./BeltCargoEntryAnimation"
 const ITEM_ICON_TEXTURE_PREFIX = "item-icon-"
 const BELT_CARGO_BOX_TEXTURE_KEY = "belt-cargo-box"
 const BOX_ICON_SIZE_RATIO = 0.72
-// AI-REMOVED 2026-08-20:
-// Reason: 传送带私有裁边常量会让三个物品图标入口继续产生不一致。
-// Trigger: 用户要求裁边整像素数改为 shared 常量。
-// Evidence: renderer/texture 现已导出 ITEM_ICON_TEXTURE_INSET_PX 并被三处渲染链路复用。
-// Replacement: src/renderer/texture/item-icon-texture.ts
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// const ITEM_ICON_TEXTURE_INSET_PX = 2
 const BOX_CORNER_RADIUS_RATIO = 0.1
 const BOX_STROKE_WIDTH_PX = 1
 const BOX_TURN_CLEARANCE_PX = 2
@@ -81,7 +61,6 @@ const BOX_TURN_CLEARANCE_RATIO = (
 )
 const EMPTY_BELT_PORT_EXTENSION_ENTRIES: readonly BeltPortExtensionEntry[] = []
 const EMPTY_BELT_DISCONNECTED_PORT_ENTRIES: readonly BeltDisconnectedPortEntry[] = []
-// AI-CORRECTION 2026-06-20:
 // 全局 Bitmap 遮罩不再按货物读取空端口集合；旧常量仅保留用于删除审计。
 void EMPTY_BELT_PORT_EXTENSION_ENTRIES
 void EMPTY_BELT_DISCONNECTED_PORT_ENTRIES
@@ -193,7 +172,6 @@ export function createBeltCargoDecoration(): DecorationLayer {
 
     for (const view of cargoViews) {
       view.root.visible = false
-      // AI-CORRECTION 2026-06-21: view.mask 已删除，不再需要逐一重置
     }
   }
 
@@ -282,7 +260,6 @@ export function createBeltCargoDecoration(): DecorationLayer {
       const source = ctx.renderHost.input.source
       const documentSnapshot = source.snapshot.getSnapshot().document ?? null
       // 文档版本不变时缓存命中；snapshot 不可用时始终失效（如测试 mock 缺少 document）
-      // AI-CORRECTION 2026-09-15: 缓存由实体内容决定，viewport 写回不使路线失效。
       const documentStable = documentSnapshot !== null && cachedDocumentSnapshot !== null
         && shallowSnapshotEqual(selectDocumentEntities(cachedDocumentSnapshot), selectDocumentEntities(documentSnapshot))
       const simplifiedDeviceIcons = ctx.renderHost.input.presentation.getSnapshot()?.settings?.gameUseBlueprintStyleDeviceImages === true
@@ -306,7 +283,6 @@ export function createBeltCargoDecoration(): DecorationLayer {
         clipMaskRevision += 1
       }
       const beltRectsByGridKey = cachedBeltRectsByGridKey
-      // AI-CORRECTION 2026-06-20:
       // 全局 Bitmap 遮罩直接合并全部可见传送带，局部格索引不再参与当前渲染。
       void beltRectsByGridKey
 
@@ -404,9 +380,6 @@ export function createBeltCargoDecoration(): DecorationLayer {
         ? publishedBoxTexture : null
 
       // 共享 box 纹理：只在 zoom 变化时重新烘焙
-      // AI-CORRECTION 2026-08-19: 纹理按整数像素尺寸分桶，主体显示尺寸仍使用精确世界比例，避免连续缩放反复重建纹理。
-      // AI-CORRECTION 2026-09-26: 网站烘焙盒子加载后直接复用源纹理；原有绘制只用于加载期间的首帧。
-      // AI-CORRECTION 2026-10-01: 蓝图外观固定使用白底圆角框；网站烘焙盒子仅用于普通外观。
       if (!activeBoxTexture && sharedBoxTextureSize !== boxTextureSize) {
         const boxCornerRadius = boxTextureSize * BOX_CORNER_RADIUS_RATIO
         const temp = new Graphics({ roundPixels: true })
@@ -619,8 +592,6 @@ function resolveRuntimeCargoState(
   return resolveStationaryCargoState(runtimeStatus)
 }
 
-// AI-CORRECTION 2026-05-30: recipeId/progressSeconds/desiredSeconds 已从 readmodel 删除，
-//   改为读取第一个 channel 的状态。没有 channel 时返回 null。
 function getFirstChannelStatus(
   runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null,
 ): SimulationDeviceRuntimeChannelRecipeStatus | null {
@@ -635,7 +606,6 @@ function getFirstChannelStatus(
 function resolveRunningCargoItemId(
   runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null,
 ): string | null {
-  // AI-CORRECTION 2026-05-30: recipeId 已从 readmodel 删除，改为读取第一个 channel。
   if (runtimeStatus === null) return null;
   const firstChannelStatus = getFirstChannelStatus(runtimeStatus);
   if (firstChannelStatus === null || firstChannelStatus.recipeId === null) {
@@ -705,8 +675,6 @@ function resolveRuntimeProgress(
   runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null,
   progressPresentation: BeltCargoProgressPresentation,
 ): number | null {
-  // AI-CORRECTION 2026-05-30: progressSeconds/desiredSeconds 已从 readmodel 删除，
-  //   改为读取第一个 channel。
   const firstChannelStatus = getFirstChannelStatus(runtimeStatus);
   if (
     firstChannelStatus === null
@@ -769,7 +737,6 @@ function resolveBeltCargoClipMask(options: {
   }
 
   // mask = beltRects（所有可见传送带格子矩形）+ 各端口独立产生的条目。
-  // AI-CORRECTION 2026-06-20:
   // 旧注释中的 beltRects 曾表示“所有可见传送带格子矩形”，导致每个货物重复绘制整张传送带遮罩，
   // 复杂度为 O(可见货物数 × 可见传送带数)。当前 beltRects 只包含当前传送带格和四邻接传送带格。
   // 各端口按对面匹配情况决定自身条目：
@@ -809,7 +776,6 @@ function resolveBeltCargoClipMask(options: {
   }
 }
 
-// AI-CORRECTION 2026-06-20:
 // 单货物 clipMask 已被全局 Bitmap 遮罩替代；旧解析函数仅保留用于删除审计。
 void resolveBeltCargoClipMask
 
@@ -1062,7 +1028,6 @@ function isPointWithinExpandedRotatedRect(
     && Math.abs(localY) <= rect.width / 2 + expansion
 }
 
-// AI-CORRECTION 2026-06-20:
 // 以下局部遮罩辅助函数已被单一全局 Bitmap 遮罩替代，仅保留用于删除审计，禁止执行。
 void groupBeltPortEntriesByBeltId
 void resolveLocalBeltCargoClipRects
@@ -1145,8 +1110,6 @@ function syncBeltCargoViews(options: {
     view.cargoRoot.rotation = entry.angleRadians
 
     // 共享 box 纹理：缩放不变时仅设 texture，无 clear / redraw 开销
-    // AI-CORRECTION 2026-08-19: 同一整数纹理桶内的缩放会复用 texture，仅同步精确世界比例对应的 Sprite 宽高。
-    // AI-CORRECTION 2026-09-26: 烘焙源图占一格画布、可见盒子占半格，因此 Sprite 画布宽度是目标盒宽的两倍。
     if (view.box.texture !== options.sharedBoxTexture) {
       view.box.texture = options.sharedBoxTexture
       view.box.width = options.boxSpriteSize
@@ -1217,50 +1180,6 @@ function resolveInsetItemIconTexture(options: {
   return insetTexture
 }
 
-// AI-REMOVED 2026-08-20:
-// Reason: 传送带私有 Texture frame 裁边实现会与另外两个物品圆圈重复并漂移。
-// Trigger: 用户要求三处物品纹理共用同一个整像素内收规则。
-// Evidence: createInsetItemIconTexture 已完整承接边界保护、整像素归一化与 Texture frame 构造。
-// Replacement: src/renderer/texture/item-icon-texture.ts
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// function createInsetTexture(texture: Texture, insetPx: number): Texture {
-//   const frame = texture.frame
-//   if (
-//     frame === undefined
-//     || !Number.isFinite(frame.width)
-//     || !Number.isFinite(frame.height)
-//   ) {
-//     return texture
-//   }
-//
-//   const maxHorizontalInset = Math.max(0, Math.floor((frame.width - 1) / 2))
-//   const maxVerticalInset = Math.max(0, Math.floor((frame.height - 1) / 2))
-//   const safeInset = Math.min(insetPx, maxHorizontalInset, maxVerticalInset)
-//   if (safeInset <= 0) {
-//     return texture
-//   }
-//
-//   const width = frame.width - safeInset * 2
-//   const height = frame.height - safeInset * 2
-//
-//   return new Texture({
-//     source: texture.source,
-//     label: texture.label,
-//     frame: new Rectangle(
-//       frame.x + safeInset,
-//       frame.y + safeInset,
-//       width,
-//       height,
-//     ),
-//     orig: new Rectangle(0, 0, width, height),
-//     defaultAnchor: texture.defaultAnchor,
-//     defaultBorders: texture.defaultBorders,
-//     rotate: texture.rotate,
-//   })
-// }
 
 function drawBeltCargoClipMask(
   graphics: Graphics,
@@ -1304,7 +1223,6 @@ function drawBeltCargoClipMask(
   }
 }
 
-// AI-CORRECTION 2026-06-20:
 // 每货物 Graphics mask 已退出执行路径；旧绘制函数仅保留用于删除审计。
 void drawBeltCargoClipMask
 

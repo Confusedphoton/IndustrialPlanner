@@ -1,7 +1,7 @@
 import { makeAutoObservable, reaction } from "mobx";
 
 /**
- * 2026-11-13：配方树浮层的个人 UI 状态。
+ * 配方树浮层的个人 UI 状态。
  *
  * 浮层固定在画布上方，可在摆放设备时持续查看已钉住的配方树；状态仅属于当前浏览器，
  * 与 useWarehousePinnedItems 一样写入 localStorage，不参与 WebDAV 同步。
@@ -27,9 +27,17 @@ const MAX_PINS = 12;
 export const RECIPE_TREE_DEFAULT_PER_MINUTE = 30;
 export const RECIPE_TREE_MIN_WIDTH = 280;
 export const RECIPE_TREE_MIN_HEIGHT = 160;
+export const RECIPE_TREE_DOCK_MIN_WIDTH = 300;
+export const RECIPE_TREE_DOCK_MAX_WIDTH = 960;
+const RECIPE_TREE_DOCK_DEFAULT_WIDTH = 440;
 const DEFAULT_RECT: RecipeTreeOverlayRect = { x: -1, y: 72, width: 380, height: 520 };
 
+export type RecipeTreeViewMode = "tree" | "graph";
+
 interface PersistedRecipeTreeState {
+  readonly docked?: unknown;
+  readonly dockWidth?: unknown;
+  readonly viewMode?: unknown;
   readonly visible?: unknown;
   readonly minimized?: unknown;
   readonly rect?: unknown;
@@ -40,6 +48,11 @@ interface PersistedRecipeTreeState {
 export class RecipeTreeOverlayState {
   public visible = false;
   public minimized = false;
+  /** 树形或流程图（合并全部钉住目标，共用中间产物只出现一次）。 */
+  public viewMode: RecipeTreeViewMode = "tree";
+  /** 停靠为画布右侧独立栏（占用布局宽度、可拖动左缘调整宽度），否则为浮层。 */
+  public docked = false;
+  public dockWidth = RECIPE_TREE_DOCK_DEFAULT_WIDTH;
   /** x 为 -1 表示尚未定位，首次显示时贴靠画布右侧。 */
   public rect: RecipeTreeOverlayRect = DEFAULT_RECT;
   public pins: RecipeTreePin[] = [];
@@ -63,6 +76,26 @@ export class RecipeTreeOverlayState {
 
   public setVisible(visible: boolean): void {
     this.visible = visible;
+  }
+
+  /** 停靠栏实际占用的布局宽度（未显示或未停靠时为 0）。 */
+  public get dockLayoutWidth(): number {
+    return this.visible && this.docked ? this.dockWidth : 0;
+  }
+
+  public toggleDocked(): void {
+    this.docked = !this.docked;
+    if (this.docked) {
+      this.minimized = false;
+    }
+  }
+
+  public setDockWidth(width: number): void {
+    this.dockWidth = Math.round(Math.min(RECIPE_TREE_DOCK_MAX_WIDTH, Math.max(RECIPE_TREE_DOCK_MIN_WIDTH, width)));
+  }
+
+  public setViewMode(viewMode: RecipeTreeViewMode): void {
+    this.viewMode = viewMode;
   }
 
   public toggleMinimized(): void {
@@ -148,6 +181,11 @@ export class RecipeTreeOverlayState {
     }
 
     this.visible = raw.visible === true;
+    this.viewMode = raw.viewMode === "graph" ? "graph" : "tree";
+    this.docked = raw.docked === true;
+    if (typeof raw.dockWidth === "number" && Number.isFinite(raw.dockWidth)) {
+      this.setDockWidth(raw.dockWidth);
+    }
     this.minimized = raw.minimized === true;
     this.rect = normalizeRect(raw.rect) ?? DEFAULT_RECT;
     this.pins = Array.isArray(raw.pins)
@@ -160,6 +198,9 @@ export class RecipeTreeOverlayState {
 
   public toPersisted(): PersistedRecipeTreeState {
     return {
+      viewMode: this.viewMode,
+      docked: this.docked,
+      dockWidth: this.dockWidth,
       visible: this.visible,
       minimized: this.minimized,
       rect: this.rect,

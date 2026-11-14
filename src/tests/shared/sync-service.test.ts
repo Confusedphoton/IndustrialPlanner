@@ -370,17 +370,6 @@ describe("sync-service", () => {
           kind: "directory-maintenance",
           run: vi.fn(async () => undefined),
         },
-        // AI-REMOVED 2026-07-29:
-        // Reason: 设备注册与枚举已退出同步维护任务。
-        // Trigger: 用户确认设备列表没有业务意义。
-        // Evidence: SyncTaskKind 不再包含 device-registration / remote-devices。
-        // Replacement: directory-maintenance 是唯一维护任务。
-        // Risk: Low。
-        // Human Review: Required
-        //
-        // Original code:
-        // { kind: "device-registration", run: vi.fn(async () => undefined) },
-        // { kind: "remote-devices", run: vi.fn(async () => undefined) },
       ],
     });
 
@@ -562,7 +551,6 @@ describe("sync-service", () => {
         _session: SyncRemoteSession,
         options: Parameters<SyncAdapter["sync"]>[1],
       ): Promise<SyncAdapterResult> => {
-        // AI-CORRECTION 2026-08-13: 冲突以 SyncPlanItem 登记，引擎统一弹框决议。
         options.transaction.recordItem(
           createPlanItemStub("conflicting-adapter", "single", "conflict"),
         );
@@ -694,7 +682,6 @@ describe("sync-service", () => {
   });
 
   it("discards local additions when an upload item is resolved as use-remote", async () => {
-    // AI-CORRECTION 2026-08-14: 上传条目（本地有、远端没有）被决议为“用远端”时，
     // 语义为放弃本地新增：调用 applyDiscardLocal 走二段删除，而不是 applyDownload
     // 的“远端资产不存在 → skipping”静默路径（原路径不上传也不删除，却推进同步状态，
     // 制造“已同步”假象）。
@@ -929,7 +916,6 @@ describe("sync-service", () => {
 
     const status = await service.syncNow("manual");
 
-    // AI-CORRECTION 2026-08-13: 写 409 丢弃整轮从头开始（新 remote/session + 重新拉 plan），
     // 不再做“刷新索引后原地重试单 adapter”。
     expect(adapter.sync).toHaveBeenCalledTimes(2);
     expect(createRemoteMock).toHaveBeenCalledTimes(2);
@@ -1018,7 +1004,6 @@ describe("sync-service", () => {
       expect(service.getStatus().phase).toBe("idle");
     });
 
-    // AI-CORRECTION 2026-07-30: idle 状态下 notifyLocalChange 立即触发上传；
     // 上传完成后 syncSuppressImmediate 随 pendingLocalChangeCount=0 复位。
     // 后续在同步进行中连续调用 notifyLocalChange 才会走 5s / 30s 防抖。
     service.notifyLocalChange({ adapterId: "adapter" });
@@ -1404,7 +1389,6 @@ describe("sync-service", () => {
       expect(service.getStatus().phase).toBe("idle");
     });
 
-    // AI-CORRECTION 2026-07-30: idle 状态每次 notifyLocalChange 立即同步。
     // 先触发一次上传并等待完成，确认正常路径 saveState 回到 idle。
     service.notifyLocalChange({ adapterId: "adapter" });
     await vi.waitFor(() => {
@@ -1713,18 +1697,6 @@ it("收齐下载批次后保存并提交基线，再刷新；本页不执行全�
   const dispose = await prepareLocalMigrationRecovery({ schemaVersion: 7, buildId: "sync-test", onInvalidated: () => {} });
   const events: string[] = [];
   const controller = createDataMigrationController("sync-test", [{
-// AI-REMOVED 2026-10-09:
-// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
-// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
-// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
-// Replacement: 刷新后由启动迁移统一执行
-// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
-// Human Review: Required
-// Original code:
-//     pause: async () => { events.push("freeze"); },
-//     prepare: async () => ({ jobs: [{ label: "全库", run: async () => { events.push("migrate"); } }] }),
-//     refresh: async () => { events.push("refresh"); },
-//   }]);
     prepare: async () => { throw new Error("运行期不允许调用全库迁移"); },
   }], () => { events.push("reload"); });
   const uninstall = installDataMigrationController(controller);

@@ -15,23 +15,6 @@ describe("createRegistryContract", () => {
     expect(agriculturalLand).toMatchObject({
       name: "农牧用地",
       tag: "武陵",
-      // AI-REMOVED 2026-11-12:
-      // Reason: 旧基地字段由统一 areas 空间模型取代。
-      // Trigger: REQ-048 已确认 D1 接口变化。
-      // Evidence: 原区域身份和有限边界按世界坐标迁移。
-      // Replacement: areas 中逐项核查原两块区域的 ID、名牌、尺寸和外圈
-      // Risk: Low；原断言行为继续覆盖。
-      // Human Review: Required
-      // Original code:
-      //       nameplate: "武陵农用地",
-      //       placeableArea: { width: 44, height: 44 },
-      //       outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
-      //       subAreas: [{
-      //         nameplate: "缘缘庄",
-      //         position: { x: 104, y: 0 },
-      //         placeableArea: { width: 38, height: 38 },
-      //         outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
-      //       }],
       areas: [{
         id: "wuling_agricultural_land", nameplate: "武陵农用地",
         bounds: { minX: 0, maxX: 44, minY: 0, maxY: 44 },
@@ -85,28 +68,6 @@ describe("createRegistryContract", () => {
       seenIds.add(definition.id);
 
       expect(definition.tag).toBeTruthy();
-      // AI-REMOVED 2026-11-12:
-      // Reason: 旧基地字段由统一 areas 空间模型取代。
-      // Trigger: REQ-048 已确认 D1 接口变化。
-      // Evidence: 原区域身份和有限边界按世界坐标迁移。
-      // Replacement: 所有区域边界与外圈逐项核查
-      // Risk: Low；原断言行为继续覆盖。
-      // Human Review: Required
-      // Original code:
-      //       expect(definition.placeableArea.width).toBeGreaterThan(0);
-      //       expect(definition.placeableArea.height).toBeGreaterThan(0);
-      //       expect(definition.outerRing.top).toBeGreaterThanOrEqual(0);
-      //       expect(definition.outerRing.right).toBeGreaterThanOrEqual(0);
-      //       expect(definition.outerRing.bottom).toBeGreaterThanOrEqual(0);
-      //       expect(definition.outerRing.left).toBeGreaterThanOrEqual(0);
-      //       expect(definition.outerRing.top % 5).toBe(0);
-      //       expect(definition.outerRing.right % 5).toBe(0);
-      //       expect(definition.outerRing.bottom % 5).toBe(0);
-      //       expect(definition.outerRing.left % 5).toBe(0);
-      //       expect([5, 10, 20]).toContain(definition.outerRing.top);
-      //       expect([5, 10, 20]).toContain(definition.outerRing.right);
-      //       expect([5, 10, 20]).toContain(definition.outerRing.bottom);
-      //       expect([5, 10, 20]).toContain(definition.outerRing.left);
       expect(definition.areas.length).toBeGreaterThan(0);
       for (const area of definition.areas) {
         expect(area.bounds.maxX! - area.bounds.minX!).toBeGreaterThan(0);
@@ -118,28 +79,6 @@ describe("createRegistryContract", () => {
         }
       }
 
-      // AI-REMOVED 2026-05-10:
-      // Reason: 用户澄清约束是 outerRing 每个方向的格数分别必须是 5 的整数倍，不是外扩总面积满足 5 整除。
-      // Trigger: 之前基于错误前提新增了面积整除校验，会放过方向值不是 5 倍数但总面积凑巧满足条件的错误配置。
-      // Evidence: 当前会话中的用户更正；base-definition 的数据模型明确按 top/right/bottom/left 四个方向存储外扩值。
-      // Replacement: 使用上面的四个方向逐项取模断言。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // const expandedWidth =
-      //   definition.placeableArea.width
-      //   + definition.outerRing.left
-      //   + definition.outerRing.right;
-      // const expandedHeight =
-      //   definition.placeableArea.height
-      //   + definition.outerRing.top
-      //   + definition.outerRing.bottom;
-      // const expansionArea =
-      //   expandedWidth * expandedHeight
-      //   - definition.placeableArea.width * definition.placeableArea.height;
-      //
-      // expect(expansionArea % 5).toBe(0);
     }
   });
 
@@ -149,56 +88,12 @@ describe("createRegistryContract", () => {
     expect(draftBases[0]).toMatchObject({
       id: "draft_box",
       name: "草稿箱",
-      // AI-REMOVED 2026-11-12:
-      // Reason: 主区域和分区统一使用世界坐标 SceneAreaDefinition。
-      // Trigger: REQ-048 已授权 D1 数据模型迁移。
-      // Evidence: areas 保留原 ID、尺寸、名牌和外圈。
-      // Replacement: 本对象的 areas。
-      // Risk: Low；仅表达形式变更，有限空间范围不变。
-      // Human Review: Required
-      //
-      // Original code:
-      // placeableArea: { width: 320, height: 320 },
       areas: [{
         id: "draft_box",
         bounds: { minX: 0, maxX: 320, minY: 0, maxY: 320 },
         outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
       }],
-      // AI-REMOVED 2026-11-12:
-      // Reason: 主区域和分区统一使用世界坐标 SceneAreaDefinition。
-      // Trigger: REQ-048 已授权 D1 数据模型迁移。
-      // Evidence: areas 保留原 ID、尺寸、名牌和外圈。
-      // Replacement: 本对象的 areas。
-      // Risk: Low；仅表达形式变更，有限空间范围不变。
-      // Human Review: Required
-      //
-      // Original code:
-      // outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
-// AI-REMOVED 2026-10-12:
-// Reason: 标签资格测试迁为结构化白名单测试。
-// Trigger: 用户确认地图/区域白名单与 UI 过滤方案。
-// Evidence: EntityDefinition.placementWhitelist 已成为唯一资格来源。
-// Replacement: 草稿箱地区设备资格由白名单提供；只保留核心生命周期标记
-// Risk: 原有草稿箱、外围和完整占地断言需要继续覆盖。
-// Human Review: Required
-//
-// Original code:
-//       tags: ["allRegionEntities", "草稿箱"],
       tags: ["草稿箱"],
-      // AI-REMOVED 2026-09-28:
-      // Reason: 草稿箱取消左上角独立外环区。
-      // Trigger: 用户要求删除该区域并更新对应测试。
-      // Evidence: draft_box 改为仅保留主区域。
-      // Replacement: 下方无子区域断言。
-      // Risk: 原独立区域内已有设备将判定为越界。
-      // Human Review: Required
-      // Original code:
-      // subAreas: [{
-      //   id: "draft_box_upper_left",
-      //   position: { x: -60, y: -60 },
-      //   placeableArea: { width: 0, height: 0 },
-      //   outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
-      // }],
     });
     expect(draftBases[0]?.areas).toHaveLength(1);
   });
@@ -501,17 +396,6 @@ describe("createRegistryContract", () => {
     );
 
     for (const definition of wulingDefinitions) {
-      // AI-REMOVED 2026-10-15:
-      // Reason: 武陵农用地新增地块自带围栏，其余武陵基地仍没有内置建筑。
-      // Trigger: 用户要求先按占地摆放 38 个隐藏围栏件。
-      // Evidence: wuling_agricultural_land.builtinEntities 声明 34 段栏杆和 4 根立柱。
-      // Replacement: 下方按基地身份验证内置数量；wuling-fence-definition.test.ts 验证空间约束。
-      // Risk: 原有布局若与围栏重叠，会新增放置错误。
-      // Human Review: Required
-      // Original code:
-      // expect(definition.builtinEntities ?? []).toHaveLength(0);
-      // AI-CORRECTION 2026-10-17: 农牧用地同时承载主地块 38 件与缘缘庄 36 件围栏。
-      // AI-CORRECTION 2026-10-28: 两区域各新增一台无功能的内置自动农植机，围栏仍为 74 件。
       expect(definition.builtinEntities ?? []).toHaveLength(
         definition.id === "wuling_agricultural_land" ? 76 : 0,
       );

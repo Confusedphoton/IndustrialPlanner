@@ -145,6 +145,15 @@ export class CanvasInteractionController {
   }
   public createPlacementDraft(request: SinglePlacementRequest): boolean {
     if (!this.isOperationEnabled("confirm-placement")) return false;
+    // 放置同一设备期间附带运行时初始配置（例如配方树指定的配方）。
+    const pendingConfig = this.state.runtime.singlePlacementConfig;
+    if (request.config === undefined && pendingConfig !== null && this.state.runtime.singlePlacementDeviceId === request.definitionId) {
+      request = { ...request, config: pendingConfig };
+    }
+    const pendingRotation = this.state.runtime.singlePlacementRotation;
+    if (request.rotation === undefined && pendingRotation !== null && this.state.runtime.singlePlacementDeviceId === request.definitionId) {
+      request = { ...request, rotation: pendingRotation };
+    }
     const entry = this.options.readPalette?.().find(candidate => candidate.id === this.selectedPaletteEntryId
       && candidate.definitionId === request.definitionId && candidate.availableCount !== 0);
     const ownedRequest = this.options.readPalette === undefined ? request : entry?.createRequest(request.centerGridPoint);
@@ -224,7 +233,7 @@ export class CanvasInteractionController {
   }
 
   private cancelTransientInteraction(): void {
-    // 2026-11-12：仅取消拥有临时草稿的工具；跨窗口的业务选点不是在途指针手势。
+    // 仅取消拥有临时草稿的工具；跨窗口的业务选点不是在途指针手势。
     const tool = this.state.activeTool;
     const ownsTransientDraft = tool === "single-placement" || tool === "blueprint-placement"
       || tool === "move" || tool === "marquee" || tool === "logistics-placement" || tool === "region-edit";
@@ -235,21 +244,12 @@ export class CanvasInteractionController {
     if (this.state.activeTool === "region-edit") this.editor?.actions.cancelRegionDraft();
     this.pendingPlacementEnter = null;
     this.overlapEntityMenu.cancel();
-    // AI-REMOVED 2026-11-12:
-    // Reason: 挂起输入不应结束跨窗口业务选点；仅结束被取消的临时草稿工具。
-    // Trigger: REQ-048 正式 E2E 跨基地暗管选择被 Inspector 遮挡。
-    // Evidence: 基地选择窗口获取挂起租约后，暗管状态被清空，触发 Inspector 自动打开。
-    // Replacement: 下方按草稿归属重置；销毁与输入转移仍明确重置所有工具。
-    // Risk: Low；底图指针、按键和相机仍先统一取消。Human Review: Required
-    // Original code:
-    // this.actions.setActiveTool("select");
     if (ownsTransientDraft) this.actions.setActiveTool("select");
   }
 
   public getOperationAvailability(operation: CanvasOperationId) {
     const availability = this.editor?.queries.getOperationAvailability(operation)
       ?? { supported: false, enabled: false, reason: null };
-    // AI-CORRECTION 2026-11-12：挂起底图不能禁用焦点窗口自身的文档命令，资格按命令通道判断。
     return this.isCommandInputSuspended ? { ...availability, enabled: false } : availability;
   }
 

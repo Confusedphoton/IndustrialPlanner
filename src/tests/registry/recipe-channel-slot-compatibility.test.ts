@@ -1,6 +1,5 @@
 // =========================================================================
 
-// AI-CORRECTION 2026-10-14: 用户确认 outputTarget=warehouse 的产物直接入仓，
 // 验证已注册的具体物品和正整数数量；设备产物仍保留原有本地槽位匹配规则。
 // 用户手动创建的测试
 // 验证：每个配方中的原料和产物可以放入其设备至少一个 recipe channel
@@ -107,34 +106,6 @@ function canMatchAll(
   return backtrack(0);
 }
 
-// AI-REMOVED 2026-07-19:
-// Reason: 槽位匹配从域并集升级为排列组合匹配，这两个函数不再需要。
-// Trigger: 气体反应炉单 gas 槽位但配方有 2 个 gas 输入 → 并集检测漏检。
-// Evidence: 并集 {gas} ⊇ {gas},{gas} 为 true，但 1 个 gas 槽位无法同时装两种不同气体。
-// Replacement: collectSlotFilterTypes + canMatchAll（回溯排列组合匹配）。
-// Risk: Low — 已有调用方已全部替换。
-// Human Review: Required
-//
-// Original code:
-// function slotGroupUnion(filterType: string): Set<ItemDomain> {
-//   return slotDomains(filterType);
-// }
-//
-// function storageGroupsDomainUnion(
-//   groupIds: string[],
-//   storageSlotGroups: typeof ENTITY_DEFINITIONS[number]["storageSlotGroups"],
-// ): Set<ItemDomain> {
-//   const union = new Set<ItemDomain>();
-//   for (const gid of groupIds) {
-//     const group = storageSlotGroups.find((g) => g.id === gid);
-//     if (!group || group.slots.length === 0) continue;
-//     const filterType = group.slots[0]!.itemFilterType ?? "solid";
-//     for (const d of slotGroupUnion(filterType)) {
-//       union.add(d);
-//     }
-//   }
-//   return union;
-// }
 
 /**
  * 将物品 ID 解析为它能出现的域集合。
@@ -143,7 +114,6 @@ function canMatchAll(
  * "solid" → {solid}
  * 其他通过 ITEM_DEFINITIONS 查 tags。
  */
-// AI-CORRECTION 2026-07-28: 配方域占位符与槽位过滤均已迁移为位标志。
 function itemDomains(itemId: string): ItemDomain {
   if (itemId === "any") {
     return AnyDomain;

@@ -138,7 +138,6 @@ async function readPixels(source: string | Buffer) {
 }
 
 /** 读取实际像素中的白色输入圆点或黄色输出圆点，不复用生成器的布局算法。 */
-/** AI-CORRECTION 2026-10-07: 同时读取固体端口的半透明箭头，覆盖全量通用设备。 */
 function readPortCellIndices(pixels: Pixels, edge: GridEdge, direction: "input" | "output" | "solid"): number[] {
   const vertical = edge === "WEST" || edge === "EAST";
   const span = vertical ? pixels.info.height : pixels.info.width;
@@ -163,7 +162,6 @@ function readPortCellIndices(pixels: Pixels, edge: GridEdge, direction: "input" 
       }
     }
   }
-  // AI-CORRECTION 2026-10-07: 流体端口同样含半透明灰色箭头，不能仅按箭头颜色判定固体。
   // 只根据实际图片的白/黄圆点排除流体格，不读取注册表期望值，保留独立的像素位置断言。
   const fluidCells = direction === "solid"
     ? new Set([

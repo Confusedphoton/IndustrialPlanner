@@ -9,7 +9,6 @@
 }
 
 // PC 端二栏布局：左侧模块库面板 + 右侧主内容
-// AI-CORRECTION 2026-07-19: 模块库收起时必须恢复为单列，展开时才启用固定宽度的双列布局。
 .module-balancing-desktop-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -144,7 +143,6 @@
   height: 17px;
 }
 
-// AI-CORRECTION 2026-06-25: 从 ::after 菱形分隔符改为 stepper 步骤条（圆点+横线）。
 // 避免菱形在 hover/active 状态下边界泄漏和 "反向箭头" 问题。
 .module-balancing-wizard-tabs {
   display: flex;
@@ -304,18 +302,6 @@
 .module-balancing-drawer-layer {
   position: absolute;
   inset: 0;
-  /*
-    AI-REMOVED 2026-06-30:
-    Reason: 模块配平素材库抽屉已接入 OverlayStack 层级计算，层级由打开顺序统一分配。
-    Trigger: 用户要求工具箱内弹层也纳入系统性层级治理，避免抽屉与编辑器/picker 互相压错。
-    Evidence: ModuleBalancingPanel 中 module-balancing-drawer-layer 现在通过 useOverlayStackLayer 接收 inline zIndex。
-    Replacement: src/app/shell/shared/overlay-stack.tsx
-    Risk: Low
-    Human Review: Required
-
-    Original code:
-    z-index: 20;
-  */
   background: var(--shell-bg);
   background: var(--shell-bg);
   @supports (background: color-mix(in srgb, red 50%, blue)) {
@@ -1033,7 +1019,6 @@
   min-width: 0;
 
   /* RecipeDisplay 在卡片内左对齐 */
-  /* AI-CORRECTION 2026-07-19: 跨 CSS Module 的嵌套选择器不会命中；实际左对齐由 RecipeDisplay 的 moduleLibrary variant 提供。 */
   .recipe-display-formula {
     justify-content: flex-start;
   }
@@ -1658,9 +1643,6 @@
   height: 14px;
 }
 
-// AI-CORRECTION 2026-06-24: .module-balancing-custom-icon-preview 已废弃，
-//   图标预览移入 .module-balancing-icon-picker 按钮中，不再使用独立 preview 区域。
-//   .module-balancing-quantity-module img 保留，仍被 QuantityEditor 使用。
 .module-balancing-quantity-module img {
   width: 42px;
   height: 42px;
@@ -1675,18 +1657,6 @@
 .module-balancing-editor-backdrop {
   position: absolute;
   inset: 0;
-  /*
-    AI-REMOVED 2026-06-30:
-    Reason: 模块配平局部编辑器已接入 OverlayStack，层级由打开顺序统一分配。
-    Trigger: 用户要求工具箱内弹层也纳入系统性层级治理，避免编辑器与物品选择器/其他 picker 互相压错。
-    Evidence: ModuleBalancingPanel 中 module-balancing-editor-backdrop 现在通过 OverlayStackLayer 接收 inline zIndex。
-    Replacement: src/app/shell/shared/overlay-stack.tsx
-    Risk: Low
-    Human Review: Required
-
-    Original code:
-    z-index: 30;
-  */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1978,7 +1948,6 @@
 }
 
 
-/* AI-CORRECTION 2026-06-20: Wizard 页面统一使用内容卡片、响应式数据网格与紧凑矮屏布局，旧选择器保留用于删除审计。 */
 .module-balancing-wizard-add {
   justify-content: center;
 }
@@ -2277,27 +2246,6 @@
   border-top: 1px solid var(--line);
 }
 
-// AI-REMOVED 2026-06-24:
-// Reason: 图标预览已移入 .module-balancing-icon-picker 按钮中，不再需要独立 preview 区域。
-// Trigger: 需求"图标改为和颜色在同一行，使用物品选择器选择图标"。
-// Replacement: .module-balancing-icon-picker
-// Risk: Low
-//
-// Original code:
-// .module-balancing-custom-icon-preview {
-//   display: flex;
-//   align-items: center;
-//   justify-content: center;
-//   min-height: 74px;
-//   border: 1px solid var(--line);
-//   border-radius: 10px;
-//   background: var(--surface-2);
-// }
-//
-// .module-balancing-custom-icon-preview img {
-//   width: 54px;
-//   height: 54px;
-// }
 
 .module-balancing-form-notes {
   grid-column: 1 / -1;
@@ -2437,7 +2385,6 @@
 }
 
 
-/* AI-CORRECTION 2026-06-20: Playwright 审计发现 24px 操作按钮及矮屏双栏端口选择器过小，统一提升点击面积并恢复单栏表单。 */
 .module-balancing-mini-icon-button {
   width: 30px;
   height: 30px;

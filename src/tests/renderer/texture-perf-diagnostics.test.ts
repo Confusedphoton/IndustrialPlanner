@@ -3,14 +3,6 @@ import { describe, expect, it } from "vitest"
 
 import { TexturePerfDiagnostics } from "@/renderer/texture/texture-perf-diagnostics"
 
-// AI-REMOVED 2026-09-13:
-// Reason: 测试契约从预算选择/即时回收改为全量驻留与 20 秒离屏期限。
-// Trigger: 用户明确调整动画驻留规则，执行测试前同步原行为断言。
-// Evidence: DeviceAnimationTextureCache 已取消预算与 5 秒回收。
-// Replacement: 下方全量驻留诊断快照
-// Risk: Low; Human Review: Required
-// Original code:
-// const residency = { activeSessions: 2, loadingPages: 0, residentDecodedBytes: 1024, residentMasks: 1, residentPages: 1, residency: { budgetBytes: 512, reservedBytes: 512, overBudgetBytes: 0, visibleSessions: 2, visibleAssets: 1, queuedPages: 0, totalsSinceCreation: {}, assets: [], omittedAssets: 0 } }
 const residency = { activeSessions: 2, loadingPages: 0, residentDecodedBytes: 1024, residentMasks: 1, residentPages: 1, residency: { mode: "full-set" as const, offscreenGraceMs: 20_000, retainedSetBytes: 512, retainedAssets: 1, visibleSessions: 2, visibleAssets: 1, queuedPages: 0, totalsSinceCreation: {}, assets: [], omittedAssets: 0 } }
 
 describe("TexturePerfDiagnostics", () => {

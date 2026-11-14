@@ -16,21 +16,6 @@ import type {
   ProductionPlanningSourceConfig,
 } from "@/app/shell/production-planning/production-planning-model";
 
-// AI-REMOVED 2026-10-09:
-// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
-// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
-// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
-// Replacement: 页面刷新重新读取规划设置
-// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
-// Human Review: Required
-// Original code:
-// const migrationLifecycles = new Set<{ pause: () => Promise<void>; refresh: () => Promise<void> }>();
-// export async function pausePlannerStorageForMigration(): Promise<void> {
-//   for (const lifecycle of migrationLifecycles) await lifecycle.pause();
-// }
-// export async function refreshPlannerStorageAfterMigration(): Promise<void> {
-//   for (const lifecycle of migrationLifecycles) await lifecycle.refresh();
-// }
 /**
  * 挂接 IndexedDB 持久化到 MobX store。
  * - 异步加载历史状态并 hydration
@@ -43,15 +28,6 @@ export function hookPlannerIndexedDbPersistence(
   let disposed = false;
   let loaded = false;
   let writeQueue = Promise.resolve();
-// AI-REMOVED 2026-10-09:
-// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
-// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
-// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
-// Replacement: reportStorageFailure
-// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
-// Human Review: Required
-// Original code:
-//   let writeError: unknown = null;
   const baseline = JSON.stringify(toPersistedState(store));
   runInAction(() => { store.hydrated = false; });
   // Step 1: 异步加载持久化状态
@@ -84,15 +60,6 @@ export function hookPlannerIndexedDbPersistence(
       store.hydrated = true;
     });
   }).catch(error => {
-// AI-REMOVED 2026-10-09:
-// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
-// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
-// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
-// Replacement: reportStorageFailure
-// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
-// Human Review: Required
-// Original code:
-//     writeError = error;
     if (!disposed) reportStorageFailure("production-planning load", error);
   });
 
@@ -109,53 +76,8 @@ export function hookPlannerIndexedDbPersistence(
     { fireImmediately: false },
   );
 
-  // AI-REMOVED 2026-07-27:
-  // Reason: 用户配方偏好需要跨配置长期持久化，不能再由需求签名变化触发自动清空。
-  // Trigger: “持久化用户的配方偏好，并总是使用他们”。
-  // Evidence: 该 reaction 在 targets/supplies/sourceConfig 变化时会将 store.recipeChoices 置空。
-  // Replacement: 仅保留 toPersistedState 的自动写入 reaction，不再存在自动清空 recipeChoices 的 reaction。
-  // Risk: Low；历史偏好在当前上下文不可用时由求解器自动忽略。
-  // AI-CORRECTION 2026-10-30：目标物品集合变更时按剩余产线依赖清理偏好；数量、外供和来源策略变更仍保留。
-  // Human Review: Required
-  //
-  // Original code:
-  // const disposeDemandReset = reaction(
-  //   () => createProductionPlanningDemandSignature(store),
-  //   () => {
-  //     if (hydrating || !store.hydrated || Object.keys(store.recipeChoices).length === 0) {
-  //       return;
-  //     }
-  //
-  //     runInAction(() => {
-  //       store.recipeChoices = {};
-  //     });
-  //   },
-  //   { fireImmediately: false },
-  // );
 
-// AI-REMOVED 2026-10-09:
-// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
-// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
-// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
-// Replacement: 页面刷新
-// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
-// Human Review: Required
-// Original code:
-//   const lifecycle = {
-//     pause: async () => { await hydration; await writeQueue; if (writeError !== null) throw writeError; },
-//     refresh: async () => { await hydrate(true); if (writeError !== null) throw writeError; },
-//   };
-//   migrationLifecycles.add(lifecycle);
   return () => {
-// AI-REMOVED 2026-10-09:
-// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
-// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
-// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
-// Replacement: None
-// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
-// Human Review: Required
-// Original code:
-//     migrationLifecycles.delete(lifecycle);
     disposed = true;
     dispose();
   };

@@ -64,7 +64,6 @@ export interface RecipeStatsBucket extends RecipeStatsDelta {
 
 /** 配方统计滑动窗口状态 */
 export interface RecipeStatsState {
-  // AI-CORRECTION 2026-07-03: 统计窗口改为 phase-safe bucket；旧 tick 环形字段仅保留为兼容诊断字段，当前有效窗口见 windowBuckets/activeBucket。
   /** 环形缓冲：最近 N 个 tick 的 delta */
   windowDeltas: RecipeStatsDelta[];
   /** 当前写入游标 */
@@ -98,21 +97,10 @@ export interface RuntimeDeviceState {
   deviceState?: SimulationDeviceStateReadModel;
   cultivation?: SimulationCropCultivationReadModel;
   block: boolean;
-  // AI-CORRECTION 2026-05-13: recipe → channelRecipes.
   // 每个 channel 独立运行一个配方。key 为 channel id。
   channelRecipes: Record<string, RuntimeDeviceRecipeState | null>;
 }
 
-// AI-REMOVED 2026-07-23:
-// Reason: 固定窗口计量状态被真实槽位与频道配方状态取代。
-// Trigger: 用户要求去掉计数器机制。
-// Evidence: RuntimeSlotState + RuntimeDeviceRecipeState 已是完整持久真值。
-// Replacement: RuntimeSlotState + RuntimeDeviceRecipeState。
-// Risk: Medium
-// Human Review: Required
-//
-// Original code:
-// export interface RuntimeMeteredConsumptionState { ... }
 
 export interface RuntimeDeviceRecipeState {
   runId: string;
@@ -210,16 +198,6 @@ export interface RuntimeTickEdgeState {
   edgeId: string;
   shadowPull: RuntimeShadowState;
   shadowPush: RuntimeShadowState;
-  // AI-REMOVED 2026-06-12:
-  // Reason: edge 的 currentThroughCount 是单 tick 临时计数，不符合准入口跨 tick 上限语义。
-  // Trigger: 用户确认 per tick count 应删除。
-  // Evidence: 新 admission counter 存放于 SimulationPersistentRuntimeState.admissionCounters。
-  // Replacement: persistent.admissionCounters[targetPortId]。
-  // Risk: Medium - stage-3 求解需改为查询 target port admissionRule。
-  // Human Review: Required
-  //
-  // Original code:
-  // currentThroughCount: number;
   sourceSlotId: string | null;
   targetSlotId: string | null;
   itemType: string | null;
@@ -275,21 +253,6 @@ export function createSimulationMutableRuntimeState(
     routingCursors[routingGroup.key] = 0;
   }
 
-  // AI-REMOVED 2026-08-27:
-  // Reason: 运行时游标改由 Node 级候选集合初始化，PortGroup 级 key 与 Stage 3 的实际排序集合不一致。
-  // Trigger: 反应池两个单端口液体输出组共享库存 Node 时，PortGroup 级游标长度恒为 1。
-  // Evidence: reactor-dual-fluid-output-routing.test.ts 修复前六次产出均从 out_w_1 输出。
-  // Replacement: 上方 collectTopologyRoutingCursorGroups(topology) 初始化循环。
-  // Risk: Low - 热迁移首次采用新 key 时从 0 开始，后续同拓扑迁移会保留新游标。
-  // Human Review: Required
-  //
-  // Original code:
-  // for (const portId of device.portIds) {
-  //   const port = topology.ports[portId];
-  //   if (port !== undefined) {
-  //     routingCursors[`${port.deviceId}:${port.portGroupId}:${port.direction}:priority-${port.priorityGroup}`] ??= 0;
-  //   }
-  // }
 
   return {
     tickNumber: 0,
@@ -364,31 +327,11 @@ export function createMigratedSimulationMutableRuntimeState(
     }
 
     state.persistent.devices[deviceId] = cloneRuntimeDeviceState(previousDeviceState);
-    // AI-REMOVED 2026-07-23:
-    // Reason: 拓扑迁移不再复制已删除的计量窗口状态；真实消耗槽与频道配方随设备状态迁移。
-    // Trigger: 用户要求删除计数器机制。
-    // Evidence: 上方 listDeviceSlotIds 与 cloneRuntimeDeviceState 已覆盖新机制全部持久状态。
-    // Replacement: slot/device 通用迁移。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // state.persistent.meteredConsumptions[deviceId] = cloneRuntimeMeteredConsumptionState(...);
     if (nextDevice.waterPurifierNode !== undefined && nextDevice.waterPurifierNode !== null) {
       state.persistent.waterPurifierManualRemainders[deviceId] =
         (options.previousState.persistent.waterPurifierManualRemainders ?? {})[deviceId] ?? 0;
     }
     for (const portId of nextDevice.portIds) {
-      // AI-REMOVED 2026-07-16:
-      // Reason: canPreserveMinuteCounter 已集中比较旧/新 admission 与 metered 配置，局部 previousPort 不再被读取。
-      // Trigger: 计量入口迁移需要同时支持无 admissionRule 的固定窗口计数。
-      // Evidence: 定向 ESLint 报告 previousPort 为 unused variable。
-      // Replacement: canPreserveMinuteCounter({ previousTopology, topology, previousPortId, portId })。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // const previousPort = options.previousTopology.ports[portId];
       const nextPort = options.topology.ports[portId];
       if (
         nextPort !== undefined
@@ -452,16 +395,6 @@ export function cloneSimulationMutableRuntimeState(
           cloneFixedWindowCounterState(counter),
         ]),
       ),
-      // AI-REMOVED 2026-07-23:
-      // Reason: 检查点不再序列化计量窗口旁路状态。
-      // Trigger: 用户要求真实槽位与频道配方成为唯一真值。
-      // Evidence: slots/devices 已在本对象前部完成深克隆。
-      // Replacement: slots + devices。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // meteredConsumptions: clone(...),
       routingCursors: { ...state.persistent.routingCursors },
       shareAllTargetSlotIdBySourceSlotId: { ...state.persistent.shareAllTargetSlotIdBySourceSlotId },
       sharedCapacitySlotIdsBySlotId: Object.fromEntries(
@@ -598,16 +531,6 @@ function createInitialFixedWindowCounters(
   return counters;
 }
 
-// AI-REMOVED 2026-07-23:
-// Reason: 初始化计量窗口状态的入口已经失去数据对象。
-// Trigger: 用户要求移除计数器。
-// Evidence: createSimulationMutableRuntimeState 会初始化真实 slots 与 devices。
-// Replacement: 通用槽位/频道初始化。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// function createInitialMeteredConsumptions(...) { ... }
 
 export function normalizeFixedWindowCountersForCurrentWindow(
   topology: CompiledSimulationTopology,
@@ -724,16 +647,6 @@ function ensureFixedWindowCounterForCurrentWindow(
   return counter;
 }
 
-// AI-REMOVED 2026-07-23:
-// Reason: 固定窗口滚动不再产生设备运行许可或气体环境。
-// Trigger: 用户要求以运行中的 consumption recipe 直接决定许可。
-// Evidence: ensureFixedWindowCounterForCurrentWindow 仅服务准入口十秒额度。
-// Replacement: 直接重置 RuntimeFixedWindowCounterState。
-// Risk: Medium
-// Human Review: Required
-//
-// Original code:
-// function rolloverMeteredConsumptionWindow(...) { ... }
 
 function resolveCounterWindowStartTick(
   topology: CompiledSimulationTopology,
@@ -742,11 +655,8 @@ function resolveCounterWindowStartTick(
 ): number {
   const windowTicks = Math.max(1, topology.standardTickRate * 10);
   const currentTick = Math.max(0, Math.trunc(tickNumber));
-  // AI-CORRECTION 2026-07-17: 与动态运行帧及严格物流统一使用 tick 1 相位。
   // tick 0 是初始快照；首个有效窗口从 tick 1 开始，后续窗口为
   // 1 + N * windowTicks（例如 1、11、21 或分钟窗口的 1、1201、2401）。
-  // AI-CORRECTION 2026-07-23: 普通准入口现为 10 秒窗口，20 tick/s 时边界是 1、201、401；计量入口仍按自身 windowTicks。
-  // AI-CORRECTION 2026-07-23: 计量入口已删除；_portId 仅为保留现有调用签名，所有固定窗口均是准入口十秒窗口。
   return 1 + Math.floor(Math.max(0, currentTick - 1) / windowTicks) * windowTicks;
 }
 
@@ -758,16 +668,6 @@ function portUsesFixedWindowCounter(
   return port?.admissionRule !== null && port?.admissionRule !== undefined;
 }
 
-// AI-REMOVED 2026-07-23:
-// Reason: 输入端口不再映射到计量设备旁路。
-// Trigger: 用户要求物品正常进入真实缓存。
-// Evidence: portStorageBinding 已将消耗端口绑定 consume_buffer。
-// Replacement: 普通端口-槽位求解。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// function resolveMeteredConsumptionDeviceForPort(...) { ... }
 
 function canPreserveFixedWindowCounter(options: {
   readonly previousTopology: CompiledSimulationTopology;
@@ -785,26 +685,6 @@ function canPreserveFixedWindowCounter(options: {
   return preservesAdmission;
 }
 
-// AI-REMOVED 2026-07-16:
-// Reason: 计量消耗允许显式 windowTicks，准入口与计量入口必须共用统一窗口起点解析。
-// Trigger: 用户授权复用 perMinuteLimit 的整分钟窗口机制实现持续消耗。
-// Evidence: resolveCounterWindowStartTick 会按计量配置或标准仿真分钟计算固定窗口。
-// Replacement: resolveCounterWindowStartTick(topology, tickNumber, portId)。
-// Risk: Low - 普通 admissionRule 仍回退到 standardTickRate * 60。
-// Human Review: Required
-//
-// Original code:
-// function resolveAdmissionMinuteWindowStartTick(
-//   tickNumber: number,
-//   standardTickRate: number,
-// ): number {
-//   const normalizedTickRate = Number.isFinite(standardTickRate) && standardTickRate > 0
-//     ? Math.floor(standardTickRate)
-//     : 1;
-//   const minuteWindowTicks = Math.max(1, normalizedTickRate * 60);
-//   const currentTick = Math.max(0, Math.trunc(tickNumber));
-//   return Math.floor(currentTick / minuteWindowTicks) * minuteWindowTicks;
-// }
 
 function cloneRuntimeSlotState(slot: RuntimeSlotState): RuntimeSlotState {
   return {
@@ -824,16 +704,6 @@ function cloneFixedWindowCounterState(
   };
 }
 
-// AI-REMOVED 2026-07-23:
-// Reason: 已删除的计量窗口状态无需克隆。
-// Trigger: 用户要求时间轴仅保存真实槽位与频道配方。
-// Evidence: cloneRuntimeDeviceState 已克隆配方预留与进度。
-// Replacement: cloneRuntimeSlotState + cloneRuntimeDeviceState。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// function cloneRuntimeMeteredConsumptionState(...) { ... }
 
 function cloneRuntimeDeviceState(device: RuntimeDeviceState): RuntimeDeviceState {
   return {
@@ -855,30 +725,6 @@ function cloneRuntimeDeviceState(device: RuntimeDeviceState): RuntimeDeviceState
   };
 }
 
-// AI-REMOVED 2026-07-17:
-// Reason: 配方计划是 topology 级静态数据；为每个 tick 检查点深拷贝会制造大量重复对象并增加 GC 压力。
-// Trigger: 用户要求减少 180 tick 缓存中重复的配方 plan，提升仿真速度并降低快照内存。
-// Evidence: 678 实体场景中 plan 深拷贝占单份 runtime devices 序列化体积 226,862 B（47.7%），180 份约 39 MiB。
-// Replacement: cloneRuntimeDeviceState 共享不可变 recipe.plan；runtime-slot-access 按 topology/device/channel/recipe 缓存唯一 plan。
-// Risk: Low - CompiledSimulationRecipePlan 全部字段为 readonly，且仿真调用点经检索均只读取 plan。
-// Human Review: Required
-//
-// Original code:
-// function cloneRecipePlan(plan: CompiledSimulationRecipePlan): CompiledSimulationRecipePlan {
-//   return {
-//     recipeId: plan.recipeId,
-//     recipeType: plan.recipeType,
-//     durationTicks: plan.durationTicks,
-//     inputs: plan.inputs.map((input) => ({ ...input })),
-//     outputs: plan.outputs.map((output) => ({ ...output })),
-//     ingredientNodeIds: [...plan.ingredientNodeIds],
-//     productNodeIds: [...plan.productNodeIds],
-//     requiredGasDiffusion: plan.requiredGasDiffusion,
-//     gasDiffusionOutput: plan.gasDiffusionOutput === null
-//       ? null
-//       : { ...plan.gasDiffusionOutput },
-//   };
-// }
 
 function cloneTransientState(transient: SimulationTickTransientState): SimulationTickTransientState {
   return {
@@ -1025,73 +871,7 @@ export function accumulateRecipeStatsDelta(accum: RecipeStatsDelta, inc: RecipeS
 /**
  * 将当前 tick 的 delta 写入环形缓冲，并重新计算聚合值。
  * 返回聚合后的 per-min 值。
- * AI-CORRECTION 2026-07-03: 当前实现只在 phase-safe 边界封桶；per-min 按已封桶窗口覆盖的标准 tick 数归一。
- * AI-CORRECTION 2026-07-17: 粗步长跨越 phase-safe 边界时按标准 tick 区间拆桶，当前调用的 delta 归入区间终点所在桶。
  */
-// AI-REMOVED 2026-07-03:
-// Reason: 旧实现把每次 runtime step 当成一个标准 tick 窗口格；动态 tick rate 降频后，1200 格会覆盖超过 60 秒仿真时间。
-// Trigger: 用户反馈二倍速下基地仓库统计产出/消耗也被放大，要求统计窗口只能在动态帧率切换点截断。
-// Evidence: worker-runtime 在 dynamicTickRate=10 时每 2 个标准 tick 才运行一次，旧 rollRecipeStatsWindow 仍按运行步数填满 1200 格。
-// Replacement: 下方 rollRecipeStatsWindow + phase-safe bucket 状态字段。
-// Risk: Low - 仓库统计启动前 60 秒可能显示 0，用户确认可接受。
-// Human Review: Required
-//
-// Original code:
-// export function rollRecipeStatsWindow(
-//   stats: RecipeStatsState,
-//   tickDelta: RecipeStatsDelta,
-//   tickNumber: number,
-// ): void {
-//   const capacity = stats.windowCapacity;
-//   // 淘汰旧条目
-//   if (stats.windowCount >= capacity) {
-//     const oldDelta = stats.windowDeltas[stats.windowCursor];
-//     if (oldDelta !== undefined) {
-//       for (const itemType of Object.keys(oldDelta.produced)) {
-//         const entry = stats.aggregated[itemType];
-//         if (entry !== undefined) {
-//           entry.producedPerMinute -= oldDelta.produced[itemType] ?? 0;
-//           if (entry.producedPerMinute < 0) entry.producedPerMinute = 0;
-//         }
-//       }
-//       for (const itemType of Object.keys(oldDelta.consumed)) {
-//         const entry = stats.aggregated[itemType];
-//         if (entry !== undefined) {
-//           entry.consumedPerMinute -= oldDelta.consumed[itemType] ?? 0;
-//           if (entry.consumedPerMinute < 0) entry.consumedPerMinute = 0;
-//         }
-//       }
-//     }
-//   }
-//
-//   // 写入新条目
-//   stats.windowDeltas[stats.windowCursor] = {
-//     produced: { ...tickDelta.produced },
-//     consumed: { ...tickDelta.consumed },
-//   };
-//   stats.windowCursor = (stats.windowCursor + 1) % capacity;
-//   stats.windowCount = Math.min(stats.windowCount + 1, capacity);
-//
-//   // 聚合新条目
-//   for (const itemType of Object.keys(tickDelta.produced)) {
-//     const entry = stats.aggregated[itemType] ??= { producedPerMinute: 0, consumedPerMinute: 0 };
-//     entry.producedPerMinute += tickDelta.produced[itemType] ?? 0;
-//     stats.lastChangedTick[itemType] = tickNumber;
-//   }
-//   for (const itemType of Object.keys(tickDelta.consumed)) {
-//     const entry = stats.aggregated[itemType] ??= { producedPerMinute: 0, consumedPerMinute: 0 };
-//     entry.consumedPerMinute += tickDelta.consumed[itemType] ?? 0;
-//     stats.lastChangedTick[itemType] = tickNumber;
-//   }
-//
-//   // 清理归零的条目
-//   for (const itemType of Object.keys(stats.aggregated)) {
-//     const entry = stats.aggregated[itemType]!;
-//     if (entry.producedPerMinute <= 0 && entry.consumedPerMinute <= 0) {
-//       delete stats.aggregated[itemType];
-//     }
-//   }
-// }
 export function rollRecipeStatsWindow(
   stats: RecipeStatsState,
   tickDelta: RecipeStatsDelta,

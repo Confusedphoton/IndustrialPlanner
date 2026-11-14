@@ -22,7 +22,7 @@ export interface PlannerSessionState {
   activeScreen: "input" | "result";
   flowViewport: PlannerFlowViewportState;
   treeScrollTop: number;
-  /** 2026-10-26：保留存储字段名，内容为工序图具体支线路径 ID；重新计算时默认清空。 */
+  /** 保留存储字段名，内容为工序图具体支线路径 ID；重新计算时默认清空。 */
   processExpandedItems: string[];
   processViewport: PlannerFlowViewportState;
 }
@@ -33,7 +33,7 @@ export interface PlannerPersistedState {
   displayMode: "item" | "device";
   viewMode: "tree" | "flow" | "process";
   useModules: boolean;
-  /** 2026-08-29：历史键名保留为存储协议字段，值已升级为生产候选 ID。 */
+  /** 历史键名保留为存储协议字段，值已升级为生产候选 ID。 */
   recipeChoices: Record<string, string>;
   recipeChoicesDemandSignature: string | null;
   sourceConfig: {
@@ -253,16 +253,6 @@ function normalizeRecipeChoices(value: unknown): Record<string, string> {
       result[itemId] = recipeId.startsWith("recipe:") || recipeId.startsWith("module:")
         ? recipeId
         : `recipe:${recipeId}`;
-      // AI-REMOVED 2026-08-29:
-      // Reason: 旧值是无命名空间配方 ID，无法与模块候选 ID 共享同一持久化字段。
-      // Trigger: ST2-RQ-019 候选 ID 必须带来源命名空间。
-      // Evidence: 新求解索引使用 recipe:<id> 与 module:<source>:<id>。
-      // Replacement: 上方候选 ID 规范化赋值。
-      // Risk: Low；读取旧存储时仅补 recipe: 前缀。
-      // Human Review: Required
-      //
-      // Original code:
-      // result[itemId] = recipeId;
     }
   }
 

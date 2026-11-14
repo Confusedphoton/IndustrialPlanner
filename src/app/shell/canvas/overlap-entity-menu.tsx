@@ -8,18 +8,6 @@ import { cm } from "@/app/shell/shared/css-module-class";
 import { createEntityIconAssetUrl } from "@/shared/browser/public-asset-url";
 import styles from "@/app/shell/canvas/canvas.module.scss";
 
-// AI-REMOVED 2026-08-20:
-// Reason: 重叠实体菜单改为读取设备定义自身的 iconPath，不再维护局部资源映射。
-// Trigger: 用户要求图标资源路径与设备 ID、spriteId 解耦。
-// Evidence: EntityDefinition.iconPath 是必填字段，并由 Registry 契约测试校验资源存在。
-// Replacement: 下方 createEntityIconAssetUrl(definition?.iconPath)。
-// Risk: Low；缺失 definition 时统一显示缺失资源图标。
-// Human Review: Required
-//
-// Original code:
-// const DEVICE_ICON_SPECIAL_MAP: Record<string, string> = {
-//   liquid_filling_pd_mc_1: "item_port_filling_pd_mc_1",
-// };
 
 export const OverlapEntityMenu = observer(function OverlapEntityMenu({
   appHost,
@@ -38,25 +26,6 @@ export const OverlapEntityMenu = observer(function OverlapEntityMenu({
     canvas.registry.entityDefinitions.map((definition) => [definition.id, definition]),
   );
 
-  // AI-REMOVED 2026-08-30:
-  // Reason: 重叠菜单不再绕过 GestureActionRouter 单独监听 Escape。
-  // Trigger: ST2-RQ-020 输入层 Route 统一。
-  // Evidence: hypergryph-overlap-entity-menu-guard 注册 overlap-entity-menu.cancel 固定 Route。
-  // Replacement: overlap-entity-menu.cancel Shortcut Route
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // useEffect(() => {
-  //   if (!visible) return;
-  //   const handleKeyDown = (event: KeyboardEvent) => {
-  //     if (event.code !== "Escape") return;
-  //     event.preventDefault();
-  //     controller.cancel();
-  //   };
-  //   window.addEventListener("keydown", handleKeyDown);
-  //   return () => window.removeEventListener("keydown", handleKeyDown);
-  // }, [controller, visible]);
 
   if (!visible || position === null) {
     return null;

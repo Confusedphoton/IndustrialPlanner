@@ -1,5 +1,4 @@
 import { getTestView } from "@/tests/helpers/app-test-workspace";
-// AI-CORRECTION 2026-10-08: REQ-041 普通夹具空升级为 schema 7；归档注释中的 .schema6.json 路径现对应 .schema7.json，专用迁移输入保留原版。
 // @vitest-environment jsdom
 
 import { runInAction } from "mobx";
@@ -23,15 +22,6 @@ import {
 import { type EditorHost } from "@/editor/editor-host";
 import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createRegistryContract } from "@/registry";
-// AI-REMOVED 2026-09-14:
-// Reason: 运行时手写朝向补偿已由文件升级取代。
-// Trigger: 用户要求全部测试蓝图升级并改用带版本号的蓝图文件。
-// Evidence: schema 3 场景绕过正式 5→6 迁移，遗漏准入口 270°补偿。
-// Replacement: loadBlueprintFromFile
-// Risk: Low；原始场景和断言保留，版本迁移使用生产入口。
-// Human Review: Required
-// Original code:
-// import { rotateGridRotation } from "@/shared/geometry/grid";
 import { loadBlueprintFromFile } from "../simulation/blueprint-test-helpers";
 
 /**
@@ -66,16 +56,6 @@ describe("物流布设模式完全测试集", () => {
     });
 
     runInAction(() => {
-      // AI-REMOVED 2026-09-10:
-      // Reason: 操作模式总开关已废弃，不再保留关闭分支
-      // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-      // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-      // Replacement: 测试状态不再需要模式字段
-      // Risk: 历史 false 设置统一使用当前操作行为。
-      // Human Review: Required
-      //
-      // Original code:
-      // appHost.internalState.settings.hypergryphOperationMode = true;
       appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = true;
       appHost.internalState.settings.hypergryphAutoCreateSplittersAndConvergers = false;
     });
@@ -396,19 +376,6 @@ describe("物流布设模式完全测试集", () => {
   });
 
   it("场景4-删除9,5的重叠传送带后可连接已有管道", async () => {
-// AI-REMOVED 2026-09-14:
-// Reason: 重叠层序变体也保存为完整、可独立加载的蓝图。
-// Trigger: 用户要求全部测试蓝图升级并改用带版本号的蓝图文件。
-// Evidence: schema 3 场景绕过正式 5→6 迁移，遗漏准入口 270°补偿。
-// Replacement: src/tests/fixtures/blueprints/logistics-placement-complete/scene-4-without-overlapping-belt.schema6.json
-// Risk: Low；原始场景和断言保留，版本迁移使用生产入口。
-// Human Review: Required
-// Original code:
-//     const blueprintWithoutOverlappingBelt = structuredClone(USER_PROVIDED_BLUEPRINT_SCENE4);
-//     delete blueprintWithoutOverlappingBelt.entities["logistics-draft:belt:572:3"];
-//     blueprintWithoutOverlappingBelt.entityOrder = blueprintWithoutOverlappingBelt.entityOrder.filter(
-//       (entityId) => entityId !== "logistics-draft:belt:572:3",
-//     );
     const blueprintWithoutOverlappingBelt = loadBlueprintFromFile("src/tests/fixtures/blueprints/logistics-placement-complete/scene-4-without-overlapping-belt.schema7.json");
     resetCanvasFromUserBlueprint(editorHost, blueprintWithoutOverlappingBelt);
     enterPipeLogisticsPlacement(appHost);
@@ -435,21 +402,6 @@ describe("物流布设模式完全测试集", () => {
   });
 
   it("场景4-9,5的传送带位于管道命中层之上时仍应连接管道", async () => {
-// AI-REMOVED 2026-09-14:
-// Reason: 重叠层序变体也保存为完整、可独立加载的蓝图。
-// Trigger: 用户要求全部测试蓝图升级并改用带版本号的蓝图文件。
-// Evidence: schema 3 场景绕过正式 5→6 迁移，遗漏准入口 270°补偿。
-// Replacement: src/tests/fixtures/blueprints/logistics-placement-complete/scene-4-belt-on-top.schema6.json
-// Risk: Low；原始场景和断言保留，版本迁移使用生产入口。
-// Human Review: Required
-// Original code:
-//     const blueprintWithOverlappingBeltOnTop = structuredClone(USER_PROVIDED_BLUEPRINT_SCENE4);
-//     blueprintWithOverlappingBeltOnTop.entityOrder = [
-//       ...blueprintWithOverlappingBeltOnTop.entityOrder.filter(
-//         (entityId) => entityId !== "logistics-draft:belt:572:3",
-//       ),
-//       "logistics-draft:belt:572:3",
-//     ];
     const blueprintWithOverlappingBeltOnTop = loadBlueprintFromFile("src/tests/fixtures/blueprints/logistics-placement-complete/scene-4-belt-on-top.schema7.json");
     resetCanvasFromUserBlueprint(editorHost, blueprintWithOverlappingBeltOnTop);
     enterPipeLogisticsPlacement(appHost);
@@ -561,20 +513,6 @@ describe("物流布设模式完全测试集", () => {
     clickCell(appHost, editorHost, { x: 51, y: 2 }, nextPointerId++);
     expect(editorHost.document.getSnapshot().entities).toEqual(entitiesBeforeConfirm);
 
-    // (51,3) 应生成 pipe_splitter
-    // AI-CORRECTION 2026-09-24: 路线穿过液燃炉，占用格冲突；此处应预览红色且点击不得落盘。
-    // AI-REMOVED 2026-09-24:
-    // Reason: 原断言把穿越设备的红色无效路径当作可提交路径。
-    // Trigger: 用户明确要求此用例改为确认红色。
-    // Evidence: (51,2) 的预览格与液燃炉重叠，invalid-placement 非空，canApply=false。
-    // Replacement: 本用例上方的预览与落盘断言。
-    // Risk: Low。
-    // Human Review: Required
-    // Original code:
-    // expectEntityAt(editorHost, {
-    //   definitionId: "pipe_splitter",
-    //   position: { x: 51, y: 3 },
-    // });
   });
 
   it("管道从已有管道起笔分叉-关闭自动分流器时穿过液燃炉应显示红色且拒绝落盘", async () => {
@@ -594,21 +532,6 @@ describe("物流布设模式完全测试集", () => {
     clickCell(appHost, editorHost, { x: 51, y: 2 }, nextPointerId++);
     expect(editorHost.document.getSnapshot().entities).toEqual(entitiesBeforeConfirm);
 
-    // 关闭自动分流器时，(51,3) 应转为 pipe_turn_ccw_1x1 弯道
-    // AI-CORRECTION 2026-09-24: 禁用自动分流器不改变设备占用规则；红色路线不得落盘。
-    // AI-REMOVED 2026-09-24:
-    // Reason: 原断言把穿越设备的红色无效路径当作可提交路径。
-    // Trigger: 用户明确要求此用例改为确认红色。
-    // Evidence: (51,2) 的预览格与液燃炉重叠，invalid-placement 非空，canApply=false。
-    // Replacement: 本用例上方的预览与落盘断言。
-    // Risk: Low。
-    // Human Review: Required
-    // Original code:
-    // expectEntityAt(editorHost, {
-    //   definitionId: "pipe_turn_ccw_1x1",
-    //   position: { x: 51, y: 3 },
-    //   rotation: 270,
-    // });
   });
 
   it("连续布设管道绕回穿越已有直管时(2,2)应生成管道桥接器", async () => {
@@ -684,397 +607,18 @@ describe("物流布设模式完全测试集", () => {
 });
 
 
-// AI-REMOVED 2026-09-14:
-// Reason: 内联历史蓝图已迁移为独立 JSON 文件，保留原文用于审计。
-// Trigger: 用户要求全部测试蓝图升级并改用带版本号的蓝图文件。
-// Evidence: schema 3 场景绕过正式 5→6 迁移，遗漏准入口 270°补偿。
-// Replacement: src/tests/fixtures/blueprints/logistics-placement-complete/scene-1.schema6.json
-// Risk: Low；原始场景和断言保留，版本迁移使用生产入口。
-// Human Review: Required
-// Original code:
-// const USER_PROVIDED_BLUEPRINT: BlueprintDocument = {
-//   schemaVersion: 3,
-//   blueprintId: "7d8dd13e-274d-47c3-9000-799df527c807",
-//   version: "v1.3.0",
-//   name: "1111",
-//   description: "",
-//   baseId: "wuling_protocol_core",
-//   initialGridPoint: { x: 6, y: 5 },
-//   entities: {
-//     "item_port_liquid_furnance_1:2": {
-//       id: "item_port_liquid_furnance_1:2",
-//       definitionId: "furnance_1_liquid",
-//       position: { x: 4, y: 0 },
-//       rotation: 180,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:belt:84:0": {
-//       id: "logistics-draft:belt:84:0",
-//       definitionId: "belt_straight_1x1",
-//       position: { x: 6, y: 3 },
-//       rotation: 90,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:belt:87:1": {
-//       id: "logistics-draft:belt:87:1",
-//       definitionId: "belt_turn_ccw_1x1",
-//       position: { x: 6, y: 4 },
-//       rotation: 0,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:belt:86:2": {
-//       id: "logistics-draft:belt:86:2",
-//       definitionId: "belt_straight_1x1",
-//       position: { x: 7, y: 4 },
-//       rotation: 0,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:belt:88:3": {
-//       id: "logistics-draft:belt:88:3",
-//       definitionId: "belt_straight_1x1",
-//       position: { x: 8, y: 4 },
-//       rotation: 0,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:belt:143:1": {
-//       id: "logistics-draft:belt:143:1",
-//       definitionId: "belt_straight_1x1",
-//       position: { x: 2, y: 6 },
-//       rotation: 270,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:belt:144:2": {
-//       id: "logistics-draft:belt:144:2",
-//       definitionId: "belt_straight_1x1",
-//       position: { x: 2, y: 5 },
-//       rotation: 270,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:belt:145:3": {
-//       id: "logistics-draft:belt:145:3",
-//       definitionId: "belt_straight_1x1",
-//       position: { x: 2, y: 4 },
-//       rotation: 270,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:belt:157:2": {
-//       id: "logistics-draft:belt:157:2",
-//       definitionId: "belt_straight_1x1",
-//       position: { x: 3, y: 8 },
-//       rotation: 0,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:belt:158:3": {
-//       id: "logistics-draft:belt:158:3",
-//       definitionId: "belt_straight_1x1",
-//       position: { x: 4, y: 8 },
-//       rotation: 0,
-//       config: {},
-//       tags: [],
-//     },
-//   },
-//   entityOrder: [
-//     "item_port_liquid_furnance_1:2",
-//     "logistics-draft:belt:84:0",
-//     "logistics-draft:belt:87:1",
-//     "logistics-draft:belt:86:2",
-//     "logistics-draft:belt:88:3",
-//     "logistics-draft:belt:143:1",
-//     "logistics-draft:belt:144:2",
-//     "logistics-draft:belt:145:3",
-//     "logistics-draft:belt:157:2",
-//     "logistics-draft:belt:158:3",
-//   ],
-//   slotLinks: [],
-//   regions: [],
-//   createdAt: "2026-06-19T08:48:20.300Z",
-//   updatedAt: "2026-06-19T08:48:20.300Z",
-// };
 const USER_PROVIDED_BLUEPRINT: BlueprintDocument = loadBlueprintFromFile(
   "src/tests/fixtures/blueprints/logistics-placement-complete/scene-1.schema7.json",
 );
 
-// AI-REMOVED 2026-09-14:
-// Reason: 内联历史蓝图已迁移为独立 JSON 文件，保留原文用于审计。
-// Trigger: 用户要求全部测试蓝图升级并改用带版本号的蓝图文件。
-// Evidence: schema 3 场景绕过正式 5→6 迁移，遗漏准入口 270°补偿。
-// Replacement: src/tests/fixtures/blueprints/logistics-placement-complete/scene-2.schema6.json
-// Risk: Low；原始场景和断言保留，版本迁移使用生产入口。
-// Human Review: Required
-// Original code:
-// const USER_PROVIDED_BLUEPRINT_SCENE2: BlueprintDocument = {
-//   schemaVersion: 3,
-//   blueprintId: "41bf5dc4-f741-45af-850a-0e81b583e219",
-//   version: "v1.3.0",
-//   name: "场景2",
-//   description: "",
-//   baseId: "wuling_protocol_core",
-//   initialGridPoint: { x: 7, y: 4 },
-//   entities: {
-//     "item_port_cmpt_mc_1:12": {
-//       id: "item_port_cmpt_mc_1:12",
-//       definitionId: "cmpt_mc_1",
-//       position: { x: 8, y: 3 },
-//       rotation: 270,
-//       config: {},
-//       tags: [],
-//     },
-//     "item_port_liquid_furnance_1:9": {
-//       id: "item_port_liquid_furnance_1:9",
-//       definitionId: "furnance_1_liquid",
-//       position: { x: 4, y: 0 },
-//       rotation: 180,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:belt:414:0": {
-//       id: "logistics-draft:belt:414:0",
-//       definitionId: "belt_straight_1x1",
-//       position: { x: 7, y: 3 },
-//       rotation: 180,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:belt:415:1": {
-//       id: "logistics-draft:belt:415:1",
-//       definitionId: "belt_straight_1x1",
-//       position: { x: 6, y: 3 },
-//       rotation: 180,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:belt:416:2": {
-//       id: "logistics-draft:belt:416:2",
-//       definitionId: "belt_straight_1x1",
-//       position: { x: 5, y: 3 },
-//       rotation: 180,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:belt:426:0": {
-//       id: "logistics-draft:belt:426:0",
-//       definitionId: "belt_straight_1x1",
-//       position: { x: 2, y: 4 },
-//       rotation: 90,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:belt:427:1": {
-//       id: "logistics-draft:belt:427:1",
-//       definitionId: "belt_straight_1x1",
-//       position: { x: 2, y: 5 },
-//       rotation: 90,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:belt:428:2": {
-//       id: "logistics-draft:belt:428:2",
-//       definitionId: "belt_straight_1x1",
-//       position: { x: 2, y: 6 },
-//       rotation: 90,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:belt:445:0": {
-//       id: "logistics-draft:belt:445:0",
-//       definitionId: "belt_straight_1x1",
-//       position: { x: 7, y: 7 },
-//       rotation: 180,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:belt:446:1": {
-//       id: "logistics-draft:belt:446:1",
-//       definitionId: "belt_straight_1x1",
-//       position: { x: 6, y: 7 },
-//       rotation: 180,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:belt:447:2": {
-//       id: "logistics-draft:belt:447:2",
-//       definitionId: "belt_straight_1x1",
-//       position: { x: 5, y: 7 },
-//       rotation: 180,
-//       config: {},
-//       tags: [],
-//     },
-//   },
-//   entityOrder: [
-//     "item_port_cmpt_mc_1:12",
-//     "item_port_liquid_furnance_1:9",
-//     "logistics-draft:belt:414:0",
-//     "logistics-draft:belt:415:1",
-//     "logistics-draft:belt:416:2",
-//     "logistics-draft:belt:426:0",
-//     "logistics-draft:belt:427:1",
-//     "logistics-draft:belt:428:2",
-//     "logistics-draft:belt:445:0",
-//     "logistics-draft:belt:446:1",
-//     "logistics-draft:belt:447:2",
-//   ],
-//   slotLinks: [],
-//   regions: [],
-//   createdAt: "2026-06-19T13:28:08.212Z",
-//   updatedAt: "2026-06-19T13:28:08.212Z",
-// };
 const USER_PROVIDED_BLUEPRINT_SCENE2: BlueprintDocument = loadBlueprintFromFile(
   "src/tests/fixtures/blueprints/logistics-placement-complete/scene-2.schema7.json",
 );
 
-// AI-REMOVED 2026-09-14:
-// Reason: 内联历史蓝图已迁移为独立 JSON 文件，保留原文用于审计。
-// Trigger: 用户要求全部测试蓝图升级并改用带版本号的蓝图文件。
-// Evidence: schema 3 场景绕过正式 5→6 迁移，遗漏准入口 270°补偿。
-// Replacement: src/tests/fixtures/blueprints/logistics-placement-complete/scene-3.schema6.json
-// Risk: Low；原始场景和断言保留，版本迁移使用生产入口。
-// Human Review: Required
-// Original code:
-// const USER_PROVIDED_BLUEPRINT_SCENE3: BlueprintDocument = {
-//   schemaVersion: 3,
-//   blueprintId: "1041aaaf-437b-435d-ad2b-2241bb520fbe",
-//   version: "v1.3.0",
-//   name: "场景3",
-//   description: "",
-//   baseId: "wuling_protocol_core",
-//   initialGridPoint: { x: 6, y: 5 },
-//   entities: {
-//     "item_port_cmpt_mc_1:9": {
-//       id: "item_port_cmpt_mc_1:9",
-//       definitionId: "cmpt_mc_1",
-//       position: { x: 2, y: 3 },
-//       rotation: 270,
-//       config: {},
-//       tags: [],
-//     },
-//     "item_port_cmpt_mc_1:11": {
-//       id: "item_port_cmpt_mc_1:11",
-//       definitionId: "cmpt_mc_1",
-//       position: { x: 6, y: 3 },
-//       rotation: 270,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:belt:580:1": {
-//       id: "logistics-draft:belt:580:1",
-//       definitionId: "belt_straight_1x1",
-//       position: { x: 5, y: 5 },
-//       rotation: 270,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:belt:581:2": {
-//       id: "logistics-draft:belt:581:2",
-//       definitionId: "belt_straight_1x1",
-//       position: { x: 5, y: 4 },
-//       rotation: 270,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:belt:582:3": {
-//       id: "logistics-draft:belt:582:3",
-//       definitionId: "belt_straight_1x1",
-//       position: { x: 5, y: 3 },
-//       rotation: 270,
-//       config: {},
-//       tags: [],
-//     },
-//   },
-//   entityOrder: [
-//     "item_port_cmpt_mc_1:9",
-//     "item_port_cmpt_mc_1:11",
-//     "logistics-draft:belt:580:1",
-//     "logistics-draft:belt:581:2",
-//     "logistics-draft:belt:582:3",
-//   ],
-//   slotLinks: [],
-//   regions: [],
-//   createdAt: "2026-06-19T13:36:00.575Z",
-//   updatedAt: "2026-06-19T13:36:00.575Z",
-// };
 const USER_PROVIDED_BLUEPRINT_SCENE3: BlueprintDocument = loadBlueprintFromFile(
   "src/tests/fixtures/blueprints/logistics-placement-complete/scene-3.schema7.json",
 );
 
-// AI-REMOVED 2026-09-14:
-// Reason: 内联历史蓝图已迁移为独立 JSON 文件，保留原文用于审计。
-// Trigger: 用户要求全部测试蓝图升级并改用带版本号的蓝图文件。
-// Evidence: schema 3 场景绕过正式 5→6 迁移，遗漏准入口 270°补偿。
-// Replacement: src/tests/fixtures/blueprints/logistics-placement-complete/scene-4.schema6.json
-// Risk: Low；原始场景和断言保留，版本迁移使用生产入口。
-// Human Review: Required
-// Original code:
-// const USER_PROVIDED_BLUEPRINT_SCENE4: BlueprintDocument = {
-//   schemaVersion: 3,
-//   blueprintId: "37c8e4e6-c720-4480-95bf-f584d2d257aa",
-//   version: "v1.3.0",
-//   name: "未命名蓝图-20260722212625",
-//   description: "",
-//   baseId: "wuling_tianwangping_aid",
-//   initialGridPoint: { x: 9, y: 6 },
-//   entities: {
-//     "pipe_admission:2": {
-//       id: "pipe_admission:2",
-//       definitionId: "pipe_admission",
-//       position: { x: 7, y: 6 },
-//       rotation: 0,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:belt:571:2": {
-//       id: "logistics-draft:belt:571:2",
-//       definitionId: "belt_straight_1x1",
-//       position: { x: 8, y: 5 },
-//       rotation: 0,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:belt:572:3": {
-//       id: "logistics-draft:belt:572:3",
-//       definitionId: "belt_straight_1x1",
-//       position: { x: 9, y: 5 },
-//       rotation: 0,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:belt:573:4": {
-//       id: "logistics-draft:belt:573:4",
-//       definitionId: "belt_straight_1x1",
-//       position: { x: 10, y: 5 },
-//       rotation: 0,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:pipe:584:3": {
-//       id: "logistics-draft:pipe:584:3",
-//       definitionId: "pipe_straight_1x1",
-//       position: { x: 9, y: 5 },
-//       rotation: 270,
-//       config: {},
-//       tags: [],
-//     },
-//   },
-//   entityOrder: [
-//     "pipe_admission:2",
-//     "logistics-draft:belt:571:2",
-//     "logistics-draft:belt:572:3",
-//     "logistics-draft:belt:573:4",
-//     "logistics-draft:pipe:584:3",
-//   ],
-//   slotLinks: [],
-//   regions: [],
-//   createdAt: "2026-07-22T13:26:26.853Z",
-//   updatedAt: "2026-07-22T13:26:26.853Z",
-// };
 const USER_PROVIDED_BLUEPRINT_SCENE4: BlueprintDocument = loadBlueprintFromFile(
   "src/tests/fixtures/blueprints/logistics-placement-complete/scene-4.schema7.json",
 );
@@ -1083,210 +627,14 @@ const USER_PROVIDED_BLUEPRINT_BRIDGE_CROSSING: BlueprintDocument = loadBlueprint
   "src/tests/fixtures/blueprints/logistics-placement-complete/bridge-crossing.schema7.json",
 );
 
-// AI-REMOVED 2026-09-14:
-// Reason: 内联历史蓝图已迁移为独立 JSON 文件，保留原文用于审计。
-// Trigger: 用户要求全部测试蓝图升级并改用带版本号的蓝图文件。
-// Evidence: schema 3 场景绕过正式 5→6 迁移，遗漏准入口 270°补偿。
-// Replacement: src/tests/fixtures/blueprints/logistics-placement-complete/pipe-deadend.schema6.json
-// Risk: Low；原始场景和断言保留，版本迁移使用生产入口。
-// Human Review: Required
-// Original code:
-// const USER_PROVIDED_BLUEPRINT_PIPE_DEADEND: BlueprintDocument = {
-//   schemaVersion: 3,
-//   blueprintId: "833b49ea-c832-470f-be0b-043b16890b8f",
-//   version: "v1.3.0",
-//   name: "未命名蓝图-20260723105623",
-//   description: "",
-//   baseId: "stm_hongs_3",
-//   initialGridPoint: { x: 4, y: 3 },
-//   entities: {
-//     "logistics-draft:pipe:1:0": {
-//       id: "logistics-draft:pipe:1:0",
-//       definitionId: "pipe_straight_1x1",
-//       position: { x: 3, y: 4 },
-//       rotation: 0,
-//       config: {},
-//       tags: [],
-//     },
-//     "pipe_splitter:1": {
-//       id: "pipe_splitter:1",
-//       definitionId: "pipe_splitter",
-//       position: { x: 5, y: 1 },
-//       rotation: 0,
-//       config: {},
-//       tags: [],
-//     },
-//     "pipe_splitter:2": {
-//       id: "pipe_splitter:2",
-//       definitionId: "pipe_splitter",
-//       position: { x: 2, y: 4 },
-//       rotation: 270,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:pipe:2:1": {
-//       id: "logistics-draft:pipe:2:1",
-//       definitionId: "pipe_straight_1x1",
-//       position: { x: 4, y: 4 },
-//       rotation: 0,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:pipe:5:0": {
-//       id: "logistics-draft:pipe:5:0",
-//       definitionId: "pipe_straight_1x1",
-//       position: { x: 5, y: 2 },
-//       rotation: 90,
-//       config: {},
-//       tags: [],
-//     },
-//     "logistics-draft:pipe:6:1": {
-//       id: "logistics-draft:pipe:6:1",
-//       definitionId: "pipe_straight_1x1",
-//       position: { x: 5, y: 3 },
-//       rotation: 90,
-//       config: {},
-//       tags: [],
-//     },
-//   },
-//   entityOrder: [
-//     "logistics-draft:pipe:1:0",
-//     "pipe_splitter:1",
-//     "pipe_splitter:2",
-//     "logistics-draft:pipe:2:1",
-//     "logistics-draft:pipe:5:0",
-//     "logistics-draft:pipe:6:1",
-//   ],
-//   slotLinks: [],
-//   regions: [],
-//   createdAt: "2026-07-23T02:56:24.419Z",
-//   updatedAt: "2026-07-23T02:56:24.419Z",
-// };
 const USER_PROVIDED_BLUEPRINT_PIPE_DEADEND: BlueprintDocument = loadBlueprintFromFile(
   "src/tests/fixtures/blueprints/logistics-placement-complete/pipe-deadend.schema7.json",
 );
 
-// AI-REMOVED 2026-09-14:
-// Reason: 内联历史蓝图已迁移为独立 JSON 文件，保留原文用于审计。
-// Trigger: 用户要求全部测试蓝图升级并改用带版本号的蓝图文件。
-// Evidence: schema 3 场景绕过正式 5→6 迁移，遗漏准入口 270°补偿。
-// Replacement: src/tests/fixtures/blueprints/logistics-placement-complete/pipe-branch.schema6.json
-// Risk: Low；原始场景和断言保留，版本迁移使用生产入口。
-// Human Review: Required
-// Original code:
-// const USER_PROVIDED_BLUEPRINT_PIPE_BRANCH: BlueprintDocument = {
-//   schemaVersion: 3,
-//   blueprintId: "pipe-branch-test-001",
-//   version: "v1.3.0",
-//   name: "管道分叉测试",
-//   description: "(50,0)液燃炉rotation=0, (50/51/52,3)三格管道",
-//   baseId: "wuling_protocol_core",
-//   initialGridPoint: { x: 51, y: 3 },
-//   entities: {
-//     "liquid-furnance": {
-//       id: "liquid-furnance",
-//       definitionId: "furnance_1_liquid",
-//       position: { x: 50, y: 0 },
-//       rotation: 0,
-//       config: {},
-//       tags: [],
-//     },
-//     "pipe-50-3": {
-//       id: "pipe-50-3",
-//       definitionId: "pipe_straight_1x1",
-//       position: { x: 50, y: 3 },
-//       rotation: 0,
-//       config: {},
-//       tags: [],
-//     },
-//     "pipe-51-3": {
-//       id: "pipe-51-3",
-//       definitionId: "pipe_straight_1x1",
-//       position: { x: 51, y: 3 },
-//       rotation: 0,
-//       config: {},
-//       tags: [],
-//     },
-//     "pipe-52-3": {
-//       id: "pipe-52-3",
-//       definitionId: "pipe_straight_1x1",
-//       position: { x: 52, y: 3 },
-//       rotation: 0,
-//       config: {},
-//       tags: [],
-//     },
-//   },
-//   entityOrder: ["liquid-furnance", "pipe-50-3", "pipe-51-3", "pipe-52-3"],
-//   slotLinks: [],
-//   regions: [],
-//   createdAt: "2026-07-23T10:00:00.000Z",
-//   updatedAt: "2026-07-23T10:00:00.000Z",
-// };
 const USER_PROVIDED_BLUEPRINT_PIPE_BRANCH: BlueprintDocument = loadBlueprintFromFile(
   "src/tests/fixtures/blueprints/logistics-placement-complete/pipe-branch.schema7.json",
 );
 
-// AI-REMOVED 2026-09-14:
-// Reason: 内联历史蓝图已迁移为独立 JSON 文件，保留原文用于审计。
-// Trigger: 用户要求全部测试蓝图升级并改用带版本号的蓝图文件。
-// Evidence: schema 3 场景绕过正式 5→6 迁移，遗漏准入口 270°补偿。
-// Replacement: src/tests/fixtures/blueprints/logistics-placement-complete/pipe-continuous-crossing.schema6.json
-// Risk: Low；原始场景和断言保留，版本迁移使用生产入口。
-// Human Review: Required
-// Original code:
-// const USER_PROVIDED_BLUEPRINT_PIPE_CONTINUOUS_CROSSING: BlueprintDocument = {
-//   schemaVersion: 5,
-//   blueprintId: "16247ed5-4276-4419-a608-9856720b46e4",
-//   version: "",
-//   name: "未命名蓝图-20260913230402",
-//   description: "",
-//   baseId: "wuling_tianwangping_aid",
-//   initialGridPoint: { x: 3, y: 3 },
-//   entities: {
-//     "pipe_splitter:5": {
-//       id: "pipe_splitter:5",
-//       definitionId: "pipe_splitter",
-//       position: { x: 2, y: 1 },
-//       rotation: 0,
-//       config: {},
-//       tags: [],
-//     },
-//     "pipe_straight_1x1:5": {
-//       id: "pipe_straight_1x1:5",
-//       definitionId: "pipe_straight_1x1",
-//       position: { x: 2, y: 2 },
-//       rotation: 90,
-//       config: {},
-//       tags: [],
-//     },
-//     "pipe_straight_1x1:6": {
-//       id: "pipe_straight_1x1:6",
-//       definitionId: "pipe_straight_1x1",
-//       position: { x: 2, y: 3 },
-//       rotation: 90,
-//       config: {},
-//       tags: [],
-//     },
-//     "pipe_straight_1x1:7": {
-//       id: "pipe_straight_1x1:7",
-//       definitionId: "pipe_straight_1x1",
-//       position: { x: 2, y: 4 },
-//       rotation: 90,
-//       config: {},
-//       tags: [],
-//     },
-//   },
-//   entityOrder: [
-//     "pipe_splitter:5",
-//     "pipe_straight_1x1:5",
-//     "pipe_straight_1x1:6",
-//     "pipe_straight_1x1:7",
-//   ],
-//   slotLinks: [],
-//   regions: [],
-//   createdAt: "2026-09-13T15:04:03.139Z",
-//   updatedAt: "2026-09-13T15:04:03.139Z",
-// };
 const USER_PROVIDED_BLUEPRINT_PIPE_CONTINUOUS_CROSSING: BlueprintDocument = loadBlueprintFromFile(
   "src/tests/fixtures/blueprints/logistics-placement-complete/pipe-continuous-crossing.schema7.json",
 );
@@ -1305,7 +653,6 @@ function createWorkspace(): WorkspaceContract {
     simulation: null,
     sync: null,
     audio: null,
-    blueprintPlanner: null,
   };
 }
 
@@ -1341,27 +688,6 @@ function resetCanvasFromUserBlueprint(
   editorHost.internalDocument.setSnapshot(emptyDocument);
 
   const entities = structuredClone(blueprint.entities);
-// AI-REMOVED 2026-09-14:
-// Reason: 已加载 schema 6 蓝图，删除仅覆盖两台设备的运行时旋转名单。
-// Trigger: 用户要求全部测试蓝图升级并改用带版本号的蓝图文件。
-// Evidence: schema 3 场景绕过正式 5→6 迁移，遗漏准入口 270°补偿。
-// Replacement: src/tests/fixtures/blueprints/logistics-placement-complete
-// Risk: Low；原始场景和断言保留，版本迁移使用生产入口。
-// Human Review: Required
-// Original code:
-//   // AI-CORRECTION 2026-09-11: these user-provided schema-3 fixtures encode
-//   // the pre-AKEData-1.5.3 registry orientation. Translate only affected
-//   // device entities so their recorded world connections remain unchanged;
-//   // belt and pipe fixtures remain byte-for-byte equivalent.
-//   const correctedOrientationIds = new Set([
-//     "cmpt_mc_1",
-//     "furnance_1_liquid",
-//   ]);
-//   for (const entity of Object.values(entities)) {
-//     if (correctedOrientationIds.has(entity.definitionId)) {
-//       entity.rotation = rotateGridRotation(entity.rotation, 180);
-//     }
-//   }
   const blueprintDocument: WorldDocument = {
     ...emptyDocument,
     entities,
@@ -1594,80 +920,6 @@ function keyEvent(
   };
 }
 
-// AI-REMOVED 2026-09-14:
-// Reason: 内联历史蓝图已迁移为独立 JSON 文件，保留原文用于审计。
-// Trigger: 用户要求全部测试蓝图升级并改用带版本号的蓝图文件。
-// Evidence: schema 3 场景绕过正式 5→6 迁移，遗漏准入口 270°补偿。
-// Replacement: src/tests/fixtures/blueprints/logistics-placement-complete/suppression-overlap.schema6.json
-// Risk: Low；原始场景和断言保留，版本迁移使用生产入口。
-// Human Review: Required
-// Original code:
-// const USER_PROVIDED_BLUEPRINT_SUPPRESSION_OVERLAP: BlueprintDocument = {
-//   schemaVersion: 4,
-//   blueprintId: "dea0569d-2e5d-44d3-913a-ab30dd84fca4",
-//   version: "v1.3.0",
-//   name: "未命名蓝图-20260801141942",
-//   description: "",
-//   baseId: "stm_hongs_3",
-//   initialGridPoint: { x: 4, y: 4 },
-//   entities: {
-//     "belt_straight_1x1:13": {
-//       id: "belt_straight_1x1:13",
-//       definitionId: "belt_straight_1x1",
-//       position: { x: 1, y: 3 },
-//       rotation: 0,
-//       config: {},
-//       tags: [],
-//     },
-//     "belt_straight_1x1:14": {
-//       id: "belt_straight_1x1:14",
-//       definitionId: "belt_straight_1x1",
-//       position: { x: 2, y: 3 },
-//       rotation: 0,
-//       config: {},
-//       tags: [],
-//     },
-//     "pipe_straight_1x1:23": {
-//       id: "pipe_straight_1x1:23",
-//       definitionId: "pipe_straight_1x1",
-//       position: { x: 1, y: 3 },
-//       rotation: 0,
-//       config: {},
-//       tags: [],
-//     },
-//     "pipe_straight_1x1:24": {
-//       id: "pipe_straight_1x1:24",
-//       definitionId: "pipe_straight_1x1",
-//       position: { x: 2, y: 3 },
-//       rotation: 0,
-//       config: {},
-//       tags: [],
-//     },
-//     "storager_1:2": {
-//       id: "storager_1:2",
-//       definitionId: "storager_1",
-//       position: { x: 4, y: 2 },
-//       rotation: 90,
-//       config: {
-//         channelRecipes: {
-//           warehouse_submit: "r_warehouse_submit",
-//         },
-//       },
-//       tags: [],
-//     },
-//   },
-//   entityOrder: [
-//     "belt_straight_1x1:13",
-//     "belt_straight_1x1:14",
-//     "pipe_straight_1x1:23",
-//     "pipe_straight_1x1:24",
-//     "storager_1:2",
-//   ],
-//   slotLinks: [],
-//   regions: [],
-//   createdAt: "2026-08-01T06:19:44.518Z",
-//   updatedAt: "2026-08-01T06:19:44.518Z",
-// };
 const USER_PROVIDED_BLUEPRINT_SUPPRESSION_OVERLAP: BlueprintDocument = loadBlueprintFromFile(
   "src/tests/fixtures/blueprints/logistics-placement-complete/suppression-overlap.schema7.json",
 );

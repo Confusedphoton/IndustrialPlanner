@@ -236,7 +236,6 @@ describe("production planning flow graph", () => {
     expect(byproductLink?.value).toBeGreaterThan(0);
   });
 
-  // AI-CORRECTION 2026-07-23:
   // 设备最低消耗不再自建独立节点，改为挂到宿主配方节点上作为入线标注。
   // 自消费场景（设备消耗品也是该配方产物）在流程图中跳过，不创建自环连线。
   it("shows self-consumed device input as an independent consumption node at the gross output rate", () => {
@@ -400,7 +399,6 @@ describe("production planning flow graph", () => {
     expect(layoutFeedback?.direction).toBe("backward");
   });
 
-  // AI-CORRECTION 2026-10-29：用户指定赤铜矿默认路线；旧默认互转循环和虚假外供不再是正确行为。
   it("默认赤铜矿路线在设备流程图中不产生互转回路或虚假外供", () => {
     const index = buildProductionPlanningIndex(createRegistryContract());
     const result = computeProductionPlan({

@@ -162,15 +162,6 @@ describe("ST2-RQ-046 Legacy 随机生命周期", () => {
   afterEach(() => vi.useRealTimers());
 
   it("真实 Legacy Host 暂停继续与同速连续运行一致，停止重启恢复起点", async () => {
-    // AI-REMOVED 2026-11-02:
-    // Reason: 真实 Host 按文档计算供电范围，单机夹具缺少供电装配。
-    // Trigger: 新增 Host 测试无启动配方，主代理已确认补齐 fixture。
-    // Evidence: Legacy controller.computePoweredEntityIds 判定原场景为 out-of-power-range。
-    // Replacement: host.schema7.json 保存完整供电设备。
-    // Risk: Low；不修改任何供电准入或概率断言。
-    // Human Review: Required
-    // Original code:
-    // const test = scene([recipe("a", 1), recipe("b", 1)]);
     const test = scene([recipe("a", 1), recipe("b", 1)], { poweredFixture: true });
     const first = createSimulationHost(createHeadlessWorkspace(test.document, test.registry), { engineKind: "legacy", workerMode: "runtime" });
     const second = createSimulationHost(createHeadlessWorkspace(test.document, test.registry), { engineKind: "legacy", workerMode: "runtime" });

@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { expect, SCREEN_PROFILES, test } from "./harness/fixture";
 
-// 2026-10-29：开发截图确认后独立添加；仅回归错误区与图形共存的真实排版，循环业务矩阵由 Vitest 覆盖。
+// 开发截图确认后独立添加；仅回归错误区与图形共存的真实排版，循环业务矩阵由 Vitest 覆盖。
 for (const profile of SCREEN_PROFILES) {
   test(`循环错误提示保留可见工序图：${profile.name}`, async ({ browserSession, baseURL }) => {
     test.setTimeout(150_000);

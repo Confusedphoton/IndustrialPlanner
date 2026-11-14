@@ -9,15 +9,6 @@ import { resolveStrongPortOverlayEntityIds } from "@/renderer/move-visual-policy
 import type { GridEdge, GridPoint, GridRectSize, GridRotation } from "@/domain/shared/grid";
 import type { SceneBounds } from "@/domain/shared/scene-space";
 import { isPointInSceneBounds } from "@/shared/geometry/scene-space";
-// AI-REMOVED 2026-11-12:
-// Reason: 端口过滤直接读取会话空间。
-// Trigger: REQ-048 独立空间。
-// Evidence: currentBase 查询已退出。
-// Replacement: SceneSource.snapshot.space
-// Risk: Low
-// Human Review: Required
-// Original code:
-// import { resolveBaseAreas } from "@/shared/geometry/base-areas";
 import {
   FluidDomain,
   ItemDomainFlag,
@@ -97,15 +88,6 @@ export function resolveLogisticsPortOverlayEntries(options: {
   readonly direction: LogisticsPortDirection;
   readonly queries: RegistryQuery;
   readonly occupiedDraftPortKeys?: ReadonlySet<string>;
-  // AI-REMOVED 2026-09-26:
-  // Reason: 只传主基地尺寸会漏报分区端口，并把空隙当作可连接范围。
-  // Trigger: 草稿箱新增独立分区。
-  // Evidence: 分区占地必须保留每块矩形的原点。
-  // Replacement: basePlaceableRects。
-  // Risk: Low。
-  // Human Review: Required
-  // Original code:
-  // readonly basePlaceableArea?: GridRectSize;
   readonly basePlaceableBounds?: readonly SceneBounds[];
 }): PortOverlayEntry[] {
   const occupancy = createPortOccupancyIndex(options);
@@ -339,17 +321,6 @@ export function createPortOverlayDecoration(): DecorationLayer {
           && draft.headDraftEntityId !== null
           ? "input"
           : "output";
-        // AI-REMOVED 2026-11-12:
-        // Reason: 端口过滤必须使用会话实际空间，不能回退来源基地。
-        // Trigger: REQ-048 无界及内存会话。
-        // Evidence: 独立会话允许空间与 sourceBaseId 不同。
-        // Replacement: source.snapshot.space.areas
-        // Risk: Low
-        // Human Review: Required
-        // Original code:
-        // const currentBase = ctx.renderHost.input.source.registry.baseDefinitions.find(
-        // (definition) => definition.id === source.snapshot.getSnapshot().document.baseId,
-        // );
 
         entries = resolveLogisticsPortOverlayEntries({
           entities,
@@ -395,7 +366,6 @@ export function createPortOverlayDecoration(): DecorationLayer {
           const sprite = getOrCreateSprite(crossSprites, crossIndex, container);
           crossIndex += 1;
           sprite.texture = crossTexture;
-          // AI-CORRECTION 2026-06-18: 实机端口叉号使用高亮橙红色而非纯红色，配合贴图中的 alpha 柔光还原发光标记。
           sprite.tint = 0xff4b24;
           applyPortSpriteLayout(sprite, layout);
           continue;
@@ -428,37 +398,9 @@ function canLegallyLeadLogisticsFromPort(options: {
   entities: readonly WorldEntity[];
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
   queries: RegistryQuery;
-  // AI-REMOVED 2026-09-26:
-  // Reason: 端口合法范围从单区域尺寸改为多区域完整矩形。
-  // Trigger: 草稿箱分离建造区。
-  // Evidence: 全部区域的 placeableRect 含各自位置。
-  // Replacement: basePlaceableRects。
-  // Risk: Low。
-  // Human Review: Required
-  // Original code:
-  // basePlaceableArea?: GridRectSize;
   basePlaceableBounds?: readonly SceneBounds[];
 }): boolean {
   const point = options.endpoint.outsideGridPoint;
-  // AI-REMOVED 2026-09-26:
-  // Reason: 单矩形点判定只接受从原点开始的主区域。
-  // Trigger: 不连续分区端口提示。
-  // Evidence: 新分区坐标为负，旧检查立即拒绝。
-  // Replacement: 下方逐矩形点包含判定。
-  // Risk: Low。
-  // Human Review: Required
-  // Original code:
-  // if (
-  //   options.basePlaceableArea !== undefined
-  //   && (
-  //     point.x < 0
-  //     || point.y < 0
-  //     || point.x >= options.basePlaceableArea.width
-  //     || point.y >= options.basePlaceableArea.height
-  //   )
-  // ) {
-  //   return false;
-  // }
   if (
     options.basePlaceableBounds !== undefined
     && !options.basePlaceableBounds.some((rect) =>
@@ -665,23 +607,6 @@ function findEntitiesAtGridPoint(options: {
   entities: readonly WorldEntity[];
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
 }): WorldEntity[] {
-  // AI-REMOVED 2026-09-16:
-  // Reason: 每个端口扫描全场实体改为复用本轮矩形索引。
-  // Trigger: 用户要求优化视口拖动与虚影移动。
-  // Evidence: Trace 与调用链确认重复布局、全量候选扫描和缓存驱逐。
-  // Replacement: GridRectIndex.at
-  // Risk: 需验证平移、缩放、旋转与编辑后的正确性。
-  // Human Review: Required
-  // Original code:
-  //   return options.entities.filter((entity) => {
-  //     const definition = options.entityDefinitionMap.get(entity.definitionId);
-  //     if (definition === undefined) return false;
-  //     const footprint = getRotatedGridFootprint(definition.footprint, entity.rotation);
-  //     return options.gridPoint.x >= entity.position.x
-  //       && options.gridPoint.x < entity.position.x + footprint.width
-  //       && options.gridPoint.y >= entity.position.y
-  //       && options.gridPoint.y < entity.position.y + footprint.height;
-  //   });
   return options.occupancy.at(options.gridPoint);
 }
 

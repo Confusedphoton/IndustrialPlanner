@@ -13,15 +13,6 @@ import {
   type NormalizedDeviceSpriteAnimationDefinition,
 } from "@/shared/device-sprite-animation";
 
-// AI-REMOVED 2026-09-13:
-// Reason: 取消软预算，不再选择性保留动画页。
-// Trigger: 用户要求任一动画触发全阶段全帧驻留，最后同类实例离屏超过 20 秒才回收。
-// Evidence: 原软预算会裁剪阶段，5 秒离屏策略提前取消队列。
-// Replacement: DeviceAnimationTextureCache.reconcileResidency
-// Risk: 全量驻留提高内存与显存占用。
-// Human Review: Required
-// Original code:
-// export const DEFAULT_ANIMATION_RESIDENCY_BYTES = 512 * 1024 * 1024;
 const OFFSCREEN_GRACE_MS = 20_000;
 const PAGE_QUEUE_INTERVAL_MS = 16;
 
@@ -59,17 +50,6 @@ export interface DeviceAnimationTextureStats {
   readonly residentMasks: number;
   readonly residentPages: number;
   readonly residency: {
-    // AI-REMOVED 2026-09-13:
-    // Reason: 预算诊断不再对应当前的全量驻留规则。
-    // Trigger: 用户要求任一动画触发全阶段全帧驻留，最后同类实例离屏超过 20 秒才回收。
-    // Evidence: 原软预算会裁剪阶段，5 秒离屏策略提前取消队列。
-    // Replacement: mode / offscreenGraceMs / retainedSetBytes
-    // Risk: 全量驻留提高内存与显存占用。
-    // Human Review: Required
-    // Original code:
-    // readonly budgetBytes: number;
-    // readonly reservedBytes: number;
-    // readonly overBudgetBytes: number;
     readonly mode: "full-set";
     readonly offscreenGraceMs: number;
     readonly retainedSetBytes: number;
@@ -95,16 +75,6 @@ export interface DeviceAnimationTextureStats {
 }
 
 export interface DeviceAnimationTextures {
-  // AI-REMOVED 2026-09-06:
-  // Reason: 全片段 Texture[] 会强制同时解码并常驻全部分页，反应池约占 2.13GiB。
-  // Trigger: 用户要求保留 896px、665 帧和 30 FPS 后实测分页内存。
-  // Evidence: 4×4 页面单页约 49MiB；会话只需当前页和相邻预取页。
-  // Replacement: hasFrame / prepareFrame / commitFrame 的页级会话接口。
-  // Risk: 慢网下在下一页就绪前暂停视觉时间，避免跳帧或空白。
-  // Human Review: Required
-  //
-  // Original code:
-  // readonly clips: Readonly<Record<DeviceSpriteAnimationPhase, readonly Texture[]>>;
   readonly definition: NormalizedDeviceSpriteAnimationDefinition;
   readonly mask: Texture;
   readonly frameWidth: number;
@@ -274,8 +244,6 @@ class DeviceAnimationTextureSession implements DeviceAnimationTextures {
 }
 
 /** 只拥有分页子纹理；页面无人使用时立即释放基础纹理，避免整套动画常驻 GPU。 */
-// AI-CORRECTION 2026-09-13: 当前/相邻页由会话保护，可见类型的其他阶段按预算预热驻留；离屏缓冲到期后回收。
-// AI-CORRECTION 2026-09-13: 按用户新要求取消预算裁剪，任一阶段激活整套预上传，最后同类实例离屏超过 20 秒才回收。
 export class DeviceAnimationTextureCache {
   private readonly entries = new Map<string, {
     readonly signature: string;
@@ -292,28 +260,10 @@ export class DeviceAnimationTextureCache {
   private expiryTimer: ReturnType<typeof setTimeout> | null = null;
   private loading = false;
   private reconcileScheduled = false;
-  // AI-REMOVED 2026-09-13:
-  // Reason: 不再维护按预算选择的容量。
-  // Trigger: 用户要求任一动画触发全阶段全帧驻留，最后同类实例离屏超过 20 秒才回收。
-  // Evidence: 原软预算会裁剪阶段，5 秒离屏策略提前取消队列。
-  // Replacement: getStats().residency.retainedSetBytes
-  // Risk: 全量驻留提高内存与显存占用。
-  // Human Review: Required
-  // Original code:
-  // private reservedBytes = 0;
   private warmPriorities = new Map<DeviceAnimationPageRuntime, number>();
   private readonly totals = {
     frameHits: 0, frameMisses: 0, demandLoads: 0, prewarmLoads: 0,
     preparedPages: 0, prewarmFailures: 0, loadFailures: 0, unloadFailures: 0,
-    // AI-REMOVED 2026-09-13:
-    // Reason: 取消预算驱逐计数；仅保留离屏超时回收计数。
-    // Trigger: 用户要求任一动画触发全阶段全帧驻留，最后同类实例离屏超过 20 秒才回收。
-    // Evidence: 原软预算会裁剪阶段，5 秒离屏策略提前取消队列。
-    // Replacement: totals.offscreenEvictions
-    // Risk: 全量驻留提高内存与显存占用。
-    // Human Review: Required
-    // Original code:
-    // budgetEvictions: 0, offscreenEvictions: 0,
     offscreenEvictions: 0,
   };
   private destroyed = false;
@@ -325,15 +275,6 @@ export class DeviceAnimationTextureCache {
     readonly configureTexture: (texture: Texture) => void;
     readonly getMaxTextureSize: () => number;
     readonly uploadTexture: (texture: Texture) => void;
-    // AI-REMOVED 2026-09-13:
-    // Reason: 缓存不再接受预算覆盖。
-    // Trigger: 用户要求任一动画触发全阶段全帧驻留，最后同类实例离屏超过 20 秒才回收。
-    // Evidence: 原软预算会裁剪阶段，5 秒离屏策略提前取消队列。
-    // Replacement: reconcileResidency 整套驻留
-    // Risk: 全量驻留提高内存与显存占用。
-    // Human Review: Required
-    // Original code:
-    // readonly budgetBytes?: number;
   }) {}
 
   public async get(
@@ -414,17 +355,6 @@ export class DeviceAnimationTextureCache {
       residentMasks,
       residentPages,
       residency: {
-        // AI-REMOVED 2026-09-13:
-        // Reason: 以整套目标容量与离屏期限替代软预算。
-        // Trigger: 用户要求任一动画触发全阶段全帧驻留，最后同类实例离屏超过 20 秒才回收。
-        // Evidence: 原软预算会裁剪阶段，5 秒离屏策略提前取消队列。
-        // Replacement: residency.mode / retainedSetBytes / offscreenGraceMs
-        // Risk: 全量驻留提高内存与显存占用。
-        // Human Review: Required
-        // Original code:
-        // budgetBytes: this.budgetBytes,
-        // reservedBytes: this.reservedBytes,
-        // overBudgetBytes: Math.max(0, this.reservedBytes - this.budgetBytes),
         mode: "full-set" as const,
         offscreenGraceMs: OFFSCREEN_GRACE_MS,
         retainedSetBytes: retainedAssets.reduce((sum, asset) => sum + asset.definition.clipIds
@@ -548,18 +478,6 @@ export class DeviceAnimationTextureCache {
     this.scheduleResidency();
   }
 
-  // AI-REMOVED 2026-09-13:
-  // Reason: 整套保留不能被预算值覆盖。
-  // Trigger: 用户要求任一动画触发全阶段全帧驻留，最后同类实例离屏超过 20 秒才回收。
-  // Evidence: 原软预算会裁剪阶段，5 秒离屏策略提前取消队列。
-  // Replacement: isAssetRetained / reconcileResidency
-  // Risk: 全量驻留提高内存与显存占用。
-  // Human Review: Required
-  // Original code:
-  // private get budgetBytes(): number {
-  //   const value = this.options.budgetBytes ?? DEFAULT_ANIMATION_RESIDENCY_BYTES;
-  //   return Number.isFinite(value) && value >= 0 ? value : DEFAULT_ANIMATION_RESIDENCY_BYTES;
-  // }
 
   private isAssetRetained(asset: DeviceAnimationAsset, now: number): boolean {
     return asset.visibleOwners.size > 0 || now <= asset.lastVisibleAt + OFFSCREEN_GRACE_MS;
@@ -578,79 +496,6 @@ export class DeviceAnimationTextureCache {
     });
   }
 
-  // AI-REMOVED 2026-09-13:
-  // Reason: 预算选择和离屏立即取消队列与全量驻留要求冲突。
-  // Trigger: 用户要求任一动画触发全阶段全帧驻留，最后同类实例离屏超过 20 秒才回收。
-  // Evidence: 原软预算会裁剪阶段，5 秒离屏策略提前取消队列。
-  // Replacement: 下方 reconcileResidency
-  // Risk: 全量驻留提高内存与显存占用。
-  // Human Review: Required
-  // Original code:
-  // private reconcileResidency(): void {
-  //   if (this.expiryTimer !== null) clearTimeout(this.expiryTimer);
-  //   this.expiryTimer = null;
-  //   const now = performance.now();
-  //   const assets = [...this.resolvedAssets];
-  //   const allPages = assets.flatMap(asset => DEVICE_SPRITE_ANIMATION_PHASES.flatMap(phase => asset.pages[phase]));
-  //   // 必需页可超过软预算，不能为了满足缓存上限销毁当前正在显示的纹理。
-  //   let reserved = assets.reduce((sum, asset) => sum + asset.mask.source.pixelWidth * asset.mask.source.pixelHeight * 4, 0);
-  //   for (const page of allPages) {
-  //     page.warm = false;
-  //     if (page.owners.size > 0) reserved += page.estimatedBytes;
-  //   }
-  //   const candidates = new Map<DeviceAnimationPageRuntime, number>();
-  //   const add = (page: DeviceAnimationPageRuntime | undefined, priority: number) => {
-  //     if (page !== undefined && !page.failed) candidates.set(page, Math.min(candidates.get(page) ?? Infinity, priority));
-  //   };
-  //   let nextExpiry = Infinity;
-  //   for (const asset of assets) {
-  //     if (asset.unavailable) continue;
-  //     if (asset.visibleOwners.size > 0) {
-  //       // 所有可见类型先准备各状态入口，再补当前阶段、其他循环和过渡阶段；同类实例共享一份。
-  //       for (const phase of DEVICE_SPRITE_ANIMATION_PHASES) add(asset.pages[phase][0], 0);
-  //       for (const phase of new Set(asset.visibleOwners.values())) {
-  //         for (const page of asset.pages[phase]) add(page, 1);
-  //       }
-  //       for (const phase of DEVICE_SPRITE_ANIMATION_PHASES) {
-  //         for (const page of asset.pages[phase]) add(page, phase.endsWith("idle") ? 2 : 3);
-  //       }
-  //     } else if (now < asset.lastVisibleAt + OFFSCREEN_GRACE_MS) {
-  //       nextExpiry = Math.min(nextExpiry, asset.lastVisibleAt + OFFSCREEN_GRACE_MS);
-  //       // 离屏缓冲只保留已有/正在加载的页，不继续扩大预热集合。
-  //       for (const phase of DEVICE_SPRITE_ANIMATION_PHASES) {
-  //         for (const page of asset.pages[phase]) if (page.texture !== null || (page.loadPromise !== null && !this.queuedPages.has(page))) add(page, 4);
-  //       }
-  //     }
-  //   }
-  //   for (const [page] of [...candidates].sort((a, b) => a[1] - b[1])) {
-  //     if (page.owners.size > 0 || reserved + page.estimatedBytes > this.budgetBytes) continue;
-  //     page.warm = true;
-  //     reserved += page.estimatedBytes;
-  //   }
-  //   this.reservedBytes = reserved;
-  //   this.warmPriorities = candidates;
-  //   for (const page of allPages) {
-  //     if (this.isWanted(page)) {
-  //       if (page.frames === null && page.loadPromise === null && !page.failed
-  //         && this.resolveAsset(page)?.unavailable === false) void this.enqueuePage(page);
-  //     } else if (!this.isWanted(page)) {
-  //       const finish = this.queuedPages.get(page);
-  //       if (finish !== undefined) {
-  //         this.queuedPages.delete(page);
-  //         finish(false);
-  //       }
-  //       if (page.texture === null || page.unloadPromise !== null) continue;
-  //       const asset = this.resolveAsset(page)!;
-  //       if (asset.visibleOwners.size === 0 && now >= asset.lastVisibleAt + OFFSCREEN_GRACE_MS) this.totals.offscreenEvictions += 1;
-  //       else this.totals.budgetEvictions += 1;
-  //       void this.unloadPage(page);
-  //     }
-  //   }
-  //   if (Number.isFinite(nextExpiry)) {
-  //     this.expiryTimer = setTimeout(() => { this.expiryTimer = null; this.scheduleResidency(); }, Math.max(1, nextExpiry - now));
-  //   }
-  //   this.scheduleQueue();
-  // }
 
   private reconcileResidency(): void {
     if (this.expiryTimer !== null) clearTimeout(this.expiryTimer);

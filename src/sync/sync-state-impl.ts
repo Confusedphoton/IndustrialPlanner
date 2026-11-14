@@ -72,19 +72,6 @@ export class SyncStateImpl implements SyncState {
     this.settings = settings;
   }
 
-  // AI-REMOVED 2026-07-29:
-  // Reason: 不再维护没有可靠 revision 归因能力的设备列表。
-  // Trigger: 用户确认设备列表没有业务意义，只显示远端上传时间。
-  // Evidence: 原 setRemoteDevices 仅排序逐文件枚举结果，冲突时却错误使用第一项作为提交设备。
-  // Replacement: requestConflictResolutions 中的 remoteUpdatedAt。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // public remoteDevices: SyncRemoteDeviceInfo[] = [];
-  // public setRemoteDevices(devices: readonly SyncRemoteDeviceInfo[]): void {
-  //   this.remoteDevices = [...devices].sort((left, right) => right.lastActive.localeCompare(left.lastActive));
-  // }
 
   public beginConflictDiscovery(): void {
     this.pendingConflict = {

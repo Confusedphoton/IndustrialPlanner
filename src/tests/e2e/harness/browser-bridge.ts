@@ -76,7 +76,6 @@ export function installE2eBridge(app: AppHost, normalize: typeof normalizeBluepr
       const x = entity.position.x + (rotated ? definition.footprint.height : definition.footprint.width) / 2;
       const y = entity.position.y + (rotated ? definition.footprint.width : definition.footprint.height) / 2;
       // focusOnEntity 是动画入口；duration=0 不代表同步完成，且会导致除零。
-      // AI-CORRECTION 2026-11-12: 独立 View 的 duration=0 已同步完成；此处保留非零动画覆盖。
       app.mainCanvas.focusOnEntity(id, { duration: 100 });
       const deadline = performance.now() + 3000;
       while (performance.now() < deadline) {

@@ -69,14 +69,6 @@ export function ProductionPlanningTreeTableView<Row extends PlanningTreeRow>({
 
   const selectRow = (rowId: string) => {
     setSelectedRowId(rowId);
-    // AI-REMOVED 2026-10-03:
-    // Reason: 详情 render 回调携带 ref 闭包触发 React refs 校验。
-    // Trigger: 共用树表提取。Evidence: ESLint react-hooks/refs。
-    // Replacement: 下方选中行布局 effect。Risk: Low。Human Review: Required
-    // Original code:
-    // requestAnimationFrame(() => {
-    //   rowElementRefs.current.get(rowId)?.scrollIntoView({ block: "nearest" });
-    // });
   };
 
   useLayoutEffect(() => {

@@ -9,21 +9,6 @@ import { recipeTreeOverlayState } from "@/app/shell/recipe-tree/recipe-tree-stat
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
-// AI-REMOVED 2026-05-10:
-// Reason: 左侧删除模式按钮已废弃，不再注册到主工具栏。
-// Trigger: 产品要求移除左侧“删除模式”和整个删除面板。
-// Evidence: 删除面板只通过 LeftToolbar 和 LeftDock 暴露，没有其他入口设置 activePanel 为 delete。
-// Replacement: None
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// {
-//   id: "primary-delete",
-//   icon: "delete" as const,
-//   labelKey: "workbench.leftRail.delete",
-//   panel: "delete" as LeftToolbarPanel,
-// },
 
 type LeftToolbarPanel = Exclude<ActivePanel, null>;
 
@@ -113,11 +98,6 @@ export const LeftToolbar = observer(function LeftToolbar({
   const helpDialogVisible = appHost.internalState.workbench.dialogState.help.visible;
   const settingsDialogVisible = appHost.internalState.workbench.dialogState.settings.visible;
   const debugLogDialogVisible = appHost.internalState.workbench.dialogState["debug-log"]?.visible ?? false;
-  const plannerVisible = appHost.blueprintPlannerDialog.dialogState.visible;
-  const plannerBusy = appHost.blueprintPlannerDialog.taskLocked;
-  const plannerIndicator = plannerBusy && !plannerVisible;
-  const plannerStatus = appHost.workspace.blueprintPlanner?.queries.getTask(appHost.blueprintPlannerDialog.activeTaskId ?? undefined)?.status;
-  const plannerLabel = plannerBusy ? `${t("eda.toolbar")} · ${t(plannerStatus === "saving" ? "eda.saving" : "eda.running")}` : t("eda.toolbar");
   const primaryToolbarItems = PRIMARY_TOOLBAR_ITEMS.filter((item) => {
     if (item.panel === "region" && !appHost.state.settings.showRegionAnnotations) {
       return false;
@@ -162,33 +142,6 @@ export const LeftToolbar = observer(function LeftToolbar({
         })}
       </div>
       <div className={cm(styles, "toolbar-rail-group toolbar-rail-utility")}>
-        {/*
-        AI-REMOVED 2026-10-14:
-        Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
-        Trigger: 用户要求 EDA 默认可用且不再需要开启。
-        Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
-        Replacement: EDA 入口直接显示，BlueprintPlannerDialogController 不再持有启用状态。
-        Risk: Low；规划任务与业务可用性校验保持原行为。
-        Human Review: Required
-
-        Original code:
-                {appHost.blueprintPlannerDialog.enabled ? <button
-                  type="button" aria-label={plannerLabel} title={plannerBusy ? plannerLabel : t("eda.title")}
-                  aria-pressed={plannerVisible}
-                  className={cm(styles, `rail-button rail-button-utility${plannerVisible ? " is-active" : ""}${plannerIndicator ? " eda-task-indicator" : ""}`)}
-                  onClick={() => appHost.blueprintPlannerDialog.open()}>
-                  <span className={cm(styles, "rail-button-short")}><WorkbenchIcon kind="toolbox" /></span>
-                  <span className={cm(styles, "rail-button-label")}>{t("eda.toolbar")}</span>
-                </button> : null}
-        */}
-        <button
-          type="button" aria-label={plannerLabel} title={plannerBusy ? plannerLabel : t("eda.title")}
-          aria-pressed={plannerVisible}
-          className={cm(styles, `rail-button rail-button-utility${plannerVisible ? " is-active" : ""}${plannerIndicator ? " eda-task-indicator" : ""}`)}
-          onClick={() => appHost.blueprintPlannerDialog.open()}>
-          <span className={cm(styles, `rail-button-short${plannerBusy ? " eda-task-running" : ""}`)}><WorkbenchIcon kind="search" /></span>
-          <span className={cm(styles, "rail-button-label")}>{t("eda.toolbar")}</span>
-        </button>
         {/* 2026-11-13：配方树浮层开关；浮层常驻画布上方，不占用左侧面板。 */}
         <button
           type="button"

@@ -16,8 +16,12 @@ interface ProductionFlowGraphProps {
   readonly index?: ProductionPlanningIndex;
   readonly input?: ProductionFlowGraphInput;
   readonly fitToView?: boolean;
+  /** 适配视图时的最小缩放；小于该值时保持可读字号，改为平移查看。 */
+  readonly minFitScale?: number;
   readonly interactionMode?: "edit" | "browse";
   readonly onViewportChange?: (viewport: ViewportState) => void;
+  /** 节点被点按（未拖动）时回调，用于弹出节点快捷操作；锚点为节点卡片的屏幕矩形。 */
+  readonly onNodeActivate?: (node: ProductionFlowNode, anchor: DOMRect) => void;
   readonly t: (key: string) => string;
 }
 
@@ -75,8 +79,10 @@ export function ProductionFlowGraph({
   index,
   input,
   fitToView = false,
+  minFitScale = MIN_SCALE,
   interactionMode = "edit",
   onViewportChange,
+  onNodeActivate,
   t,
 }: ProductionFlowGraphProps) {
   const graphInput = useMemo(() => input ?? (plan && index ? buildProductionFlowGraph(plan, index, t, displayMode)
@@ -110,25 +116,19 @@ export function ProductionFlowGraph({
     const element = canvasRef.current;
     if (!fitToView || element === null) return;
     if (initialLayout.nodes.length === 0) return;
-    // AI-REMOVED 2026-09-30:
-    // Reason: 虚拟 Sankey 高度包含空白，不适合作为任务摘要的缩放边界。
-    // Trigger: 手机流程图文字过小。Evidence: 三屏截图。
-    // Replacement: 下方按实际卡片与回流线计算边界。Risk: Low。Human Review: Required
-    // Original code:
-    // const bounds = getGraphBounds(initialLayout);
-    // const width = bounds.width + 44, height = bounds.height + 44;
-    // const scale = Math.min(1, Math.max(MIN_SCALE, Math.min(element.clientWidth / width, element.clientHeight / height)));
-    // setViewport({ x: Math.max(0, (element.clientWidth - width * scale) / 2),
-    //   y: Math.max(0, (element.clientHeight - height * scale) / 2), scale });
     const left = Math.min(...initialLayout.nodes.map(node => node.x0)) - 48;
     const top = Math.min(...initialLayout.nodes.map(getNodeCardTop)) + 10;
     const width = Math.max(...initialLayout.nodes.map(node => node.x1)) + 92 - left;
     const height = Math.max(...initialLayout.nodes.map(node => getNodeCardTop(node) + NODE_CARD_HEIGHT)) + 122 - top;
     const availableHeight = Math.max(1, element.clientHeight - 44);
-    const scale = Math.min(1, Math.max(MIN_SCALE, Math.min(element.clientWidth / width, availableHeight / height)));
-    setViewport({ x: (element.clientWidth - width * scale) / 2 - left * scale,
-      y: 44 + (availableHeight - height * scale) / 2 - top * scale, scale });
-  }, [fitToView, initialLayout, setViewport]);
+    const scale = Math.min(1, Math.max(minFitScale, Math.min(element.clientWidth / width, availableHeight / height)));
+    const overflows = width * scale > element.clientWidth || height * scale > availableHeight;
+    setViewport({
+      x: overflows ? 16 - left * scale : (element.clientWidth - width * scale) / 2 - left * scale,
+      y: overflows ? 44 - top * scale : 44 + (availableHeight - height * scale) / 2 - top * scale,
+      scale,
+    });
+  }, [fitToView, initialLayout, minFitScale, setViewport]);
 
   useEffect(() => {
     const element = canvasRef.current;
@@ -160,7 +160,6 @@ export function ProductionFlowGraph({
   const resetNodeLayout = useCallback(() => {
     setGraph(cloneSankeyGraph(initialLayout));
     // 内嵌浏览图不能拖动；重置同时恢复完整图的视野。独立编辑图仍保持原视野。
-    // AI-CORRECTION 2026-10-25：内嵌浏览图现支持鼠标平移，重置仍恢复完整图的视野；触控继续滚动外层。
     fit();
   }, [fit, initialLayout]);
 
@@ -174,7 +173,9 @@ export function ProductionFlowGraph({
     setViewport((current) => {
       const direction = resolveWheelZoomDirection(event.deltaY, invertWheelZoom);
       if (direction === 0) return current;
-      const nextScale = clamp(current.scale + direction * 0.1, MIN_SCALE, MAX_SCALE);
+      // 原实现每个事件固定加减 0.1，小比例时跳变过大。
+      const magnitude = Math.min(Math.abs(event.deltaMode === 0 ? event.deltaY : event.deltaY * 40), 120);
+      const nextScale = clamp(current.scale * Math.exp(direction * magnitude * 0.0015), MIN_SCALE, MAX_SCALE);
       const ratio = nextScale / current.scale;
       return {
         x: cursorX - ratio * (cursorX - current.x),
@@ -185,7 +186,6 @@ export function ProductionFlowGraph({
   }, [invertWheelZoom, setViewport]);
 
   // --- unified pointer down on canvas (not on a node / toolbar) ---
-  // AI-CORRECTION 2026-10-25：浏览模式允许从节点发起鼠标平移；工具栏仍排除，触控留给外层滚动。
   const handleCanvasPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     if (interactionMode === "browse" && event.pointerType !== "mouse") {
       return;
@@ -373,9 +373,21 @@ export function ProductionFlowGraph({
     }
 
     if (interaction.node?.pointerId === event.pointerId) {
+      const nodeDrag = interaction.node;
       interaction.node = null;
+      // 位移小于 6px 视为点按，触发节点快捷操作。
+      if (
+        onNodeActivate !== undefined
+        && Math.hypot(event.clientX - nodeDrag.startClientX, event.clientY - nodeDrag.startClientY) < 6
+      ) {
+        const element = (event.target as HTMLElement | null)?.closest<HTMLElement>("[data-flow-node-id]");
+        const node = graph.nodes.find((candidate) => candidate.id === nodeDrag.nodeId);
+        if (element !== null && element !== undefined && node !== undefined) {
+          onNodeActivate(node.source, element.getBoundingClientRect());
+        }
+      }
     }
-  }, []);
+  }, [graph.nodes, onNodeActivate]);
 
   if (graphInput.nodes.length === 0) {
     return <div className={styles["production-planning-empty"]}>{t("productionPlanning.noRecipes")}</div>;
@@ -406,8 +418,8 @@ export function ProductionFlowGraph({
         >
           <LucideRotateCcw aria-hidden="true" />
         </button>
-        <button type="button" onClick={() => setViewport((current) => ({ ...current, scale: clamp(current.scale - 0.12, MIN_SCALE, MAX_SCALE) }))}>-</button>
-        <button type="button" onClick={() => setViewport((current) => ({ ...current, scale: clamp(current.scale + 0.12, MIN_SCALE, MAX_SCALE) }))}>+</button>
+        <button type="button" onClick={() => setViewport((current) => ({ ...current, scale: clamp(current.scale / 1.15, MIN_SCALE, MAX_SCALE) }))}>-</button>
+        <button type="button" onClick={() => setViewport((current) => ({ ...current, scale: clamp(current.scale * 1.15, MIN_SCALE, MAX_SCALE) }))}>+</button>
       </div>
       <div
         className={styles["production-flow-surface"]}
@@ -466,6 +478,7 @@ function FlowNode({
         height: NODE_CARD_HEIGHT,
       }}
       onPointerDown={(event) => onPointerDown?.(event, node)}
+      data-flow-node-id={node.id}
     >
       <CompositeItemIcon iconSrcs={node.source.iconSrcs} size={32} />
       <div>

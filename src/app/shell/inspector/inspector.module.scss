@@ -290,29 +290,6 @@
   height: 14px;
 }
 
-// AI-REMOVED 2026-07-16:
-// Reason: 标尺下方的文字说明行已按用户要求移除，对应样式不再参与渲染。
-// Trigger: “文字说明那一行直接去掉，只留下标尺”。
-// Evidence: MeteredConsumptionInspector 已只渲染 .metered-consumption-content。
-// Replacement: .metered-consumption-content + .metered-consumption-item-icon。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// .metered-consumption-summary {
-//   display: flex;
-//   align-items: baseline;
-//   justify-content: space-between;
-//   gap: 12px;
-//   color: var(--text-1);
-//   font-size: 0.76rem;
-// }
-//
-// .metered-consumption-summary strong {
-//   color: var(--text-0);
-//   font-size: 0.9rem;
-//   font-variant-numeric: tabular-nums;
-// }
 
 .logistics-item-list {
   gap: 0;
@@ -421,7 +398,6 @@
 
 .selection-inspector-device-header {
   display: grid;
-  // AI-CORRECTION 2026-11-13：设备名与操作按钮改为上下两行，避免停靠面板中设备名被挤成单字；原为 minmax(0, 1fr) auto 两列、gap 14px。
   grid-template-columns: minmax(0, 1fr);
   align-items: center;
   gap: 8px;
@@ -1026,89 +1002,6 @@
   white-space: nowrap;
 }
 
-/*
-  AI-REMOVED 2026-06-05:
-  Reason: 仓库链接行的无限物品控制已改为 ∞ 图标切换按钮，旧文字开关不再参与当前 UI。
-  Trigger: 用户要求“无限物品 switch 改成一个无限符号的切换形按钮”，并节省横向空间。
-  Evidence: JSX 中 warehouse-link-ignore-stock label/input 已归档删除，当前控件为 warehouse-link-infinity-button。
-  Replacement: .warehouse-link-infinity-button
-  Risk: Low
-  Human Review: Required
-
-  Original code:
-  .warehouse-link-ignore-stock {
-    position: relative;
-    display: inline-grid;
-    grid-template-columns: auto 36px;
-    align-items: center;
-    min-width: 0;
-    gap: 6px;
-    color: var(--text-1);
-    cursor: pointer;
-    font-size: 0.75rem;
-    line-height: 1;
-    white-space: nowrap;
-  }
-
-  .warehouse-link-ignore-stock input {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
-  }
-
-  .warehouse-link-ignore-stock-copy {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .warehouse-link-ignore-stock-track {
-    position: relative;
-    display: inline-block;
-    width: 36px;
-    height: 20px;
-    border: 1px solid color-mix(in srgb, var(--line-strong) 64%, var(--line));
-    border-radius: 999px;
-    background: var(--surface-2);
-  }
-
-  .warehouse-link-ignore-stock-track::after {
-    content: "";
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: var(--text-2);
-    transition: transform 0.15s ease, background 0.15s ease;
-  }
-
-  .warehouse-link-ignore-stock input:checked + .warehouse-link-ignore-stock-track {
-    border-color: var(--accent-strong);
-    background: var(--accent-soft);
-  }
-
-  .warehouse-link-ignore-stock input:checked + .warehouse-link-ignore-stock-track::after {
-    transform: translateX(16px);
-    background: var(--accent-strong);
-  }
-
-  .warehouse-link-ignore-stock input:focus-visible + .warehouse-link-ignore-stock-track {
-    outline: 2px solid var(--accent-strong);
-    outline-offset: 2px;
-  }
-
-  .warehouse-link-ignore-stock input:disabled + .warehouse-link-ignore-stock-track {
-    opacity: 0.55;
-  }
-
-  .warehouse-link-ignore-stock.is-disabled {
-    cursor: default;
-    opacity: 0.72;
-  }
-*/
 
 .warehouse-link-infinity-button {
   position: relative;
@@ -1146,32 +1039,6 @@
   color: var(--text-0);
 }
 
-/*
-  AI-REMOVED 2026-10-08:
-  Reason: 浅色填充与关闭态差异不足，且普通 hover 的优先级会覆盖开启态。
-  Trigger: 用户选择“实色按钮 + 勾选”方案，要求明显区分无限按钮的开关状态。
-  Evidence: 原开启态使用 accent-soft 混色；普通 hover 选择器优先级高于 aria-pressed 选择器。
-  Replacement: 下方实色开启态与 warehouse-link-infinity-check-icon。
-  Risk: Low；复用主题 token，按钮尺寸与库存配置行为不变。
-  Human Review: Required
-
-  Original code:
-  .warehouse-link-infinity-button[aria-pressed="true"] {
-    border-color: var(--accent-strong);
-    @supports (background: color-mix(in srgb, red 50%, blue)) {
-      border-color: color-mix(in srgb, var(--accent-strong) 76%, var(--line));
-    }
-    background: var(--accent-soft);
-    @supports (background: color-mix(in srgb, red 50%, blue)) {
-      background: color-mix(in srgb, var(--accent-soft) 72%, var(--surface-1));
-    }
-    color: var(--accent-strong);
-    box-shadow: inset 0 0 0 1px var(--accent-strong);
-    @supports (background: color-mix(in srgb, red 50%, blue)) {
-      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-strong) 24%, transparent);
-    }
-  }
-*/
 
 .warehouse-link-infinity-button[aria-pressed="true"]:not(:disabled) {
   border-color: var(--accent-strong);
@@ -1382,18 +1249,6 @@
   --admission-accent-soft: rgb(184 138 47 / 10%);
 
   display: grid;
-  /*
-    AI-REMOVED 2026-06-12:
-    Reason: 物品选择、数量与按钮挤在同一行，在 tablet/dialog 和 mobile 下可点击区域过小。
-    Trigger: 用户反馈“平板和手机上 ui 团成一团无法点击”，要求数量和物品选择分成两行。
-    Evidence: Playwright mobile/tablet 截图中单行控件水平空间不足。
-    Replacement: 外层固定单列，.admission-rule-controls-row 承载第二行。
-    Risk: Low
-    Human Review: Required
-
-    Original code:
-    grid-template-columns: minmax(0, 1fr) 82px 76px auto;
-  */
   grid-template-columns: minmax(0, 1fr);
   align-items: stretch;
   min-width: 0;
@@ -1705,54 +1560,16 @@
   height: 15px;
 }
 
-/*
-  AI-REMOVED 2026-06-12:
-  Reason: 旧响应式规则仍让 tablet/dialog 使用单行布局，mobile 下按钮也被压到狭窄网格里。
-  Trigger: 用户要求数量与物品选择分成两行，提升平板和手机可点击性。
-  Evidence: .admission-rule-controls-row 已接管二级布局。
-  Replacement: 下方 controls-row 响应式规则。
-  Risk: Low
-  Human Review: Required
-
-  Original code:
-  .admission-rule-inspector[data-render-mode="dock"] .admission-rule-row,
-  .admission-rule-inspector[data-device-class="mobile"] .admission-rule-row {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .admission-rule-inspector[data-render-mode="dock"] .admission-rule-item-button,
-  .admission-rule-inspector[data-device-class="mobile"] .admission-rule-item-button {
-    grid-column: 1 / -1;
-  }
-
-  .admission-rule-inspector[data-render-mode="dock"] .admission-rule-limit,
-  .admission-rule-inspector[data-device-class="mobile"] .admission-rule-limit {
-    grid-column: 1 / 2;
-  }
-
-  .admission-rule-inspector[data-render-mode="dock"] .admission-rule-count,
-  .admission-rule-inspector[data-device-class="mobile"] .admission-rule-count {
-    grid-column: 2 / 3;
-  }
-
-  .admission-rule-inspector[data-render-mode="dock"] .admission-rule-actions,
-  .admission-rule-inspector[data-device-class="mobile"] .admission-rule-actions {
-    grid-column: 1 / -1;
-    justify-content: flex-start;
-  }
-*/
 
 .admission-rule-inspector[data-render-mode="dock"] .admission-rule-controls-row,
 .admission-rule-inspector[data-device-class="mobile"] .admission-rule-controls-row,
 .admission-rule-inspector[data-device-class="tablet"] .admission-rule-controls-row {
-  /* AI-CORRECTION 2026-07-10: 每行现在有独立重置按钮，响应式布局仍需保留第三个操作列，避免按钮被压到额外行。 */
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
 }
 
 .admission-rule-inspector[data-render-mode="dock"] .admission-rule-actions,
 .admission-rule-inspector[data-device-class="mobile"] .admission-rule-actions,
 .admission-rule-inspector[data-device-class="tablet"] .admission-rule-actions {
-  /* AI-CORRECTION 2026-07-10: 与上方三列配置行一致，操作按钮留在当前行右侧。 */
   grid-column: auto;
   justify-content: flex-end;
 }
@@ -1776,39 +1593,6 @@
   white-space: nowrap;
 }
 
-/*
-  AI-REMOVED 2026-06-04:
-  Reason: 输出端口 summary 重复下方列表可直接读出或数出的配置状态。
-  Trigger: 用户要求 summary 不重复主区域信息。
-  Evidence: JSX 中 port-output-summary 已归档删除。
-  Replacement: None
-  Risk: Low
-  Human Review: Required
-
-  Original code:
-  .port-output-summary {
-    display: inline-flex;
-    align-items: center;
-    min-width: 0;
-    gap: 4px;
-    height: 24px;
-    padding: 0 10px;
-    border: 1px solid color-mix(in srgb, var(--accent-strong) 24%, var(--line));
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--accent-soft) 52%, var(--surface-2));
-    color: color-mix(in srgb, var(--accent-strong) 86%, var(--text-1));
-    font-size: 0.72rem;
-    font-weight: 520;
-    line-height: 1;
-    white-space: nowrap;
-  }
-
-  .port-output-summary strong {
-    color: var(--accent-strong);
-    font-size: 0.76rem;
-    font-weight: 750;
-  }
-*/
 
 .port-output-panel-body {
   padding: 8px;
@@ -1856,64 +1640,13 @@
   --port-output-accent-soft: rgb(79 143 168 / 10%);
 }
 
-/*
-  AI-REMOVED 2026-06-04:
-  Reason: 编号色、配置态行背景和旧 P index 色块都重复表达已有文字/主内容信息。
-  Trigger: 用户要求颜色、边框、背景不能重复表达编号、区域或配置状态。
-  Evidence: 端口行现在只通过主内容显示“未选择 / 目标名”，端口颜色只按类型小面积使用。
-  Replacement: .port-output-row[data-port-kind] + .port-output-locator
-  Risk: Low
-  Human Review: Required
-
-  Original code:
-  .port-output-row[data-port-tone="blue"] {
-    --port-output-accent: #2563eb;
-    --port-output-accent-soft: rgb(37 99 235 / 12%);
-  }
-
-  .port-output-row[data-port-tone="green"] {
-    --port-output-accent: #5e9f4b;
-    --port-output-accent-soft: rgb(94 159 75 / 13%);
-  }
-
-  .port-output-row[data-port-tone="orange"] {
-    --port-output-accent: #f97316;
-    --port-output-accent-soft: rgb(249 115 22 / 14%);
-  }
-
-  .port-output-row.is-configured {
-    border-color: color-mix(in srgb, var(--port-output-accent) 48%, var(--line));
-    background: color-mix(in srgb, var(--surface-1) 82%, var(--port-output-accent-soft));
-  }
-
-  .port-output-row.is-unconfigured {
-    color: var(--text-1);
-  }
-
-  .port-output-index {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 32px;
-    flex: 0 0 auto;
-    border: 1px solid color-mix(in srgb, var(--port-output-accent) 70%, var(--line));
-    border-radius: 5px;
-    background: var(--port-output-accent);
-    color: #ffffff;
-    font-size: 0.86rem;
-    font-weight: 800;
-    line-height: 1;
-    box-shadow: 0 1px 2px rgb(15 23 42 / 10%);
-  }
-*/
 
 .port-output-locator {
   display: inline-grid;
   grid-template-columns: 30px auto;
   align-items: center;
   justify-content: center;
-  width: 56px;
+  width: auto;
   height: 32px;
   min-width: 56px;
   gap: 2px;
@@ -1981,32 +1714,6 @@
   white-space: nowrap;
 }
 
-/*
-  AI-REMOVED 2026-06-04:
-  Reason: 端口类型图标已从行内移除，避免和端口类型色重复表达固体/液体类型。
-  Trigger: 用户要求任何元素都不能重复传递同一信息。
-  Evidence: JSX 中 port-output-type-icon 节点已归档删除。
-  Replacement: .port-output-locator 中的小面积类型色
-  Risk: Medium - 新用户需要通过颜色体系或 title 理解类型色。
-  Human Review: Required
-
-  Original code:
-  .port-output-type-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 23px;
-    height: 23px;
-    flex: 0 0 auto;
-    color: color-mix(in srgb, var(--text-0) 88%, var(--port-output-accent));
-  }
-
-  .port-output-type-icon svg {
-    width: 22px;
-    height: 22px;
-    fill: currentColor;
-  }
-*/
 
 .port-output-item-button {
   display: inline-grid;
@@ -2071,39 +1778,6 @@
   white-space: nowrap;
 }
 
-/*
-  AI-REMOVED 2026-06-04:
-  Reason: 行内“运行中 / 未配置”状态 chip 已从输出端口行移除，相关样式不再参与当前 UI。
-  Trigger: 用户确认该状态文本低价值且挤占 mobile/tablet dialog 的水平空间。
-  Evidence: 对应 JSX 已归档删除 port-output-status 节点，当前状态由 port-output-item-button 展示。
-  Replacement: .port-output-item-button / .port-output-item-name
-  Risk: Low
-  Human Review: Required
-
-  Original code:
-  .port-output-status {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 52px;
-    height: 26px;
-    padding: 0 8px;
-    border: 1px solid color-mix(in srgb, #79b36b 46%, var(--line));
-    border-radius: 5px;
-    background: rgb(119 183 107 / 15%);
-    color: #477d38;
-    font-size: 0.76rem;
-    font-weight: 650;
-    line-height: 1;
-    white-space: nowrap;
-  }
-
-  .port-output-row.is-unconfigured .port-output-status {
-    border-color: color-mix(in srgb, var(--line-strong) 54%, var(--line));
-    background: color-mix(in srgb, var(--surface-3) 68%, transparent);
-    color: var(--text-1);
-  }
-*/
 
 .port-output-action-button {
   display: inline-flex;
@@ -2632,33 +2306,6 @@
   }
 }
 
-/*
-  AI-REMOVED 2026-06-04:
-  Reason: 输入/输出/共享列已经由标题和布局表达，列容器彩色边框/背景重复表达区域和角色。
-  Trigger: 用户要求颜色和边框不能传递重复信息。
-  Evidence: active slot-config-flow-column 已改为中性边框和背景。
-  Replacement: .slot-config-flow-column neutral style
-  Risk: Low
-  Human Review: Required
-
-  Original code:
-  .slot-config-flow-column {
-    --slot-config-flow-accent: var(--accent-strong);
-    --slot-config-flow-soft: var(--accent-soft);
-    border: 1px solid color-mix(in srgb, var(--slot-config-flow-accent) 68%, var(--line));
-    background: color-mix(in srgb, var(--slot-config-flow-soft) 28%, var(--surface-2));
-  }
-
-  .slot-config-flow-column.is-output {
-    --slot-config-flow-accent: #d9822b;
-    --slot-config-flow-soft: rgb(217 130 43 / 18%);
-  }
-
-  .slot-config-flow-column.is-shared {
-    --slot-config-flow-accent: var(--text-2);
-    --slot-config-flow-soft: rgb(128 128 128 / 10%);
-  }
-*/
 
 .slot-config-flow-column-header {
   display: grid;
@@ -2681,44 +2328,6 @@
   white-space: nowrap;
 }
 
-/*
-  AI-REMOVED 2026-06-04:
-  Reason: 列 header 图标与辅助计数字段已从 JSX 删除，相关样式不再参与当前 UI。
-  Trigger: 用户要求图标/文字/summary 不重复表达标题和列表内容。
-  Evidence: slot-config-flow-column-header 只保留 strong 标题。
-  Replacement: .slot-config-flow-column-header strong
-  Risk: Low
-  Human Review: Required
-
-  Original code:
-  .slot-config-flow-column-header {
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 8px;
-    color: var(--slot-config-flow-accent);
-  }
-
-  .slot-config-flow-column-header svg {
-    width: 18px;
-    height: 18px;
-  }
-
-  .slot-config-flow-column-header div {
-    gap: 2px;
-  }
-
-  .slot-config-flow-column-header strong {
-    color: var(--slot-config-flow-accent);
-  }
-
-  .slot-config-flow-column-header span {
-    overflow: hidden;
-    color: color-mix(in srgb, var(--slot-config-flow-accent) 82%, var(--text-1));
-    font-size: 0.72rem;
-    line-height: 1.2;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-*/
 
 .slot-config-flow-slot-list,
 .slot-config-group {
@@ -2857,26 +2466,6 @@
   text-align: center;
 }
 
-/*
-  AI-REMOVED 2026-06-04:
-  Reason: “加工流向”文字已从 JSX 删除，流向由箭头和布局表达。
-  Trigger: 用户要求文字与图标不能重复传递同一信息。
-  Evidence: slot-config-flow-direction 保留 aria-label。
-  Replacement: .slot-config-flow-direction svg
-  Risk: Low
-  Human Review: Required
-
-  Original code:
-  .slot-config-flow-direction {
-    gap: 8px;
-  }
-
-  .slot-config-flow-direction span {
-    color: var(--text-1);
-    font-size: 0.72rem;
-    line-height: 1.2;
-  }
-*/
 
 .slot-config-flow-direction svg {
   width: min(64px, 100%);
@@ -2908,21 +2497,8 @@
 }
 
 .slot-config-dialog-backdrop {
-  /* AI-CORRECTION 2026-06-30: 槽位配置器已迁移到 OverlayStack，定位跟随统一 overlay root。 */
   position: absolute;
   inset: 0;
-  /*
-    AI-REMOVED 2026-06-30:
-    Reason: 业务弹层层级改由 OverlayStack 按打开顺序统一分配，避免右侧面板模式下压住物品选择器。
-    Trigger: 用户反馈开启“使用右侧面板显示设备属性”后，槽位配置器层级高于物品选择器导致无法选物品。
-    Evidence: .slot-config-dialog-backdrop 原 z-index 80 高于 DialogShell z-index 13；迁移后组件通过 inline style 接收 OverlayStack zIndex。
-    Replacement: src/app/shell/shared/overlay-stack.tsx
-    Risk: Low
-    Human Review: Required
-
-    Original code:
-    z-index: 80;
-  */
   display: grid;
   place-items: center;
   padding: 8px;
@@ -3260,82 +2836,6 @@
   color: var(--danger);
 }
 
-/*
-  AI-REMOVED 2026-06-05:
-  Reason: submitToWarehouse 已收敛为固定隐形配方的单开关 UI；旧表单 switch/select 样式会保留错误的“可选配方”表达。
-  Trigger: 用户明确要求“外表看起来就是一个开关”，不展示配方名。
-  Evidence: submit-to-warehouse-inspector.tsx 已删除 select 分支，当前 JSX 使用 submit-to-warehouse-toggle 按钮。
-  Replacement: 下方 submit-to-warehouse-panel-body / row / toggle 样式。
-  Risk: Low
-  Human Review: Required
-
-  Original code:
-  .submit-to-warehouse-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 10px;
-    min-height: 38px;
-    color: var(--text-1);
-    font-size: 0.8rem;
-  }
-
-  .submit-to-warehouse-label {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .submit-to-warehouse-switch {
-    appearance: none;
-    position: relative;
-    width: 42px;
-    height: 24px;
-    margin: 0;
-    border: 1px solid color-mix(in srgb, var(--line-strong) 64%, var(--line));
-    border-radius: 999px;
-    background: var(--surface-2);
-    cursor: pointer;
-  }
-
-  .submit-to-warehouse-switch::after {
-    content: "";
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: var(--text-2);
-    transition: transform 0.15s ease, background 0.15s ease;
-  }
-
-  .submit-to-warehouse-switch:checked {
-    border-color: var(--accent-strong);
-    background: var(--accent-soft);
-  }
-
-  .submit-to-warehouse-switch:checked::after {
-    transform: translateX(18px);
-    background: var(--accent-strong);
-  }
-
-  .submit-to-warehouse-countdown {
-    color: var(--text-2);
-    font-size: 0.76rem;
-  }
-
-  .submit-to-warehouse-select {
-    min-width: 0;
-    min-height: 34px;
-    border: 1px solid var(--line);
-    border-radius: 7px;
-    background: var(--surface-2);
-    color: var(--text-0);
-    font: inherit;
-  }
-*/
 
 .submit-to-warehouse-inspector {
   background: var(--surface-1);
@@ -3860,7 +3360,6 @@
   }
 }
 
-// AI-CORRECTION 2026-05-29: 多 channel 分区展示相关样式。
 .recipe-auto-section,
 .recipe-manual-section {
   display: flex;
@@ -3895,20 +3394,6 @@
   @supports (background: color-mix(in srgb, red 50%, blue)) {
     background: color-mix(in srgb, var(--surface-2) 62%, var(--surface-1));
   }
-  /*
-    AI-REMOVED 2026-06-04:
-    Reason: 配方状态行是 Inspector 内列表行，不应通过渐变和内阴影制造卡片立体感。
-    Trigger: 用户要求将扁平、少彩色、少卡片嵌套的 Inspector 设计语言应用到其他 Inspector。
-    Evidence: InspectorPanel设计风格规范 2.2。
-    Replacement: neutral flat background above.
-    Risk: Low
-    Human Review: Required
-
-    Original code:
-    background:
-      linear-gradient(180deg, color-mix(in srgb, var(--surface-1) 94%, white 2%) 0%, var(--surface-2) 100%);
-    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--surface-1) 84%, transparent);
-  */
 
   > :first-child {
     flex: 1 1 auto;
@@ -4066,7 +3551,7 @@
   }
 }
 
-// 2026-11-13：设备配方单击选择网格（RecipeTileGrid）。磁贴最小 44px 高，满足笔与触控命中区域。
+// 设备配方单击选择网格（RecipeTileGrid）。磁贴最小 44px 高，满足笔与触控命中区域。
 .recipe-tile-grid-shell {
   display: grid;
   gap: 6px;
@@ -4193,4 +3678,59 @@
 .recipe-tile-clear svg {
   width: 14px;
   height: 14px;
+}
+
+// 物流设备类型切换（分流器/汇流器/桥接器/准入口）。
+.logistics-role-switcher {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.logistics-role-option {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-height: 56px;
+  padding: 6px 2px 4px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-1);
+  font-size: 0.7rem;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.logistics-role-option img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.logistics-role-option:hover {
+  border-color: var(--line-strong);
+  color: var(--text-0);
+}
+
+.logistics-role-option.is-current {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text-0);
+}
+
+// 可点击的输出端口定位标识（打开物品选择）。
+.port-output-locator-button {
+  display: inline-flex;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.port-output-locator-button:hover:not(:disabled) {
+  background: transparent;
+  filter: brightness(1.15);
 }

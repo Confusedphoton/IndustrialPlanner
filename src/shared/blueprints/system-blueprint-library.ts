@@ -1,12 +1,3 @@
-// Reason: This module no longer uses the BlueprintDocument type directly.
-// Trigger: ESLint reported an unused type import.
-// Evidence: npm run lint flagged BlueprintDocument as unused.
-// Replacement: None.
-// Risk: Low.
-// Human Review: Required.
-//
-// Original code:
-// import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import type {
   BlueprintLibraryDirectoryListing,
   BlueprintLibraryFolder,
@@ -34,16 +25,6 @@ export interface SystemBlueprintRecord extends BlueprintLibraryRecord {
   readonly sourcePath: string;
 }
 
-// AI-REMOVED 2026-09-22:
-// Reason: 直接别名到通用目录类型会把 SystemBlueprintRecord.sourcePath 从系统蓝图查询结果的静态类型中擦除。
-// Trigger: TypeScript 检查在 system-blueprint-public-assets.test.ts 读取 sourcePath 时报告 TS2339。
-// Evidence: readSystemBlueprintRecord 返回 SystemBlueprintRecord，buildFolderDirectoryListing 的 blueprints 运行时均包含 sourcePath。
-// Replacement: 下方收窄 blueprints 元素类型的 SystemBlueprintDirectoryListing 接口。
-// Risk: Low；仅恢复系统蓝图目录已有的实际返回类型，不改变运行时数据和通用用户蓝图 contract。
-// Human Review: Required
-//
-// Original code:
-// export type SystemBlueprintDirectoryListing = BlueprintLibraryDirectoryListing;
 export interface SystemBlueprintDirectoryListing extends BlueprintLibraryDirectoryListing {
   readonly blueprints: readonly SystemBlueprintRecord[];
 }
@@ -290,17 +271,6 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-// Reason: The helper is no longer used after the index parser was simplified.
-// Trigger: ESLint reported an unused local function.
-// Evidence: npm run lint flagged isStringArray as unused.
-// Replacement: None.
-// Risk: Low.
-// Human Review: Required.
-//
-// Original code:
-// function isStringArray(value: unknown): value is string[] {
-//   return Array.isArray(value) && value.every((entry) => typeof entry === "string");
-// }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;

@@ -98,15 +98,6 @@ export interface SyncServiceStatus {
   readonly lastUpdateCheckAt: string | null;
   /** 下载不容忍中止后锁定画布，阻断继续编辑直到本轮同步结束。 */
   readonly canvasLocked: boolean;
-  // AI-REMOVED 2026-08-10:
-  // Reason: 大检查功能已删除。
-  // Trigger: 用户确认大检查无额外价值。
-  // Replacement: None。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // readonly lastBigCheckAt: string | null;
   readonly lastResults: readonly SyncAdapterResult[];
 }
 
@@ -167,15 +158,6 @@ export interface SyncServiceOptions {
   readonly beforeSync?: (session: SyncRemoteSession, settings: SyncConnectionSettings) => Promise<void> | void;
   readonly afterSync?: (session: SyncRemoteSession, settings: SyncConnectionSettings, results: readonly SyncAdapterResult[]) => Promise<void> | void;
   readonly intervalMs?: number;
-  // AI-REMOVED 2026-08-10:
-  // Reason: 大检查功能已删除。
-  // Trigger: 用户确认大检查无额外价值。
-  // Replacement: None。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // readonly bigCheckIntervalMs?: number;
   readonly retryDelaysMs?: readonly number[];
   readonly onStatusChange?: (status: SyncServiceStatus) => void;
   readonly onConflictDiscoveryStart?: () => void;
@@ -183,16 +165,6 @@ export interface SyncServiceOptions {
     conflicts: readonly SyncAdapterConflict<unknown>[],
   ) => Promise<readonly SyncConflictDecision[]>;
   readonly onConflictWorkflowFinished?: () => void;
-  // AI-REMOVED 2026-07-29:
-  // Reason: 适配器结果只包含 asset id，无法支撑一次性范围探测与逐项决议。
-  // Trigger: 用户要求检测到首个冲突后普查全部业务资源，只弹一个汇总窗口。
-  // Evidence: onConflict 在同步已经结束后触发，且每个适配器内部此前已逐个等待弹窗。
-  // Replacement: onConflictDiscoveryStart / resolveConflicts / onConflictWorkflowFinished。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // readonly onConflict?: (results: readonly SyncAdapterResult[]) => void;
 }
 
 export interface SyncService {
@@ -207,30 +179,10 @@ export interface SyncService {
 }
 
 const DEFAULT_INTERVAL_MS = 60_000;
-// AI-REMOVED 2026-08-10:
-// Reason: 大检查功能已删除。
-// Trigger: 用户确认大检查无额外价值。
-// Replacement: None。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-// const DEFAULT_BIG_CHECK_INTERVAL_MS = 10 * 60_000;
 const LOCAL_CHANGE_IDLE_UPLOAD_MS = 5_000;
 const LOCAL_CHANGE_MAX_UPLOAD_MS = 30_000;
 const INITIAL_SYNC_REQUEST_TIMEOUT_MS = 8_000;
-// AI-CORRECTION 2026-08-13: 下载/写 409 与下载不容忍的整轮重启次数上限，避免异常场景死循环。
 const MAX_STALE_RESTARTS = 5;
-// AI-REMOVED 2026-07-29:
-// Reason: 对整个同步事务做六轮退避重试会把一次 30 秒请求超时放大为数分钟，并重复已经成功的写入步骤。
-// Trigger: 用户要求首次网络失败后立即解除画布锁定并显示错误状态。
-// Evidence: retrySync 包裹 beforeSync、全部 adapter 和 maintenance，而不是单个幂等 GET。
-// Replacement: 默认不做事务级重试；一分钟轮询、切回前台和用户手动重试提供新的独立同步机会。
-// Risk: Low；短暂网络抖动会更早显示错误，但不会阻塞用户或重复部分提交。
-// Human Review: Required
-//
-// Original code:
-// const DEFAULT_RETRY_DELAYS_MS = [1_000, 2_000, 4_000, 8_000, 16_000, 30_000] as const;
 const DEFAULT_RETRY_DELAYS_MS: readonly number[] = [];
 const SYNC_TASK_KINDS: readonly SyncTaskKind[] = [
   "canvas",
@@ -241,42 +193,12 @@ const SYNC_TASK_KINDS: readonly SyncTaskKind[] = [
   "directory-maintenance",
   "update-check",
 ];
-// AI-REMOVED 2026-08-10:
-// Reason: 大检查任务类型已删除。
-// Trigger: 用户确认大检查无额外价值。
-// Replacement: 仅保留 interval-check。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-//   "big-check",
-// AI-CORRECTION 2026-08-24: 现行任务类型已由 `interval-check` 统一更名为 `update-check`。
-// AI-REMOVED 2026-07-29:
-// Reason: 设备心跳和设备列表已退出同步任务。
-// Trigger: 用户确认设备列表没有意义，仅展示 revision 的远端上传时间。
-// Evidence: 设备枚举不能提供可靠 revision 归因，且真实服务器读取约 17.9 秒。
-// Replacement: 业务资源冲突元数据 committedAt。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-// "device-registration",
-// "remote-devices",
 
 export function createSyncService(options: SyncServiceOptions): SyncService {
   let status: SyncServiceStatus = createIdleStatus([]);
   let started = false;
   let syncing = false;
   let intervalId: ReturnType<typeof globalThis.setInterval> | null = null;
-  // AI-REMOVED 2026-08-10:
-  // Reason: 大检查定时器已删除。
-  // Trigger: 用户确认大检查无额外价值。
-  // Replacement: None。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // let bigCheckIntervalId: ReturnType<typeof globalThis.setInterval> | null = null;
   let updateCheckRunning = false;
   let schedulerGeneration = 0;
   let intervalTickSequence = 0;
@@ -297,25 +219,10 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
   let conflictOverlayVisible = false;
   let syncSuppressImmediate = false;
   const dirtyAssetIdsByAdapter = new Map<string, Set<string> | null>();
-  // AI-CORRECTION 2026-08-13: 脏标代际——第一代快照（每轮 pass 开始时固化）
   // 携带每个 adapter 的脏标集合与通知版本；同步期间的新编辑会推进版本（第二代脏标），
   // 清理时集合相同但版本已推进的 adapter 保留脏标。
   const dirtyVersionsByAdapter = new Map<string, number>();
   let activeFrozenDirty = new Map<string, FrozenDirtyEntry>();
-  // AI-REMOVED 2026-08-22:
-  // Reason: 单值 Map 会被同一 adapter 的后续 scope 覆盖，无法识别 include[current] 与
-  //   exclude[current] 在同一轮初始同步中共同覆盖完整 collection。
-  // Trigger: 非当前基地的远端变化被局部同步错误推进的 collection cursor 吞掉，
-  //   小检查和刷新均误判为远端未变化。
-  // Evidence: runAdapterRequests 原实现每次 passRequestScopes.set(adapter.id, requestScope)，
-  //   resolveRequestScopeComplete 只读取最后一个 scope。
-  // Replacement: 下方按 adapter 累积全部 request scope，并在终局计算联合覆盖。
-  // Risk: Low；仅改变 collection cursor 是否允许推进，不改变资产分类与决议。
-  // Human Review: Required
-  // AI-CORRECTION 2026-08-24: 上述“小检查”现统一称为“更新检查”。
-  //
-  // Original code:
-  // let passRequestScopes = new Map<string, SyncAdapterScope | undefined>();
   let passRequestScopes = new Map<
     string,
     Array<SyncAdapterScope | undefined>
@@ -342,8 +249,6 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
 
   const resetTasks = (): readonly SyncTaskStatus[] =>
     SYNC_TASK_KINDS.map((kind) => {
-      // AI-CORRECTION 2026-08-10: big-check 已删除，仅保留 interval-check 的跳过逻辑。
-      // AI-CORRECTION 2026-08-24: 现行任务类型已由 `interval-check` 更名为 `update-check`。
       if (kind === "update-check") {
         const existing = status.tasks.find((t) => t.kind === kind);
         if (existing !== undefined && existing.lastStartedAt !== null) {
@@ -394,7 +299,6 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     error: unknown = null,
     direction?: SyncTaskDirection,
   ): void => {
-    // AI-CORRECTION 2026-08-25: 普通同步的方向在实际下载/commit 时才确定；
     // finish 不得用调用入口捕获的 undefined 覆盖运行中已经更新的真实方向。
     const effectiveDirection = direction
       ?? status.tasks.find((task) => task.kind === kind)?.direction
@@ -419,21 +323,6 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     logger.info(`sync triggered: ${trigger}`);
     const isInitialSync = trigger === "startup" || trigger === "foreground";
 
-    // AI-REMOVED 2026-07-29:
-    // Reason: 排队判定前切回 canvas 会让尚未开始的前台检查提前锁住画布。
-    // Trigger: 同步进行中切后台再切回时，进度遮罩出现但没有对应网络请求。
-    // Evidence: syncing 分支只排队，实际 queued trigger 要到当前 run 的 finally 后才执行。
-    // Replacement: 设置校验通过且当前 run 真正开始前再切换 initialSyncStage。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // if (isInitialSync && status.initialSyncStage === "ready") {
-    //   setStatus({
-    //     ...status,
-    //     initialSyncStage: "canvas",
-    //   });
-    // }
 
     if (syncing) {
       if (trigger === "interval") {
@@ -494,21 +383,6 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     clearLocalChangeTimers();
     const syncLocalChangeVersion = localChangeVersion;
     const hasPendingLocalChanges = syncLocalChangeVersion > acknowledgedLocalChangeVersion;
-    // AI-CORRECTION 2026-08-25: 普通同步开始只代表正在读取 plan/分类，不能据此宣称正在下载；
-    // 只有初始同步需要预先锁定画布，普通同步由实际下载落地或上传 commit 再切换 phase。
-    // AI-REMOVED 2026-08-25:
-    // Reason: local-change/待保存只说明需要分类，不证明最终存在 upload mutation；净变化归零时
-    //   提前进入 uploading 同样会让状态描述与实际 I/O 不一致。
-    // Trigger: phase 必须表达有效数据应用，而不是同步触发来源。
-    // Evidence: commitTransactionUploads 已在 uploads 非空时切换 uploading。
-    // Replacement: 下方普通同步 idle、初始同步 downloading 的状态选择。
-    // Risk: Low；保存按钮仍由 saveState=saving 表达待提交状态。
-    // Human Review: Required
-    //
-    // Original code:
-    // const activePhase: SyncServicePhase = hasPendingLocalChanges || trigger === "local-change"
-    //   ? "uploading"
-    //   : isInitialSync ? "downloading" : "idle";
     const activePhase: SyncServicePhase = isInitialSync ? "downloading" : "idle";
     setStatus({
       ...status,
@@ -526,7 +400,6 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     logger.info(`sync phase: ${activePhase}`);
 
     try {
-      // AI-CORRECTION 2026-08-13: 下载 409 / commit 写 409 / 下载不容忍 → 丢弃整轮
       // 并回到流程起点（重新 beginSession + 重新拉 plan）。脏标代际在每轮开始时重新固化
       // （第二代脏标在重跑中被升格为新一代快照）。重试次数封顶避免异常场景死循环。
       let staleRestarts = 0;
@@ -619,24 +492,6 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
       clearStaleDirtyAssets();
       const pendingLocalChangeCount = getPendingLocalChangeCount();
 
-      // AI-CORRECTION 2026-07-30: 无挂起改动时复位 syncSuppressImmediate，
-      // 使得下次从 idle 编辑能再次立即上传。
-      // AI-CORRECTION 2026-08-12: 同步中包含下载（含冲突 use-remote）时，
-      // 写入本地会触发 notifyLocalChange → 立即 syncNow 会把刚下载的数据重新上传 →
-      // 远端 revision 已变化 → 必然失败。因此在有下载时保持 syncSuppressImmediate=true，
-      // 让后续通知走 5s idle timer（此时 hash 匹配，不会造成无意义上传）。
-      // AI-CORRECTION 2026-08-12: 上述延迟规避已被变更来源 contract 取代；
-      // remote-sync 落地不会进入 notifyLocalChange，因此正常复位立即上传门禁即可。
-      // AI-REMOVED 2026-08-12:
-      // Reason: didDownload 不再需要延迟释放本地编辑的立即上传能力。
-      // Trigger: storage/snapshot 远端落地均以 remote-sync origin 在通知边界被过滤。
-      // Evidence: 冲突 use-remote 不再增加 localChangeVersion 或 dirtyAssetIdsByAdapter。
-      // Replacement: 下方仅依赖 pendingLocalChangeCount 的状态复位。
-      // Risk: Low。
-      // Human Review: Required
-      //
-      // Original code:
-      // if (pendingLocalChangeCount === 0 && !didDownload) {
       if (pendingLocalChangeCount === 0) {
         syncSuppressImmediate = false;
       }
@@ -741,7 +596,6 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
         batch.stage,
       );
       results.push(...batchResults);
-      // AI-CORRECTION 2026-08-13: 冲突不再中断后续批次；
       // 全部资产分类与下载完成后统一弹框决议（sync-model.md“先下载、后上传”）。
     }
 
@@ -823,16 +677,6 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
             },
           }
           : request.scope;
-        // AI-REMOVED 2026-08-22:
-        // Reason: 覆盖写入会丢失同一 adapter 在本轮已经完成的其他 scope。
-        // Trigger: 当前基地 include scope 与后台基地 exclude scope 无法合并为完整覆盖。
-        // Evidence: createInitialSyncPlan 对 world-documents 连续提交两个互补 scope。
-        // Replacement: 下方追加到 adapterScopes。
-        // Risk: Low。
-        // Human Review: Required
-        //
-        // Original code:
-        // passRequestScopes.set(adapter.id, requestScope);
         const adapterScopes = passRequestScopes.get(adapter.id) ?? [];
         adapterScopes.push(requestScope);
         passRequestScopes.set(adapter.id, adapterScopes);
@@ -840,28 +684,6 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
           scope: requestScope,
           transaction,
         };
-        // AI-REMOVED 2026-08-13:
-        // Reason: 单适配器“刷新索引后重试一次”的局部修复已被整轮重启取代。
-        // Trigger: sync-model.md 要求下载 409 与 commit 写 409 一律丢弃本次完整操作，
-        //   从流程起点重新拉 plan；局部刷新会造成部分已下载、部分未下载的中间态。
-        // Evidence: 上传先于下载时刷新索引无法恢复同 run 后续下载的过期票据。
-        // Replacement: syncNow 的 stale 重启循环（isRemoteSyncStaleError）。
-        // Risk: Low。
-        // Human Review: Required
-        //
-        // Original code:
-        // let result: SyncAdapterResult;
-        // try {
-        //   result = await adapter.sync(session, requestScope);
-        // } catch (error) {
-        //   if (!(error instanceof RemoteWriteConflictError) || session.refreshIndexes === undefined) {
-        //     throw error;
-        //   }
-        //   // AI-CORRECTION 2026-08-08: revision 竞争不是网络重试；先刷新权威索引，再让适配器重新做一次三方判断。
-        //   logger.info(`adapter "${adapter.id}" remote revision changed → refreshing index once`);
-        //   await session.refreshIndexes([adapter.collection]);
-        //   result = await adapter.sync(session, requestScope);
-        // }
         const result: SyncAdapterResult = await adapter.sync(session, syncOptions);
         const elapsed = Date.now() - beforeMs;
         logger.info(
@@ -880,7 +702,6 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
             ...(resultDirection === null ? {} : { direction: resultDirection }),
           });
         }
-        // AI-CORRECTION 2026-08-13: 冲突不再中断批次，继续完成全部下载后再统一弹框。
       }
     } catch (error) {
       if (taskKind !== undefined) {
@@ -898,26 +719,6 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
   const resolveRegularSyncRequests = (
     _trigger: SyncRunReason,
   ): readonly SyncAdapterRequest[] => {
-    // AI-REMOVED 2026-08-25:
-    // Reason: local-change 只执行脏资产 scope，会跳过同一份 CF plan 中其他远端已变化资产；
-    //   随后的 commit 若推进全局 revision 就会永久漏下载，若不推进则更新检查反复命中同一 revision。
-    // Trigger: 本地 A 上传与远端 B 变化并存时，commit 成功后同步无法完成前推。
-    // Evidence: CF /plan 返回全空间资产 hash；sync-model.md 要求每次操作对全部资源分类。
-    // Replacement: 下方所有 adapter 的无 scope 请求；脏标仅用于免算 clean 资产本地 hash。
-    // Risk: Medium；WebDAV 会失去局部 scope 优化，用户已明确本轮不要求兼容 WebDAV。
-    // Human Review: Required
-    //
-    // Original code:
-    // if (trigger !== "local-change") {
-    //   return options.adapters.map((adapter) => ({ adapterId: adapter.id }));
-    // }
-    //
-    // return Array.from(dirtyAssetIdsByAdapter, ([adapterId, assetIds]) => ({
-    //   adapterId,
-    //   scope: assetIds === null
-    //     ? undefined
-    //     : { includeAssetIds: Array.from(assetIds) },
-    // }));
     return options.adapters.map((adapter) => ({ adapterId: adapter.id }));
   };
 
@@ -950,7 +751,6 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
         taskKind,
       );
       results.push(...taskResults);
-      // AI-CORRECTION 2026-08-13: 冲突不再中断任务链，全部完成后统一弹框。
     }
 
     return results;
@@ -1019,7 +819,6 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
         if (downloads.some(download => download.requiresMigration)) await adoptIncomingDataAndReload(downloads, true);
         else for (const download of downloads) await download.run();
 
-        // AI-CORRECTION 2026-08-10: big-check 已删除，目录维护仅在初始同步时执行。
         if (passIsInitialSync) {
           for (const task of options.maintenanceTasks ?? []) {
             queueTask(task.kind, 1);
@@ -1171,7 +970,6 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
         if (frozen !== undefined && frozen.has(assetId)) {
           return;
         }
-        // AI-CORRECTION 2026-08-13: 未记录（undefined）≠ 整片脏（null）；
         // 只有实时脏标整片置位或明确包含该资产时才中止。
         const live = dirtyAssetIdsByAdapter.get(adapterId);
         if (live === null || (live !== undefined && live.has(assetId))) {
@@ -1287,7 +1085,6 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
         continue;
       }
       if (item.kind === "upload") {
-        // AI-CORRECTION 2026-08-14: 上传条目 × 用远端 = 放弃本地新增，
         // 不再走 applyDownload（远端资产不存在会静默跳过，制造“已同步”假象），
         // 改为 applyDiscardLocal：二段删除本地资产 + touch 清空。
         await item.applyDiscardLocal();
@@ -1352,7 +1149,6 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
       await session.localState.setLastSyncedHash(assetKey, contentHash);
     }
     // markApplied：本 collection 有已提交上传时不写 etag，使下次检查重新探测。
-    // AI-CORRECTION 2026-09-01: 含未来 schema 的 collection 未被当前客户端完整理解，禁止推进 revision/ETag。
     for (const result of adapterResults) {
       if (result.remoteStateIncomplete === true) {
         continue;
@@ -1378,21 +1174,6 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     }
   };
 
-  // AI-REMOVED 2026-08-22:
-  // Reason: 只检查最后一个 scope，既会漏掉互补 scope，也会把 collection 完整性绑定到执行顺序。
-  // Trigger: 初始同步先 include 当前基地、再 exclude 当前基地，实际完整覆盖却被判定为不完整；
-  //   局部请求的 provider 推进语义因此无法建立可靠依据。
-  // Evidence: passRequestScopes 现已保留本轮同一 adapter 的全部 scope。
-  // Replacement: 下方 resolveRequestScopesComplete 联合覆盖判断。
-  // Risk: Medium；错误返回 true 会重新引入远端变化漏检，因此由回归测试锁定 include/exclude 边界。
-  // Human Review: Required
-  //
-  // Original code:
-  // const resolveRequestScopeComplete = (adapterId: string): boolean => {
-  //   const scope = passRequestScopes.get(adapterId);
-  //   return scope?.includeAssetIds === undefined
-  //     && scope?.excludeAssetIds === undefined;
-  // };
   const resolveRequestScopeComplete = (adapterId: string): boolean =>
     resolveRequestScopesComplete(passRequestScopes.get(adapterId) ?? []);
 
@@ -1450,281 +1231,7 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
     });
   };
 
-  // AI-REMOVED 2026-08-13:
-  // Reason: 报告型冲突（无条目）直接透传结果（状态已含 conflict），不再需要整体改写。
-  // Trigger: resolvePlanItems 的 reportOnlyConflict 分支。
-  // Replacement: 结果透传。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // const markAdapterConflicts = (
-  //   adapterResults: readonly SyncAdapterResult[],
-  // ): SyncAdapterResult[] =>
-  //   adapterResults.map((result) =>
-  //     result.status === "conflict"
-  //       ? result
-  //       : { ...result, status: "conflict" as const }
-  //   );
 
-  // AI-REMOVED 2026-08-13:
-  // Reason: 旧“同步后探测冲突 + 循环弹框 + 分阶段执行决议”工作流已移除。
-  // Trigger: sync-model.md 要求上传/下载/冲突资产全部进入对话框逐项选择，
-  //   且决议执行与单次 commit 统一由引擎编排。
-  // Evidence: runConflictWorkflow 依赖已删除的 adapter.inspectConflicts /
-  //   executeConflictDecisions；deferredConflictFingerprints 只在旧循环中使用。
-  // Replacement: resolvePlanItems / executeItemDecisions / computeResolvedResults。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  //
-  // const runConflictWorkflow = async (
-  //   session: SyncRemoteSession,
-  //   initialResults: readonly SyncAdapterResult[],
-  // ): Promise<SyncAdapterResult[]> => {
-  //   const completedResults = initialResults.filter(
-  //     (result) => result.status !== "conflict",
-  //   );
-  //
-  //   try {
-  //     while (true) {
-  //       if (
-  //         !conflictOverlayVisible
-  //         && deferredConflictFingerprints.size === 0
-  //       ) {
-  //         options.onConflictDiscoveryStart?.();
-  //         conflictOverlayVisible = true;
-  //       }
-  //
-  //       const discoveredConflicts = deduplicateConflicts(
-  //         (await Promise.all(options.adapters.map(async (adapter) =>
-  //           adapter.inspectConflicts === undefined
-  //             ? []
-  //             : await adapter.inspectConflicts(session)
-  //         ))).flat(),
-  //       );
-  //       discardResolvedDeferredConflicts(
-  //         deferredConflictFingerprints,
-  //         discoveredConflicts,
-  //       );
-  //       const actionableConflicts = discoveredConflicts.filter((conflict) =>
-  //         deferredConflictFingerprints.get(createConflictKey(conflict))
-  //         !== createConflictFingerprint(conflict)
-  //       );
-  //
-  //       if (actionableConflicts.length === 0) {
-  //         return [
-  //           ...completedResults,
-  //           ...initialResults.filter((result) => result.status === "conflict"),
-  //         ];
-  //       }
-  //
-  //       if (!conflictOverlayVisible) {
-  //         options.onConflictDiscoveryStart?.();
-  //         conflictOverlayVisible = true;
-  //       }
-  //
-  //       const choices = await (
-  //         options.resolveConflicts?.(actionableConflicts)
-  //         ?? Promise.resolve([])
-  //       );
-  //       const decisions = createConflictDecisions(
-  //         actionableConflicts,
-  //         choices,
-  //       );
-  //       for (const decision of decisions) {
-  //         const key = createConflictKey(decision);
-  //         if (decision.resolution === "pause") {
-  //           deferredConflictFingerprints.set(
-  //             key,
-  //             createConflictFingerprint(decision),
-  //           );
-  //         } else {
-  //           deferredConflictFingerprints.delete(key);
-  //         }
-  //       }
-  //
-  //       const resolutionResults = await runConflictDecisionRequests(
-  //         session,
-  //         decisions,
-  //       );
-  //       completedResults.push(...resolutionResults);
-  //       const hasDeferredDecision = decisions.some(
-  //         (decision) => decision.resolution === "pause",
-  //       );
-  //       const hasUnexpectedConflict = resolutionResults.some(
-  //         (result) => result.status === "conflict",
-  //       ) && !hasDeferredDecision;
-  //       if (!hasUnexpectedConflict) {
-  //         return completedResults;
-  //       }
-  //
-  //       options.onConflictDiscoveryStart?.();
-  //     }
-  //   } finally {
-  //     if (conflictOverlayVisible) {
-  //       options.onConflictWorkflowFinished?.();
-  //       conflictOverlayVisible = false;
-  //     }
-  //   }
-  // };
-  //
-  // const runConflictDecisionRequests = async (
-  //   session: SyncRemoteSession,
-  //   decisions: readonly SyncAdapterConflictDecision[],
-  // ): Promise<SyncAdapterResult[]> => {
-  //   if (decisions.length === 0) return [];
-  //
-  //   // 按 adapter 分组决策
-  //   const decisionsByAdapter = new Map<string, SyncAdapterConflictDecision[]>();
-  //   for (const decision of decisions) {
-  //     const list = decisionsByAdapter.get(decision.adapterId) ?? [];
-  //     list.push(decision);
-  //     decisionsByAdapter.set(decision.adapterId, list);
-  //   }
-  //
-  //   // 收集涉及的 adapter
-  //   const involvedAdapterIds = new Set(decisionsByAdapter.keys());
-  //   const involvedAdapters = options.adapters.filter((a) => involvedAdapterIds.has(a.id));
-  //
-  //   // 任务追踪
-  //   const adaptersByTask = new Map<SyncTaskKind, SyncAdapter[]>();
-  //   for (const adapter of involvedAdapters) {
-  //     const taskKind = options.resolveAdapterTaskKind?.(adapter.id) ?? "canvas";
-  //     const taskAdapters = adaptersByTask.get(taskKind) ?? [];
-  //     taskAdapters.push(adapter);
-  //     adaptersByTask.set(taskKind, taskAdapters);
-  //   }
-  //   for (const [taskKind, taskAdapters] of adaptersByTask) {
-  //     beginTask(taskKind, getAdapterTaskTotalUnitCount(taskKind, taskAdapters.length));
-  //   }
-  //
-  //   let results: SyncAdapterResult[];
-  //   try {
-  //     const useRemoteDecisions = decisions.filter((d) => d.resolution === "use-remote");
-  //     const useLocalDecisions = decisions.filter((d) => d.resolution === "use-local");
-  //
-  //     // Phase 1: 并行下载所有 "use-remote"
-  //     const downloadResults: SyncAdapterResult[] = [];
-  //     if (useRemoteDecisions.length > 0) {
-  //       const byAdapter = new Map<string, SyncAdapterConflictDecision[]>();
-  //       for (const d of useRemoteDecisions) {
-  //         const list = byAdapter.get(d.adapterId) ?? [];
-  //         list.push(d);
-  //         byAdapter.set(d.adapterId, list);
-  //       }
-  //       const downloaded = await Promise.all(
-  //         Array.from(byAdapter.entries()).map(async ([adapterId, adapterDecisions]) => {
-  //           const adapter = options.adapters.find((a) => a.id === adapterId);
-  //           if (adapter?.executeConflictDecisions !== undefined) {
-  //             return await adapter.executeConflictDecisions(session, adapterDecisions);
-  //           }
-  //           // 回退：使用 sync() + conflictDecisions（仅 use-remote）
-  //           return await adapter!.sync(session, { conflictDecisions: adapterDecisions });
-  //         }),
-  //       );
-  //       downloadResults.push(...downloaded);
-  //     }
-  //
-  //     // Phase 2: 共享批次上传所有 "use-local"
-  //     const uploadResults: SyncAdapterResult[] = [];
-  //     if (useLocalDecisions.length > 0) {
-  //       const batch = session.beginWriteBatch();
-  //       const byAdapter = new Map<string, SyncAdapterConflictDecision[]>();
-  //       for (const d of useLocalDecisions) {
-  //         const list = byAdapter.get(d.adapterId) ?? [];
-  //         list.push(d);
-  //         byAdapter.set(d.adapterId, list);
-  //       }
-  //       const uploaded = await Promise.all(
-  //         Array.from(byAdapter.entries()).map(async ([adapterId, adapterDecisions]) => {
-  //           const adapter = options.adapters.find((a) => a.id === adapterId);
-  //           if (adapter?.executeConflictDecisions !== undefined) {
-  //             return await adapter.executeConflictDecisions(session, adapterDecisions, batch);
-  //           }
-  //           // 回退：使用 sync() + conflictDecisions（仅 use-local）
-  //           return await adapter!.sync(session, { conflictDecisions: adapterDecisions });
-  //         }),
-  //       );
-  //       await batch.commit();
-  //       for (const decision of useLocalDecisions) {
-  //         const adapter = options.adapters.find((item) => item.id === decision.adapterId);
-  //         if (adapter === undefined) continue;
-  //         await session.localState.setLastSyncedHash(
-  //           createSyncAssetKey(adapter.collection, decision.assetId),
-  //           decision.localHash,
-  //         );
-  //       }
-  //       uploadResults.push(...uploaded);
-  //     }
-  //
-  //     // pause 决策的 adapter 标记为 conflict
-  //     const pauseAdapterIds = new Set(
-  //       decisions.filter((d) => d.resolution === "pause").map((d) => d.adapterId),
-  //     );
-  //     for (const adapterId of pauseAdapterIds) {
-  //       if (!downloadResults.some((r) => r.adapterId === adapterId)
-  //         && !uploadResults.some((r) => r.adapterId === adapterId)) {
-  //         const adapter = options.adapters.find((a) => a.id === adapterId);
-  //         if (adapter !== undefined) {
-  //           uploadResults.push({
-  //             adapterId: adapter.id,
-  //             mode: adapter.mode,
-  //             status: "conflict",
-  //             changedAssetIds: [],
-  //           });
-  //         }
-  //       }
-  //     }
-  //
-  //     // 合并结果：download + upload，同一 adapter 的结果合并
-  //     const merged = new Map<string, SyncAdapterResult>();
-  //     for (const r of [...downloadResults, ...uploadResults]) {
-  //       const existing = merged.get(r.adapterId);
-  //       if (existing === undefined) {
-  //         merged.set(r.adapterId, r);
-  //       } else {
-  //         merged.set(r.adapterId, {
-  //           adapterId: r.adapterId,
-  //           mode: r.mode,
-  //           status: existing.status === "conflict" || r.status === "conflict"
-  //             ? "conflict"
-  //             : existing.status === "uploaded" || r.status === "uploaded"
-  //               ? "uploaded"
-  //               : existing.status === "downloaded" || r.status === "downloaded"
-  //                 ? "downloaded"
-  //                 : "idle",
-  //           changedAssetIds: Array.from(new Set([...existing.changedAssetIds, ...r.changedAssetIds])),
-  //         });
-  //       }
-  //     }
-  //     results = Array.from(merged.values());
-  //   } catch (error) {
-  //     for (const [taskKind, taskAdapters] of adaptersByTask) {
-  //       finishTask(
-  //         taskKind,
-  //         getAdapterTaskTotalUnitCount(taskKind, taskAdapters.length),
-  //         error,
-  //       );
-  //     }
-  //     throw error;
-  //   }
-  //   for (const [taskKind, taskAdapters] of adaptersByTask) {
-  //     const taskAdapterIds = new Set(taskAdapters.map((adapter) => adapter.id));
-  //     const taskResults = results.filter((result) => taskAdapterIds.has(result.adapterId));
-  //     const totalUnitCount = getAdapterTaskTotalUnitCount(taskKind, taskAdapters.length);
-  //     finishTask(
-  //       taskKind,
-  //       totalUnitCount,
-  //       taskResults.some((result) => result.status === "conflict")
-  //         ? new Error("Sync conflict")
-  //         : null,
-  //     );
-  //   }
-  //
-  //   return results;
-  // };
 
   const runMaintenanceTasks = async (
     session: SyncRemoteSession,
@@ -1988,7 +1495,6 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
         dirtyAssetIdsByAdapter.set(change.adapterId, nextDirtyAssetIds);
       }
       localChangeVersion += 1;
-      // AI-CORRECTION 2026-07-30: setStatus 同步修改 status.saveState，
       // 原判断 status.saveState === "idle" 永远为 false；先捕获 prevSaveState 再判断。
       const prevSaveState = status.saveState;
       setStatus({
@@ -1997,7 +1503,6 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
         pendingLocalChangeCount: getPendingLocalChangeCount(),
       });
 
-      // AI-CORRECTION 2026-07-29: 从 idle 状态的首次编辑立即触发保存，不再等待 5 秒空闲；
       // 后续编辑沿用 5 秒空闲 + 30 秒上限防抖策略。
       if (!syncSuppressImmediate && prevSaveState === "idle") {
         syncSuppressImmediate = true;
@@ -2039,35 +1544,6 @@ export function createSyncService(options: SyncServiceOptions): SyncService {
   }
 }
 
-// AI-REMOVED 2026-08-13:
-// Reason: 事务级重试已内联进 syncNow 的重启循环（瞬态错误走 retryDelaysMs，stale 错误走重启上限）。
-// Trigger: 旧 retrySync 无法区分“需要换新 plan 的重启”与“原地重试”。
-// Replacement: syncNow 内的 while 循环。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-// async function retrySync<TValue>(
-//   task: () => Promise<TValue>,
-//   retryDelaysMs: readonly number[],
-// ): Promise<TValue> {
-//   let lastError: unknown = null;
-//   for (let attempt = 0; attempt <= retryDelaysMs.length; attempt += 1) {
-//     try {
-//       return await task();
-//     } catch (error) {
-//       lastError = error;
-//       const delayMs = retryDelaysMs[attempt];
-//       if (delayMs === undefined) {
-//         break;
-//       }
-//
-//       await wait(delayMs);
-//     }
-//   }
-//
-//   throw lastError;
-// }
 
 function wait(delayMs: number): Promise<void> {
   return new Promise((resolve) => {
@@ -2139,76 +1615,6 @@ function selectQueuedTrigger(
   return priority[incoming] > priority[current] ? incoming : current;
 }
 
-// AI-REMOVED 2026-08-13:
-// Reason: 旧冲突工作流的决策/去重/指纹工具已随 runConflictWorkflow 一并移除。
-// Trigger: sync-model.md 引擎级弹框按条目逐项决议，不再需要跨轮指纹去重。
-// Replacement: createItemDecisions（下方）。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-//
-// function createConflictDecisions(
-//   conflicts: readonly SyncAdapterConflict<unknown>[],
-//   choices: readonly SyncConflictDecision[],
-// ): SyncAdapterConflictDecision[] {
-//   return conflicts.map((conflict) => ({
-//     adapterId: conflict.adapterId,
-//     assetId: conflict.assetId,
-//     localHash: conflict.localHash,
-//     remoteHash: conflict.remoteHash,
-//     remoteDeletedAt: conflict.remoteDeletedAt,
-//     resolution: choices.find((choice) =>
-//       choice.adapterId === conflict.adapterId
-//       && choice.assetId === conflict.assetId
-//     )?.resolution ?? "pause",
-//   }));
-// }
-//
-// function deduplicateConflicts(
-//   conflicts: readonly SyncAdapterConflict<unknown>[],
-// ): SyncAdapterConflict<unknown>[] {
-//   return Array.from(
-//     new Map(conflicts.map((conflict) => [
-//       createConflictKey(conflict),
-//       conflict,
-//     ])).values(),
-//   );
-// }
-//
-// function discardResolvedDeferredConflicts(
-//   deferredFingerprints: Map<string, string>,
-//   conflicts: readonly SyncAdapterConflict<unknown>[],
-// ): void {
-//   const currentFingerprints = new Map(conflicts.map((conflict) => [
-//     createConflictKey(conflict),
-//     createConflictFingerprint(conflict),
-//   ]));
-//   for (const [key, fingerprint] of deferredFingerprints) {
-//     if (currentFingerprints.get(key) !== fingerprint) {
-//       deferredFingerprints.delete(key);
-//     }
-//   }
-// }
-//
-// function createConflictKey(value: {
-//   readonly adapterId: string;
-//   readonly assetId: string;
-// }): string {
-//   return `${value.adapterId}\u0000${value.assetId}`;
-// }
-//
-// function createConflictFingerprint(value: {
-//   readonly localHash: string;
-//   readonly remoteHash: string | null;
-//   readonly remoteDeletedAt: string | null;
-// }): string {
-//   return JSON.stringify([
-//     value.localHash,
-//     value.remoteHash,
-//     value.remoteDeletedAt,
-//   ]);
-// }
 
 function toConflictShape(item: SyncPlanItem): SyncAdapterConflict<unknown> {
   return {

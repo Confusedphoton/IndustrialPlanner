@@ -37,16 +37,6 @@ import {
   requestSyncProvider,
 } from "@/shared/storage/sync-provider-activation";
 
-// AI-REMOVED 2026-08-24:
-// Reason: 授权 URL 现在必须与原标签页预创建的随机频道一起生成，不能由 UI 直接拼接旧入口。
-// Trigger: 后端 /authorize 新增 frontend_redirect_uri 与 oauth_channel 必填参数。
-// Evidence: cloudflare-oauth-browser-flow 在打开 popup 前同步创建频道并监听。
-// Replacement: startCloudflareOAuthLogin。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import { createCloudflareOAuthAuthorizeUrl } from "@/shared/storage/cloudflare-oauth-session";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import { cm } from "@/app/shell/shared/css-module-class";
 import styles from "./settings-dialog.module.scss";
@@ -60,10 +50,7 @@ import styles from "./settings-dialog.module.scss";
 // - 服务器端错误置顶醒目展示（role="alert"）
 // - 显示小检查倒计时
 // - 显示 interval-check 任务卡片
-// AI-CORRECTION 2026-08-08: Cloudflare 弹窗现包含独立的空间名称配置表单；
 // 输入先保留为本地草稿，只有按下保存按钮后才写入设置并切换同步空间。
-// AI-CORRECTION 2026-08-24: 保存动作现为明确的“使用此 Space ID 并启用”；登录 session 本身不再切换同步模式。
-// AI-CORRECTION 2026-08-24: 唯一保留的同步检查现统一称为“更新检查”，任务类型为 update-check。
 
 const DEFAULT_UPDATE_CHECK_INTERVAL_MS = 60_000;
 
@@ -72,7 +59,6 @@ const CLOUDFLARE_EXCLUDED_TASK_KINDS: ReadonlySet<SyncTaskKind> = new Set([
 ]);
 
 // 小检查任务放在任务列表的最前面
-// AI-CORRECTION 2026-08-24: 上述“小检查”现统一称为“更新检查”。
 const TASK_ORDER: Record<SyncTaskKind, number> = {
   "update-check": 0,
   "canvas": 1,
@@ -137,33 +123,6 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
         return;
       }
       setOAuthSession(session);
-      // AI-REMOVED 2026-08-24:
-      // Reason: 登录状态变化不能自动选择账户同步目标。
-      // Trigger: 用户要求明确确认使用登录账户或匿名 Space ID。
-      // Evidence: 下方 handleActivateAccountSession 是唯一账户激活入口。
-      // Replacement: handleActivateAccountSession。
-      // Risk: Low。
-      // Human Review: Required
-      //
-      // Original code:
-      // if (session !== null) {
-      //   void (async () => {
-      //     try {
-      //       const settings = await readCloudflareSyncSettings();
-      //       if (settings.remoteMode === "account") {
-      //         if (active) setSavedRemoteMode("account");
-      //         return;
-      //       }
-      //       const accountSettings = await writeCloudflareSyncSettings({
-      //         ...settings,
-      //         remoteMode: "account",
-      //       });
-      //       if (active) setSavedRemoteMode(accountSettings.remoteMode);
-      //     } catch {
-      //       // 同步宿主也会在读取到有效 session 时重试写入账户模式。
-      //     }
-      //   })();
-      // }
     };
     void readCloudflareSyncSettings().then((settings) => {
       if (!active) {
@@ -421,18 +380,6 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
           </div>
         </section>
 
-        {/*
-          AI-REMOVED 2026-08-24:
-          Reason: 已登录或曾使用账户模式时仍必须允许用户主动选择匿名 Space ID。
-          Trigger: 用户要求 Cloudflare 配置明确二选一，而不是由 session 隐式决定。
-          Evidence: 账户激活与匿名激活现为两个独立按钮。
-          Replacement: 下方始终显示的匿名 Space ID 配置 section。
-          Risk: Low。
-          Human Review: Required
-
-          Original code:
-          {oauthSession !== null || savedRemoteMode === "account" ? null : (
-        */}
         <section
           className={cm(styles, "sync-status-section", "sync-config-section")}
         >
@@ -484,11 +431,6 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
             </div>
           </div>
         </section>
-        {/*
-          AI-REMOVED 2026-08-24:
-          Original code:
-          )}
-        */}
 
         {/* 服务器端错误 — 置顶醒目展示 */}
         {status.lastError === null ? null : (
@@ -551,7 +493,6 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
               )}
             />
             {/* 小检查倒计时 */}
-            {/* AI-CORRECTION 2026-08-24: 上述“小检查”现统一称为“更新检查”。 */}
             {updateCheckCountdown === null ? null : (
               <StatusValue
                 label={t("cloudflareStatus.updateCheckCountdown")}
@@ -577,7 +518,6 @@ export const CloudflareSyncStatusDialog = observer(function CloudflareSyncStatus
         </section>
 
         {/* 任务 — 含 interval-check，按顺序排列 */}
-        {/* AI-CORRECTION 2026-08-24: 现行任务类型已由 interval-check 更名为 update-check。 */}
         <section className={cm(styles, "sync-status-section")}>
           <h3>{t("syncStatus.tasks")}</h3>
           <div className={cm(styles, "sync-task-list")}>

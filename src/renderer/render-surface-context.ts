@@ -5,8 +5,6 @@ import type { createTextureActions } from "./texture/texture-manager"
 import type { RenderResourceScope } from "./texture"
 
 export interface RenderSurfaceContext {
-  // AI-REMOVED 2026-11-12: 显示边界归 ScenePresentation；REQ-048 D5；Replacement: input.presentation；Risk: Low；Human Review: Required
-  // readonly showBaseBoundary?: boolean
   readonly input: SceneViewInput
   readonly resources: RenderResourceScope
   readonly invalidate: () => void

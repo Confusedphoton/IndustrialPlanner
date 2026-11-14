@@ -1,4 +1,5 @@
 import { observer } from "mobx-react-lite";
+import { translateKnownText } from "@/app/shell/shared/known-text-translation";
 import type { AppHost } from "@/app/host/app-host";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
@@ -36,7 +37,7 @@ function collectPlacementProblems(
   if (validation.canPlace) return [];
 
   return validation.reasons.map((reason) => ({
-    message: reason.message,
+    message: translateKnownText(reason.message, appHost.actions.translate),
     severity: "error" as const,
   }));
 }
@@ -61,16 +62,6 @@ function collectPowerProblems(
       });
     }
 
-    // 地图电力不足（基地级大停电）
-    // AI-REMOVED 2026-09-24:
-    // Reason: 停电状态必须与设备供电状态来自同一次运行态采样。
-    // Trigger: 统一 Inspector 运行态快照。
-    // Evidence: SelectionInspectorSlot 已采集 documentStatus。
-    // Replacement: runtimeSample.documentStatus。
-    // Risk: Low
-    // Human Review: Required
-    // Original code:
-    // const docStatus = appHost.workspace.simulation?.queries.getDocumentRuntimeStatus();
     const docStatus = runtimeSample?.documentStatus;
     if (docStatus?.isPowerOutage && runtimeStatus.powerStatus !== "no-power-needed") {
       problems.push({
@@ -202,26 +193,6 @@ export const ProblemInspector = observer(function ProblemInspector({
       dataInspectorKey={PROBLEM_INSPECTOR_KEY}
       title={appHost.actions.translate("inspectorText.problems")}
     >
-      {/*
-        AI-REMOVED 2026-06-04:
-        Reason: problem-inspector 在 expanded panel 内再次嵌套 definition-card，造成右侧 Inspector 层级过重。
-        Trigger: 用户要求将端口配置的扁平、低彩色、少卡片设计语言应用到其他 Inspector。
-        Evidence: InspectorPanel设计风格规范 2.1/2.3/2.5 要求普通 section 使用 list row，不使用 card 嵌套。
-        Replacement: problem-row list item below.
-        Risk: Low
-        Human Review: Required
-
-        Original code:
-        {allProblems.map((problem, index) => (
-          <article
-            className={cm(styles, "definition-card")}
-            key={`${problem.severity}-${index}`}
-            data-problem-severity={problem.severity}
-          >
-            <p>{problem.message}</p>
-          </article>
-        ))}
-      */}
       {allProblems.map((problem, index) => (
         <div
           aria-label={`${appHost.actions.translate(problem.severity === "error" ? "inspectorText.error" : problem.severity === "warning" ? "inspectorText.warning" : "inspectorText.notice")}${problem.message}`}

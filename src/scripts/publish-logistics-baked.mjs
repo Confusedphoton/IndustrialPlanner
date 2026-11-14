@@ -34,18 +34,6 @@ export async function publishLogisticsBaked({ sourceDirectory, outputDirectory, 
     staticResources: Object.fromEntries(Object.entries(source.staticResources).map(([key, resource]) => [key, resource.frame])),
     parametersByResourceId: Object.fromEntries(Object.entries(source.parametersByResourceId)
       .map(([key, value]) => [key, Object.fromEntries(Object.entries(value).filter(([, v]) => typeof v === 'number'))])),
-    // AI-REMOVED 2026-09-14:
-    // Reason: baked 资源清单不再复制物品流体配色。
-    // Trigger: 用户要求 ItemDefinition.fluidColors 成为唯一运行时颜色来源。
-    // Evidence: 独立美术表覆盖 20 项，而当前 baked manifest 仅有 2 项，版本绑定已导致事实分裂。
-    // Replacement: Registry item-definition.ts 中的 fluidColors；本发布器只处理物流纹理协议。
-    // Risk: Low
-    // Human Review: Required
-    // Original code:
-    // fluidProfiles: Object.fromEntries(Object.entries(source.fluidProfiles).map(([id, profile]) => [id, {
-    //   phase: profile.phase,
-    //   colors: Object.fromEntries(['body', 'skin', 'skin2', 'splash'].map((role) => [role, (profile.colors[role] ?? profile.colors.skin).hex])),
-    // }])),
     cycle: source.cycle,
     // 只提取播放器使用的协议，原始含大整数的来源元数据留在 resources 原件中。
     fluidPlayback: { referenceShader: source.fluidPlayback.referenceShader },
@@ -138,7 +126,6 @@ export async function publishLogisticsBaked({ sourceDirectory, outputDirectory, 
   manifest.staticResources = Object.fromEntries(Object.entries(manifest.staticResources).filter(([, frame]) => source.frames[frame]));
   for (const [key, frame] of Object.entries(source.frames)) {
     // 原始 pattern/chevron 长图已烘焙为相位帧，运行时不再加载这两个未消费的原贴图。
-    // AI-CORRECTION 2026-09-20: 新版移除直管 pattern clip，并直接交付 64px 物理图集；这里只保留清单引用帧。
     if (!requiredFrames.has(key)) continue;
     const original = originals.get(frame.page);
     const [x, y, width, height] = frame.physicalRect ?? [];
@@ -170,7 +157,6 @@ export async function publishLogisticsBaked({ sourceDirectory, outputDirectory, 
       original.data.copy(full, ((targetTop + row) * sourceWidth + targetLeft) * 4, offset, offset + copyWidth * 4);
     }
     // 裁切向外覆盖采样核边缘，保持原画布/pivot，不能将窄帧拉伸为整格。
-    // AI-CORRECTION 2026-09-20: 直接保留网站图集与 physicalRect；静态回退只安全复制完整归属像素。
     fullFrames.set(key, full);
   }
   for (const [key, clip] of Object.entries(manifest.clips)) {

@@ -106,19 +106,7 @@ describe("blueprint device id migration version chain", () => {
       [3, 4],
       [4, 5],
       [5, 6],
-      // AI-CORRECTION 2026-10-08: REQ-041 授权新增空升级恢复边界。
       [6, 7],
-      // AI-REMOVED 2026-09-11:
-      // Reason: 未发布的 schema 7/8 不构成历史版本，撤回以它们为输入的测试。
-      // Trigger: 用户要求按发布 tag 确认迁移边界，并用更旧版本的夹具验证。
-      // Evidence: 远端 v1.5.0 的蓝图、基地与迁移 schema 均为 5。
-      // Replacement: 当前连续的 schema 1→2→3→4→5→6。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      //       [6, 7],
-      //       [7, 8],
     ]);
   });
 
@@ -144,30 +132,6 @@ describe("blueprint device id migration version chain", () => {
     { source: 5, target: 5, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
     { source: 5, target: 6, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
     { source: 6, target: 6, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
-    // AI-REMOVED 2026-09-11:
-    // Reason: 未发布的 schema 7/8 不构成历史版本，撤回以它们为输入的测试。
-    // Trigger: 用户要求按发布 tag 确认迁移边界，并用更旧版本的夹具验证。
-    // Evidence: 远端 v1.5.0 的蓝图、基地与迁移 schema 均为 5。
-    // Replacement: 上方 schema 1～6 的完整矩阵。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    //     { source: 1, target: 7, sourceId: "item_port_mix_pool_large_1", expectedId: "mix_pool_2" },
-    //     { source: 6, target: 7, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
-    //     { source: 7, target: 7, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
-    //     { source: 2, target: 7, sourceId: "item_port_mix_pool_2", expectedId: "mix_pool_2" },
-    //     { source: 3, target: 7, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
-    //     { source: 4, target: 7, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
-    //     { source: 5, target: 7, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
-    //     { source: 1, target: 8, sourceId: "item_port_mix_pool_large_1", expectedId: "mix_pool_2" },
-    //     { source: 2, target: 8, sourceId: "item_port_mix_pool_2", expectedId: "mix_pool_2" },
-    //     { source: 3, target: 8, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
-    //     { source: 4, target: 8, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
-    //     { source: 5, target: 8, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
-    //     { source: 6, target: 8, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
-    //     { source: 7, target: 8, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
-    //     { source: 8, target: 8, sourceId: "mix_pool_2", expectedId: "mix_pool_2" },
   ])(
     "covers the complete supported migration matrix: schema $source to $target",
     ({ source, target, sourceId, expectedId }) => {
@@ -233,25 +197,6 @@ describe("blueprint device id migration version chain", () => {
     expect(version6?.entities.pool).toMatchObject({ rotation: 180 });
     expect(version6?.entities.grinder).toMatchObject({ rotation: 90 });
 
-    // AI-REMOVED 2026-09-11:
-    // Reason: 未发布的 schema 7/8 不构成历史版本，撤回以它们为输入的测试。
-    // Trigger: 用户要求按发布 tag 确认迁移边界，并用更旧版本的夹具验证。
-    // Evidence: 远端 v1.5.0 的蓝图、基地与迁移 schema 均为 5。
-    // Replacement: 上方 schema 5→6 合并迁移的最终状态。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    //     const version7 = migrateBlueprintEntityDeviceIds(version6?.entities ?? {}, 6, 7);
-    //
-    //     expect(version7?.schemaVersion).toBe(7);
-    //     expect(version7?.entities.pool).toMatchObject({ rotation: 180 });
-    //     expect(version7?.entities.grinder).toMatchObject({ rotation: 90 });
-    //
-    //     const version8 = migrateBlueprintEntityDeviceIds(version7?.entities ?? {}, 7, 8);
-    //
-    //     expect(version8?.schemaVersion).toBe(8);
-    //     expect(version8?.entities).toEqual(version7?.entities);
 
     const directToCurrent = migrateBlueprintEntityDeviceIds(version1Entities, 1);
 
@@ -302,34 +247,6 @@ describe("blueprint device id migration version chain", () => {
       sourceDeviceId: "mix_pool_2",
       expectedDeviceId: "mix_pool_2",
     },
-    // AI-REMOVED 2026-09-11:
-    // Reason: 未发布的 schema 7/8 不构成历史版本，撤回以它们为输入的测试。
-    // Trigger: 用户要求按发布 tag 确认迁移边界，并用更旧版本的夹具验证。
-    // Evidence: 远端 v1.5.0 的蓝图、基地与迁移 schema 均为 5。
-    // Replacement: schema 1～5 迁入当前 schema 6；schema 6 仅验证幂等。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    //     {
-    //       sourceSchemaVersion: 7,
-    //       sourceDeviceId: "mix_pool_2",
-    //       expectedDeviceId: "mix_pool_2",
-    //     },
-    // AI-REMOVED 2026-09-11:
-    // Reason: 未发布的 schema 7/8 不构成历史版本，撤回以它们为输入的测试。
-    // Trigger: 用户要求按发布 tag 确认迁移边界，并用更旧版本的夹具验证。
-    // Evidence: 远端 v1.5.0 的蓝图、基地与迁移 schema 均为 5。
-    // Replacement: schema 1～5 迁入当前 schema 6；schema 6 仅验证幂等。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    //     {
-    //       sourceSchemaVersion: 8,
-    //       sourceDeviceId: "mix_pool_2",
-    //       expectedDeviceId: "mix_pool_2",
-    //     },
   ])(
     "migrates schema $sourceSchemaVersion to current schema from its own canonical state",
     ({ sourceSchemaVersion, sourceDeviceId, expectedDeviceId }) => {
@@ -345,36 +262,6 @@ describe("blueprint device id migration version chain", () => {
     },
   );
 
-  // AI-REMOVED 2026-09-11:
-  // Reason: 未发布的 schema 7/8 不构成历史版本，撤回以它们为输入的测试。
-  // Trigger: 用户要求按发布 tag 确认迁移边界，并用更旧版本的夹具验证。
-  // Evidence: 远端 v1.5.0 的蓝图、基地与迁移 schema 均为 5。
-  // Replacement: 下方以真实历史 schema 2/5 验证重命名，schema 6 仅使用新 ID。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  //   it.each([
-  //     { schemaVersion: 1, deviceId: "item_port_mix_pool_large_1", expectedId: "mix_pool_2" },
-  //     { schemaVersion: 2, deviceId: "item_port_mix_pool_2", expectedId: "mix_pool_2" },
-  //     { schemaVersion: 3, deviceId: "mix_pool_2", expectedId: "mix_pool_2" },
-  //     { schemaVersion: 4, deviceId: "mix_pool_2", expectedId: "mix_pool_2" },
-  //     { schemaVersion: 5, deviceId: "mix_pool_2", expectedId: "mix_pool_2" },
-  //     { schemaVersion: 6, deviceId: "mix_pool_2", expectedId: "mix_pool_2" },
-  //     { schemaVersion: 7, deviceId: "mix_pool_2", expectedId: "mix_pool_2" },
-  //     { schemaVersion: 8, deviceId: "mix_pool_2", expectedId: "mix_pool_2" },
-  //     { schemaVersion: 2, deviceId: "item_port_liquid_filling_pd_mc_1", expectedId: "filling_pd_mc_1_liquid" },
-  //     { schemaVersion: 6, deviceId: "liquid_filling_pd_mc_1", expectedId: "filling_pd_mc_1_liquid" },
-  //     { schemaVersion: 7, deviceId: "liquid_filling_pd_mc_1", expectedId: "filling_pd_mc_1_liquid" },
-  //     { schemaVersion: 8, deviceId: "filling_pd_mc_1_liquid", expectedId: "filling_pd_mc_1_liquid" },
-  //     { schemaVersion: 2, deviceId: "item_port_hydro_planter_1", expectedId: "planter_1_liquid" },
-  //     { schemaVersion: 6, deviceId: "hydro_planter_1", expectedId: "planter_1_liquid" },
-  //     { schemaVersion: 7, deviceId: "hydro_planter_1", expectedId: "planter_1_liquid" },
-  //     { schemaVersion: 8, deviceId: "planter_1_liquid", expectedId: "planter_1_liquid" },
-  //     { schemaVersion: 2, deviceId: "item_port_liquid_furnance_1", expectedId: "furnance_1_liquid" },
-  //     { schemaVersion: 6, deviceId: "liquid_furnance_1", expectedId: "furnance_1_liquid" },
-  //     { schemaVersion: 7, deviceId: "liquid_furnance_1", expectedId: "furnance_1_liquid" },
-  //     { schemaVersion: 8, deviceId: "furnance_1_liquid", expectedId: "furnance_1_liquid" },
   it.each([
     { schemaVersion: 1, deviceId: "item_port_mix_pool_large_1", expectedId: "mix_pool_2" },
     { schemaVersion: 2, deviceId: "item_port_mix_pool_2", expectedId: "mix_pool_2" },
@@ -480,19 +367,6 @@ describe("blueprint device id migration version chain", () => {
         entities: { entity, unrelated: { ...createEntity("power_diffuser_1"), id: "unrelated" } },
         entityOrder: ["unrelated", "entity"],
         slotLinks: [createPumpWarehouseLink("item_liquid_water")],
-        // AI-REMOVED 2026-09-11:
-        // Reason: 未发布的 schema 7/8 不构成历史版本，撤回以它们为输入的测试。
-        // Trigger: 用户要求按发布 tag 确认迁移边界，并用更旧版本的夹具验证。
-        // Evidence: 远端 v1.5.0 的蓝图、基地与迁移 schema 均为 5。
-        // Replacement: schema 5 不含区域字段；迁移得到空区域，当前区域保留由 region-annotation-migration.test.ts 验证。
-        // Risk: Low
-        // Human Review: Required
-        //
-        // Original code:
-        //         regions: [{
-        //           id: "region", name: "生产区", description: "保留区域", color: "#3B82F6",
-        //           rects: [{ x: -2, y: 4, width: 6, height: 3 }],
-        //         }],
       };
       const original = structuredClone(state);
       const renamed = migrateBlueprintDocumentState(state, 5);
@@ -934,20 +808,6 @@ describe("blueprint device id migration version chain", () => {
     const registeredIds = new Set(ENTITY_DEFINITIONS.map((definition) => definition.id));
     const version3Spec = BLUEPRINT_DEVICE_ID_MIGRATION_SPECS.find((spec) => spec.toVersion === 3);
 
-    // AI-CORRECTION 2026-10-12: 原 66 种设备新增 10 种普通田块；存量设备迁移规则保持原断言。
-    // AI-CORRECTION 2026-10-13: 新增洒水机后共 77 种设备，存量迁移规则不变。
-    // AI-CORRECTION 2026-10-15: 新增十二种缘缘庄田块后共89种设备，既有ID与迁移规则保持不变。
-    // AI-CORRECTION 2026-10-15: 设备总数会随独立功能增长；迁移不变量为ID唯一、无前缀且所有历史目标可解析。
-    // AI-REMOVED 2026-10-15:
-    // Reason: 全量设备总数不是历史schema迁移的不变量。
-    // Trigger: 新增田块及同一工作区独立设备扩展均不修改历史迁移目标。
-    // Evidence: 本用例下方逐项验证全部version3迁移目标；注册表设备可持续增加。
-    // Replacement: 下方注册ID唯一性及既有迁移目标覆盖断言。
-    // Risk: Low；新增设备数量由各设备定义专项测试验证。
-    // Human Review: Required
-    // Original code:
-    // expect(ENTITY_DEFINITIONS).toHaveLength(77);
-    // expect(ENTITY_DEFINITIONS).toHaveLength(89);
     expect(registeredIds.size).toBe(ENTITY_DEFINITIONS.length);
     expect(ENTITY_DEFINITIONS.filter((definition) => definition.id.startsWith("item_"))).toEqual([]);
     expect(version3Spec?.deviceRules.every((rule) => {

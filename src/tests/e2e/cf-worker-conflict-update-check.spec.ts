@@ -1,11 +1,8 @@
 import { startCloudflareTestBackend } from "../helpers/cloudflare-test-backend";
 /**
  * CF Worker 同步 e2e：冲突解决 → 小检查短路 → 增量同步
- * AI-CORRECTION 2026-08-12: Cloudflare 同步当前由主线程直接请求 cf-sync-v2 后端；
  * 本测试名称保留历史称呼，但场景验证的是当前 HTTP 同步实现。
- * AI-CORRECTION 2026-08-12: 上述主线程实现已被 Dedicated Worker v2 链路取代；
  * 本场景继续验证相同后端协议下的冲突、小检查与增量同步。
- * AI-CORRECTION 2026-08-24: 上述“小检查”现统一称为“更新检查”。
  *
  * 全部使用文本/role/data 选择器（CSS Module 在 dev 模式被哈希）。
  */
@@ -25,7 +22,6 @@ import {
   type CfV2PrepareResponse,
 } from "../../sync/clients/cloudflare/cloudflare-v2-types";
 
-// AI-CORRECTION 2026-09-28: 冲突、迁移与自动下载改用逐用例隔离的本地协议后端。
 let BACKEND_API_BASE_URL: string;
 let localBackend: Awaited<ReturnType<typeof startCloudflareTestBackend>>;
 test.beforeEach(async () => {
@@ -35,16 +31,6 @@ test.beforeEach(async () => {
 test.afterEach(async () => {
   await localBackend?.close();
 });
-// AI-REMOVED 2026-08-12:
-// Reason: 模块级共享空间会让 use-remote 与 use-local 共享远端状态。
-// Trigger: 用户要求两个 E2E 各自独立。
-// Evidence: 每个 test 现在在自己的作用域内创建唯一 spaceId。
-// Replacement: Cloudflare conflict: use remote / use local 内的 spaceId。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-// const TEST_SPACE_ID = `e2e-cf-conflict-${randomUUID()}`;
 const TEST_WORLD_DOCUMENT_ASSET_TYPE = "world-document";
 
 type ConflictResolution = "use-local" | "use-remote";
@@ -122,7 +108,6 @@ async function seedRemoteWorldDocument(
   assetId: string,
   content: string,
 ): Promise<string> {
-  // AI-CORRECTION 2026-08-22: 该辅助函数同时承担后续远端版本写入；空间已存在时必须
   // 使用当前 revision 作为 baseRevision，不能再次创建空间或固定从 revision 0 提交。
   const planResponse = await request.get(
     `${BACKEND_API_BASE_URL}/v1/sync/spaces/${encodeURIComponent(spaceId)}/plan`,
@@ -320,7 +305,6 @@ async function mutateStoredWorldDocument(
     };
     // 直接写入持久化层用于构造“非当前基地已在另一标签页发生本地改动”的真实同步输入；
     // 不调用编辑器 action，避免测试过程切换到目标基地并提前触发同步。
-    // AI-CORRECTION 2026-08-25: 常规同步依赖脏标免除重复 hash；非刷新场景必须显式发出
     // storage change，使测试输入与正式本地写入链路一致。startup 场景重建服务并执行未知状态 hash。
     await storage.writeWorldDocument(nextDocument);
     if (notifyDirty) {
@@ -379,7 +363,6 @@ async function configureCloudflareTestSpace(
   spaceId: string,
 ): Promise<void> {
   await page.addInitScript(() => {
-    // AI-CORRECTION 2026-08-22: init script 会在 page.reload() 时再次执行；只允许首次导航
     // 清空 provider，否则 startup 回归阶段会被错误切回 none，根本不会启动同步。
     const initializedKey = "e2e-cf-inactive-base-provider-initialized";
     if (sessionStorage.getItem(initializedKey) !== "true") {
@@ -481,7 +464,6 @@ async function enableCloudflareSync(page: Page): Promise<void> {
     await page.getByRole("treeitem", { name: "实验性" }).click();
   }
   await page.locator('select[name="sync-provider"]').selectOption("cloudflare");
-  // AI-CORRECTION 2026-08-24: provider 选择现在只进入待配置态，必须明确确认匿名 Space ID。
   const cloudflareDialog = page.getByRole("dialog", { name: "Cloudflare 同步状态" });
   await expect(cloudflareDialog).toBeVisible();
   const activateCloudflareButton = cloudflareDialog.getByRole("button", {
@@ -526,18 +508,6 @@ async function resolveVisibleConflictUsingRemote(page: Page): Promise<void> {
 
 test.setTimeout(240_000);
 
-// AI-REMOVED 2026-08-12:
-// Reason: 模块级共享 spaceId 使两种冲突决策无法获得资源级隔离。
-// Trigger: 用户要求 use-remote 与 use-local 两个测试各自独立。
-// Evidence: 原 afterEach 只能清理单个 TEST_SPACE_ID。
-// Replacement: 下方每个 test 的独立 spaceId 与 finally 清理。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-// test.afterEach(async ({ request }) => {
-//   await clearRemoteTestAssets(request);
-// });
 test("Cloudflare conflict: use remote", async ({ page, request }) => {
   const spaceId = `e2e-cf-conflict-use-remote-${randomUUID()}`;
   try {
@@ -571,16 +541,6 @@ test("Cloudflare inactive base conflict: dirty local change and startup", async 
   request,
 }) => {
   test.setTimeout(360_000);
-  // AI-REMOVED 2026-08-22:
-  // Reason: 前缀与 UUID 拼接后超过 Cloudflare 空间名 64 字符上限，写入时会被合法截断。
-  // Trigger: 新增 E2E 的空间 ID 前置断言首次运行失败。
-  // Evidence: resolveCloudflareSpaceId 返回值缺少 UUID 末尾两字符；设置规范明确限制为 64 字符。
-  // Replacement: 下方更短且仍可识别场景的 e2e-cf-inactive- 前缀。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // const spaceId = `e2e-cf-inactive-base-conflict-${randomUUID()}`;
   const spaceId = `e2e-cf-inactive-${randomUUID()}`;
   try {
     await runInactiveBaseConflictScenario({ page, request, spaceId });
@@ -620,23 +580,6 @@ async function runInactiveBaseConflictScenario(options: {
       ?.workspace?.editor?.document?.getSnapshot()?.baseId ?? null
   )).toBe(currentBaseId);
 
-  // ─── Phase 2: 默认小检查必须在未切换基地时发现非当前基地冲突 ───
-  // AI-CORRECTION 2026-08-24: 本阶段现统一称为“默认更新检查”。
-  // AI-CORRECTION 2026-08-25: 常规同步现在以本地脏标证明资产可复用 touch hash；本阶段改为
-  // 验证正式脏标通知触发的全量 plan 分类仍能发现非当前基地冲突。
-  // AI-REMOVED 2026-08-25:
-  // Reason: 本地修改发出正式脏标后会立即触发常规同步，不再等待默认更新检查。
-  // Trigger: 用户确认同步以脏标避免每轮重新 hash，测试必须模拟同一输入 contract。
-  // Evidence: SyncService.notifyLocalChange 在 idle 首次变更时立即调用 syncNow("local-change")。
-  // Replacement: 下方先写远端、再写本地并发出 storage change 的顺序。
-  // Risk: Low；默认更新检查的远端探测与短路由同文件其他场景覆盖。
-  // Human Review: Required
-  //
-  // Original code:
-  // const previousUpdateCheckAt = await page.evaluate(() =>
-  //   (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
-  //     ?.workspace?.sync?.state.status.lastUpdateCheckAt ?? null
-  // );
   const intervalRemoteContent = createWorldDocumentVariant(
     inactiveBaseBaseline.content,
     "inactive-remote-interval",
@@ -655,23 +598,6 @@ async function runInactiveBaseConflictScenario(options: {
     { notifyDirty: true },
   );
 
-  // AI-REMOVED 2026-08-25:
-  // Reason: 脏标通知会立即触发常规同步；等待周期时间戳既延长测试，也不再证明冲突来源。
-  // Trigger: 用户要求测试在本地持久化修改后插入脏标。
-  // Evidence: 本阶段冲突应由 local-change pass 产生，后续 pendingConflict 断言直接验证结果。
-  // Replacement: 下方 conflictTitle 可见性与 pendingConflict 内容断言。
-  // Risk: Low；更新检查计时仍由独立 E2E 与单元测试覆盖。
-  // Human Review: Required
-  //
-  // Original code:
-  // await expect.poll(async () => await page.evaluate(() =>
-  //   (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
-  //     ?.workspace?.sync?.state.status.lastUpdateCheckAt ?? null
-  // ), {
-  //   message: "默认更新检查应发现非当前基地的远端 revision 变化",
-  //   timeout: 75_000,
-  //   intervals: [1000],
-  // }).not.toBe(previousUpdateCheckAt);
 
   const conflictTitle = page.getByRole("heading", { name: "同步冲突" });
   await expect(conflictTitle).toBeVisible({ timeout: 60_000 });
@@ -760,16 +686,6 @@ async function runInactiveBaseConflictScenario(options: {
     .toBe(revisionBeforeNavigation);
 }
 
-// AI-REMOVED 2026-08-12:
-// Reason: 单一测试只固定选择 use-remote，无法独立验证 use-local。
-// Trigger: 用户要求两种冲突决策各有独立 E2E。
-// Evidence: 原测试内硬编码查找“全部使用远端”。
-// Replacement: 上方两个独立 test 调用下方参数化场景。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-// test("CF Worker sync e2e", async ({ page, request }) => {
 async function runConflictScenario(options: {
   readonly page: Page;
   readonly request: APIRequestContext;
@@ -836,7 +752,6 @@ async function runConflictScenario(options: {
     )
   );
   // 设置 debug 日志级别、后端地址与独立 Cloudflare 空间，并检查同步状态
-  // AI-CORRECTION 2026-08-14: 不再直接调用 logger.setLogLevel——应用的 debugMode 开关
   // effect 会在 debugMode=false 时把 logger 回写为 warn，与测试注入的 debug 级别形成竞态；
   // 改为在 Phase 4 通过应用设置开关（other-debug-mode）开启，由应用统一管理 logger 级别。
   const configurationResult = await page.evaluate(async ({ apiBaseUrl, spaceId }) => {
@@ -958,7 +873,6 @@ async function runConflictScenario(options: {
     await page.waitForTimeout(800);
   }
 
-  // AI-CORRECTION 2026-08-14: 通过应用设置开启调试模式，由应用 effect 统一把 logger 设为 debug；
   // 直接调用 logger.setLogLevel 会被应用在 debugMode=false 时回写为 warn（Phase 1 断言不稳定）。
   const debugModeToggle = page.locator('input[name="other-debug-mode"]');
   await expect(debugModeToggle).toBeVisible({ timeout: 5000 });
@@ -978,9 +892,7 @@ async function runConflictScenario(options: {
   if (hasSidebar) await page.getByRole("treeitem", { name: "实验性" }).click();
   await page.locator('select[name="sync-provider"]').selectOption("cloudflare");
   await page.waitForTimeout(1000);
-  // AI-CORRECTION 2026-08-12: 开启同步后初始同步门禁/冲突弹窗会覆盖设置窗口；
   // 必须先解决冲突并等待同步结束，再点击设置关闭按钮。
-  // AI-CORRECTION 2026-08-24: provider 选择只进入待配置态；确认匿名 Space ID 后才真正启动同步，
   // 冲突解决后还需要先关闭 Cloudflare 状态窗口，再关闭设置窗口。
   const cloudflareDialog = page.getByRole("dialog", { name: "Cloudflare 同步状态" });
   await expect(cloudflareDialog).toBeVisible();
@@ -1018,16 +930,6 @@ async function runConflictScenario(options: {
     await expect(conflictTitle).toBeVisible({ timeout: 20_000 });
     console.log("[TEST] Conflict appeared");
 
-    // AI-REMOVED 2026-08-12:
-    // Reason: 冲突决策不再固定为 use-remote。
-    // Trigger: 用户要求 use-remote 与 use-local 独立测试。
-    // Evidence: runConflictScenario 现在接收 resolution 参数。
-    // Replacement: 下方按 resolution 选择批量按钮或 radio。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // const batchBtn = page.getByRole("button", { name: "全部使用远端" });
     const batchBtn = page.getByRole("button", {
       name: resolution === "use-remote" ? "全部使用远端" : "全部使用我的",
     });
@@ -1035,17 +937,6 @@ async function runConflictScenario(options: {
       await batchBtn.click();
     } else {
       await Promise.all(
-        // AI-REMOVED 2026-08-12:
-        // Reason: radio 回退路径不再硬编码 use-remote。
-        // Trigger: use-local 独立 E2E 需要选中本地决策。
-        // Evidence: resolution 来自当前独立 test。
-        // Replacement: 下方动态 input[value="${resolution}"] 选择器。
-        // Risk: Low。
-        // Human Review: Required
-        //
-        // Original code:
-        // Array.from({ length: await page.locator('input[value="use-remote"]').count() }, (_, i) =>
-        //   page.locator('input[value="use-remote"]').nth(i).check({ force: true }),
         Array.from({
           length: await page.locator(`input[value="${resolution}"]`).count(),
         }, (_, i) =>
@@ -1134,9 +1025,6 @@ async function runConflictScenario(options: {
   await expect(settingsDialog).not.toBeVisible();
 
   // ─── Phase 6: 小检查 (~35s) ───
-  // AI-CORRECTION 2026-08-12: 当前默认检查周期为 60 秒；等待状态时间戳变化，避免依赖固定 sleep。
-  // AI-CORRECTION 2026-08-20: 时间戳只代表小检查完成，若检查触发完整同步，还必须等待同步状态回到稳定。
-  // AI-CORRECTION 2026-08-24: 本阶段及上述“小检查”现统一称为“更新检查”。
   const preCheck = syncLogs.length;
   const preCheckResponseCount = backendCheckResponses.length;
   const previousUpdateCheckAt = await page.evaluate(() =>
@@ -1197,9 +1085,7 @@ async function runConflictScenario(options: {
   const updateCheckResponses = backendCheckResponses.slice(preCheckResponseCount);
   expect((await readRemotePlan(request, spaceId)).revision)
     .toBe(revisionAfterConflictResolution);
-  // AI-CORRECTION 2026-08-12: page response 事件与 lastSmallCheckAt 状态通知存在观测竞态；
   // 独立向当前 test 的空间发送同一 knownRevision 检查，以 HTTP 结果作为权威断言。
-  // AI-CORRECTION 2026-08-24: 上述字段现已更名为 lastUpdateCheckAt。
   const verificationCheck = await request.get(
     `${BACKEND_API_BASE_URL}/v1/sync/spaces/${encodeURIComponent(spaceId)}`
       + `/check?knownRevision=${revisionAfterConflictResolution}`,
@@ -1245,16 +1131,6 @@ async function runConflictScenario(options: {
   if (box2) {
     await page.locator("canvas").first().click({
       position: { x: box2.width / 2 + 150, y: box2.height / 2 + 150 },
-      // AI-REMOVED 2026-08-20:
-      // Reason: 强制点击会绕过真实用户必须遵守的同步遮罩，制造产品 UI 中不可达的交错操作。
-      // Trigger: CF use-remote E2E 在 interval 同步尚未稳定时偶发读取错误的 revision 基线。
-      // Evidence: 失败日志先出现 interval 完整同步，随后测试继续放置；单项重跑及同步门禁审计确认真实点击应等待遮罩解除。
-      // Replacement: 下方 force: false，由 Playwright actionability 等待真实交互条件。
-      // Risk: Low；若遮罩无法解除，测试将以点击超时暴露真实 UI 阻塞。
-      // Human Review: Required
-      //
-      // Original code:
-      // force: true,
       force: false,
     });
   }
@@ -1269,16 +1145,6 @@ async function runConflictScenario(options: {
   }).toBeGreaterThan(furnaceCountBeforeIncrementalSync);
   await expect.poll(async () => {
     const revision = await tryReadRemoteRevision(request, spaceId);
-    // AI-REMOVED 2026-08-20:
-    // Reason: 任意远端 revision 变化不能证明本轮精炼炉正文已经上传完成。
-    // Trigger: interval 同步推进 revision 后，旧断言提前通过并读取到不含第二台精炼炉的远端文档。
-    // Evidence: 全量 E2E 失败时 revision 断言通过，但紧随其后的远端正文不包含 furnance_1。
-    // Replacement: 下方同时验证 revision 推进与目标世界文档正文包含 furnance_1。
-    // Risk: Low；下载票据瞬时过期时轮询下一份 plan，不把合法 stale 当成正文成功。
-    // Human Review: Required
-    //
-    // Original code:
-    // return revision !== null && revision !== revisionBeforeIncrementalSync;
     if (revision === null || revision === revisionBeforeIncrementalSync) {
       return false;
     }
@@ -1311,16 +1177,6 @@ async function runConflictScenario(options: {
   const downloadResponse = await request.get(remoteWorldDocument!.downloadUrl);
   expect(downloadResponse.ok(), await downloadResponse.text()).toBe(true);
   const uploadedDocument = await downloadResponse.json() as BrowserWorldDocument;
-  // AI-REMOVED 2026-08-12:
-  // Reason: 重构过程中误重复了一层 expect(，导致语法结构错误。
-  // Trigger: 将单一冲突场景拆为 use-remote/use-local 参数化场景。
-  // Evidence: TypeScript 语法审计发现连续两个 expect(。
-  // Replacement: 下方单层 expect 断言。
-  // Risk: None。
-  // Human Review: Required
-  //
-  // Original code:
-  // expect(
   expect(
     Object.values(uploadedDocument.entities)
       .some((entity) => entity.definitionId === "furnance_1"),
@@ -1367,13 +1223,3 @@ async function runConflictScenario(options: {
   expect(backendRequestFailures).toEqual([]);
   expect(backendHttpErrors).toEqual([]);
 }
-// AI-REMOVED 2026-08-12:
-// Reason: 场景从单一 test callback 改为可被两个独立 test 调用的 async function。
-// Trigger: use-remote 与 use-local 需要独立空间和独立用例。
-// Evidence: 两个 test 现在分别传入自己的 spaceId 和 resolution。
-// Replacement: runConflictScenario 函数结尾。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-// });

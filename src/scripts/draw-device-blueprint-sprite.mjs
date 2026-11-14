@@ -4,19 +4,6 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { DIRECT_BLUEPRINT_SPRITE_IDS } from './blueprint-direct-sprite-mappings.mjs';
-// AI-REMOVED 2026-08-15:
-// Reason: 无限设备蓝图资源只需一次性合成，绘制脚本不应长期依赖一次性生成配置。
-// Trigger: 用户明确要求不要把一次性工作常态化放入脚本。
-// Evidence: 三张成品已固化到 resources/blueprint-direct-sprites，并由直接映射发布。
-// Replacement: resources/blueprint-direct-sprites 下的稳定 PNG 资源。
-// Risk: Low；今后更换 infinite icon 时需要人工重新合成资源。
-// Human Review: Required
-//
-// Original code:
-// import {
-//   DIRECT_BLUEPRINT_SPRITE_IDS,
-//   INFINITE_BLUEPRINT_SPRITE_MAPPINGS,
-// } from './blueprint-direct-sprite-mappings.mjs';
 
 const CELL_SIZE = 128;
 const DEVICE_BORDER_INSET_RATIO = 20 / 128;
@@ -51,15 +38,6 @@ const blueprintPortPartCache = new Map();
 const PIPE_PORT_ASSET_TOKEN = 'fluid';
 const SOLID_PORT_ASSET_TOKEN = 'item';
 
-// AI-REMOVED 2026-10-07:
-// Reason: 导入生成函数进行像素回归时，不应启动 CLI 或写入默认目录。
-// Trigger: 气体提纯机蓝图输入口错位，需要直接验证真实合成结果。
-// Evidence: 原入口在模块导入时无条件解析 process.argv 并调用 main。
-// Replacement: 下方仅直接执行脚本时启动 CLI 的入口判断。
-// Risk: Low；原 CLI 参数与执行流程保持不变。
-// Human Review: Required
-// Original code:
-// void main();
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   void main();
 }
@@ -73,20 +51,6 @@ async function main() {
       return;
     }
 
-    // AI-REMOVED 2026-08-15:
-    // Reason: 无限设备蓝图资源只需一次性生成，不应成为常驻 CLI 模式。
-    // Trigger: 用户明确要求清理本次加入的一次性脚本逻辑。
-    // Evidence: resources/blueprint-direct-sprites 已保存最终资源，发布流程只需直接读取。
-    // Replacement: 直接映射读取稳定 PNG，不再提供生成命令。
-    // Risk: Low；资源更新需人工执行一次性 sharp 合成。
-    // Human Review: Required
-    //
-    // Original code:
-    // if (options.mode === 'infinite-direct-resources') {
-    //   const registryContract = await loadRegistryContract();
-    //   await generateInfiniteBlueprintDirectResources(registryContract);
-    //   return;
-    // }
 
     if (options.mode === 'single') {
       const definition = await loadDeviceDefinition(options.deviceId);
@@ -126,20 +90,6 @@ async function main() {
 function parseCliOptions(argv) {
   const [firstArgument, secondArgument] = argv;
 
-  // AI-REMOVED 2026-08-15:
-  // Reason: 无限设备蓝图资源只需一次性生成，不应污染通用 CLI 参数。
-  // Trigger: 用户明确要求移除常态化的一次性工作入口。
-  // Evidence: 直接映射已改为读取 resources/blueprint-direct-sprites 中的成品。
-  // Replacement: None；资源已经固化。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // if (firstArgument === '--infinite-direct-resources') {
-  //   return {
-  //     mode: 'infinite-direct-resources',
-  //   };
-  // }
 
   if (firstArgument === '--all') {
     return {
@@ -158,57 +108,9 @@ function parseCliOptions(argv) {
 
   console.error('Usage: npx tsx --tsconfig tsconfig.app.json src/scripts/draw-device-blueprint-sprite.mjs <device-id> [output-file]');
   console.error('   or: npx tsx --tsconfig tsconfig.app.json src/scripts/draw-device-blueprint-sprite.mjs --all [output-directory]');
-  // AI-REMOVED 2026-08-15:
-  // Reason: 对应的一次性 CLI 模式已停用，帮助信息必须与当前有效入口一致。
-  // Trigger: 用户要求一次性合成逻辑不常驻脚本。
-  // Evidence: parseCliOptions 已不再接受 --infinite-direct-resources。
-  // Replacement: None
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // console.error('   or: npx tsx --tsconfig tsconfig.app.json src/scripts/draw-device-blueprint-sprite.mjs --infinite-direct-resources');
   return null;
 }
 
-// AI-REMOVED 2026-08-15:
-// Reason: 以下函数只服务三张 infinite 蓝图资源的一次性合成，不属于通用设备蓝图生成职责。
-// Trigger: 用户明确要求一次性工作不要常态化保留在脚本中，并指出脚本数量/职责需要收敛。
-// Evidence: 三张最终资源已固化到 resources/blueprint-direct-sprites；直接发布不调用这些函数。
-// Replacement: resources/blueprint-direct-sprites 下的成品由直接映射读取。
-// Risk: Low；若源 icon 变化，需要人工重新执行一次性 sharp 合成。
-// Human Review: Required
-//
-// Original code:
-// async function generateInfiniteBlueprintDirectResources(registryContract) {
-//   for (const mapping of INFINITE_BLUEPRINT_SPRITE_MAPPINGS) {
-//     const definition = registryContract.entityDefinitions.find((item) => item.id === mapping.deviceId) ?? null;
-//     if (definition === null) {
-//       throw new Error(`Unknown infinite device id: ${mapping.deviceId}`);
-//     }
-//
-//     const iconAssetPath = path.resolve(projectRoot, mapping.iconAssetPath);
-//     const outputFilePath = path.resolve(projectRoot, mapping.repositoryAssetPath);
-//     const spriteImage = await createInfiniteBlueprintDirectSprite(definition, iconAssetPath);
-//
-//     await mkdir(path.dirname(outputFilePath), { recursive: true });
-//     await spriteImage.toFile(outputFilePath);
-//     console.log(`Wrote ${path.relative(projectRoot, outputFilePath)}`);
-//   }
-// }
-//
-// async function createInfiniteBlueprintDirectSprite(definition, iconAssetPath) {
-//   const baseSvgMarkup = createDeviceBlueprintCanvasSvg(definition);
-//   const baseBuffer = await sharp(Buffer.from(baseSvgMarkup)).png().toBuffer();
-//   const borderOverlayBuffer = await sharp(Buffer.from(createDeviceBorderOverlaySvg(definition))).png().toBuffer();
-//
-//   return sharp(baseBuffer)
-//     .composite([
-//       { input: iconAssetPath, gravity: 'centre' },
-//       { input: borderOverlayBuffer, left: 0, top: 0 },
-//     ])
-//     .png();
-// }
 
 export async function createDeviceBlueprintSprite(definition) {
   const baseSvgMarkup = createDeviceBlueprintCanvasSvg(definition);
@@ -326,21 +228,6 @@ function isExcludedFromBlueprintBatch(definition, queries) {
     return true;
   }
 
-  // AI-REMOVED 2026-07-27:
-  // Reason: uiGroup、family tag 和 definition ID 前缀都不是物流族的唯一事实源。
-  // Trigger: 用户要求 registry 外只使用 Query，避免 14 个设备分类漂移。
-  // Evidence: RegistryQuery.isBeltFamily/isPipeFamily 已覆盖两族各 7 个设备。
-  // Replacement: 下方 RegistryQuery 判定。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // if (definition.uiGroup === 'beltLogistics' || definition.uiGroup === 'pipeLogistics') return true;
-  // if (definition.tags.includes('BeltFamily') || definition.tags.includes('PipeFamily')) return true;
-  // return definition.id.startsWith('belt_')
-  //   || definition.id.startsWith('pipe_')
-  //   || definition.id.startsWith('log_')
-  //   || definition.id.includes('water_pump');
 
   // 传送带族和管道设备族统一由 RegistryQuery 判定；
   // 其中传送带物流设备不包括传送带节，管道物流设备不包括管道节。
@@ -348,23 +235,6 @@ function isExcludedFromBlueprintBatch(definition, queries) {
     return true;
   }
 
-  // AI-CORRECTION 2026-06-17: 暗管不再走例外排除，改为标准计算。
-  // AI-CORRECTION 2026-07-12: 暗管入口(item_port_udpipe_loader_1)和出口(item_port_udpipe_unloader_1)
-  //   已恢复为 DIRECT_BLUEPRINT_SPRITE_MAPPINGS 直接素材映射，使用 bg_machine_udpipe_loader_1.png
-  //   和 bg_machine_udpipe_unloader_1.png；该映射通过 DIRECT_BLUEPRINT_SPRITE_IDS 自动排除标准计算。
-  // AI-CORRECTION 2026-07-19: 当前 definition.id 已移除 item_ 前缀；素材匹配改用稳定的 definition.spriteId。
-  // AI-REMOVED 2026-08-20:
-  // Reason: 抽水泵蓝图精灵必须从已订正的 registry 端口生成，继续排除会保留旧默认朝向。
-  // Trigger: 用户要求 schema 4→5 同步统一设备默认朝向和渲染资源。
-  // Evidence: water_pump_1 已有标准 footprint 与 fluid_output 端口，可直接走通用生成流程。
-  // Replacement: 下方 return false，设备族排除仍由 RegistryQuery 处理。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // return definition.id.includes('water_pump');
-  // AI-CORRECTION 2026-08-20: 抽水泵最终继续使用专用素材，但已注册为 DIRECT_BLUEPRINT_SPRITE_MAPPINGS，
-  // 因而无需在此保留 definition ID 特例，且不会进入通用生成流程。
   return false;
 }
 
@@ -449,34 +319,6 @@ async function trimBlueprintAsset(asset, trimPx = BLUEPRINT_ASSET_TRIM_PX) {
   };
 }
 
-/*
-  AI-REMOVED 2026-06-13:
-  Reason: 协议核心拼接不再从完整端口块裁 overlay；当前实现改为 resources/blueprint-port-parts 的 cell 片段合成。
-  Trigger: 用户指出协议核心蓝图精灵存在重叠元素，并要求重新考虑拼接方法。
-  Evidence: rg 显示 cropBlueprintAsset 仅剩 AI-REMOVED 历史注释引用；npx eslint src/scripts/draw-device-blueprint-sprite.mjs 通过。
-  Replacement: composePortBandAsset
-  Risk: Low - 该 helper 仅服务旧协议核心 overlay 拼接路径，当前 active code 不再调用。
-  Human Review: Required
-
-  Original code:
-  async function cropBlueprintAsset(asset, left, width) {
-    const { data, info } = await sharp(asset.input)
-      .extract({
-        left,
-        top: 0,
-        width,
-        height: asset.height,
-      })
-      .png()
-      .toBuffer({ resolveWithObject: true });
-
-    return {
-      input: data,
-      width: info.width,
-      height: info.height,
-    };
-  }
-*/
 
 async function composeBlueprintAsset(width, height, layers) {
   const { data, info } = await sharp({
@@ -656,52 +498,6 @@ async function maybeCreateSpecialPortCompositeLayer(definition, isPipe, portEdge
 
 async function createSpHubInputCompositeAsset(edge) {
   const composedAsset = await composePortBandAsset(false, 'input', 9, [1, 2, 3, 4, 5, 6, 7]);
-  /*
-    AI-REMOVED 2026-06-13:
-    Reason: 协议核心输入边改为公共端口 cell 片段重复拼接，避免完整端口块与 overlay 块重复叠加造成元素重影。
-    Trigger: 用户指出协议核心蓝图模式精灵下方存在重叠元素，并建议从扩容反应池端口素材裁切公共左侧/端口/右侧片段。
-    Evidence: public/blueprint-view/sprites/item_port_sp_hub_1.png 视觉检查显示端口块边框和灰条重复；旧实现同时叠加 port_in_2/3 完整块和 port_in_5_2/5_3 裁剪 overlay。
-    Replacement: 当前函数顶部 composePortBandAsset('item', 'input', 9, [1..7])。
-    Risk: Low - 仅影响生成脚本和重新生成后的蓝图精灵资源；端口定义未变。
-    Human Review: Required
-
-    Original code:
-    const assetWidth = 9 * CELL_SIZE;
-    const leftSegment = await loadBlueprintAsset('port_in_2.png');
-    const middleSegment = await loadBlueprintAsset('port_in_3.png');
-    const rightSegment = await loadBlueprintAsset('port_in_2.png');
-    const sideOverlaySource = await loadBlueprintAsset('port_in_5_2.png');
-    const centerOverlaySource = await loadBlueprintAsset('port_in_5_3.png');
-    const sideOverlayHalfWidth = Math.floor(sideOverlaySource.width / 2);
-    const centerOverlayThirdWidth = Math.floor(centerOverlaySource.width / 3);
-    const leftOverlay = await cropBlueprintAsset(sideOverlaySource, 0, sideOverlayHalfWidth);
-    const rightOverlay = await cropBlueprintAsset(
-      sideOverlaySource,
-      sideOverlaySource.width - sideOverlayHalfWidth,
-      sideOverlayHalfWidth,
-    );
-    const middleOverlay = await cropBlueprintAsset(
-      centerOverlaySource,
-      centerOverlayThirdWidth,
-      centerOverlayThirdWidth,
-    );
-    const assetHeight = Math.max(
-      leftSegment.height,
-      middleSegment.height,
-      rightSegment.height,
-      leftOverlay.height,
-      rightOverlay.height,
-      middleOverlay.height,
-    );
-    const composedAsset = await composeBlueprintAsset(assetWidth, assetHeight, [
-      { input: leftSegment.input, left: CELL_SIZE, top: 0 },
-      { input: middleSegment.input, left: CELL_SIZE * 3, top: 0 },
-      { input: rightSegment.input, left: CELL_SIZE * 6, top: 0 },
-      { input: leftOverlay.input, left: 0, top: 0 },
-      { input: rightOverlay.input, left: assetWidth - rightOverlay.width, top: 0 },
-      { input: middleOverlay.input, left: Math.round((assetWidth - middleOverlay.width) / 2), top: 0 },
-    ]);
-  */
 
   return orientBlueprintAssetForEdge(composedAsset, edge);
 }
@@ -711,51 +507,6 @@ async function createSpHubOutputCompositeAsset(edge) {
     useEndCaps: false,
     omitBlankEndCells: true,
   });
-  /*
-    AI-REMOVED 2026-06-13:
-    Reason: 协议核心输出边改为公共端口 cell 片段按真实端口位置拼接，避免从 port_out_5_3 裁三段后在 3 格带内二次居中造成装饰错位。
-    Trigger: 用户指出协议核心蓝图模式精灵存在重叠元素，并要求重新考虑拼接方法。
-    Evidence: 旧实现把 port_out_5_3 的三段 overlay 分别放进 3 个 segmentBand，保留了源素材内的边框/灰条上下文，旋转到 W/E 后视觉上出现重叠。
-    Replacement: 当前函数顶部 composePortBandAsset('item', 'output', 9, [1, 4, 7])。
-    AI-CORRECTION 2026-06-13: 左右输出边现在通过 { useEndCaps: false } 关闭端帽，避免与上下输入边端帽在四角重叠。
-    AI-CORRECTION 2026-06-13: 左右输出边首尾空格现在通过 { omitBlankEndCells: true } 保持透明，只由上下输入边负责角部装饰。
-    Risk: Low - 仅影响生成脚本和重新生成后的蓝图精灵资源；端口定义未变。
-    Human Review: Required
-
-    Original code:
-    const assetWidth = 9 * CELL_SIZE;
-    const segmentBandWidth = 3 * CELL_SIZE;
-    const centerOverlaySource = await loadBlueprintAsset('port_out_5_3.png');
-    const overlayThirdWidth = Math.floor(centerOverlaySource.width / 3);
-    const leftOverlay = await cropBlueprintAsset(centerOverlaySource, 0, overlayThirdWidth);
-    const middleOverlay = await cropBlueprintAsset(
-      centerOverlaySource,
-      overlayThirdWidth,
-      overlayThirdWidth,
-    );
-    const rightOverlay = await cropBlueprintAsset(
-      centerOverlaySource,
-      centerOverlaySource.width - overlayThirdWidth,
-      overlayThirdWidth,
-    );
-    const composedAsset = await composeBlueprintAsset(assetWidth, centerOverlaySource.height, [
-      {
-        input: leftOverlay.input,
-        left: Math.round((segmentBandWidth - leftOverlay.width) / 2),
-        top: 0,
-      },
-      {
-        input: middleOverlay.input,
-        left: segmentBandWidth + Math.round((segmentBandWidth - middleOverlay.width) / 2),
-        top: 0,
-      },
-      {
-        input: rightOverlay.input,
-        left: segmentBandWidth * 2 + Math.round((segmentBandWidth - rightOverlay.width) / 2),
-        top: 0,
-      },
-    ]);
-  */
 
   return rotateBlueprintAsset(composedAsset, resolveEdgeRotationDegrees(edge));
 }
@@ -770,7 +521,6 @@ async function createPortCompositeLayers(definition, isPipe) {
     }
 
     const assetSource = await resolvePortAssetSource(definition, isPipe, portEdge);
-    // AI-CORRECTION 2026-07-12: SOUTH 边端口需要只翻到下边，不应通过 180 度旋转镜像 registry 的 x 坐标。
     const asset = assetSource.asset === undefined
       ? await loadBlueprintAssetForEdge(assetSource.fileName, portEdge.edge)
       : await orientBlueprintAssetForEdge(assetSource.asset, portEdge.edge);
@@ -919,7 +669,6 @@ async function resolvePortAssetSource(definition, isPipe, portEdge) {
         isPipe,
         portEdge.direction,
         fallbackSegment.segmentSpan,
-        // AI-CORRECTION 2026-10-07: WEST 的 270° 旋转会反转片段内的格序，
         // 合成前须将注册表的自上而下索引映射回源图索引，避免非对称端口上下错位。
         portEdge.boundaryIndices.map((index) => portEdge.edge === 'WEST'
           ? fallbackSegment.segmentStart + fallbackSegment.segmentSpan - 1 - index

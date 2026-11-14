@@ -18,7 +18,7 @@ import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
 import { createRegistryContract } from "@/registry";
 import { lookupText } from "@/shared/i18n";
 
-// 2026-11-13：界面文案改走 i18n，测试使用真实中文译文断言。
+// 界面文案改走 i18n，测试使用真实中文译文断言。
 const zhTranslate = (key: string): string => lookupText("zh-CN", key) ?? key;
 
 function createWorkspace(): WorkspaceContract {
@@ -31,7 +31,6 @@ function createWorkspace(): WorkspaceContract {
     simulation: null,
     sync: null,
     audio: null,
-    blueprintPlanner: null,
   };
 }
 
@@ -171,7 +170,6 @@ describe("SlotConfigInspector", () => {
       firstTileButton.click();
     });
 
-    // AI-CORRECTION 2026-11-13：空槽位单击直接打开物品选择，不再经过槽位配置器的“选择物品”按钮。
 
     expect(currentAppHost.encyclopediaPicker.matchesItem(ore)).toBe(true);
     expect(currentAppHost.encyclopediaPicker.matchesItem(liquid)).toBe(false);
@@ -202,10 +200,7 @@ describe("SlotConfigInspector", () => {
       secondTileButton.click();
     });
 
-    // AI-CORRECTION 2026-11-13：空槽位单击直接打开物品选择，不再经过槽位配置器的“选择物品”按钮。
 
-    // AI-CORRECTION 2026-05-18: 协议存储箱使用 6 个单槽储存组，
-    //   跨组不互斥，第二组可再次选择 ore。
     expect(currentAppHost.encyclopediaPicker.matchesItem(ore)).toBe(true);
     expect(currentAppHost.encyclopediaPicker.matchesItem(powder)).toBe(true);
 
@@ -301,7 +296,6 @@ describe("SlotConfigInspector", () => {
       firstTileButton.click();
     });
 
-    // AI-CORRECTION 2026-11-13：空槽位单击直接打开物品选择，不再经过槽位配置器的“选择物品”按钮。
 
     expect(currentAppHost.encyclopediaPicker.matchesItem(requireItem(workspace, "item_copper_ore"))).toBe(true);
     expect(currentAppHost.encyclopediaPicker.matchesItem(requireItem(workspace, "item_liquid_water"))).toBe(true);

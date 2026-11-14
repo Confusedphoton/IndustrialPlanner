@@ -8,16 +8,6 @@ import type {
   GridRotation,
 } from "@/domain/shared/grid";
 import type { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
-// AI-REMOVED 2026-08-02:
-// Reason: logisticsKind 不再镜像到 CompiledSimulationDevice，Worker 直接使用自己持有的 RegistryQuery。
-// Trigger: 用户允许 simulation Worker 入口构造唯一 registry 实例并向下传递。
-// Evidence: RegistryQuery 已公开 isBelt/isPipe/isBeltFamily/isPipeFamily。
-// Replacement: SimulationWorkerRuntime.registry。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import type { LogisticsKind } from "@/domain/shared/logistics";
 import type { RecipeType } from "@/domain/registry/types/recipe-definition";
 import type {
   EntitySimulationBehaviorDeclaration,
@@ -30,55 +20,23 @@ export type SimulationItemDomainFilter = ItemDomainFlag;
 export type SimulationPortKind = ItemDomainFlag;
 export type SimulationPortDirection = "input" | "output";
 export type SimulationNodeViewRole = "input-view" | "output-view";
-// AI-REMOVED 2026-06-12:
-// Reason: 端口/边 per-tick count 是错误设计；准入口上限必须由跨 tick runtime counter 表达。
-// Trigger: 用户确认 per tick count 应删除，文档中没有该概念。
-// Evidence: .docs/common/模拟器/仿真运行原理.md 已改为 admissionRule + persistent counter。
-// Replacement: SimulationAdmissionRule。
-// Risk: Medium - topology 编译与 runtime 求解需同步迁移。
-// Human Review: Required
-//
-// Original code:
-// export type SimulationCountLimit = number | "unlimited";
 export type SimulationPowerStatus = "no-power-needed" | "in-power-range" | "out-of-power-range";
 /**
  * 仿真运输类别，决定设备在物流拓扑中的角色。
  *
  * - `strict-belt`：专用传送带（belt_straight_1x1 / belt_turn_cw_1x1 / belt_turn_ccw_1x1）。
- *   AI-CORRECTION 2026-07-27: 现行中文名为“传送带节”，由 RegistryQuery.isBelt 判定。
- *   可混合运输多种物品，不建 TransportComponent（无需域锁）。
  *
  * - `strict-pipe`：专用管道（pipe_straight_1x1 / pipe_turn_cw_1x1 / pipe_turn_ccw_1x1）。
- *   AI-CORRECTION 2026-07-27: 现行中文名为“管道节”，由 RegistryQuery.isPipe 判定。
- *   独占一种液体，需要域锁。由 compileTransportComponents 构建连通分量，
- *   同一分量内管道共享 transportComponentDomain，确保不会混入第二种液体。
  *
  * - `anchor`：非专用物流设备。包括：
  *   - 生产设备（如 item_port_hydro_planter_1、item_port_furnance_1 等）
  *   - 通用物流设备（item_pipe_splitter、item_pipe_converger、item_pipe_connector、
  *     item_log_splitter、item_log_converger、item_log_connector、
  *     item_pipe_admission、item_log_admission）
- *   AI-CORRECTION 2026-07-19: 当前设备定义 ID 已移除 item_/item_port_ 前缀；上行保留迁移前名称。
- *   AI-CORRECTION 2026-07-27: 上述“通用物流设备”现分别称为传送带物流设备、管道物流设备；
- *   传送带物流设备不包括传送带节，管道物流设备不包括管道节。
- *   anchor 设备不参与 TransportComponent，且会**分割** strict-pipe 的连通分量：
- *   两个 strict-pipe 之间如果隔了一个 anchor 设备（如分流器），它们属于不同的 TransportComponent。
- *   这是有意设计——分流器/汇流器/桥接器自身有 buffer 和独立的搬运配方，不应被管道域锁约束。
  *
  * - `non-graph`：无端口且无存储槽的空壳设备，不进入求解图。
  */
 export type SimulationTransportClass = "strict-belt" | "strict-pipe" | "anchor" | "non-graph";
-// AI-REMOVED 2026-06-06:
-// Reason: submitMode 运行时机制已按用户要求彻底移除；自动入仓改由动态 warehouse sink 或 r_warehouse_submit 配方处理。
-// Trigger: RUN_ID 20260606-041337-509040 中旧蓝图 submitMode 被全局 tick 扫描消费，导致产线目标存储箱同 tick 被清空。
-// Evidence: .docs/stages/stage1/requirements/REQ-087-warehouse-loader-and-storager-submit-semantics.md 明确不再使用 submitMode / submitIntervalSeconds。
-// Replacement: WarehouseSink 设备标签 + runtime-slot-access 动态仓库槽写入；协议存储箱使用 r_warehouse_submit。
-// Risk: Medium - domain 层字段仍作为旧配置数据残留，但 simulation 不再编译或消费。
-// AI-CORRECTION 2026-06-06: domain 层 StorageSlotDefinition 字段也已注释化删除；旧蓝图同名 config 键仅作为外部遗留输入存在。
-// Human Review: Required
-//
-// Original code:
-// export type SimulationSubmitMode = "never" | "every-tick" | "every-n-seconds";
 export type SimulationWorkerStatusMode = "idle" | "starting" | "running" | "stopped" | "error";
 export type SimulationRecipeType = RecipeType;
 export type SimulationLinkType = LinkType;
@@ -137,8 +95,6 @@ export interface CompiledRegionalResourceSupply {
 }
 
 export interface CompiledSimulationTopology {
-  // AI-CORRECTION 2026-09-11: 当前文档 schema 已升至 7，拓扑契约跟随当前版本。
-  // AI-CORRECTION 2026-09-11: 发布 tag v1.5.0 的 schema 为 5，当前文档及拓扑统一为未发布 schema 6。
   readonly schemaVersion: 6;
   /** 编译时使用的显式模式；Worker 与 runtime 不得从区域上下文存在性推断。 */
   readonly simulationMode: SimulationMode;
@@ -150,17 +106,6 @@ export interface CompiledSimulationTopology {
   readonly totalPowerDemand: number;
   /** 编译该拓扑时的确定性活动上下文；Worker 不得自行根据时间推断。 */
   readonly activeActivityIds: readonly string[];
-  // AI-REMOVED 2026-08-02:
-  // Reason: Worker 已持有自己的 RegistryContract，topology 不再序列化 registry 的 item/recipe 镜像。
-  // Trigger: 用户要求删除 itemCatalog 等间接数据和运行时启发式。
-  // Evidence: 两个 Worker 入口均只构造一次 registry，并向 runtime 传递。
-  // Replacement: activeActivityIds + SimulationWorkerRuntime.registry。
-  // Risk: Medium - topology schema 升级为 5，旧 runtime export 不再兼容。
-  // Human Review: Required
-  //
-  // Original code:
-  // readonly itemCatalog: Record<string, CompiledSimulationItem>;
-  // readonly recipeCatalog: Record<string, CompiledSimulationRecipeDefinition>;
   readonly devices: Record<string, CompiledSimulationDevice>;
   readonly nodes: Record<string, CompiledSimulationNode>;
   readonly slots: Record<string, CompiledSimulationSlot>;
@@ -188,69 +133,12 @@ export interface CompiledSimulationTopology {
   readonly diagnostics: readonly SimulationCompileDiagnostic[];
 }
 
-// AI-REMOVED 2026-08-02:
-// Reason: 物品与配方定义由 Worker 内唯一 RegistryContract 直接提供，不再维护仿真专用副本类型。
-// Trigger: 删除 topology.itemCatalog/recipeCatalog。
-// Evidence: RegistryQuery 提供精确 definition 查询与 machine recipe 索引。
-// Replacement: domain RecipeDefinition/ItemDefinition + RegistryQuery。
-// Risk: Medium - runtime recipe plan 仍保留绑定节点后的仿真专用形状。
-// Human Review: Required
-//
-// Original code:
-// export interface CompiledSimulationItem {
-//   readonly id: string;
-//   readonly domain: SimulationItemDomain;
-//   readonly tags: readonly string[];
-// }
-//
-// export interface CompiledSimulationRecipeDefinition {
-//   readonly id: string;
-//   readonly nameKey: string;
-//   readonly durationTicks: number;
-//   readonly inputs: readonly CompiledSimulationRecipeItem[];
-//   readonly outputs: readonly CompiledSimulationRecipeItem[];
-//   readonly machineId: string;
-//   readonly recipeType: SimulationRecipeType;
-//   readonly tags: readonly string[];
-//   /** 配方运行时发电量（kW），默认 0。 */
-//   readonly powerOutput: number;
-//   /** 配方运行/启动所需气体扩散范围。值为气体物品 ID。 */
-//   readonly requiredGasDiffusion: string | null;
-//   /** 配方运行期间提供的气体扩散范围。 */
-//   readonly gasDiffusionOutput: CompiledSimulationGasDiffusionOutput | null;
-// }
 
 export interface CompiledSimulationGasDiffusionOutput {
   readonly itemId: string;
-// AI-REMOVED 2026-10-13:
-// Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
-// Trigger: 洒水机和定向离体区域支持。
-// Evidence: Search-First 确认旧电力、气体各自重复计算范围。
-// Replacement: rangeId。
-// Risk: 保持既有供电与气体规则，需范围回归验证。
-// Human Review: Required
-// Original code:
-//   readonly range: number;
   readonly rangeId: string;
 }
 
-// AI-REMOVED 2026-07-23:
-// Reason: 固定分钟窗口计量已由真实缓存与 consumption-channel 配方取代。
-// Trigger: 用户要求去掉计数器机制。
-// Evidence: CompiledSimulationRecipeChannel.type 与运行时频道配方能够直接表达许可和气体环境。
-// Replacement: CompiledSimulationRecipeChannel.type + CompiledSimulationDevice.consumptionChannelCount。
-// Risk: Medium
-// Human Review: Required
-//
-// Original code:
-// export interface CompiledSimulationMeteredConsumption {
-//   readonly inputPortId: string;
-//   readonly itemIds: readonly string[];
-//   readonly windowTicks: number;
-//   readonly startThreshold: number;
-//   readonly acceptanceLimit: number;
-//   readonly gasDiffusionRange: number | null;
-// }
 
 export interface CompiledSimulationDevice {
   readonly id: string;
@@ -259,34 +147,10 @@ export interface CompiledSimulationDevice {
   readonly position: GridPoint | null;
   readonly rotation: GridRotation | null;
   readonly footprint: GridRectSize | null;
-  // AI-REMOVED 2026-08-02:
-  // Reason: entity tags 是 registry 定义事实，Worker 不再从 topology 读取副本。
-  // Trigger: Worker 入口构造完整 RegistryContract。
-  // Evidence: runtime 仅用 tags 判定 Producer/WarehouseSink。
-  // Replacement: RegistryQuery.findEntityDefinition。
-  // Risk: Medium - entity.config 不再能通过覆盖 tags 改变仿真分类。
-  // Human Review: Required
-  //
-  // Original code:
-  // readonly tags: readonly string[];
   readonly powerStatus: SimulationPowerStatus;
   readonly powerDemand: number;
   /** 是否需要电力才能运行。对应 EntityDefinition.requiresPower。 */
   readonly requiresPower: boolean;
-  // AI-REMOVED 2026-08-02:
-  // Reason: 物流族必须由 registry 公开 Query 实时解析，不再进入 topology 镜像。
-  // Trigger: Worker runtime 已持有完整 registry 实例。
-  // Evidence: RegistryQuery.isBeltFamily/isPipeFamily 是唯一设备 ID 分类事实层。
-  // Replacement: RegistryQuery.isBeltFamily/isPipeFamily。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // /**
-  //  * 物流族业务类型："belt" 表示传送带族，"pipe" 表示管道设备族，null 表示非物流族设备。
-  //  * 传送带物流设备不包括传送带节，管道物流设备不包括管道节；本字段覆盖两类完整族。
-  //  */
-  // readonly logisticsKind: LogisticsKind | null;
   readonly transportClass: SimulationTransportClass;
   /** 若属于 strict-belt/strict-pipe 运输组件，则为该组件的 ID；否则为 null。 */
   readonly transportComponentId: string | null;
@@ -301,31 +165,10 @@ export interface CompiledSimulationDevice {
   readonly portIds: readonly string[];
   readonly routing: Record<string, CompiledSimulationRoutingEntry>;
   readonly configHash: string;
-  // AI-REMOVED 2026-08-02:
-  // Reason: isProducer 是 registry EntityDefinition.tags 的重复派生值。
-  // Trigger: Worker runtime 直接查询 registry definition。
-  // Evidence: 字段原实现仅为 definition.tags.includes("Producer")。
-  // Replacement: RegistryQuery.findEntityDefinition(device.definitionId)?.tags。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // /** 编译期缓存：该设备是否有实质生产配方（非运输、非仓库提交）。运行时零开销判断。 */
-  // readonly isProducer: boolean;
   /** 显式声明的阻塞清理机制；未配置的设备运行时完全不生效。 */
   readonly blockageAutoClearance?: CompiledSimulationBlockageAutoClearance | null;
   /** 净水节点专用运行配置；其他设备为 null。 */
   readonly waterPurifierNode?: CompiledSimulationWaterPurifierNodeConfig | null;
-  // AI-REMOVED 2026-07-23:
-  // Reason: 设备消耗许可由运行中的 consumption-channel 配方直接决定。
-  // Trigger: 用户要求删除窗口计数器。
-  // Evidence: consumptionChannelCount 提供无查表的编译期频道边界。
-  // Replacement: consumptionChannelCount。
-  // Risk: Medium
-  // Human Review: Required
-  //
-  // Original code:
-  // readonly meteredConsumption?: CompiledSimulationMeteredConsumption | null;
 }
 
 export interface CompiledSimulationBlockageAutoClearanceSlotRef {
@@ -381,17 +224,6 @@ export interface CompiledSimulationSlot {
   readonly initialItemType: string | null;
   readonly initialCount: number;
   readonly ignoreStock: boolean;
-  // AI-REMOVED 2026-06-06:
-  // Reason: submitMode 编译字段会诱导 runtime 继续按全局 slot 行为入仓；当前语义改为 sink/配方两条明确路径。
-  // Trigger: 用户要求 submit mode 机制彻底删除，未来都用 warehouse sink 或配方交货。
-  // Evidence: RUN_ID 20260606-041337-509040 的 premium-capsule-line / wuling-battery-line 因该字段被消费而失败。
-  // Replacement: WarehouseSink tag + r_warehouse_submit recipe.
-  // Risk: Medium - 旧配置仍可能存在于蓝图 JSON，但不再影响仿真。
-  // Human Review: Required
-  //
-  // Original code:
-  // readonly submitMode: SimulationSubmitMode;
-  // readonly submitIntervalTicks: number | null;
 }
 
 export interface CompiledSimulationPort {
@@ -409,18 +241,7 @@ export interface CompiledSimulationPort {
   readonly boundNodeIds: readonly string[];
   readonly acceptRule: SimulationAcceptRule;
   /** 仅 admission 设备 input port 使用；计数存放于 runtime persistent state。 */
-  /** AI-CORRECTION 2026-07-24: 规则配置保留在 input port，额度预留检查输入缓存，真实计数在设备 output edge 移动成功时提交。 */
   readonly admissionRule: SimulationAdmissionRule | null;
-  // AI-REMOVED 2026-06-12:
-  // Reason: CompiledSimulationPort 不再携带 per-tick count。
-  // Trigger: 用户要求彻底删除错误的通用 port count 设计。
-  // Evidence: stage-3 求解将改为基于 admissionRule 的跨 tick counter。
-  // Replacement: admissionRule。
-  // Risk: Medium - 旧 topology fixture 需迁移。
-  // Human Review: Required
-  //
-  // Original code:
-  // readonly count: SimulationCountLimit;
   readonly priorityGroup: number;
   readonly roundRobinSeed: number;
   readonly order: number;
@@ -455,16 +276,6 @@ export interface CompiledSimulationTransferEdge {
   readonly sourceNodeId: string;
   readonly targetNodeId: string;
   readonly acceptRule: SimulationAcceptRule;
-  // AI-REMOVED 2026-06-12:
-  // Reason: TransferEdge 不再承载 per-tick count；准入口限制属于 target input port 的跨 tick 状态。
-  // Trigger: 用户要求删除 per tick count。
-  // Evidence: topology compiler 不再计算 min(sourcePort.count, targetPort.count)。
-  // Replacement: targetPort.admissionRule + persistent admission counter。
-  // Risk: Medium - runtime 求解逻辑需统一使用 targetPortId。
-  // Human Review: Required
-  //
-  // Original code:
-  // readonly count: SimulationCountLimit;
 }
 
 export interface CompiledSimulationSlotLink {
@@ -558,16 +369,6 @@ export interface SimulationTopologyMigration {
   readonly resetDeviceIds: readonly string[];
 }
 
-// AI-REMOVED 2026-09-20:
-// Reason: topology migration 重新只处理稳定同 ID 的真实图变更，不再承担当前基地切换产生的跨 ID 补偿。
-// Trigger: ST2-RQ-036 规定当前基地仅是 Dense 展示投影。
-// Evidence: Dense 规范执行文档的实体 ID 不依赖当前基地，基地切换走 switch-presentation。
-// Replacement: DensePresentationIdentity
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// readonly previousDeviceIdByNextDeviceId?: Readonly<Record<string, string>>;
 
 export interface SimulationTickSnapshotResult {
   readonly status: SimulationTickPullStatus;
@@ -584,7 +385,6 @@ export interface RuntimeTickSnapshot {
   readonly tickRate: number;
   readonly status: "initial" | "running";
   /** 调试模式下为完整 Tick 与 Worker 可序列化内部状态的 JSON；非调试模式不传输该属性。 */
-  /** AI-CORRECTION 2026-07-17：仅在“仿真Worker详细汇报”开启时构造并传输，普通调试模式不再生成。 */
   readonly debugData?: string;
   readonly totalPowerDemand: number;
   readonly currentPowerGeneration: number;
@@ -649,43 +449,14 @@ export interface RuntimeDeviceSnapshot {
   readonly cultivation?: SimulationCropCultivationReadModel;
   readonly deviceId: string;
   readonly block: boolean;
-  // AI-CORRECTION 2026-05-29: recipe 保留兼容，channelRecipes 为新的多 channel 数据源。
   // 原 recipe 仍为第一个运行中 recipe 的快照投影。
   readonly recipe: RuntimeDeviceRecipeSnapshot | null;
   /** 每个 channel 的当前运行时配方状态，key 为 channel id，null 表示该 channel 空闲 */
   readonly channelRecipes: Record<string, RuntimeDeviceRecipeSnapshot | null>;
   /** 准入口 runtime 计数，key 为 `${portGroupId}:${portId}`。 */
   readonly admissionCounters: Record<string, RuntimeAdmissionCounterSnapshot>;
-  // AI-REMOVED 2026-07-23:
-  // Reason: tick 快照改为通过真实 slot 与 channelRecipes 展示消耗状态。
-  // Trigger: 用户要求删除计数器 Inspector 数据源。
-  // Evidence: RuntimeSlotSnapshot.count/reserved 和频道配方状态已覆盖全部信息。
-  // Replacement: RuntimeTickSnapshot.slots + RuntimeDeviceSnapshot.channelRecipes。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // readonly meteredConsumption: RuntimeMeteredConsumptionSnapshot | null;
 }
 
-// AI-REMOVED 2026-07-23:
-// Reason: 固定窗口计量快照不再存在。
-// Trigger: 用户要求真实缓存十秒后消耗。
-// Evidence: RuntimeSlotSnapshot 与 RuntimeDeviceRecipeSnapshot 是唯一运行时真值。
-// Replacement: RuntimeSlotSnapshot + RuntimeDeviceRecipeSnapshot。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// export interface RuntimeMeteredConsumptionSnapshot {
-//   readonly windowStartTick: number;
-//   readonly currentCount: number;
-//   readonly currentItemId: string | null;
-//   readonly previousWindowItemId: string | null;
-//   readonly previousWindowCount: number;
-//   readonly authorizedUntilTick: number | null;
-//   readonly activeEffectItemId: string | null;
-// }
 
 export interface RuntimeAdmissionCounterSnapshot {
   readonly portId: string;
@@ -736,55 +507,6 @@ export interface RuntimeDiagnosticSnapshot {
   readonly message: string;
 }
 
-// AI-REMOVED 2026-08-02:
-// Reason: Registry recipe 不再先复制成 topology catalog DTO；runtime 在构造 CompiledSimulationRecipePlan 时完成必要的 tick 换算。
-// Trigger: 删除 topology.recipeCatalog。
-// Evidence: Worker 持有完整 RegistryContract，RecipeDefinition 可直接查询。
-// Replacement: runtime-slot-access.ts::createRegistryRecipePlan。
-// Risk: Medium - optional 气体字段必须在 plan 边界收口为 null。
-// Human Review: Required
-//
-// Original code:
-// export function compileRecipeDefinition(
-//   recipe: RecipeDefinition,
-//   durationTicks: number,
-// ): CompiledSimulationRecipeDefinition {
-//   return {
-//     id: recipe.id,
-//     nameKey: recipe.nameKey,
-//     durationTicks,
-//     inputs: recipe.inputs.map((input) => ({ ...input })),
-//     outputs: recipe.outputs.map((output) => ({ ...output })),
-//     machineId: recipe.machineId,
-//     recipeType: recipe.recipeType,
-//     tags: [...recipe.tags].sort(),
-//     powerOutput: recipe.powerOutput ?? 0,
-//     requiredGasDiffusion: normalizeRecipeGasItemId(recipe.requiredGasDiffusion),
-//     gasDiffusionOutput: normalizeRecipeGasDiffusionOutput(recipe.gasDiffusionOutput),
-//   };
-// }
-//
-// function normalizeRecipeGasItemId(itemId: string | undefined): string | null {
-//   return typeof itemId === "string" && itemId.length > 0 ? itemId : null;
-// }
-//
-// function normalizeRecipeGasDiffusionOutput(
-//   output: RecipeDefinition["gasDiffusionOutput"],
-// ): CompiledSimulationGasDiffusionOutput | null {
-//   if (output === undefined || output === null) {
-//     return null;
-//   }
-//   if (typeof output.gasItemId !== "string" || output.gasItemId.length === 0) {
-//     return null;
-//   }
-//   if (!Number.isFinite(output.range) || output.range <= 0) {
-//     return null;
-//   }
-//   return {
-//     gasItemId: output.gasItemId,
-//     range: output.range,
-//   };
-// }
 
 // ============================================================
 // Perf instrumentation types

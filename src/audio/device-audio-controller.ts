@@ -6,15 +6,6 @@ import type { WorldEntity } from "@/domain/document/world-document";
 import type { EditorHistoryRecord } from "@/domain/editor/editor-history";
 import type { GridRect } from "@/domain/shared/grid";
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
-// AI-REMOVED 2026-09-26:
-// Reason: 矩形相交索引无法选取屏幕外的最近设备。
-// Trigger: 用户要求屏内最近 10 台原音量，余下最近 10 台降至 20%。
-// Evidence: GridRectIndex 只有 at/intersecting 查询；音效需统一筛选屏内外设备。
-// Replacement: audio-spatial-mix.ts 的固定大小距离候选列表。
-// Risk: Low；缓存设备几何，候选集合大小固定。
-// Human Review: Required
-// Original code:
-// import { GridRectIndex } from "@/shared/geometry/grid-rect-index";
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 import { resolveWorldPointFromViewportPoint } from "@/shared/geometry/viewport-transform";
 import { parseDeviceAudioManifest, type DeviceAudioBinding, type DeviceAudioManifest, type DeviceAudioState } from "./audio-manifest";
@@ -213,17 +204,6 @@ export class DeviceAudioController {
     if (!this.player.ready || !simulation || simulation.state.timeline.isSeeking) return;
     const running = simulation.state.runningState;
     if (running === "stop" || running === "starting") return;
-    // AI-REMOVED 2026-09-26:
-    // Reason: 旧筛选只覆盖屏内，距离使用左上角，不能支持用户要求的两档设备混音。
-    // Trigger: 屏内最近 10 台原音量，余下最近 10 台为 20%，其余停止。
-    // Evidence: 原查询 intersecting 排除了所有屏外设备，且运行声额外限制为 12 台。
-    // Replacement: updateMix/selectDeviceAudioGains，使用设备中心并统一约束全部音效。
-    // Risk: Low；同距按 ID 排序，运行声换档不会重新播放。
-    // Human Review: Required
-    // Original code:
-    // const center = { x: visible.x + visible.width / 2, y: visible.y + visible.height / 2 };
-    // const candidates = this.index.intersecting(visible).sort((a, b) =>
-    //   Math.hypot(a.rect.x - center.x, a.rect.y - center.y) - Math.hypot(b.rect.x - center.x, b.rect.y - center.y));
     const nextStates = new Map<string, DeviceAudioState | null>();
     const retained = new Set<string>();
     const pending: { key: string; entityId: string; binding: DeviceAudioBinding }[] = [];

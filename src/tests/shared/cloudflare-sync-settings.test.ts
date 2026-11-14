@@ -52,18 +52,6 @@ describe("cloudflare-sync-settings", () => {
       preserveImplicitDefault: false,
     });
 
-    // AI-REMOVED 2026-08-24:
-    // Reason: 初始化不再生成随机 Space ID。
-    // Trigger: 用户要求匿名 Space 必须显式确认。
-    // Evidence: preserveImplicitDefault=false 现在表示未配置。
-    // Replacement: 下方空目标断言。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // expect(initialized.spaceName).toMatch(
-    //   /^space-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
-    // );
     expect(initialized).toEqual({
       spaceName: "",
       remoteMode: "anonymous",

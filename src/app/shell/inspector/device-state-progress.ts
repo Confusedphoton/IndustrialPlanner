@@ -22,7 +22,6 @@ export function resolveDeviceStateProgressSeconds(
   const { documentStatus, simulationState } = clock;
   if (documentStatus?.tickNumber == null || documentStatus.standardTickRate <= 0) return 0;
   // tick 1 表示 t=0，状态 enteredAtSeconds / endsAtSeconds 使用同一时间原点。
-  // AI-CORRECTION 2026-10-15: 分支状态继承 timerStartedAtSeconds；enteredAtSeconds 仅表示当前状态进入时间。
   const seconds = Math.max(0, documentStatus.tickNumber - 1) / documentStatus.standardTickRate;
   const delta = simulationState?.runningState === "start" && !simulationState.timeline.isSeeking
     && documentStatus.tickRate > 0

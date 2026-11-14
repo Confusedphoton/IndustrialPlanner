@@ -8,7 +8,7 @@ const blueprint = JSON.parse(await readFile(
 ));
 
 for (const profile of SCREEN_PROFILES) {
-  // 2026-10-18：首帧加载与快照切换的竞态独立于屏幕尺寸，在桌面补充受控资源延迟回归。
+  // 首帧加载与快照切换的竞态独立于屏幕尺寸，在桌面补充受控资源延迟回归。
   for (const delayInitialFrame of profile.name === "desktop" ? [false, true] : [false]) {
     test(`暂停快照切换田块形态，积水帧仍保持冻结 [${profile.name}]${delayInitialFrame ? " [首帧延迟]" : ""}`, async ({ browserSession }) => {
       test.setTimeout(120_000);

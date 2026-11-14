@@ -8,7 +8,7 @@ export default async function setup(config) {
   }
   const release = await acquireBrowserLease("e2e");
   const directory = config.projects[0].outputDir;
-  // 2026-10-30：用户授权 Vite 跨用例复用；此资源归整轮所有，浏览器和有状态服务仍逐例释放。
+  // 用户授权 Vite 跨用例复用；此资源归整轮所有，浏览器和有状态服务仍逐例释放。
   const suite = new BrowserRound(resolve(directory, "suite"));
   try {
     await mkdir(directory, { recursive: true });
@@ -27,15 +27,6 @@ export default async function setup(config) {
     try { await release(); } catch (cleanupError) { errors.push(cleanupError); }
     throw new AggregateError(errors, "E2E 共享服务启动失败");
   }
-  // AI-REMOVED 2026-10-05:
-  // Reason: 在获取锁前验证配置，避免配置失败留下锁。
-  // Trigger: 基座串行与异常清理要求。Evidence: config.shard 也会启动分片。
-  // Replacement: 本函数入口验证。Risk: Low。Human Review: Required
-  // Original code:
-  // if (config.workers !== 1 || config.fullyParallel) {
-  //   await release();
-  //   throw new Error("E2E 必须使用单 worker，禁止并行与分片");
-  // }
   return async () => {
     const errors = [];
     try {

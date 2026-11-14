@@ -63,16 +63,6 @@ import {
   type RegionWarehouseDemandBatch,
   type RegionalWarehouseOutletTable,
 } from "../regional";
-// AI-REMOVED 2026-06-06:
-// Reason: submitMode 全局扫描机制已删除；入仓必须走 WarehouseSink 或 r_warehouse_submit 配方。
-// Trigger: 用户要求 submit mode 机制彻底删除，避免旧蓝图 submitMode 配置影响所有 slot。
-// Evidence: RUN_ID 20260606-041337-509040 中全局扫描清空产线目标存储箱导致 blueprint 失败。
-// Replacement: runtime-slot-access 动态 warehouse sink；stage-1 r_warehouse_submit 配方完成时调用 submitSlotsToWarehouse。
-// Risk: Medium
-// Human Review: Required
-//
-// Original code:
-// import { submitSlotsBySubmitMode } from "./runtime/warehouse-submit";
 import {
   cloneSimulationMutableRuntimeState,
   createEmptyTransientState,
@@ -236,16 +226,6 @@ export class SimulationWorkerRuntime {
   /** 当前主线程热队列生命周期；只接受同 generation 的呈现确认。 */
   private presentationGeneration: number | null = null;
   private lastDynamicRateAdjustmentTick: number | null = null;
-  // AI-REMOVED 2026-07-15:
-  // Reason: x1 粗粒度降级破坏了配方、气体与净水的精确 tick 语义。
-  // Trigger: 完整测试出现 7 个确定性产量回归。
-  // Evidence: gas-diffusion、power-system、production、water-purifier-node、xiranite-enr-chain 均在 x1 降级后失败。
-  // Replacement: 保留 x1 的 20 TPS 精确运行；低性能时只允许播放背压与未来边界替换。
-  // Risk: 性能极差机器无法维持实时速度时会平滑减速，但不会牺牲仿真准确性。
-  // Human Review: Required
-  //
-  // Original code:
-  // private forceHighestDynamicTickRateAtNextLegalPoint = false;
   private powerMode: "real" | "infinite" = "infinite";
   private regionalGate: RegionWarehouseGate | null = null;
   private pendingRegionalDemand: readonly string[] = [];
@@ -258,18 +238,6 @@ export class SimulationWorkerRuntime {
   private regionalAuthorityState: RegionWarehouseAuthorityState | null = null;
   private regionalActiveArbitration: RegionWarehouseArbitrationResult | null = null;
   private regionalAdvancePerTick = false;
-  // AI-REMOVED 2026-09-04:
-  // Reason: 区域模式不再跨 Stage 保存配方 overrun。
-  // Trigger: ST2-RQ-024 禁止 remainder 结转。
-  // Evidence: advanceDevices 返回 void，settleRecipes 不再接收 Stage1 结果。
-  // Replacement: None
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // private regionalGateStage1AdvanceResult:
-  //   | ReturnType<typeof advanceDevices>
-  //   | undefined = undefined;
   private regionalGateCurrentPowerGeneration = Infinity;
   private regionalGatePowerOutage = false;
   private regionalGateLastAdvancedTickNumber = 0;
@@ -809,19 +777,8 @@ export class SimulationWorkerRuntime {
     this.tickRuntimeStates.clear();
 
     const tickNumber = this.runtimeState.tickNumber;
-    // AI-CORRECTION 2026-07-17: 导入检查点时必须保留导出端已经计算完成的展示帧；runtimeState 的 transient
     // 可能为节省历史缓存而被裁剪，重新从它构帧会让当前 tick 的 transfers 等瞬态展示状态消失。
     const snapshot = runtimeExport.snapshot;
-    // AI-REMOVED 2026-07-17:
-    // Reason: 从 runtimeState 重建导入帧会主动清空 transient，破坏检查点携带的精确展示语义。
-    // Trigger: 平板端时间轴拖动停止并提交后，所有在途物品再次消失。
-    // Evidence: tick 321 检查点快照含 4 个 transfers，而 importRuntimeState 返回的 currentTick 含 0 个。
-    // Replacement: 直接使用 runtimeExport.snapshot；后续 tick 仍从导入的持久运行状态继续计算。
-    // Risk: Low；导出协议已保证 snapshot 与 runtimeState 属于同一 tick。
-    // Human Review: Required
-    //
-    // Original code:
-    // const snapshot = this.createSnapshotFromRuntimeState(this.runtimeState);
     this.tickSnapshots.set(tickNumber, snapshot);
     // 后台 tick 只需缓存可迁移的持久状态；完整 transient 仅在 debugData 模式保留。
     this.tickRuntimeStates.set(
@@ -837,16 +794,6 @@ export class SimulationWorkerRuntime {
     this.standardStepTicks = 1;
     this.fixedDynamicTickRate = null;
     this.lastDynamicRateAdjustmentTick = null;
-    // AI-REMOVED 2026-07-15:
-    // Reason: 对应的 x1 粗粒度切换状态已因准确性回归撤销。
-    // Trigger: 完整仿真测试 7 项失败。
-    // Evidence: forceHighestDynamicTickRateAtNextLegalPoint 不再是有效运行状态。
-    // Replacement: adjustDynamicTickRateAtLegalPoint 在 x1 固定选择最高合法粒度。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // this.forceHighestDynamicTickRateAtNextLegalPoint = false;
     this.adjustDynamicTickRateAtLegalPoint(tickNumber);
     this.nextTickNumber = tickNumber === 0
       ? 1
@@ -1316,7 +1263,6 @@ export class SimulationWorkerRuntime {
 
   /**
    * 只读返回请求区间内从 fromTickNumber 开始的连续前缀。
-   * AI-CORRECTION 2026-07-17: 范围预取不再复用 getTickSnapshot 的消费即清理语义；
    * 主线程尚未呈现的 checkpoint 必须保留到 acknowledgePresentedTick。
    */
   private getTickSnapshotRange(
@@ -1349,7 +1295,6 @@ export class SimulationWorkerRuntime {
       };
     }
 
-    // AI-CORRECTION 2026-07-17: 预取范围只扩展到请求末端；未来 180 Tick 的停止线由呈现 ACK 推进，
     // 避免每次补充热队列都把计算窗口额外向前平移一个完整缓存长度。
     this.stopLineTick = Math.max(this.stopLineTick, normalizedToTickNumber);
 
@@ -1414,49 +1359,6 @@ export class SimulationWorkerRuntime {
           : snapshot,
       );
     }
-    // AI-REMOVED 2026-09-04:
-    // Reason: 连续整数扫描会在第一个非运行标准 tick 处截断合法的真实 tick 序列。
-    // Trigger: ST2-RQ-024 要求 Worker 只缓存和传输真实运行 tick。
-    // Evidence: standardStepTicks > 1 时真实键为 1、1+step、1+2*step……。
-    // Replacement: 上方按缓存键过滤请求范围并排序。
-    // Risk: Low；响应仍保持严格递增。
-    // Human Review: Required
-    //
-    // Original code:
-    // for (
-    //   let tickNumber = normalizedFromTickNumber;
-    //   tickNumber <= availableToTickNumber;
-    //   tickNumber += 1
-    // ) {
-    //   const snapshot = this.tickSnapshots.get(tickNumber);
-    //   if (snapshot === undefined) {
-    //     if (snapshots.length === 0) {
-    //       return {
-    //         generation,
-    //         fromTickNumber: normalizedFromTickNumber,
-    //         toTickNumber: normalizedToTickNumber,
-    //         status: createNotFoundStatus(
-    //           normalizedFromTickNumber,
-    //           "unknown",
-    //           this.retainedFromTick,
-    //           this.latestTickNumber,
-    //           this.tickSnapshots.size,
-    //         ),
-    //         snapshots: [],
-    //       };
-    //     }
-    //     break;
-    //   }
-    //
-    //   snapshots.push(
-    //     this.debugDataEnabled
-    //       ? this.createDebugSnapshotReadModel(
-    //           snapshot,
-    //           this.tickRuntimeStates.get(tickNumber) ?? this.runtimeState,
-    //         )
-    //       : snapshot,
-    //   );
-    // }
 
     this.scheduleBackgroundFill();
     return {
@@ -1506,7 +1408,6 @@ export class SimulationWorkerRuntime {
     this.retainedFromTick = [...this.tickSnapshots.keys()]
       .sort((left, right) => left - right)[0] ?? normalizedTickNumber;
 
-    // AI-CORRECTION 2026-07-17: 正常播放停止线改由已呈现 Tick 推进；范围预取本身不改变消费锚点。
     this.stopLineTick = Math.max(
       this.stopLineTick,
       normalizedTickNumber + MAX_RETAINED_TICKS,
@@ -1854,16 +1755,6 @@ export class SimulationWorkerRuntime {
     }
     this.regionalGatePausedTick = null;
     this.pendingRegionalDemand = [];
-    // AI-REMOVED 2026-09-04:
-    // Reason: 区域模式不再保存或清空 Stage1 overflow 结果。
-    // Trigger: ST2-RQ-024 禁止 remainder 结转。
-    // Evidence: settleRecipes 已直接从零进度启动下一轮。
-    // Replacement: None
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // this.regionalGateStage1AdvanceResult = undefined;
     return { tickNumber: gateTick, snapshot };
   }
 
@@ -1911,13 +1802,6 @@ export class SimulationWorkerRuntime {
       cursorByItemId: proposal.cursorByItemId,
     };
     this.regionalActiveArbitration = null;
-    // AI-CORRECTION 2026-08-17: 不再在 commit 时重置 regionalSnapshotCursor。
-    // Trigger: 区域会话运行约 24 个 Epoch 后主线程播放死锁（PlaybackDiag notReady=100%、buff 恒定）。
-    // Evidence: DEBUG-TRACE 显示 enqueue 每次塞入 count=231 的全量历史快照，导致 playbackHotQueue
-    //   size 恒 ≥ 180，runRegionalSessionLoop 的背压检查永久冻结，播放等待 232+ 快照永不满足。
-    // Replacement: cursor 由 takeRegionalSnapshots 尾部推进（latestTickNumber + 1），保持增量返回。
-    // Risk: 若 authority 需重放历史快照，应在 loadRegionalTopology 处显式重置。
-    // Human Review: Required
     return proposal;
   }
 
@@ -1931,10 +1815,6 @@ export class SimulationWorkerRuntime {
       .map(([, snapshot]) => snapshot);
     this.regionalSnapshotCursor = (this.latestTickNumber ?? 0) + 1;
 
-    // AI-CORRECTION 2026-08-21: 区域快照被主线程取走后，淘汰旧快照与旧运行态，只保留最新迁移锚点。
-    // Trigger: 四个武陵基地持续运行至约 tick 4811 后，Worker 因全量历史状态常驻而停止产出。
-    // Evidence: 区域模式不走 acknowledgePresentedTick；原实现仅推进 cursor，tickSnapshots/tickRuntimeStates 永不删除。
-    // Risk: 最新锚点之前的区域 Worker 内部状态不再可供历史回放；主线程已持有对应展示快照。
     const retainedAnchorTickNumber = this.latestTickNumber;
     for (const tickNumber of [...this.tickSnapshots.keys()]) {
       if (tickNumber !== retainedAnchorTickNumber) {
@@ -2005,16 +1885,6 @@ export class SimulationWorkerRuntime {
     );
     rebuildExcludedItemTypesForTick(topology, state);
 
-    // AI-REMOVED 2026-09-04:
-    // Reason: 区域 Stage1 不再返回 overflow 交接对象。
-    // Trigger: ST2-RQ-024 禁止 remainder 结转。
-    // Evidence: advanceDevices 返回 void。
-    // Replacement: 下方直接调用 advanceDevices。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // const stage1AdvanceResult = advanceDevices(
     advanceDevices(
       this.registry,
       topology,
@@ -2045,16 +1915,6 @@ export class SimulationWorkerRuntime {
 
     this.regionalGateCurrentPowerGeneration = currentPowerGeneration;
     this.regionalGatePowerOutage = isPowerOutageRun;
-    // AI-REMOVED 2026-09-04:
-    // Reason: 区域 Stage1 不再产生可结转的 overflow 结果。
-    // Trigger: ST2-RQ-024 禁止 remainder 结转。
-    // Evidence: advanceDevices 返回 void。
-    // Replacement: None
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // this.regionalGateStage1AdvanceResult = stage1AdvanceResult;
     this.regionalGatePausedTick = tickNumber;
     this.pendingRegionalDemand = gate.collectDemandBatch(this.registry, state, epochNumber);
     return {
@@ -2141,32 +2001,9 @@ export class SimulationWorkerRuntime {
     this.runtimeState.tickNumber = tickNumber;
     normalizeFixedWindowCountersForCurrentWindow(this.topology, this.runtimeState);
     const runtimeStepTicks = tickNumber - this.runtimeState.lastAdvancedTickNumber;
-    // AI-CORRECTION 2026-07-17: 动态帧率与严格物流统一以 tick 1 为相位原点。
     // 粗步长 10 必须在 1、11、21... 执行；否则从时间轴 tick 301 导入后会在 311、321...
     // 运行仿真，却因严格物流仍等待 10、20... 相位而永久停止交付。
     const shouldRunRuntime = shouldAdvance;
-    // AI-CORRECTION 2026-09-04: nextTickNumber 现在只指向真实运行 tick；
-    // createNextTickSnapshot 不再为标准 tick 间隙生成虚拟快照，因此 shouldAdvance 即 shouldRunRuntime。
-    // AI-REMOVED 2026-09-04:
-    // Reason: 真实 tick 调度器已经按 standardStepTicks 跳过非运行标准 tick，不再需要二次相位判断。
-    // Trigger: ST2-RQ-024 禁止生成或公开虚拟 tick 快照。
-    // Evidence: fillOneTick/advanceToTick 在每次提交后以 standardStepTicks 更新 nextTickNumber。
-    // Replacement: shouldRunRuntime = shouldAdvance。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // const isDynamicStepBoundary = (tickNumber - 1) % this.standardStepTicks === 0;
-    // AI-REMOVED 2026-07-17:
-    // Reason: 仅按 lastAdvancedTickNumber 累计步长会把动态帧率固定在 tick 0 相位。
-    // Trigger: 严格物流相位改为 tick 1 后，正常动态帧率与时间轴粗步长必须使用同一相位原点。
-    // Evidence: step=10、导入 tick 301 时目标运行帧应为 311；旧判断无法表达全局相位。
-    // Replacement: 使用 (tickNumber - 1) % standardStepTicks === 0 判断动态运行帧。
-    // Risk: 动态帧率切换后的首个区间可能短于完整步长，runtimeStepTicks 会传递真实区间长度。
-    // Human Review: Required
-    //
-    // Original code:
-    // const shouldRunRuntime = shouldAdvance && runtimeStepTicks >= this.standardStepTicks;
 
     const perfTiming = this.perfEnabled ? {
       tickNumber,
@@ -2176,49 +2013,6 @@ export class SimulationWorkerRuntime {
       hotPath: undefined as TickPerfHotPathDetails | undefined,
     } : null;
 
-    // AI-REMOVED 2026-09-04:
-    // Reason: 非运行标准 tick 不再进入 Worker 缓存、协议或展示链路。
-    // Trigger: ST2-RQ-024 要求 Legacy 只输出真实运行 tick。
-    // Evidence: nextTickNumber 仅按当前 standardStepTicks 前进，范围查询只枚举真实缓存键。
-    // Replacement: 下方 shouldRunRuntime 分支。
-    // Risk: 调试输出不再包含非运行标准 tick；这是需求规定的新协议语义。
-    // Human Review: Required
-    //
-    // Original code:
-    // if (shouldAdvance && !shouldRunRuntime) {
-    //   // 非运行时 tick：仿真未推进，但需正确反映当前电力状态（含电池缓冲）
-    //   const currentPowerGeneration = computeCurrentPowerGeneration(this.registry, this.runtimeState);
-    //   const isPowerOutage = this.resolveTickPowerOutage(currentPowerGeneration);
-    //   this.runtimeState.transient = createEmptyTransientState();
-    //   this.runtimeState.transient.isPowerOutage = isPowerOutage;
-    //   this.runtimeState.transient.activeConsumptionDeviceIds =
-    //     computeActiveConsumptionDeviceIds(this.topology, this.runtimeState);
-    //   this.runtimeState.transient.activeGasDiffusions = computeActiveGasDiffusions(
-    //     this.registry,
-    //     this.topology,
-    //     this.runtimeState,
-    //   );
-    //   const t0 = this.perfEnabled ? performance.now() : 0;
-    //   const snapshot = createTickSnapshot(this.topology, this.runtimeState, isPowerOutage, currentPowerGeneration);
-    //   if (this.perfEnabled) {
-    //     perfTiming!.stages["createSnapshot"] = performance.now() - t0;
-    //     this.perfEntries.push({
-    //       tickNumber,
-    //       totalMs: performance.now() - perfTiming!.start,
-    //       stages: {
-    //         advanceDevices: 0,
-    //         buildSolveGraph: 0,
-    //         solveTransferGraph: 0,
-    //         rotateRoutingCursors: 0,
-    //         settleRecipes: 0,
-    //         maintainDomains: 0,
-    //         createSnapshot: perfTiming!.stages["createSnapshot"] ?? 0,
-    //       },
-    //     });
-    //   }
-    //   this.adjustDynamicTickRateAtLegalPoint(tickNumber);
-    //   return snapshot;
-    // }
 
     if (shouldRunRuntime) {
       // 在 Stage 1 之前计算动态发电量
@@ -2264,23 +2058,12 @@ export class SimulationWorkerRuntime {
         this.runtimeState.transient._perf = createRuntimePerfCounters();
       }
 
-      // AI-CORRECTION 2026-07-31: 在 tick 开头统一重建 excludedItemTypes 快照，
       // 写入 transient.nodes。Stage 1 通过 finishRecipeIfPossible → createSlotOverlayState →
       // findInputSlotForItem 可安全读取基于当前库存的正确值，无需每次配方完成时全拓扑扫描。
       rebuildExcludedItemTypesForTick(this.topology, this.runtimeState);
       applySingleBaseRegionalResourceSupply(this.topology, this.runtimeState);
 
       const t0 = this.perfEnabled ? performance.now() : 0;
-      // AI-REMOVED 2026-09-04:
-      // Reason: 单基地 Stage1 不再返回 overflow 交接对象。
-      // Trigger: ST2-RQ-024 禁止 remainder 结转。
-      // Evidence: advanceDevices 返回 void，Stage5 只从 progress=0 启动下一轮。
-      // Replacement: 下方直接调用 advanceDevices。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // const stage1AdvanceResult = advanceDevices(
       advanceDevices(
         this.registry,
         this.topology,
@@ -2290,16 +2073,6 @@ export class SimulationWorkerRuntime {
         effectiveGeneration,
         this.effectiveTotalPowerDemand,
       );
-      // AI-REMOVED 2026-07-23:
-      // Reason: Stage1 结果是 advanceDevices 的返回值，不能作为尚未初始化的实参传入自身调用。
-      // Trigger: 接入 Stage1 → Stage5 溢出交接时首次装配位置错误。
-      // Evidence: TypeScript 会报告 stage1AdvanceResult 在声明前被使用。
-      // Replacement: 下方 settleRecipes 的最后一个参数。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // stage1AdvanceResult,
       applyWaterPurifierManualOutput(
         this.registry,
         this.topology,
@@ -2339,16 +2112,6 @@ export class SimulationWorkerRuntime {
         };
       }
 
-      // AI-REMOVED 2026-06-06:
-      // Reason: tick 末尾全局 submitMode 扫描会误消费所有旧 every-tick slot 配置。
-      // Trigger: 用户要求 submit mode 机制彻底删除，未来都用 warehouse sink 或配方交货。
-      // Evidence: RUN_ID 20260606-041337-509040 的 premium-capsule-line / wuling-battery-line 目标箱同 tick 被提交到仓库。
-      // Replacement: WarehouseSink 动态入仓在 Stage 3 moveOneItem 路径内完成；协议存储箱提交由 r_warehouse_submit 驱动。
-      // Risk: Medium - 依赖旧 submitMode 的蓝图需要通过迁移器转为 channelRecipes。
-      // Human Review: Required
-      //
-      // Original code:
-      // submitSlotsBySubmitMode(this.topology, this.runtimeState);
 
       const t3 = this.perfEnabled ? performance.now() : 0;
       rotateRoutingCursors(this.topology, this.runtimeState);
@@ -2461,22 +2224,9 @@ export class SimulationWorkerRuntime {
       return;
     }
 
-    // AI-REMOVED 2026-07-15:
-    // Reason: 不再允许 x1 根据缓存余量降低运行粒度，因此无需安排恢复最高粒度的切换标记。
-    // Trigger: x1 粗粒度导致确定性仿真结果变化。
-    // Evidence: 完整测试中配方产量与净水转换结果回归。
-    // Replacement: simulationSpeed < 2 分支始终选择最高合法 dynamic tick rate。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // if (this.simulationSpeed >= 2 && value < 2) {
-    //   this.forceHighestDynamicTickRateAtNextLegalPoint = true;
-    // }
     this.simulationSpeed = value;
     if (this.topology !== null && this.runtimeState !== null) {
       const previousDynamicTickRate = this.dynamicTickRate;
-      // AI-CORRECTION 2026-09-19: 调速命令必须在当前 tick 强制重算；否则该 tick 已按旧速度评估时，去重会阻止 x16 → x1 恢复最高 tickRate。
       this.lastDynamicRateAdjustmentTick = null;
       this.adjustDynamicTickRateAtLegalPoint(this.runtimeState.tickNumber);
       if (this.dynamicTickRate !== previousDynamicTickRate) {
@@ -2520,22 +2270,6 @@ export class SimulationWorkerRuntime {
     ) {
       return;
     }
-    // AI-REMOVED 2026-07-15:
-    // Reason: x1 自适应粗粒度方案已因准确性回归撤销。
-    // Trigger: 7 项完整仿真测试失败。
-    // Evidence: 多个 runtime stage 尚不能保证粗粒度与逐 tick 运行等价。
-    // Replacement: 下方 simulationSpeed < 2 分支固定最高合法粒度。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // if (this.forceHighestDynamicTickRateAtNextLegalPoint) {
-    //   this.forceHighestDynamicTickRateAtNextLegalPoint = false;
-    //   this.lastDynamicRateAdjustmentTick = standardTick;
-    //   const legalDynamicTickRates = resolveLegalDynamicTickRates(this.topology);
-    //   this.setDynamicTickRate(legalDynamicTickRates[0] ?? this.topology.standardTickRate);
-    //   return;
-    // }
     if (this.lastDynamicRateAdjustmentTick === standardTick) {
       return;
     }
@@ -2548,8 +2282,6 @@ export class SimulationWorkerRuntime {
       return;
     }
 
-    // AI-CORRECTION 2026-07-15: x1 速度也必须依据缓存墙钟余量自适应降级；只在初始化、暂停或从加速模式切回时先恢复最高粒度。
-    // AI-CORRECTION 2026-07-15: 完整测试证明上述策略会改变确定性结果；在所有 runtime stage 通过粗粒度等价验证前，x1 必须保持最高合法粒度。
     if (this.simulationSpeed < 2) {
       this.setDynamicTickRate(legalDynamicTickRates[0] ?? this.topology.standardTickRate);
       return;

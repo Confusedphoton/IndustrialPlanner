@@ -11,16 +11,6 @@ export interface DeviceStateProgram {
     readonly id: string;
     readonly enterRecipeId: string | null;
     readonly durationSeconds: number | null;
-    // AI-REMOVED 2026-10-15:
-    // Reason: 单个完成条件和目标无法表达同层级分支。
-    // Trigger: 育种完成优先于生长计时到期。
-    // Evidence: 原状态只能编译一条迁移，无法同时保留两个目标。
-    // Replacement: 下方有序 transitions 数组。
-    // Risk: Low - 所有消费者已统一迁移。
-    // Human Review: Required
-    // Original code:
-    // readonly completionRecipeId: string | null;
-    // readonly nextIndex: number;
     readonly transitions: readonly {
       readonly completionRecipeId: string | null;
       readonly nextIndex: number;

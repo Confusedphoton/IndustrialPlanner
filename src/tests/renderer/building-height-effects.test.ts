@@ -12,32 +12,9 @@ import {
   resolveBuildingEffectScene,
   resolveEffectFrame,
   syncStateHeightSurfaces,
-  // AI-REMOVED 2026-09-25:
-  // Reason: 端口特效统一使用场景时钟，流体门控函数已移除。
-  // Trigger: 用户明确要求 on/off 动画始终播放。
-  // Evidence: 原函数对未连接的 off 返回 null，无法推进帧。
-  // Replacement: 下方 on/off 循环播放断言。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // resolveEffectPlaybackTimeMs,
   selectRingEffectPlacements,
 } from '@/renderer/building-effects/placements';
 import { resolveBuildingEffectStatusKey } from '@/renderer/building-effects/status';
-// AI-REMOVED 2026-09-19:
-// Reason: 正式仓库不再保存网站展开原件和发布收据，运行时测试不能依赖本地来源目录。
-// Trigger: 用户要求网站素材只存在于 .temp/.trash 导入批次。
-// Evidence: import-building-assets validate 已在批次内核对原件哈希、尺寸和数值编码。
-// Replacement: 下方直接验证全部已发布数值文件、颜色页和图集边界。
-// Risk: 普通 Vitest 不再逐像素比较网站原图；发布算法的独立夹具测试继续覆盖转换。
-// Human Review: Required
-//
-// Original code:
-// import { readFile, readdir } from 'node:fs/promises';
-// import { createHash } from 'node:crypto';
-// import path from 'node:path';
-// import { BUILDING_ASSET_PUBLISH_RESOLUTIONS } from '../../scripts/building-asset-publish-config.mjs';
 
 const manifest = JSON.parse(await readFile('public/3d-top-view/port-effects/manifest.json', 'utf8')) as BuildingEffectsManifest;
 const registry = createRegistryContract();
@@ -45,23 +22,6 @@ const definitions = new Map(registry.entityDefinitions.map((definition) => [defi
 const entity: WorldEntity = { id: 'device', definitionId: 'transmuter_1_gastrans',
   position: { x: 0, y: 0 }, rotation: 0, config: {}, tags: [] };
 
-// AI-REMOVED 2026-09-11:
-// Reason: 旧镜像夹具与统一源→项目坐标发布契约冲突。
-// Trigger: 端口源 Z 需要映射为项目 -y，yaw 需要由运行时正号组合；夹具额外反射 X 并强制 yaw=180 会掩盖真实 Registry 匹配。
-// Evidence: 发布器现已统一转换 position/center/origin/像素行，Renderer 直接消费项目坐标。
-// Replacement: 使用发布后的 manifest，并在冲突测试中显式篡改一个端口位置。
-// Risk: Low；仅归档测试夹具。
-// Human Review: Required
-//
-// Original code:
-// /** 独立的“已修正交付”夹具；产品原件保持不变，不将此镜像当作接入规则。 */
-// function correctedFixture() {
-//   const fixture = structuredClone(manifest);
-//   for (const ports of Object.values(fixture.views['transmuter_1/top']!.variants)) {
-//     for (const port of ports) { port.position[0] *= -1; port.yaw = 180; }
-//   }
-//   return fixture;
-// }
 
 describe('建筑高度与端口特效', () => {
   it('自动农植机底座半格偏移修正后，5×5 颜色画布与高度范围在两处默认朝向一致', () => {
@@ -228,16 +188,6 @@ describe('建筑高度与端口特效', () => {
     ['udpipe_unloader_1', [{ id: 'pipe-1', x: 3, y: 1 }]],
     ['udpipe_loader_2', [{ id: 'pipe-1', x: -1, y: 1 }, { id: 'pipe-2', x: -1, y: 3 }]],
     ['udpipe_unloader_2', [{ id: 'pipe-1', x: 3, y: 3 }, { id: 'pipe-2', x: 3, y: 1 }]],
-  // AI-REMOVED 2026-09-25:
-  // Reason: 旧测试标题描述的流体驱动行为与新的持续播放要求冲突。
-  // Trigger: 用户明确要求未接管道的 off 和已接管道的 on 始终播放。
-  // Evidence: 端口特效资源都声明为 loop。
-  // Replacement: 下方 on/off 资源与场景时钟推进断言。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // ] as const)('%s 的每个箭头动画由相邻管道流体状态驱动', (definitionId, pipePositions) => {
   ] as const)('%s 的每个端口按连接状态选择 on/off 并持续播放', (definitionId, pipePositions) => {
     const target: WorldEntity = { ...entity, id: 'dark-pipe', definitionId };
     const pipes = pipePositions.map(({ id, x, y }) => ({
@@ -252,18 +202,6 @@ describe('建筑高度与端口特效', () => {
 
     expect(connected.issues).toEqual([]);
     expect(targetEffects).toHaveLength(pipePositions.length);
-    // AI-REMOVED 2026-09-25:
-    // Reason: 特效不再存储相邻管道 ID，播放不依赖管道流体。
-    // Trigger: 用户要求 on/off 始终播放。
-    // Evidence: EffectPlacement 已移除 animationFluidEntityId。
-    // Replacement: 下方分别验证 on/off 资源及帧推进。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // expect(new Set(targetEffects.map((effect) => effect.animationFluidEntityId))).toEqual(
-    //   new Set(pipePositions.map(({ id }) => id)),
-    // );
     for (const effect of targetEffects) {
       expect(effect.resourceId).toContain('pipeon');
       const resource = manifest.effects[effect.resourceId]!;
@@ -272,16 +210,6 @@ describe('建筑高度与端口特效', () => {
     }
 
     const disconnected = resolveBuildingEffectScene({ manifest, definitions, entities: [target] });
-    // AI-REMOVED 2026-09-25:
-    // Reason: 未连接端口也应持续播放 off，不能保留静态帧标志。
-    // Trigger: 用户明确要求 off 动画始终播放。
-    // Evidence: 断开端口原 animationFluidEntityId=null 被播放函数解释为静态帧。
-    // Replacement: 下方验证 off 资源为 loop 并按时钟前进。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // expect(disconnected.effects.every((effect) => effect.animationFluidEntityId === null)).toBe(true);
     expect(disconnected.effects).toHaveLength(pipePositions.length);
     for (const effect of disconnected.effects) {
       expect(effect.resourceId).toContain('pipeoff');
@@ -313,50 +241,8 @@ describe('建筑高度与端口特效', () => {
     resource.playback.mode = 'loop';
     resource.playback.staticFrame = 2;
     expect([0, 24, 25, 99, 100, 199, 200].map((time) => resolveEffectFrame(resource, time))).toEqual([0, 0, 1, 1, 2, 2, 0]);
-    // AI-REMOVED 2026-09-25:
-    // Reason: 端口特效不再支持 null 时钟冻结到 staticFrame。
-    // Trigger: 用户明确要求 on/off 动画始终播放。
-    // Evidence: 唯一运行时调用方只传入 nowMs。
-    // Replacement: 上方按时间推进和循环的断言。
-    // Risk: Low。
-    // Human Review: Required
-    //
-    // Original code:
-    // expect(resolveEffectFrame(resource, null)).toBe(2);
   });
 
-  // AI-REMOVED 2026-09-25:
-  // Reason: 原测试固定了“断开或空管冻结端口特效”的错误行为。
-  // Trigger: 用户明确要求 on/off 两种端口特效始终播放。
-  // Evidence: 上方测试已验证两种资源按场景时钟循环推进；流体门控函数已移除。
-  // Replacement: 上方四种暗管型号的 on/off 播放测试。
-  // Risk: Low；不再测试按流体运输组相位同步。
-  // Human Review: Required
-  //
-  // Original code:
-  // it('暗管箭头只在相邻管道存在可见流体时使用该运输组时钟', () => {
-  //   const pipeState = {
-  //     kind: 'pipe' as const,
-  //     shape: 'straight' as const,
-  //     rotation: 0,
-  //     start: 0,
-  //     support: false,
-  //     marker: false,
-  //     fluidItemId: null as string | null,
-  //     pipeFlow: { seconds: 2.5, flowing: false },
-  //   };
-  //   const materials = {
-  //     entities: new Map([['pipe', pipeState]]),
-  //     beltSeconds: 0,
-  //     animationEnabled: true,
-  //   };
-  //
-  //   expect(resolveEffectPlaybackTimeMs({}, materials, 1234)).toBe(1234);
-  //   expect(resolveEffectPlaybackTimeMs({ animationFluidEntityId: null }, materials, 1234)).toBeNull();
-  //   expect(resolveEffectPlaybackTimeMs({ animationFluidEntityId: 'pipe' }, materials, 1234)).toBeNull();
-  //   pipeState.fluidItemId = 'item_liquid_water';
-  //   expect(resolveEffectPlaybackTimeMs({ animationFluidEntityId: 'pipe' }, materials, 1234)).toBe(2500);
-  // });
 
   it('所有已发布高度数值文件和特效颜色页完整且编码合法', async () => {
     const fields = new Map<string, { field: HeightField; reflected: boolean }>();
@@ -384,16 +270,6 @@ describe('建筑高度与端口特效', () => {
   });
 
   it.each(Object.keys(manifest.effects))('发布特效 %s 的分页、帧边界和时长自洽', async (resourceId) => {
-    // AI-REMOVED 2026-09-14:
-    // Reason: 单个资源覆盖不足；奇数高度和其他端口、状态环同样需要验证。
-    // Trigger: 共享缩放函数导致多组烘焙素材错位。
-    // Evidence: 当前 manifest 中 8 组资源需要透明补边。
-    // Replacement: 上方 it.each 遍历所有已发布特效。
-    // Risk: Low；扩大原有逐帧验证范围。
-    // Human Review: Required
-    //
-    // Original code:
-    // const resourceId = 'v1.5/fx/P_interactive_large_pipeoff_out_01';
     const resource = manifest.effects[resourceId]!;
     for (const [pageIndex, page] of resource.pages.entries()) {
       const metadata = await sharp(`public/3d-top-view/port-effects/${page.file}`).metadata();

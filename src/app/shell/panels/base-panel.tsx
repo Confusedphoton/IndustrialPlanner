@@ -1,17 +1,5 @@
 import { selectDocumentContent, sameDocumentContent } from "@/shared/snapshot/world-document-selection";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-// AI-REMOVED 2026-08-19:
-// Reason: BasePanel 不再手工同步 App 层的多基地模式副本，因此无需 runInAction。
-// Trigger: SimulationMode 单一事实源改造。
-// Evidence: checkbox 直接读取 SimulationState.simulationMode，写入统一经过 SimulationAction。
-// Replacement: None
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import { runInAction } from "mobx";
-// AI-CORRECTION 2026-08-19: runInAction 仍用于 effect 更新 siblingBaseCount；只移除了模式副本同步用途。
-// AI-CORRECTION 2026-09-25: siblingBaseCount 已移除；runInAction 仍用于本面板其他状态更新。
 import { runInAction } from "mobx";
 import { observer } from "mobx-react-lite";
 import { createPortal } from "react-dom";
@@ -34,16 +22,6 @@ import {
   WarehouseStatsView,
 } from "@/app/shell/shared/warehouse-stats-view";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
-// AI-REMOVED 2026-08-19:
-// Reason: checkbox 改为读取 RegionalSettingsController，不再直接比较 SimulationMode。
-// Trigger: 用户要求多基地选择持久化、同步，实验开关仅控制当前是否生效。
-// Evidence: main.tsx 组合根根据持久选择派生有效 SimulationMode。
-// Replacement: AppHost.regionalSettings.multiBaseEnabled。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import { SIMULATION_MODE } from "@/domain/shared/simulation-mode";
 import {
   isCustomPortPriorityGroupsEnabled,
   DEFAULT_PORT_PRIORITY_PROBLEM_TITLE,
@@ -62,6 +40,8 @@ import {
 } from "@/app/shell/panels/base-configuration-problems";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import { resolveBaseDisplayName, resolveBaseTagLabel } from "@/app/shell/shared/known-text-translation";
+import { groupBaseDefinitionsByTag } from "@/app/shell/dialogs/base-select-dialog";
 import panelStyles from "@/app/shell/panels/panels.module.scss";
 import { RegionalResourcesCard } from "@/app/shell/panels/regional-resources-card";
 
@@ -81,18 +61,6 @@ function areStringSetsEqual(left: ReadonlySet<string>, right: ReadonlySet<string
   return left.size === right.size && [...left].every((value) => right.has(value));
 }
 
-// AI-REMOVED 2026-07-27:
-// Reason: app 不应维护 4 个管道物流设备 definition ID。
-// Trigger: 用户要求 registry 外只使用 Query，并明确管道物流设备不包括管道节。
-// Evidence: RegistryQuery.isPipeLogistics 精确覆盖分流器、汇流器、桥接器和准入口。
-// Replacement: BasePanel.deviceStats 中的 registry.queries.isPipeLogistics。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// const PIPE_ATTACHMENT_IDS = new Set([
-//   "pipe_splitter", "pipe_converger", "pipe_connector", "pipe_admission",
-// ]);
 
 export const BasePanel = observer(function BasePanel({ appHost, active = true }: { appHost: AppHost; active?: boolean }) {
   const t = appHost.actions.translate;
@@ -104,23 +72,11 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
     (definition) => definition.id === currentBaseId,
   ) ?? appHost.workspace.registry.baseDefinitions[0] ?? null;
   const currentBaseName = currentBase?.name ?? currentBaseId;
+  // 界面显示用译名；currentBaseName 仍作为地区资源标签的回退键。
+  const currentBaseLabel = currentBase === undefined || currentBase === null
+    ? currentBaseId
+    : resolveBaseDisplayName(currentBase, t);
   const [regionalHelpTutorialVisible, setRegionalHelpTutorialVisible] = useState(false);
-  // AI-REMOVED 2026-09-25:
-  // Reason: Dense 支持单基地合图，基地数量不再决定区域开关是否可用。
-  // Trigger: 草稿箱只有一个基地且需要继承全局区域模式选择。
-  // Evidence: createDenseRegionalDocument 支持单份文档。
-  // Replacement: Dense Host 启动时从当前地区基地集合决定合图内容。
-  // Risk: Low
-  // Human Review: Required
-  // Original code:
-  // useEffect(() => {
-  //   const siblings = appHost.workspace.registry.baseDefinitions.filter((definition) =>
-  //     definition.tag === currentBase?.tag,
-  //   ).length - 1;
-  //   runInAction(() => {
-  //     regionalSimulationUiState.siblingBaseCount = Math.max(0, siblings);
-  //   });
-  // }, [appHost.workspace.registry.baseDefinitions, currentBase?.tag]);
   const warehouseStats = useWarehouseStats(appHost, active);
   const pinnedItems = useWarehousePinnedItems(appHost);
   const warehouseEntries = buildWarehouseStatsEntries({
@@ -210,19 +166,8 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
     return () => window.clearInterval(intervalId);
   }, [active, appHost, appHost.workspace.registry.entityDefinitions, currentDocument]);
 
-  // AI-REMOVED 2026-08-19:
-  // Reason: 多基地 checkbox 不再从 SimulationMode 读取，组件级 simulation 局部变量失去用途。
-  // Trigger: 多基地选择迁移到可持久化、可同步的 RegionalSettingsController。
-  // Evidence: 事件处理器在其局部作用域内仍会按需读取 simulation 以关闭时间轴。
-  // Replacement: appHost.regionalSettings.multiBaseEnabled。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // const simulation = appHost.workspace.simulation;
-  // AI-CORRECTION 2026-09-20: ST2-RQ-035 后静态 UI 读取 AppSettings 投影；RegionalSettingsController 仅保存同步资产原值。
   const multiBaseEnabled = appHost.state.settings.regionalMultiBaseEnabled;
-  const regionalMultiBaseSupported = appHost.workspace.simulation?.engineKind === "dense-v2";
+  const regionalMultiBaseSupported = false;
   const currentUnknownEntityProblems = useMemo<RegionalUnknownEntityProblem[]>(() => {
     if (currentDocument === null) return [];
     return collectUnknownWorldEntityDefinitionIssues({
@@ -232,12 +177,12 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
       .filter((issue) => issue.origin === "document")
       .map((issue) => ({
         baseId: currentDocument.baseId,
-        baseName: currentBaseName,
+        baseName: currentBaseLabel,
         issue,
       }));
   }, [
     appHost.workspace.registry.entityDefinitions,
-    currentBaseName,
+    currentBaseLabel,
     currentDocument,
   ]);
   const [siblingUnknownEntityProblems, setSiblingUnknownEntityProblems] = useState<
@@ -278,7 +223,7 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
           .filter((issue) => issue.origin === "document")
           .map((issue) => ({
             baseId: definition.id,
-            baseName: definition.name,
+            baseName: resolveBaseDisplayName(definition, t),
             issue,
           }));
       });
@@ -295,6 +240,7 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
     appHost.workspace.registry.entityDefinitions,
     activeDocumentBaseId,
     currentBase,
+    t,
     editor,
     multiBaseEnabled,
   ]);
@@ -318,7 +264,6 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
       const prefix = problem.baseId === currentDocument.baseId
         ? ""
         : `${problem.baseName}${t("baseProblem.basePrefixSeparator")}`;
-      // AI-CORRECTION 2026-11-13：以下文案改走 i18n 模板（{占位符} 替换），中文译文与原硬编码一致。
       const message = prefix + t("baseProblem.unknownEntity").replace("{entityId}", problem.issue.entityId);
       const relatedLinkText = problem.issue.relatedSlotLinkCount === 0
         ? t("baseProblem.noRelatedLinks")
@@ -352,7 +297,6 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
     }
 
     // ② 管道物流数超限
-    // AI-CORRECTION 2026-07-27: 此处统计管道物流设备，不包括管道节。
     const maxPipe = currentBase !== null
       ? resolveBaseMaxPipeLogistics(currentBase.tags)
       : null;
@@ -489,18 +433,6 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
       setTotalPowerDemand(docStatus?.totalPowerDemand ?? null);
       setCurrentPowerGeneration(docStatus?.currentPowerGeneration ?? null);
       setIsPowerOutage(docStatus?.isPowerOutage ?? false);
-      // AI-REMOVED 2026-09-12:
-      // Reason: 电池读数属于文档运行时投影，不再借用已退役的性能 statistics 状态。
-      // Trigger: 用户确认从 SimulationState 移除 statistics。
-      // Evidence: getDocumentRuntimeStatus 已统一返回双引擎的电池当前值与容量。
-      // Replacement: 下方 docStatus.baseBatteryJoules / baseBatteryCapacity。
-      // Risk: Low。
-      // Human Review: Required
-      //
-      // Original code:
-      // const stats = appHost.workspace.simulation?.state.statistics;
-      // setBaseBatteryJoules(stats?.baseBatteryJoules ?? null);
-      // setBaseBatteryCapacity(stats?.baseBatteryCapacity ?? null);
       setBaseBatteryJoules(docStatus?.baseBatteryJoules ?? null);
       setBaseBatteryCapacity(docStatus?.baseBatteryCapacity ?? null);
     };
@@ -554,7 +486,6 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
   if (baseBatteryJoules !== null && baseBatteryCapacity !== null && baseBatteryCapacity > 0) {
     const rawPct = (baseBatteryJoules / baseBatteryCapacity) * 100;
     // 99.5~99.9 强制显示 99%，防止四舍五入虚标 100%
-    // AI-CORRECTION 2026-06-12: 阈值从 >=99.5→99 调整为 >=99.995→99.99，显示从整数改为2位小数
     const pct = (rawPct >= 99.995 && rawPct < 100) ? 99.99 : Math.min(100, rawPct);
     percentageText = `${pct.toFixed(2)}%`;
   }
@@ -575,20 +506,7 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
         <div className={cm(styles, "card-header")}>
           <h3>{t("rightDock.base")}</h3>
         </div>
-        <button
-          className={cm(styles, "base-current-button")}
-          data-ui-button-id="base-current-select"
-          disabled={editor === null}
-          onClick={() => {
-            appHost.internalActions.openDialog("base-select");
-          }}
-          type="button"
-        >
-          <span className={cm(styles, "base-current-button-label")}>{currentBaseName}</span>
-          <span className={cm(styles, "base-current-button-icon")}>
-            <WorkbenchIcon kind="edit" />
-          </span>
-        </button>
+        <BaseInlinePicker appHost={appHost} currentBaseId={currentBaseId} />
         {regionalSimulationUiState.experimentalEnabled && (
           <div className={cm(styles, "base-regional-switch")}>
             <label className={cm(styles, "base-regional-switch-control")}>
@@ -596,15 +514,6 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
                 checked={multiBaseEnabled}
                 disabled={
                   !regionalMultiBaseSupported
-                  // AI-REMOVED 2026-09-25:
-                  // Reason: Dense 单基地合图可用，开关不再受同地区基地数量限制。
-                  // Trigger: 草稿箱单基地启动。
-                  // Evidence: Dense regional document 仅要求至少一份基地文档。
-                  // Replacement: !regionalMultiBaseSupported 与运行态门禁。
-                  // Risk: Low
-                  // Human Review: Required
-                  // Original code:
-                  // || regionalSimulationUiState.siblingBaseCount < 1
                   || appHost.workspace.simulation?.state.runningState !== "stop"
                 }
                 onChange={(event) => {
@@ -622,32 +531,7 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
                     simulation.actions.disableTimeline();
                   }
 
-                  // AI-REMOVED 2026-08-19:
-                  // Reason: 多基地选择属于可同步的地区设置资产，SimulationMode 仅保存实验开关过滤后的当前有效模式。
-                  // Trigger: 用户要求“同时运行所有基地”具备记忆并跨设备同步，同时关闭实验开关不得丢失选择。
-                  // Evidence: RegionalSettingsController.multiBaseEnabled 已是持久化与同步的唯一事实来源。
-                  // Replacement: appHost.regionalSettings.setMultiBaseEnabled(enabled)。
-                  // Risk: Low
-                  // Human Review: Required
-                  //
-                  // Original code:
-                  // simulation.actions.setRegionalMultiBaseEnabled(enabled);
                   appHost.regionalSettings.setMultiBaseEnabled(enabled);
-                  // AI-REMOVED 2026-08-19:
-                  // Reason: checkbox 状态直接观察 SimulationState.simulationMode，不再同步 App 副本。
-                  // Trigger: SimulationMode 单一事实源改造。
-                  // Evidence: Action 会在非 stop 状态拒绝切换，直接读取 state 可避免 UI 错误显示已切换。
-                  // Replacement: simulation.actions.setRegionalMultiBaseEnabled(enabled)。
-                  // Risk: Low
-                  // Human Review: Required
-                  //
-                  // Original code:
-                  // runInAction(() => {
-                  //   regionalSimulationUiState.allBasesEnabled = enabled;
-                  // });
-                  // AI-CORRECTION 2026-08-19: 当前 checkbox 读取 RegionalSettingsController，SimulationMode 由 main.tsx 的实验门控 reaction 派生。
-                  // AI-CORRECTION 2026-08-20: 当前控件使用 switch 语义与外观，状态仍读取 RegionalSettingsController。
-                  // AI-CORRECTION 2026-09-20: 当前 switch 读取 AppSettings；SimulationMode 只在 Simulation.start 时固化。
                   if (enabled) {
                     setRegionalHelpTutorialVisible(true);
                   }
@@ -1036,3 +920,73 @@ function RegionalMultiBaseHelp({
     </>
   );
 }
+
+/**
+ * 基地内联选择器。按地区分组列出全部基地及其尺寸，单击即切换，
+ * 当前基地高亮；不再经过“当前名称 + 铅笔”入口与确认对话框。
+ */
+const BaseInlinePicker = observer(function BaseInlinePicker({
+  appHost,
+  currentBaseId,
+}: {
+  appHost: AppHost;
+  currentBaseId: string;
+}) {
+  const t = appHost.actions.translate;
+  const editor = appHost.workspace.editor;
+  const [pendingBaseId, setPendingBaseId] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const groups = useMemo(
+    () => groupBaseDefinitionsByTag(appHost.workspace.registry.baseDefinitions),
+    [appHost.workspace.registry.baseDefinitions],
+  );
+
+  const switchBase = async (baseId: string) => {
+    if (editor === null || baseId === currentBaseId || pendingBaseId !== null) {
+      return;
+    }
+    setPendingBaseId(baseId);
+    setFailed(false);
+    try {
+      const didLoad = await editor.actions.loadLatestBaseDocument(baseId);
+      setFailed(!didLoad);
+    } finally {
+      setPendingBaseId(null);
+    }
+  };
+
+  return (
+    <div className={cm(panelStyles, "base-inline-picker")} data-ui-button-id="base-current-select">
+      {groups.map((group) => (
+        <section className={cm(panelStyles, "base-inline-group")} key={group.tag}>
+          <h4>{resolveBaseTagLabel(group.tag, t)}</h4>
+          <div className={cm(panelStyles, "base-inline-options")}>
+            {group.bases.map((base) => {
+              const bounds = base.areas[0]?.bounds;
+              const size = bounds === undefined
+                || bounds.minX === null || bounds.maxX === null || bounds.minY === null || bounds.maxY === null
+                ? null
+                : `${bounds.maxX - bounds.minX}×${bounds.maxY - bounds.minY}`;
+              const isCurrent = base.id === currentBaseId;
+              return (
+                <button
+                  aria-pressed={isCurrent}
+                  className={cm(panelStyles, isCurrent ? "base-inline-option is-current" : "base-inline-option")}
+                  data-base-id={base.id}
+                  disabled={editor === null || pendingBaseId !== null}
+                  key={base.id}
+                  onClick={() => void switchBase(base.id)}
+                  type="button"
+                >
+                  <span className={cm(panelStyles, "base-inline-option-name")}>{resolveBaseDisplayName(base, t)}</span>
+                  {size === null ? null : <span className={cm(panelStyles, "base-inline-option-size")}>{size}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+      {failed ? <p className={cm(panelStyles, "base-inline-error")}>{t("basePicker.loadFailed")}</p> : null}
+    </div>
+  );
+});

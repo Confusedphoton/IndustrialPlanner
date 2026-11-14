@@ -14,7 +14,7 @@ export function configuredDeviceItemIds(definition: EntityDefinition, entityId: 
 }
 
 /**
- * 2026-11-13：设备已选（手动或计划）配方的主要产物，用于非运行状态下的画布标签。
+ * 设备已选（手动或计划）配方的主要产物，用于非运行状态下的画布标签。
  * channelRecipes 由属性面板配方磁贴或自动规划写入；运输类“same-as-input”配方无固定产物，跳过。
  */
 export function selectedRecipeDeviceItemIds(entity: Pick<WorldEntity, "config"> | null,

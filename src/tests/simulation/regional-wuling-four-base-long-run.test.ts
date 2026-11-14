@@ -12,7 +12,6 @@ import {
 
 const TEN_MINUTE_EPOCHS = 1200;
 
-// AI-CORRECTION 2026-10-10: 新增农牧用地后，武陵共有五个基地入口，长跑覆盖全部五基地。
 describe("武陵五基地区域会话 10 分钟长跑", () => {
   it("五个武陵基地连续 1200 Epoch 同步提交", { timeout: 120_000 }, async () => {
     const registry = createRegistryContract();
@@ -67,16 +66,6 @@ describe("武陵五基地区域会话 10 分钟长跑", () => {
         expect(committed.warehouseVersion).toBe(epoch + 1);
         expect(committed.snapshotsByBaseId[wulingBaseIds[0]!]).not.toBeNull();
       }
-      // AI-REMOVED 2026-08-21:
-      // Reason: 区域会话不再保留完整 Epoch 快照历史。
-      // Trigger: 真实四基地持续运行出现无界内存增长。
-      // Evidence: 会话顺序现在由 nextEpochNumber 标量维护。
-      // Replacement: 断言最终 nextEpochNumber。
-      // Risk: Low。
-      // Human Review: Required
-      //
-      // Original code:
-      // expect(session.committedEpochs).toHaveLength(TEN_MINUTE_EPOCHS);
       expect(session.nextEpochNumber).toBe(TEN_MINUTE_EPOCHS);
     } finally {
       session.dispose();

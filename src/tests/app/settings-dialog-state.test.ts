@@ -10,45 +10,6 @@ import {
 import { FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED } from "@/shared/logging/debug-mode-runtime";
 
 describe("WorkbenchSettingsDialogController", () => {
-  it("基于蓝图的产线自动规划默认关闭，持久化独立选择并随实验总开关重置", () => {
-    const key = "experimental-blueprint-production-planning";
-    const controller = new WorkbenchSettingsDialogController();
-    expect(resolveGroupSettingIds("experimental")).toContain(key);
-    expect(controller.getValue(key)).toBe(false);
-    expect(controller.isSettingEditable(key)).toBe(false);
-    controller.updateSwitchValue(key, true);
-    expect(controller.getValue(key)).toBe(false);
-    controller.updateSwitchValue("other-experimental-features", true);
-    expect(controller.isSettingEditable(key)).toBe(true);
-    expect(controller.getValue(key)).toBe(false);
-    controller.updateSwitchValue(key, true);
-    const restored = new WorkbenchSettingsDialogController();
-    expect(restored.getValue(key)).toBe(true);
-    restored.updateSwitchValue("other-experimental-features", false);
-    expect(restored.getValue(key)).toBe(false);
-    expect(new WorkbenchSettingsDialogController().getValue(key)).toBe(false);
-    restored.updateSwitchValue("other-experimental-features", true);
-    expect(restored.getValue(key)).toBe(false);
-  });
-
-  it.each([false, true])("移除 EDA 实验性设置，恢复旧开关值 %s 后不再持久化", (legacyEnabled) => {
-    localStorage.setItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY, JSON.stringify({
-      selectedGroupId: "experimental",
-      values: {
-        "other-experimental-features": true,
-        "experimental-blueprint-planner": legacyEnabled,
-      },
-    }));
-    const controller = new WorkbenchSettingsDialogController();
-    expect(controller.getValue("experimental-blueprint-production-planning")).toBe(false);
-    expect(WORKBENCH_SETTINGS_GROUPS.flatMap(group => group.items).map(setting => setting.id))
-      .not.toContain("experimental-blueprint-planner");
-    expect(controller.isSettingEditable("experimental-blueprint-planner")).toBe(false);
-    controller.updateSwitchValue("other-experimental-features", false);
-    const saved = JSON.parse(localStorage.getItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY)!);
-    expect(saved.values).not.toHaveProperty("experimental-blueprint-planner");
-    expect(new WorkbenchSettingsDialogController().isSettingEditable("experimental-blueprint-planner")).toBe(false);
-  });
 
   it("defaults wheel zoom inversion to off and persists the user's choice", () => {
     const controller = new WorkbenchSettingsDialogController();
@@ -117,19 +78,9 @@ describe("WorkbenchSettingsDialogController", () => {
       "game-use-blueprint-style-device-images",
       "game-show-grass-background",
       "game-show-device-names",
-      // AI-REMOVED 2026-09-09:
-      // Reason: 区域标注移至实验性分组。
-      // Trigger: 用户要求恢复实验性功能。
-      // Evidence: WORKBENCH_SETTINGS_GROUPS 分组变更。
-      // Replacement: 下方实验性分组断言。
-      // Risk: Low
-      // Human Review: Required
-      // Original code:
-      // "game-show-region-annotations",
       "game-show-device-icons",
     ]);
     expect(resolveGroupSettingIds("experimental")).toContain("game-show-region-annotations");
-    // AI-CORRECTION 2026-11-13：交互分组新增 game-pen-precise-input；主题用例改用 graphite-dark（Ayu Dark 已退出可选项）。
     expect(resolveGroupSettingIds("interaction-mode")).toEqual([
       "game-invert-wheel-zoom",
       "game-pen-precise-input",
@@ -141,12 +92,6 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(resolveGroupSettingIds("auxiliary-display")).toEqual([
       "game-always-show-grid-lines",
       "game-always-show-power-range",
-      // AI-REMOVED 2026-09-23:
-      // Reason: 随设置迁入 display 更新分组约束。
-      // Trigger: 用户明确要求；Evidence: display 分组定义。
-      // Replacement: 上方 display 断言；Risk: Low; Human Review: Required
-      // Original code:
-      // "game-pipe-wall-reflection",
       "game-show-pipe-exact-fluid-position",
     ]);
     expect(resolveGroupSettingIds("activity")).toEqual([
@@ -164,17 +109,6 @@ describe("WorkbenchSettingsDialogController", () => {
   it("persists schema-driven values and hydrates them on the next controller", () => {
     const controller = new WorkbenchSettingsDialogController();
 
-    // AI-REMOVED 2026-08-03:
-    // Reason: 通用设置控制器不再包含 shortcuts 分组。
-    // Trigger: ST2-RQ-002 独立快捷键设置对话框。
-    // Evidence: WORKBENCH_SETTINGS_GROUPS 已取消 shortcuts。
-    // Replacement: 下方 game 分组选择。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // controller.selectGroup("shortcuts");
-    // AI-CORRECTION 2026-09-09: 设置页已恢复 shortcuts 入口分组并拆分原 game 分组；本持久化用例选择 display 分组。
     controller.selectGroup("display");
     controller.updateSelectValue("system-language", "en-US");
     controller.updateSelectValue("system-theme", "graphite-dark");
@@ -199,43 +133,8 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-quick-place": true,
         "game-invert-wheel-zoom": false,
         "game-pen-precise-input": true,
-        "game-arknights-selection-right-dock-sync": true,
+        "game-arknights-selection-right-dock-sync": false,
         "game-arknights-inspector-open-on-second-click": false,
-        // AI-REMOVED 2026-08-03:
-        // Reason: 通用设置 localStorage 不再保存快捷键默认值。
-        // Trigger: ST2-RQ-002 快捷键设置独立化。
-        // Evidence: 快捷键由 v3-app-shortcuts 独立持久化。
-        // Replacement: KeyboardShortcutManager tests。
-        // Risk: Low
-        // Human Review: Required
-        //
-        // Original code:
-        // "shortcut-quick-place": "Z",
-        // "shortcut-place-conveyor": "E",
-        // "shortcut-place-pipe": "Q",
-        // "shortcut-resources-power": "G",
-        // "shortcut-warehouse": "C",
-        // "shortcut-basic-production": "V",
-        // "shortcut-synthesis": "B",
-        // "shortcut-save-blueprint": "Ctrl+S",
-        // "shortcut-return-select": "Esc",
-        // "shortcut-rotate": "R",
-        // "shortcut-switch-device-mode": "Tab",
-        // "shortcut-rotate-viewport": "Ctrl+R",
-        // "shortcut-delete-device": "F",
-        // "shortcut-move-selection": "M",
-        // "shortcut-pan-viewport-up": "W",
-        // "shortcut-pan-viewport-down": "S",
-        // "shortcut-pan-viewport-left": "A",
-        // "shortcut-pan-viewport-right": "D",
-        // "shortcut-copy-selection": "Ctrl+C",
-        // "shortcut-paste-selection": "Ctrl+V",
-        // "shortcut-toggle-base-panel": "K",
-        // "shortcut-toggle-blueprint-panel": "L",
-        // "shortcut-toggle-history-panel": "H",
-        // "shortcut-toggle-placement-panel": "P",
-        // "shortcut-undo": "Ctrl+Z",
-        // "shortcut-redo": "Ctrl+Y",
         "game-show-device-names": true,
         "game-show-region-annotations": false,
         "game-show-device-icons": true,
@@ -253,8 +152,6 @@ describe("WorkbenchSettingsDialogController", () => {
         "other-toolbox-show-all-activity-content": true,
         "other-debug-mode": true,
         "other-experimental-features": false,
-        "experimental-blueprint-production-planning": false,
-        "debug-legacy-simulation-engine": false,
         "debug-simulation-worker-detailed-report": true,
         ...(FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED
           ? { "debug-force-flatten-blueprint-version": false }
@@ -263,17 +160,6 @@ describe("WorkbenchSettingsDialogController", () => {
         "debug-disable-cargo-entry-animation": false,
         "debug-show-fps": true,
         "debug-show-gesture-diagnostics-window": true,
-        // AI-REMOVED 2026-10-14:
-        // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
-        // Trigger: 用户要求 EDA 默认可用且不再需要开启。
-        // Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
-        // Replacement: 设置快照不再包含已移除的 EDA 开关。
-        // Risk: Low；规划任务与业务可用性校验保持原行为。
-        // Human Review: Required
-        //
-        // Original code:
-        //         "experimental-blueprint-planner": false,
-        "experimental-regional-multi-base": false,
         "experimental-virtual-mouse-pointer": false,
         "sync-provider": "none",
       },
@@ -292,30 +178,8 @@ describe("WorkbenchSettingsDialogController", () => {
       hydratedController.values["game-arknights-auto-create-splitters-and-convergers"],
     ).toBe(true);
     expect(hydratedController.values["game-quick-place"]).toBe(true);
-    expect(hydratedController.values["game-arknights-selection-right-dock-sync"]).toBe(true);
+    expect(hydratedController.values["game-arknights-selection-right-dock-sync"]).toBe(false);
     expect(hydratedController.values["game-arknights-inspector-open-on-second-click"]).toBe(false);
-    // AI-REMOVED 2026-08-03:
-    // Reason: 通用设置控制器不再 hydrate 快捷键值。
-    // Trigger: ST2-RQ-002 快捷键设置独立化。
-    // Evidence: values 中不应出现 shortcut-* 键。
-    // Replacement: 下方 shortcut-* 缺失断言。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // expect(hydratedController.values["shortcut-quick-place"]).toBe("Z");
-    // expect(hydratedController.values["shortcut-place-conveyor"]).toBe("E");
-    // expect(hydratedController.values["shortcut-place-pipe"]).toBe("Q");
-    // expect(hydratedController.values["shortcut-resources-power"]).toBe("G");
-    // expect(hydratedController.values["shortcut-warehouse"]).toBe("C");
-    // expect(hydratedController.values["shortcut-basic-production"]).toBe("V");
-    // expect(hydratedController.values["shortcut-synthesis"]).toBe("B");
-    // expect(hydratedController.values["shortcut-save-blueprint"]).toBe("Ctrl+S");
-    // expect(hydratedController.values["shortcut-return-select"]).toBe("Esc");
-    // expect(hydratedController.values["shortcut-rotate"]).toBe("R");
-    // expect(hydratedController.values["shortcut-switch-device-mode"]).toBe("Tab");
-    // expect(hydratedController.values["shortcut-rotate-viewport"]).toBe("Ctrl+R");
-    // expect(hydratedController.values["shortcut-delete-device"]).toBe("F");
     expect(Object.keys(hydratedController.values).some((key) => key.startsWith("shortcut-"))).toBe(false);
     expect(hydratedController.values["game-show-device-names"]).toBe(true);
     expect(hydratedController.values["game-show-region-annotations"]).toBe(false);
@@ -335,55 +199,7 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(hydratedController.values["debug-show-gesture-diagnostics-window"]).toBe(true);
   });
 
-  // AI-REMOVED 2026-05-26:
-  // Reason: game-arknights-operation-mode 开关已从设置面板移除，
-  //         所有快捷建设置的 editableWhen 均已解耦，此测试不再适用。
-  // Trigger: 用户需求 — 取消该设置的图像化入口，解耦关联。
-  // Evidence: settings-dialog-state.ts 中所有引用 game-arknights-operation-mode 的 editableWhen 已移除。
-  // Replacement: None（editableWhen 机制仍存在，但不再与此设置关联；其他 editableWhen 测试仍覆盖该机制）。
-  // Risk: Low
-  // Human Review: Not Required
-  //
-  // Original code:
-  // it("only updates conditional keybinding settings while their prerequisite matches", () => {
-  //   let hypergryphOperationMode = false;
-  //   const controller = new WorkbenchSettingsDialogController({
-  //     externalBindings: {
-  //       "game-arknights-operation-mode": {
-  //         readValue: () => hypergryphOperationMode,
-  //         writeValue: (value) => {
-  //           if (typeof value === "boolean") {
-  //             hypergryphOperationMode = value;
-  //           }
-  //         },
-  //       },
-  //     },
-  //   });
-  //   expect(controller.isSettingEditable("shortcut-place-conveyor")).toBe(true);
-  //   controller.updateKeybindingValue("shortcut-place-conveyor", "P");
-  //   expect(controller.values["shortcut-place-conveyor"]).toBe("P");
-  //   hypergryphOperationMode = true;
-  //   expect(controller.isSettingEditable("shortcut-place-conveyor")).toBe(false);
-  //   controller.updateKeybindingValue("shortcut-place-conveyor", "Z");
-  //   expect(controller.values["shortcut-place-conveyor"]).toBe("P");
-  // });
 
-  // AI-REMOVED 2026-05-26:
-  // Reason: game-arknights-operation-mode 设置项已从设置面板移除，此测试不再适用。
-  // Trigger: 用户需求 — 取消该设置的图像化入口。
-  // Evidence: settings-dialog-state.ts 中 game-arknights-operation-mode 项已删除。
-  // Replacement: None（disabled 设置项机制仍可通过其他测试覆盖）。
-  // Risk: Low
-  // Human Review: Not Required
-  //
-  // Original code:
-  // it("treats permanently disabled settings as read-only", () => {
-  //   const controller = new WorkbenchSettingsDialogController();
-  //   expect(controller.isSettingEditable("game-arknights-operation-mode")).toBe(false);
-  //   expect(controller.getValue("game-arknights-operation-mode")).toBe(true);
-  //   controller.updateSwitchValue("game-arknights-operation-mode", false);
-  //   expect(controller.getValue("game-arknights-operation-mode")).toBe(true);
-  // });
 
   it("disables grass and grid toggles when simplified device icons are enabled", () => {
     const controller = new WorkbenchSettingsDialogController();
@@ -521,115 +337,6 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(controller.isSettingEditable("game-play-device-animations")).toBe(true);
   });
 
-  it("resets every experimental setting to its default when the master switch is disabled", () => {
-    let gamePlayDeviceAnimations = true;
-    let regionalMultiBase = true;
-    let virtualMousePointer = true;
-    let syncProvider = "webdav";
-    localStorage.setItem(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY, JSON.stringify({
-      selectedGroupId: "experimental",
-      values: {
-        "other-experimental-features": false,
-        "other-debug-mode": true,
-        "debug-legacy-simulation-engine": true,
-      },
-    }));
-
-    const controller = new WorkbenchSettingsDialogController({
-      externalBindings: {
-        "game-play-device-animations": {
-          readValue: () => gamePlayDeviceAnimations,
-          writeValue: (value) => {
-            if (typeof value === "boolean") {
-              gamePlayDeviceAnimations = value;
-            }
-          },
-        },
-        "experimental-regional-multi-base": {
-          readValue: () => regionalMultiBase,
-          writeValue: (value) => {
-            if (typeof value === "boolean") {
-              regionalMultiBase = value;
-            }
-          },
-        },
-        "experimental-virtual-mouse-pointer": {
-          readValue: () => virtualMousePointer,
-          writeValue: (value) => {
-            if (typeof value === "boolean") {
-              virtualMousePointer = value;
-            }
-          },
-        },
-        "sync-provider": {
-          readValue: () => syncProvider,
-          writeValue: (value) => {
-            if (typeof value === "string") {
-              syncProvider = value;
-            }
-          },
-        },
-      },
-    });
-    const experimentalGroup = WORKBENCH_SETTINGS_GROUPS.find((group) => group.id === "experimental");
-
-    expect(experimentalGroup).toBeDefined();
-    for (const setting of experimentalGroup?.items ?? []) {
-      expect(controller.getValue(setting.id)).toBe(setting.defaultValue);
-      expect(controller.isSettingEditable(setting.id)).toBe(false);
-    }
-    expect(controller.getValue("debug-legacy-simulation-engine")).toBe(true);
-
-    controller.updateSelectValue("sync-provider", "cloudflare");
-    expect(syncProvider).toBe("none");
-
-    controller.updateSwitchValue("other-experimental-features", true);
-    controller.updateSwitchValue("game-play-device-animations", true);
-    controller.updateSelectValue("sync-provider", "cloudflare");
-    controller.updateSwitchValue("experimental-regional-multi-base", true);
-    controller.updateSwitchValue("experimental-virtual-mouse-pointer", true);
-
-    expect(controller.getValue("debug-legacy-simulation-engine")).toBe(true);
-    expect(gamePlayDeviceAnimations).toBe(true);
-    expect(syncProvider).toBe("cloudflare");
-    expect(regionalMultiBase).toBe(true);
-    expect(virtualMousePointer).toBe(true);
-
-    controller.updateSwitchValue("other-experimental-features", false);
-
-    for (const setting of experimentalGroup?.items ?? []) {
-      expect(controller.getValue(setting.id)).toBe(setting.defaultValue);
-      expect(controller.isSettingEditable(setting.id)).toBe(false);
-    }
-    expect(gamePlayDeviceAnimations).toBe(true);
-    expect(syncProvider).toBe("none");
-    expect(regionalMultiBase).toBe(false);
-    expect(virtualMousePointer).toBe(false);
-    expect(controller.getValue("debug-legacy-simulation-engine")).toBe(true);
-  });
-
-  it("places the legacy solver switch under debug mode, independent of experimental features", () => {
-    const controller = new WorkbenchSettingsDialogController();
-    const experimentalGroup = WORKBENCH_SETTINGS_GROUPS.find((group) => group.id === "experimental");
-    const debugGroup = WORKBENCH_SETTINGS_GROUPS.find((group) => group.id === "debug");
-
-    expect(experimentalGroup?.items.some((setting) => setting.id === "debug-legacy-simulation-engine")).toBe(false);
-    expect(debugGroup?.items.some((setting) => setting.id === "debug-legacy-simulation-engine")).toBe(true);
-    expect(controller.getValue("debug-legacy-simulation-engine")).toBe(false);
-    expect(controller.isSettingEditable("debug-legacy-simulation-engine")).toBe(false);
-
-    controller.updateSwitchValue("debug-legacy-simulation-engine", true);
-    expect(controller.getValue("debug-legacy-simulation-engine")).toBe(false);
-
-    controller.updateSwitchValue("other-debug-mode", true);
-    expect(controller.isSettingEditable("debug-legacy-simulation-engine")).toBe(true);
-    controller.updateSwitchValue("debug-legacy-simulation-engine", true);
-    expect(controller.getValue("debug-legacy-simulation-engine")).toBe(true);
-    controller.updateSwitchValue("other-debug-mode", false);
-    expect(controller.isSettingEditable("debug-legacy-simulation-engine")).toBe(false);
-    expect(controller.getValue("debug-legacy-simulation-engine")).toBe(true);
-  });
-
   it("locks device icons on when simplified device icons are enabled", () => {
     const controller = new WorkbenchSettingsDialogController();
 
@@ -727,43 +434,8 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-quick-place": true,
         "game-invert-wheel-zoom": false,
         "game-pen-precise-input": true,
-        "game-arknights-selection-right-dock-sync": true,
+        "game-arknights-selection-right-dock-sync": false,
         "game-arknights-inspector-open-on-second-click": false,
-        // AI-REMOVED 2026-08-03:
-        // Reason: 通用设置 localStorage 不再保存快捷键默认值。
-        // Trigger: ST2-RQ-002 快捷键设置独立化。
-        // Evidence: 快捷键由 v3-app-shortcuts 独立持久化。
-        // Replacement: KeyboardShortcutManager tests。
-        // Risk: Low
-        // Human Review: Required
-        //
-        // Original code:
-        // "shortcut-quick-place": "Z",
-        // "shortcut-place-conveyor": "E",
-        // "shortcut-place-pipe": "Q",
-        // "shortcut-resources-power": "G",
-        // "shortcut-warehouse": "C",
-        // "shortcut-basic-production": "V",
-        // "shortcut-synthesis": "B",
-        // "shortcut-save-blueprint": "Ctrl+S",
-        // "shortcut-return-select": "Esc",
-        // "shortcut-rotate": "R",
-        // "shortcut-switch-device-mode": "Tab",
-        // "shortcut-rotate-viewport": "Ctrl+R",
-        // "shortcut-delete-device": "F",
-        // "shortcut-move-selection": "M",
-        // "shortcut-pan-viewport-up": "W",
-        // "shortcut-pan-viewport-down": "S",
-        // "shortcut-pan-viewport-left": "A",
-        // "shortcut-pan-viewport-right": "D",
-        // "shortcut-copy-selection": "Ctrl+C",
-        // "shortcut-paste-selection": "Ctrl+V",
-        // "shortcut-toggle-base-panel": "K",
-        // "shortcut-toggle-blueprint-panel": "L",
-        // "shortcut-toggle-history-panel": "H",
-        // "shortcut-toggle-placement-panel": "P",
-        // "shortcut-undo": "Ctrl+Z",
-        // "shortcut-redo": "Ctrl+Y",
         "game-show-device-names": true,
         "game-show-region-annotations": false,
         "game-show-device-icons": false,
@@ -781,8 +453,6 @@ describe("WorkbenchSettingsDialogController", () => {
         "other-toolbox-show-all-activity-content": true,
         "other-debug-mode": true,
         "other-experimental-features": false,
-        "experimental-blueprint-production-planning": false,
-        "debug-legacy-simulation-engine": false,
         "debug-simulation-worker-detailed-report": false,
         ...(FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED
           ? { "debug-force-flatten-blueprint-version": false }
@@ -791,17 +461,6 @@ describe("WorkbenchSettingsDialogController", () => {
         "debug-disable-cargo-entry-animation": false,
         "debug-show-fps": false,
         "debug-show-gesture-diagnostics-window": false,
-        // AI-REMOVED 2026-10-14:
-        // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
-        // Trigger: 用户要求 EDA 默认可用且不再需要开启。
-        // Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
-        // Replacement: 设置快照不再包含已移除的 EDA 开关。
-        // Risk: Low；规划任务与业务可用性校验保持原行为。
-        // Human Review: Required
-        //
-        // Original code:
-        //         "experimental-blueprint-planner": false,
-        "experimental-regional-multi-base": false,
         "experimental-virtual-mouse-pointer": false,
         "sync-provider": "none",
       },

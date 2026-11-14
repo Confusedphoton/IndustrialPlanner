@@ -104,7 +104,6 @@ export class EditorHistoryRuntime {
   }
 
   /** 等待历史读取（含迁移写回）及保存完成；等待期间追加的写入也必须排空。 */
-  // AI-CORRECTION 2026-10-08: 读取不再写回 schema；统一调度器承担持久化，flush 仍等待现有读取和业务保存。
   public async flush(): Promise<void> {
     let pending: Promise<void>;
     do {
@@ -114,23 +113,6 @@ export class EditorHistoryRuntime {
     } while (pending !== this.writeQueue || this.loads.size > 0);
   }
 
-// AI-REMOVED 2026-10-09:
-// Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
-// Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
-// Evidence: REQ-041 启动、输入采纳与任务恢复调用链。
-// Replacement: 刷新页面后重新创建 Editor
-// Risk: 运行中接收旧数据将刷新页面，仿真保持停止。
-// Human Review: Required
-// Original code:
-//   public async refreshAfterMigration(): Promise<void> {
-//     await this.flush();
-//     this.documents.clear();
-//     this.loadErrors.clear();
-//     if (this.requestedDocumentKey !== null) {
-//       this.loadDocumentHistory(this.requestedDocumentKey);
-//       await this.flush();
-//     }
-//   }
   public record(options: {
     documentKey: string;
     action: EditorHistoryActionDescriptor;
@@ -290,8 +272,6 @@ export class EditorHistoryRuntime {
     }
 
     const snapshot = {
-      // AI-CORRECTION 2026-08-20: 持久化包装升级为 schema 2；record 自身仍使用领域定义的 schema 1。
-      // AI-CORRECTION 2026-09-09: 持久化包装升级为 schema 3；record schema 2 增加区域差量。
       schemaVersion: 3 as const,
       documentSchemaVersion: BLUEPRINT_SCHEMA_VERSION,
       documentKey,

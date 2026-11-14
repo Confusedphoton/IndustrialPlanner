@@ -79,22 +79,6 @@
 }
 
 .placement-panel-group-shortcut {
-  /* AI-REMOVED 2026-08-03:
-   * Reason: 分组快捷键从文字胶囊改为 SVG 键帽，外层不再重复绘制胶囊。
-   * Trigger: ST2-RQ-002 快捷键图片化展示。
-   * Evidence: 内部 KeyboardShortcutPrompt 自带可辨识背景与边框。
-   * Replacement: 下方 30px 透明承载容器。
-   * Risk: Low
-   * Human Review: Required
-   *
-   * Original code:
-   * min-width: 16px;
-   * height: 16px;
-   * padding: 0 4px;
-   * border: 1px solid var(--placement-shortcut-border);
-   * border-radius: 999px;
-   * background: var(--placement-shortcut-bg);
-   */
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -133,7 +117,7 @@
   gap: 6px;
 }
 
-/* 2026-05-09: 窄左栏下只有指定操作按钮会收缩成无文字四宫格，并在面板收起后以悬浮工具条继续存在。 */
+/* 窄左栏下只有指定操作按钮会收缩成无文字四宫格，并在面板收起后以悬浮工具条继续存在。 */
 .placement-operation-button-list.is-mobile-icon-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -196,34 +180,6 @@
   transform: translateY(1px);
 }
 
-/* AI-REMOVED 2026-07-21:
- * Reason: 放置面板变体区分不再使用端帽 mask，而是使用 mode 图标下拉按钮。
- * Trigger: 新设计要求尾部显示普通图标和下拉按钮。
- * Evidence: placement-panel.tsx 不再渲染 placement-entity-variant-cap。
- * Replacement: .placement-entity-variant-trigger 和 .placement-entity-variant-mode-icon。
- * Risk: Low。
- * Human Review: Required
- *
- * Original code:
- * .placement-entity-variant-cap {
- *   position: absolute;
- *   z-index: 0;
- *   inset-block: 0;
- *   inset-inline-end: 0;
- *   width: auto;
- *   height: 100%;
- *   aspect-ratio: 65 / 60;
- *   border-start-end-radius: 7px;
- *   border-end-end-radius: 7px;
- *   -webkit-mask-repeat: no-repeat;
- *   mask-repeat: no-repeat;
- *   -webkit-mask-position: 42% 50%;
- *   mask-position: 42% 50%;
- *   -webkit-mask-size: auto 140%;
- *   mask-size: auto 140%;
- *   pointer-events: none;
- * }
- */
 
 .placement-entity-variant-trigger {
   --placement-entity-variant-mode-color: var(--placement-variant-cap-solid);
@@ -295,20 +251,6 @@
   pointer-events: none;
 }
 
-/* AI-REMOVED 2026-07-21:
- * Reason: 主按钮内部不再渲染端帽元素。
- * Trigger: 端帽被独立下拉按钮替代。
- * Evidence: placement-device-button 内没有 placement-entity-variant-cap 子元素。
- * Replacement: .placement-entity-variant-trigger。
- * Risk: Low。
- * Human Review: Required
- *
- * Original code:
- * .placement-device-button > .placement-entity-variant-cap {
- *   inset-block: -1px;
- *   height: calc(100% + 2px);
- * }
- */
 
 .placement-entity-variant-mode-icon {
   display: block;
@@ -345,20 +287,6 @@
   pointer-events: none;
 }
 
-/* AI-REMOVED 2026-07-19:
- * Reason: backdrop 已由 document pointerdown 外部关闭逻辑替代，继续保留只会形成不可达样式。
- * Trigger: PC 端 hover 菜单需要从主按钮无阻挡地移入浮层。
- * Evidence: placement-panel.tsx 不再渲染 placement-variant-menu-backdrop。
- * Replacement: .placement-variant-menu-layer 的 pointer-events 隔离和菜单自身的 pointer-events: auto。
- * Risk: Low。
- * Human Review: Required
- *
- * Original code:
- * .placement-variant-menu-backdrop {
- *   position: absolute;
- *   inset: 0;
- * }
- */
 
 .placement-variant-menu {
   position: fixed;
@@ -427,20 +355,6 @@
   overflow-wrap: anywhere;
 }
 
-/* AI-REMOVED 2026-07-21:
- * Reason: 变体菜单项不再显示尾部端帽。
- * Trigger: 菜单头部图标改为 mode 图标。
- * Evidence: placement-panel.tsx 不再渲染 placement-variant-menu-cap。
- * Replacement: .placement-variant-menu-icon img。
- * Risk: Low。
- * Human Review: Required
- *
- * Original code:
- * .placement-variant-menu-cap {
- *   border-start-end-radius: 6px;
- *   border-end-end-radius: 6px;
- * }
- */
 
 .placement-operation-button-list.is-mobile-icon-grid .placement-action-button {
   grid-template-columns: minmax(0, 1fr);
@@ -484,7 +398,6 @@
   align-items: center;
   min-width: 0;
   min-height: 24px;
-  /* AI-CORRECTION 2026-11-13：标签统一为 0.92rem，长名称不再换行或缩小字号造成错落；原值 1.125rem。 */
   font-size: 0.92rem;
   line-height: 1.2;
   white-space: normal;
@@ -492,7 +405,6 @@
 }
 
 .placement-button-label.is-compact {
-  /* AI-CORRECTION 2026-11-13：与常规标签保持一致；原值 1rem。 */
   font-size: 0.92rem;
 }
 
@@ -507,22 +419,6 @@
 }
 
 .placement-button-hotkey {
-  /* AI-REMOVED 2026-08-03:
-   * Reason: 按钮快捷键从文字胶囊改为 SVG 键帽，外层不再重复绘制胶囊。
-   * Trigger: ST2-RQ-002 快捷键图片化展示。
-   * Evidence: 内部 KeyboardShortcutPrompt 自带可辨识背景与边框。
-   * Replacement: 下方 30px 透明承载容器。
-   * Risk: Low
-   * Human Review: Required
-   *
-   * Original code:
-   * min-width: 16px;
-   * height: 16px;
-   * padding: 0 4px;
-   * border: 1px solid var(--line-strong);
-   * border-radius: 999px;
-   * background: var(--surface-4);
-   */
   position: absolute;
   top: 3px;
   inset-inline-end: 6px;
@@ -2428,7 +2324,7 @@
   opacity: 0.5;
 }
 
-/* 2026-11-13：放置面板设备搜索框。 */
+/* 放置面板设备搜索框。 */
 .placement-search-input {
   width: 100%;
   min-height: 34px;
@@ -2443,4 +2339,240 @@
 .placement-search-input:focus {
   outline: none;
   border-color: var(--accent);
+}
+
+/* 放置面板重做——吸顶搜索/分类跳转、图标磁贴网格。磁贴最小 64px 宽、84px 高，满足笔与触控命中区域。 */
+.placement-panel-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: grid;
+  gap: 6px;
+  margin: -10px -10px 8px;
+  padding: 10px 10px 8px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-1);
+}
+
+.placement-panel-sticky-header.is-static {
+  position: static;
+}
+
+.placement-panel-sticky-header .placement-search-input {
+  margin-bottom: 0;
+}
+
+.placement-category-chips {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+
+.placement-category-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.placement-category-chip {
+  min-height: 26px;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-1);
+  font-size: 0.72rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  flex: none;
+}
+
+.placement-category-chip:hover {
+  border-color: var(--accent);
+  color: var(--text-0);
+}
+
+.placement-panel-group {
+  scroll-margin-top: 112px;
+}
+
+.placement-button-list.is-tile-grid {
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  align-items: stretch;
+  gap: 6px;
+}
+
+.placement-button-list.is-tile-grid .placement-device-button-shell {
+  height: 100%;
+}
+
+.placement-button-list.is-tile-grid .placement-device-button {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 40px auto;
+  justify-items: center;
+  align-content: start;
+  row-gap: 4px;
+  height: 100%;
+  min-height: 84px;
+  padding: 8px 4px 6px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  text-align: center;
+  touch-action: manipulation;
+}
+
+.placement-button-list.is-tile-grid .placement-device-button:hover {
+  border-color: var(--line-strong);
+  background: var(--surface-3);
+}
+
+.placement-button-list.is-tile-grid .placement-device-button.is-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.placement-button-list.is-tile-grid .placement-device-button.has-entity-variant {
+  padding-inline-end: 4px;
+}
+
+.placement-button-list.is-tile-grid .placement-device-button .button-icon,
+.placement-button-list.is-tile-grid .placement-device-button .button-icon-image {
+  width: 40px;
+  height: 40px;
+}
+
+.placement-button-list.is-tile-grid .placement-button-label,
+.placement-button-list.is-tile-grid .placement-button-label.is-compact {
+  display: -webkit-box;
+  min-height: 2.4em;
+  overflow: hidden;
+  font-size: 0.74rem;
+  line-height: 1.2;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.placement-button-list.is-tile-grid .placement-entity-variant-trigger {
+  inset-block: auto;
+  top: 3px;
+  inset-inline-end: 3px;
+  grid-template-columns: 16px 10px;
+  width: 34px;
+  height: 24px;
+  padding: 0 3px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-1);
+}
+
+.placement-button-list.is-tile-grid .placement-entity-variant-indicator {
+  inset-block: auto;
+  top: 3px;
+  inset-inline-end: 3px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+}
+
+.placement-button-list.is-tile-grid .placement-button-hotkey {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+}
+
+/* 操作按钮（选择/框选/传送带/管道）在桌面改为一行四个紧凑磁贴。 */
+.placement-button-list.placement-operation-button-list {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.placement-button-list.placement-operation-button-list .placement-action-button {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  row-gap: 3px;
+  min-height: 56px;
+  padding: 6px 2px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  text-align: center;
+}
+
+.placement-button-list.placement-operation-button-list .placement-action-button .placement-button-label {
+  justify-content: center;
+  min-height: 0;
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+/* 基地内联选择器（按地区分组，单击切换）。 */
+.base-inline-picker {
+  display: grid;
+  gap: 8px;
+}
+
+.base-inline-group {
+  display: grid;
+  gap: 4px;
+}
+
+.base-inline-group h4 {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.base-inline-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 4px;
+}
+
+.base-inline-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+  min-height: 36px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-0);
+  text-align: left;
+}
+
+.base-inline-option:not(:disabled):hover {
+  border-color: var(--line-strong);
+  background: var(--surface-3);
+}
+
+.base-inline-option.is-current {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.base-inline-option-name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.base-inline-option-size {
+  flex: none;
+  color: var(--text-2);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.base-inline-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.75rem;
 }

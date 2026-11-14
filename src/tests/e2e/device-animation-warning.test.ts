@@ -1,66 +1,13 @@
 import { SCREEN_PROFILES } from "./harness/profiles";
 import { expect, test, type Page } from "./harness/fixture";
 
-// AI-REMOVED 2026-10-05:
-// Reason: 三屏配置集中维护。Trigger: 基座迁移。Evidence: 与公共 profiles 重复。
-// Replacement: harness/profiles.ts。Risk: Low。Human Review: Required
-// Original code:
-// const SCREEN_PROFILES = [
-//   {
-//     name: "mobile-landscape",
-//     viewport: { width: 764, height: 345 },
-//     deviceScaleFactor: 3.125,
-//     hasTouch: true,
-//     isMobile: true,
-//     expectedDeviceClass: "mobile",
-//     expectedScreenShape: "landscape",
-//   },
-//   {
-//     name: "tablet-square",
-//     viewport: { width: 711, height: 665 },
-//     deviceScaleFactor: 3.125,
-//     hasTouch: true,
-//     isMobile: true,
-//     expectedDeviceClass: "tablet",
-//     expectedScreenShape: "square",
-//   },
-//   {
-//     name: "desktop-landscape",
-//     viewport: { width: 2552, height: 1315 },
-//     deviceScaleFactor: 1,
-//     hasTouch: true,
-//     isMobile: false,
-//     expectedDeviceClass: "desktop",
-//     expectedScreenShape: "landscape",
-//   },
-// ] as const;
 
 const WARNING_MESSAGE = "启用动画需要额外下载约 200 MB 的动画资源，并且运行时会消耗约 2 GB 到 4 GB 显存。不推荐电脑性能不够的管理员或者使用手机的管理员开启。关闭该选项不会清除已下载的动画资源，后续再打开时可以继续下载。";
 
-// 开发期 playwright-cli 三档验证完成后独立编写；由单 worker 的正式 E2E 入口串行执行。
-// AI-REMOVED 2026-10-05:
-// Reason: 独立屏幕或主题用例不应因前项失败而跳过。
-// Trigger: 用户授权统一 E2E 基座。
-// Evidence: 当前用例重复管理相同运行资源。
-// Replacement: playwright.config.ts 的 workers: 1
-// Risk: Low。Human Review: Required
-// Original code:
-// test.describe.configure({ mode: "serial" });
 
 for (const profile of SCREEN_PROFILES) {
   test(`设备动画只在确认后开启 [${profile.name}]`, async ({ browserSession: browser }, testInfo) => {
     test.setTimeout(90_000);
-// AI-REMOVED 2026-10-05:
-// Reason: 三屏配置集中维护。Trigger: 基座迁移。Evidence: 与公共 profiles 重复。
-// Replacement: harness/profiles.ts。Risk: Low。Human Review: Required
-// Original code:
-//     const context = await browser.newContext({
-//       viewport: profile.viewport,
-//       deviceScaleFactor: profile.deviceScaleFactor,
-//       hasTouch: profile.hasTouch,
-//       isMobile: profile.isMobile,
-//       locale: "zh-CN",
-//     });
     const context = await browser.profile(profile);
 
     try {
@@ -148,36 +95,6 @@ async function installSettingsEnvironment(page: Page, isMobile: boolean): Promis
       },
     }));
 
-// AI-REMOVED 2026-10-05:
-// Reason: 三屏配置集中维护。Trigger: 基座迁移。Evidence: 与公共 profiles 重复。
-// Replacement: harness/profiles.ts。Risk: Low。Human Review: Required
-// Original code:
-//     if (mobile) {
-//       return;
-//     }
-//
-//     Object.defineProperty(navigator, "maxTouchPoints", {
-//       configurable: true,
-//       get: () => 1,
-//     });
-//     const nativeMatchMedia = window.matchMedia.bind(window);
-//     window.matchMedia = (query) => {
-//       const result = nativeMatchMedia(query);
-//       if (query !== "(pointer: coarse)" && query !== "(hover: none)") {
-//         return result;
-//       }
-//
-//       return new Proxy(result, {
-//         get(target, property) {
-//           if (property === "matches") {
-//             return false;
-//           }
-//
-//           const value = Reflect.get(target, property, target) as unknown;
-//           return typeof value === "function" ? value.bind(target) : value;
-//         },
-//       });
-//     };
   }, isMobile);
 }
 

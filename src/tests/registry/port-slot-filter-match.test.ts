@@ -50,7 +50,6 @@ const ITEM_DOMAIN_BY_ID = new Map<string, ItemDomain>(
  * 将 acceptRule base 展开为它能接受的 ItemDomain 集合。
  * "none" 返回空集。
  */
-// AI-CORRECTION 2026-07-28: acceptRule 已迁移为位标志，返回值改为域位集合。
 function acceptDomains(
   base: EntityAcceptRuleDefinition["base"],
 ): ItemDomain {

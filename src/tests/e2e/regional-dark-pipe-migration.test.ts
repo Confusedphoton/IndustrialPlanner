@@ -4,91 +4,6 @@ import fixtureJson from "../fixtures/blueprints/editor-regional-dark-pipe/scene.
 
 import { WORLD_DOCUMENT_SCHEMA_VERSION, type WorldDocument } from "@/domain/document/world-document";
 
-// AI-REMOVED 2026-10-09:
-// Reason: 旧用例依赖已停用的运行期暗管迁移钩子，并断言过期的 Schema 6。
-// Trigger: 用户授权修复 E2E 测试偏移，竞态另行处理。
-// Evidence: Editor.data-migration 在 Host 装配前执行；RegionalSettingsController.writeLocal 只保存资产。
-// Replacement: 下方三屏启动迁移、故障回滚和刷新重试用例。
-// Risk: Low；保留真实 IndexedDB 故障注入及出口归属断言。
-// Human Review: Required
-//
-// Original code:
-// test("晚到旧资产只迁入出口文档；失败原子回滚，重复同步不复制链接", async ({ page }, testInfo) => {
-//   test.setTimeout(90_000);
-//   await page.goto("/");
-//   await page.waitForFunction(() => window.__industrialPlannerAppHost?.workspace.simulation != null);
-//   const result = await page.evaluate(async blueprint => {
-//     const app = window.__industrialPlannerAppHost!;
-//     const editor = app.workspace.editor!;
-//     const source = app.regionalSettings.createSyncSource();
-//     const storageUrl = "/src/shared/storage/browser-storage.ts";
-//     const worldUrl = "/src/shared/storage/world-document-storage.ts";
-//     const linkUrl = "/src/shared/dark-pipe-link.ts";
-//     const storage = await import(/* @vite-ignore */ storageUrl);
-//     const world = await import(/* @vite-ignore */ worldUrl);
-//     const links = await import(/* @vite-ignore */ linkUrl);
-//     await editor.queries.listBaseDocumentSummaries();
-//     const inlet = editor.document.getSnapshot().baseId;
-//     const region = app.workspace.registry.baseDefinitions.find(base => base.id === inlet)!.tag;
-//     const outlet = app.workspace.registry.baseDefinitions.find(base => base.tag === region && base.id !== inlet)!.id;
-//     const baseIds = [inlet, outlet];
-//     for (const before of await editor.queries.readLatestBaseDocuments(baseIds)) {
-//       await editor.actions.applySynchronizedDocument({
-//         ...before, entities: { ...before.entities, ...blueprint.entities },
-//         entityOrder: [...before.entityOrder, ...blueprint.entityOrder], slotLinks: [],
-//       });
-//     }
-//     const valid = links.createRegionalDarkPipeLink({ inlet: { baseId: inlet, entityId: "inlet" }, outlet: { baseId: outlet, entityId: "outlet" } });
-//     const missing = links.createRegionalDarkPipeLink({ inlet: { baseId: inlet, entityId: "missing-inlet" }, outlet: { baseId: outlet, entityId: "missing-outlet" } });
-//     const entry = { id: "default", value: { ...app.regionalSettings.asset, darkPipeLinks: [valid, missing] }, deletedAt: null };
-//     const location = { databaseName: "v3-industrial-planner", storeName: "regional-settings", key: "default" };
-//     const beforeFailure = await editor.queries.readLatestBaseDocuments(baseIds);
-//     const originalPut = IDBObjectStore.prototype.put;
-//     let failures = 0;
-//     let failedDocuments;
-//     let failedStoredDocuments;
-//     let failedAsset;
-//     try {
-//       // 文档 put 之后、旧资产清理之前失败，必须撤销整笔真实 IndexedDB 事务。
-//       IDBObjectStore.prototype.put = function (value, key) {
-//         if (this.name === location.storeName && typeof value === "string"
-//           && JSON.parse(value).data?.darkPipeLinks?.length === 1) {
-//           failures += 1;
-//           throw new DOMException("Injected legacy cleanup failure", "QuotaExceededError");
-//         }
-//         return originalPut.call(this, value, key);
-//       };
-//       await source.writeLocal(entry);
-//       failedDocuments = await editor.queries.readLatestBaseDocuments(baseIds);
-//       failedStoredDocuments = await Promise.all(failedDocuments.map(document => world.readWorldDocument(document.documentKey)));
-//       failedAsset = await storage.readFromIndexedDb(location);
-//     } finally {
-//       IDBObjectStore.prototype.put = originalPut;
-//     }
-//     await source.writeLocal(entry);
-//     const migrated = await editor.queries.readLatestBaseDocuments(baseIds);
-//     const stored = await Promise.all(migrated.map(document => world.readWorldDocument(document.documentKey)));
-//     await source.writeLocal(entry);
-//     const repeated = await editor.queries.readLatestBaseDocuments(baseIds);
-//     const remaining = await storage.readFromIndexedDb(location);
-//     return {
-//       failures, beforeFailure, failedDocuments, failedStoredDocuments,
-//       failedAssetLinks: failedAsset.data.darkPipeLinks,
-//       migrated, stored, repeated, remainingLinks: remaining.data.darkPipeLinks, missing,
-//     };
-//   }, normalizeBlueprintDocument(fixtureJson)!);
-//
-//   expect(result.failures).toBeGreaterThan(0);
-//   expect(result.failedDocuments).toEqual(result.beforeFailure);
-//   expect(result.failedStoredDocuments).toEqual(result.beforeFailure);
-//   expect(result.failedAssetLinks).toHaveLength(2);
-//   expect(result.migrated.map(document => document.slotLinks.length)).toEqual([0, 1]);
-//   expect(result.migrated.map(document => document.schemaVersion)).toEqual([6, 6]);
-//   expect(result.stored).toEqual(result.migrated);
-//   expect(result.repeated).toEqual(result.migrated);
-//   expect(result.remainingLinks).toEqual([result.missing]);
-//   await testInfo.attach("migration-state.json", { body: JSON.stringify(result, null, 2), contentType: "application/json" });
-// });
 
 interface MigrationSnapshot {
   documents: WorldDocument[];
@@ -99,15 +14,6 @@ interface MigrationSnapshot {
   hostCreated: boolean;
 }
 
-// AI-REMOVED 2026-10-15:
-// Reason: 原生 IndexedDB 跨仓库事务与启动迁移与视口尺寸无关，三屏重复运行没有新增边界覆盖。
-// Trigger: 用户要求移除与屏幕无关的重复 E2E。
-// Evidence: 本文件断言不依赖排版、Canvas 命中或触控差异。
-// Replacement: 下方保留 desktop 原生浏览器用例及其完整断言。
-// Risk: 不再重复模拟手机和平板尺寸；实际布局由专属三屏用例验证。
-// Human Review: Required
-// Original code:
-// for (const profile of SCREEN_PROFILES) {
 for (const profile of SCREEN_PROFILES.filter(profile => profile.name === "desktop")) {
   test(`启动时旧资产只迁入出口文档；失败原子回滚，刷新重试不复制链接 [${profile.name}]`, async ({ browserSession, baseURL }, testInfo) => {
     test.setTimeout(150_000);

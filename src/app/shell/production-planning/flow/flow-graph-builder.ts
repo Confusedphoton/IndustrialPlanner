@@ -35,16 +35,6 @@ export interface ProductionFlowNode extends SankeyInputNode {
   readonly tone: ProductionFlowNodeTone;
   readonly title: string;
   readonly subtitle: string;
-  // AI-REMOVED 2026-09-01:
-  // Reason: 模块节点需要承载 1～4 个物品图标，单一字符串无法表达组合布局。
-  // Trigger: 模块图标机制升级并要求流向图沿用同一图标。
-  // Evidence: ProductionPlanningModuleSnapshot.iconItemIds 是模块图标的唯一数据源。
-  // Replacement: ProductionFlowNode.iconSrcs
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // readonly iconSrc: string;
   readonly iconSrcs: readonly string[];
   readonly itemId?: string;
   readonly recipeId?: string;
@@ -115,7 +105,7 @@ export function buildProductionFlowGraph(
   const producersByItemId = new Map<string, ItemFlowEndpoint[]>();
   const consumersByItemId = new Map<string, ItemFlowEndpoint[]>();
 
-  // 2026-07-23：设备最低消耗不再自建节点，而是作为宿主配方节点的入线标注。
+  // 设备最低消耗不再自建节点，而是作为宿主配方节点的入线标注。
   // 预收集设备最低消耗，按宿主 recipeId 分组。
   const deviceMinByHost = new Map<string, { itemId: string; perMinute: number }[]>();
   for (const row of rows) {
@@ -204,7 +194,6 @@ function addLedgerRowNode(row: ProductionPlanningLedgerRow, context: LedgerBuild
   }
 
   const isExternal = isProductionPlanningExternalSupplyRecipeId(row.recipeId);
-  // AI-CORRECTION 2026-07-23:
   // 设备最低消耗行已由 buildProductionFlowGraph 主循环跳过（continue），不再创建独立节点。
   // 此处 isDeviceMinimumConsumption 相关分支变为死代码，保留以备将来恢复独立节点形态。
   const isDeviceMinimumConsumption = isProductionPlanningDeviceMinimumConsumptionRecipeId(row.recipeId);
@@ -544,7 +533,6 @@ function transientItemFlowNodeId(itemId: string): string {
   return `item:${itemId}`;
 }
 
-// AI-CORRECTION 2026-05-24: 流程图有效入口已改为 ledger 行驱动；旧递归实例遍历仅作为历史实现保留，避免再被新逻辑调用。
 function _archivedVisitItemNode(
   node: ProductionPlanningItemNode,
   context: BuildContext,
@@ -695,21 +683,6 @@ function addRecipeNode(node: ProductionPlanningRecipeNode, context: BuildContext
   });
 }
 
-// AI-REMOVED 2026-09-01:
-// Reason: 旧函数只能返回单个资源地址，且重复了产线规划模型的解析规则。
-// Trigger: 流向图需要统一渲染模块的 1～4 个物品组合图标。
-// Evidence: resolveProductionPlanningModuleIconSrcs 已集中处理选择值和端口回退。
-// Replacement: src/app/shell/production-planning/production-planning-model.ts::resolveProductionPlanningModuleIconSrcs
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// function resolveProductionPlanningModuleIconSrc(iconId: string, index: ProductionPlanningIndex): string {
-//   if (index.entityById.has(iconId)) {
-//     return resolveProductionPlanningEntityIconSrc(iconId, index);
-//   }
-//   return resolveProductionPlanningItemIconSrc(iconId, index);
-// }
 
 function addLink(
   link: Pick<ProductionFlowLink, "id" | "source" | "target" | "itemId" | "value">,

@@ -40,18 +40,6 @@ const DISTANCE_EPSILON = 0.000001
 
 const EDGE_ORDER: readonly GridEdge[] = ["NORTH", "EAST", "SOUTH", "WEST"]
 
-// AI-REMOVED 2026-07-27:
-// Reason: renderer 不应维护 3 个管道节 definition ID。
-// Trigger: 用户要求 registry 外只使用 RegistryQuery。
-// Evidence: RegistryQuery.isPipe 的定义正是 3 个管道节。
-// Replacement: isStrictPipeDefinitionId 的 queries 参数。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// const STRICT_PIPE_DEFINITION_IDS = new Set([
-//   "pipe_straight_1x1", "pipe_turn_cw_1x1", "pipe_turn_ccw_1x1",
-// ])
 
 interface VisibleWorldRect {
   readonly left: number;

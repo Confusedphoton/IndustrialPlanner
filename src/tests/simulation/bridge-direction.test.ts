@@ -4,32 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "./blueprint-runner";
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/bridge-direction/index.json
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// import {
-//   createBlueprint,
-//   createEntity,
-//   findSlot,
-//   getFirstTickAtSimulationMilliseconds,
-//   getDevice,
-// } from "./blueprint-test-helpers";
 import { findSlot, getFirstTickAtSimulationMilliseconds, getDevice } from "./blueprint-test-helpers";
-// AI-REMOVED 2026-09-08:
-// Reason: 桥接运输事件改由整数毫秒定位，不再直接按引擎 tick 编号读取。
-// Trigger: bridge-direction 接入 Host 行为矩阵。
-// Evidence: getFirstTickAtSimulationMilliseconds 可按 standardTickRate 定位相同业务相位。
-// Replacement: getFirstTickAtSimulationMilliseconds。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import { getTick } from "./blueprint-test-helpers";
 import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 
 // =============================================================================
@@ -55,58 +30,12 @@ import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 //   Tick 41: 物品入桥（belt Stage1 完成 → Stage3 传输）
 //   Tick 81: 物品入末段传送带（bridge Stage1 完成 → Stage3 传输）
 //   Tick 121: 物品达终点储存箱
-// AI-CORRECTION 2026-05-18: dedicated belt 以 20 标准 tick 相位接收/输出：
-//   Tick 20 入首段传送带 → Tick 60 入桥 → Tick 100 入末段传送带 → Tick 140 达终点。
 // =============================================================================
 
 function createBridgeDirectionBlueprint(): BlueprintDocument {
-  // AI-REMOVED 2026-09-14:
-  // Reason: 场景构造已批量固化为带版本的蓝图文件。
-  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-  // Replacement: src/tests/fixtures/blueprints/simulation/bridge-direction/index.json
-  // Risk: Low；断言与被测动作不变。
-  // Human Review: Required
-  // Original code:
-  // createBlueprint("bridge-direction-verify", [
-  //     // === NS 通道：铁矿石 S→N ===
-  //     createEntity("source-ns", "storager_1", 0, 3, 0, {
-  //       "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
-  //       "storageSlotGroups[0].slots[0].initialCount": 20,
-  //     }),
-  //     // belt rot 270: W→E 旋转为 S→N，源在上 belt 在下
-  //     createEntity("belt_ns_in", "belt_straight_1x1", 0, 2, 270),
-  //     createEntity("bridge", "log_connector", 0, 1, 0),
-  //     createEntity("belt_ns_out", "belt_straight_1x1", 0, 0, 270),
-  //     // sink 在 belt 下方：belt 输出 N 在 (0,-1)，sink 输入 S 在 (0,-1+2)=(0,1)
-  //     // 修正：sink 需在 (0,-3) 使 in_s 的 inside=(0,-1)
-  //     createEntity("sink-ns", "storager_1", 0, -3, 0),
-  //
-  //     // === EW 通道：铜矿石 W→E ===
-  //     // source rot 90: out_n→E, 输出在 outside(-1,1)
-  //     createEntity("source-ew", "storager_1", -4, 1, 90, {
-  //       "storageSlotGroups[0].slots[0].initialItemType": "item_copper_ore",
-  //       "storageSlotGroups[0].slots[0].initialCount": 20,
-  //     }),
-  //     createEntity("belt_ew_in", "belt_straight_1x1", -1, 1, 0),
-  //     // bridge 同上 (0,1)
-  //     createEntity("belt_ew_out", "belt_straight_1x1", 1, 1, 0),
-  //     // sink rot 90: in_s→W, 接收 belt 的 E 输出
-  //     createEntity("sink-ew", "storager_1", 2, 1, 90),
-  //   ])
   return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/bridge-direction/scene-01-bridge-direction-verify-a1e0eae4.schema7.json");
 }
 
-// AI-REMOVED 2026-09-08:
-// Reason: 桥接器方向隔离与槽位投影是所有生产求解器共同的 Host 行为。
-// Trigger: 用户确认下一类测试接入 Host 行为矩阵。
-// Evidence: 用例只通过 runBlueprintSimulation 公共入口观察拓扑、传输和设备状态。
-// Replacement: 下方 SIMULATION_ENGINE_MATRIX 参数化 describe。
-// Risk: Dense 可能暴露桥接运输或状态投影差异。
-// Human Review: Required
-//
-// Original code:
-// describe("bridge-direction", () => {
 describe.each(SIMULATION_ENGINE_MATRIX)("bridge-direction [%s]", (engineKind) => {
   it("NS 和 EW 通道独立运输，互不干扰", async () => {
     const report = await runBlueprintSimulation({
@@ -114,16 +43,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)("bridge-direction [%s]", (engineKind) =>
       registry: createRegistryContract(),
       engineKind,
       maxDurationSeconds: 7.5,
-      // AI-REMOVED 2026-09-08:
-      // Reason: 观察窗口按业务时间表达，不绑定 Legacy tick 150。
-      // Trigger: bridge-direction 接入求解器矩阵。
-      // Evidence: Legacy 的 150 tick 运行窗口等价于 7.5 秒标准时间。
-      // Replacement: maxDurationSeconds: 7.5。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // maxTickNumber: 150,
     });
     const zeroMillisecondTick = getFirstTickAtSimulationMilliseconds(report, 0);
     const twoSecondTick = getFirstTickAtSimulationMilliseconds(report, 2_000);
@@ -133,8 +52,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)("bridge-direction [%s]", (engineKind) =>
     const sevenSecondTick = getFirstTickAtSimulationMilliseconds(report, 7_000);
 
     // === Tick 1: 两路物品同时进入首段传送带 ===
-    // AI-CORRECTION 2026-07-17: dedicated belt 的首个交付相位前移到 tick 1。
-    // AI-CORRECTION 2026-09-08: tick 1/41/81/121 分别按 0/2000/4000/6000ms 第一 tick 定位。
     expect(zeroMillisecondTick.transfers.some((t) =>
       t.sourceSlotId.includes("device:source-ns")
       && t.targetSlotId.includes("device:belt_ns_in"),
@@ -157,7 +74,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)("bridge-direction [%s]", (engineKind) =>
     )).toBe(true);
 
     // Tick 42: 桥接器槽位状态应体现方向隔离
-    // AI-CORRECTION 2026-09-08: Dense 不暴露事件后 50ms 帧，改在下一公共可观测相位 2500ms 检查。
     const nsInSlot = findSlot(
       report,
       twoAndHalfSecondTick.tickNumber,
@@ -207,8 +123,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)("bridge-direction [%s]", (engineKind) =>
     )).toBe(true);
 
     // === Tick 130: 最终验证 sink 内容纯净 ===
-    // AI-CORRECTION 2026-05-18: 最终状态延后到 tick 150。
-    // AI-CORRECTION 2026-09-08: 最终纯净性改在两引擎共同可观测、且晚于 6000ms 到货的 7000ms 检查。
     const sinkNs = getDevice(report, sevenSecondTick.tickNumber, "sink-ns");
     const sinkEw = getDevice(report, sevenSecondTick.tickNumber, "sink-ew");
 
@@ -230,21 +144,9 @@ describe.each(SIMULATION_ENGINE_MATRIX)("bridge-direction [%s]", (engineKind) =>
       registry: createRegistryContract(),
       engineKind,
       maxDurationSeconds: 3.5,
-      // AI-REMOVED 2026-09-08:
-      // Reason: 观察窗口按业务时间表达，不绑定 Legacy tick 61。
-      // Trigger: bridge-direction 接入求解器矩阵。
-      // Evidence: 3500ms 足以覆盖 3000ms 相位下的第一 tick。
-      // Replacement: maxDurationSeconds: 3.5。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // maxTickNumber: 61,
     });
 
     // Tick 43: bridge 的 slotItems 应包含 4 个条目：ns_buffer(input+output) + ew_buffer(input+output)
-    // AI-CORRECTION 2026-05-18: dedicated belt 首次向 bridge 输出在 tick 60，tick 61 检查结构。
-    // AI-CORRECTION 2026-09-08: tick 61 按等价的 3000ms 第一 tick 定位。
     const threeSecondTick = getFirstTickAtSimulationMilliseconds(report, 3_000);
     const bridge = getDevice(report, threeSecondTick.tickNumber, "bridge");
     const slotKeys = bridge.slotItems.map((s) => `${s.storageGroupId}:${s.slotId}:${s.viewRole}`).sort();
@@ -270,43 +172,12 @@ describe.each(SIMULATION_ENGINE_MATRIX)("bridge-direction [%s]", (engineKind) =>
 //
 // 时序（pipe 0.5s=10tick，bridge anchor 0.5s=10tick）：
 //   Tick 1: 入管 → Tick 11: 入桥 → Tick 21: 出桥入末段管 → Tick 31: 达宿第1件 → Tick 41: 达宿第2件
-// AI-CORRECTION 2026-05-18: dedicated pipe 以 10 标准 tick 相位接收/输出。
-// AI-CORRECTION 2026-07-23: 所有 PipeFamily 改为 20 tick 整秒周期。
-// AI-CORRECTION 2026-07-30: 回滚 — 恢复 0.5s(10tick) + 单件配方时序。
 // =============================================================================
 
 function createPipeBridgeDirectionBlueprint(): BlueprintDocument {
-  // AI-REMOVED 2026-09-14:
-  // Reason: 场景构造已批量固化为带版本的蓝图文件。
-  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-  // Replacement: src/tests/fixtures/blueprints/simulation/bridge-direction/index.json
-  // Risk: Low；断言与被测动作不变。
-  // Human Review: Required
-  // Original code:
-  // createBlueprint("pipe-bridge-direction-verify", [
-  //     createEntity("liquid-source-ew", "liquid_storager_1", -4, 0, 180, {
-  //       "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
-  //       "storageSlotGroups[0].slots[0].initialCount": 2,
-  //     }),
-  //     createEntity("pipe_ew_in", "pipe_straight_1x1", -1, 1, 0),
-  //     createEntity("pipe-bridge", "pipe_connector", 0, 1, 0),
-  //     createEntity("pipe_ew_out", "pipe_straight_1x1", 1, 1, 0),
-  //     createEntity("liquid-sink-ew", "liquid_storager_1", 2, 0, 180),
-  //   ])
   return loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/bridge-direction/scene-02-pipe-bridge-direction-verify-72c18fbb.schema7.json");
 }
 
-// AI-REMOVED 2026-09-08:
-// Reason: 管道桥方向隔离是所有生产求解器共同的 Host 行为。
-// Trigger: 用户确认下一类测试接入 Host 行为矩阵。
-// Evidence: 用例只通过 runBlueprintSimulation 公共入口观察传输与槽位状态。
-// Replacement: 下方 SIMULATION_ENGINE_MATRIX 参数化 describe。
-// Risk: Dense 可能暴露桥接运输或状态投影差异。
-// Human Review: Required
-//
-// Original code:
-// describe("pipe-bridge-direction", () => {
 describe.each(SIMULATION_ENGINE_MATRIX)("pipe-bridge-direction [%s]", (engineKind) => {
   it("管道桥接器 EW 通道运输且不泄漏到 NS 通道", async () => {
     const report = await runBlueprintSimulation({
@@ -314,16 +185,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)("pipe-bridge-direction [%s]", (engineKin
       registry: createRegistryContract(),
       engineKind,
       maxDurationSeconds: 2.5,
-      // AI-REMOVED 2026-09-08:
-      // Reason: 观察窗口按业务时间表达，不绑定 Legacy tick 45。
-      // Trigger: pipe-bridge-direction 接入求解器矩阵。
-      // Evidence: 2500ms 足以覆盖 2000ms 相位下的第一 tick。
-      // Replacement: maxDurationSeconds: 2.5。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // maxTickNumber: 45,
     });
     const zeroMillisecondTick = getFirstTickAtSimulationMilliseconds(report, 0);
     const halfSecondTick = getFirstTickAtSimulationMilliseconds(report, 500);
@@ -332,14 +193,12 @@ describe.each(SIMULATION_ENGINE_MATRIX)("pipe-bridge-direction [%s]", (engineKin
     const twoSecondTick = getFirstTickAtSimulationMilliseconds(report, 2_000);
 
     // === Tick 1: 第 1 件水进入首段管道 ===
-    // AI-CORRECTION 2026-09-08: tick 1/11/21/31/41 分别按 0/500/1000/1500/2000ms 第一 tick 定位。
     expect(zeroMillisecondTick.transfers.filter((t) =>
       t.sourceSlotId.includes("device:liquid-source-ew")
       && t.targetSlotId.includes("device:pipe_ew_in"),
     )).toHaveLength(1);
 
     // === Tick 11: 第 1 件入桥 + 第 2 件入首段管 ===
-    // AI-CORRECTION 2026-07-30: 回滚 — 0.5s 门禁，tick 11 入桥。
     expect(halfSecondTick.transfers.filter((t) =>
       t.sourceSlotId.includes("device:pipe_ew_in")
       && t.targetSlotId.includes("device:pipe-bridge"),
@@ -350,7 +209,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)("pipe-bridge-direction [%s]", (engineKin
     )).toHaveLength(1);
 
     // === Tick 12: 桥接器槽位隔离验证 ===
-    // AI-CORRECTION 2026-09-08: Dense 在 500ms 与 1000ms 间无快照，改在入桥事件快照检查方向隔离。
     const ewInSlot = findSlot(
       report,
       halfSecondTick.tickNumber,
@@ -376,7 +234,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)("pipe-bridge-direction [%s]", (engineKin
     expect(nsInSlot.count).toBe(0);
 
     // === Tick 21: 第 1 件出桥入末段管 + 第 2 件入桥 ===
-    // AI-CORRECTION 2026-07-30: 回滚 — 0.5s 门禁，tick 21 出桥。
     expect(oneSecondTick.transfers.filter((t) =>
       t.sourceSlotId.includes("device:pipe-bridge")
       && t.targetSlotId.includes("device:pipe_ew_out"),
@@ -387,7 +244,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)("pipe-bridge-direction [%s]", (engineKin
     )).toHaveLength(1);
 
     // === Tick 31: 第 1 件达宿 + 第 2 件出桥入末段管 ===
-    // AI-CORRECTION 2026-07-30: 回滚 — 0.5s 门禁，tick 31 达宿第 1 件。
     expect(oneAndHalfSecondTick.transfers.filter((t) =>
       t.targetSlotId.includes("device:liquid-sink-ew")
       && t.itemType === "item_liquid_water",
@@ -398,7 +254,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)("pipe-bridge-direction [%s]", (engineKin
     )).toHaveLength(1);
 
     // === Tick 41: 第 2 件达宿 ===
-    // AI-CORRECTION 2026-07-30: 回滚 — 0.5s 门禁，tick 41 达宿第 2 件。
     expect(twoSecondTick.transfers.filter((t) =>
       t.targetSlotId.includes("device:liquid-sink-ew")
       && t.itemType === "item_liquid_water",
@@ -412,13 +267,3 @@ describe.each(SIMULATION_ENGINE_MATRIX)("pipe-bridge-direction [%s]", (engineKin
   });
 });
 
-// AI-REMOVED 2026-07-23:
-// Reason: 管道桥旧测试使用 0.5 秒单件时序，且只验证布尔意义上的“至少搬运 1 件”。
-// Trigger: 用户确认桥接器每个方向独立 2/s，所有管道只在整数秒搬运。
-// Evidence: 新测试在 tick 1/21/41/61 分别断言恰好 2 条搬运，并检查 EW 槽位 count/reserved=2。
-// Replacement: pipe-bridge-direction 中的 20 tick 时序与双件断言。
-// Risk: Low
-// Human Review: Required
-// AI-CORRECTION 2026-07-30: 回滚 — 上述 AI-REMOVED 块判断方向错误，恢复 0.5s 单件时序。
-//
-// Original code (was restored above):

@@ -19,25 +19,4 @@ export default defineConfig({
     screenshot: "off",
     trace: "off",
   },
-  // AI-REMOVED 2026-10-05:
-  // Reason: 套件级服务器改为逐用例资源所有权，确保失败与每轮结束时释放。
-  // Trigger: 用户授权统一 E2E 基座。
-  // Evidence: 当前用例重复管理相同运行资源。
-  // Replacement: src/tests/e2e/harness/fixture.ts
-  // Risk: Low。Human Review: Required
-  // Original code:
-  //   webServer: [
-  //     {
-  //       command: "npm run dev -- --port 4174",
-  //       url: "http://127.0.0.1:4174",
-  //       reuseExistingServer: false,
-  //       timeout: 120_000,
-  //     },
-  //     {
-  //       command: "node scripts/e2e/start-webdav-e2e-server.mjs",
-  //       url: "http://127.0.0.1:4175",
-  //       reuseExistingServer: false,
-  //       timeout: 120_000,
-  //     },
-  //   ],
 });

@@ -39,6 +39,7 @@ import {
   createHypergryphSinglePlacementGestureModule,
 } from "./hypergryph/hypergryph-single-placement-gesture-module";
 import { createHypergryphPenEraserGestureModule } from "./hypergryph/hypergryph-pen-eraser-gesture-module";
+import { createHypergryphPortDragLogisticsGestureModule } from "./hypergryph/hypergryph-port-drag-logistics-gesture-module";
 import { createHypergryphSaveBlueprintGestureModule } from "./hypergryph/hypergryph-save-blueprint-gesture-module";
 import { createHypergryphMouseViewportPanModule } from "./hypergryph/hypergryph-mouse-viewport-pan-module";
 import { createHypergryphKeyboardViewportPanModule } from "./hypergryph/hypergryph-keyboard-viewport-pan-module";
@@ -73,41 +74,6 @@ export class AppGestureModuleRegistrar {
       );
       return;
     }
-    // AI-REMOVED 2026-11-12:
-    // Reason: 每张画布仅注册自身支持的操作，EDA 不取得工作台功能。
-    // Trigger: REQ-048 操作资格统一。
-    // Evidence: 原清单无条件包含蓝图、仿真、面板等入口。
-    // Replacement: 下方按 CanvasOperationId 注册。
-    // Risk: 需检查快捷键冲突及指针修饰键旁路。
-    // Human Review: Required
-    // Original code:
-    //     this.unregisterModules.push(
-    //       bindLogisticsPlacementAlert(options.appHost.mainCanvas),
-    //       options.router.registerModule(createHypergryphOverlapEntityMenuGuardModule()),
-    //       options.router.registerModule(createHypergryphBlueprintPlacementGestureModule()),
-    //       options.router.registerModule(createHypergryphLogisticsPlacementGestureModule()),
-    //       options.router.registerModule(createHypergryphSinglePlacementGestureModule()),
-    //       options.router.registerModule(createHypergryphMoveGestureModule()),
-    //       options.router.registerModule(createHypergryphRegionGestureModule()),
-    //       options.router.registerModule(createHypergryphMarqueeGestureModule()),
-    //       options.router.registerModule(createHypergryphDarkPipeLinkGestureModule()),
-    //       options.router.registerModule(createHypergryphSelectGestureModule()),
-    //       options.router.registerModule(createHypergryphSaveBlueprintGestureModule()),
-    //       options.router.registerModule(createHypergryphEntityVariantSwitchGestureModule()),
-    //       options.router.registerModule(createHypergryphDeleteSelectionGestureModule()),
-    //       options.router.registerModule(createHypergryphMouseViewportPanModule()),
-    //       options.router.registerModule(createHypergryphKeyboardViewportPanModule()),
-    //       options.router.registerModule(createHypergryphViewportZoomModule()),
-    //       options.router.registerModule(createHypergryphViewportRotationModule()),
-    //       options.router.registerModule(createHypergryphHistoryGestureModule()),
-    //       options.router.registerModule(createQuickPlaceGestureModule()),
-    //       options.router.registerModule(createPanelToggleGestureModule()),
-    //       options.router.registerModule(createSimulationControlGestureModule()),
-    //       options.router.registerModule(createToolboxOpenGestureModule()),
-    //       options.router.registerModule(
-    //         createGestureDiagnosticsModule(options.gestureDiagnostics),
-    //       ),
-    //     );
     const register = (operation: CanvasOperationId, module: GestureMappingModule<AppHost>): void => {
       if (options.canvas.canUseWorkbenchActions || options.canvas.getOperationAvailability(operation).supported) {
         this.unregisterModules.push(options.router.registerModule(module));
@@ -116,6 +82,7 @@ export class AppGestureModuleRegistrar {
     register("select", createHypergryphOverlapEntityMenuGuardModule());
     register("blueprint-placement", createHypergryphBlueprintPlacementGestureModule());
     register("logistics-placement", createHypergryphLogisticsPlacementGestureModule());
+    register("logistics-placement", createHypergryphPortDragLogisticsGestureModule());
     if (options.canvas.canUseWorkbenchActions || options.canvas.getOperationAvailability("logistics-placement").supported) {
       this.unregisterModules.push(bindLogisticsPlacementAlert(options.canvas));
     }

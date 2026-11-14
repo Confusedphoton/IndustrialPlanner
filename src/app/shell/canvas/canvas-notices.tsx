@@ -5,15 +5,6 @@ import { useSyncExternalStore } from "react";
 import { hasStorageFailure, subscribeToStorageFailures } from "@/shared/storage/storage-failure";
 import type { ScreenProfile } from "@/domain/app/types/screen-profile";
 import type { UiKey } from "@/shared/i18n";
-// AI-REMOVED 2026-09-27:
-// Reason: 画布提示组件只接收展示数据，不跨目录依赖 AppHost。
-// Trigger: REQ-039 模块隔离审计。
-// Evidence: 本组件仅使用提示 key、翻译函数及 Screen Profile。
-// Replacement: 下方组件 props。
-// Risk: Low
-// Human Review: Required
-// Original code:
-// import type { AppHost } from "@/app/host";
 import styles from "./canvas-notices.module.scss";
 
 export const CanvasNotices = observer(function CanvasNotices({ state, translate, screenProfile }: {

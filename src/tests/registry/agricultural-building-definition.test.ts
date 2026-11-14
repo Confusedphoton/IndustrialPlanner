@@ -19,8 +19,6 @@ const EXPECTED_PLOTS = [
 
 describe("普通田块建筑定义", () => {
   const registry = createRegistryContract();
-  // AI-CORRECTION 2026-10-13: 农业分类新增洒水机，田块专项断言按 soil_ 设备族筛选。
-  // AI-CORRECTION 2026-10-15: 此用例保留既有十种田块的素材验收；新增 soil_corp_ 家族由缘缘庄专项测试覆盖。
   const plots = registry.entityDefinitions.filter((definition) => definition.id.startsWith("soil_") && !definition.id.startsWith("soil_corp_"));
 
   it("收录全部十种普通田块并提供原始中英文名称，排除模拟及无名田块", () => {

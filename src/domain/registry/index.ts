@@ -1,30 +1,10 @@
 export type { RegistryContract } from "./registry-contract";
 export type { RegistryQuery } from "./registry-query";
 export type {
-  // AI-REMOVED 2026-09-06:
-  // Reason: 片段网格类型已被分页素材 manifest 取代。
-  // Trigger: 反应池动画接入要求单阶段多页和显式有效帧数。
-  // Evidence: DeviceSpriteAnimationDefinition 不再暴露 clips 属性。
-  // Replacement: src/shared/device-sprite-animation.ts 的 manifest 类型。
-  // Risk: 当前没有生产调用者依赖该类型；测试夹具随协议迁移。
-  // Human Review: Required
-  //
-  // Original code:
-  // DeviceSpriteAnimationClipDefinition,
   DeviceSpriteAnimationDefinition,
 } from "./types/device-sprite-animation";
 export type {
 	BaseDefinition,
-	// AI-REMOVED 2026-11-12:
-	// Reason: 空间改为逐区域、逐方向可无界的唯一模型。
-	// Trigger: REQ-048 已确认的 D1 契约迁移。
-	// Evidence: 旧主区域加分区结构不能表达分方向无界。
-	// Replacement: src/domain/shared/scene-space.ts 的 SceneOuterRing
-	// Risk: 消费者必须同步迁移；保留既有有限区域身份与世界坐标。
-	// Human Review: Required
-	//
-	// Original code:
-	// BaseOuterRingDefinition,
 } from "./types/base-definition";
 export type {
 	EntityDefinition,
@@ -39,36 +19,6 @@ export type {
 	PortStorageBindingDefinition,
 	EntityAcceptRuleDefinition,
 	EntityAdmissionRuleDefinition,
-	// AI-REMOVED 2026-07-23:
-	// Reason: domain 已删除固定窗口计量定义，公共出口不能继续导出不存在的类型。
-	// Trigger: 用户逐项确认删除 EntityMeteredConsumptionDefinition。
-	// Evidence: entity-definition.ts 已将原接口注释化归档。
-	// Replacement: RecipeChannelDefinition.type + storageSlotGroups。
-	// Risk: Medium
-	// Human Review: Required
-	//
-	// Original code:
-	// EntityMeteredConsumptionDefinition,
-	// AI-REMOVED 2026-06-12:
-	// Reason: 通用 port.count per-tick 限流已删除，domain API 不再导出 CountLimit。
-	// Trigger: 用户确认 per tick count 不属于设计文档，应彻底删除。
-	// Evidence: src/domain/registry/types/entity-definition.ts 已注释化删除 CountLimit。
-	// Replacement: EntityAdmissionRuleDefinition。
-	// Risk: Medium - 外部引用需迁移。
-	// Human Review: Required
-	//
-	// Original code:
-	// CountLimit,
-	// AI-REMOVED 2026-06-06:
-	// Reason: SubmitMode 类型已从 StorageSlotDefinition 删除，domain API 不再导出旧机制。
-	// Trigger: 用户要求 submit mode 机制彻底删除。
-	// Evidence: src/domain/registry/types/entity-definition.ts 已注释化删除 SubmitMode。
-	// Replacement: WarehouseSink tag / r_warehouse_submit recipe.
-	// Risk: Medium - 外部引用需迁移。
-	// Human Review: Required
-	//
-	// Original code:
-	// SubmitMode,
 	StorageGroupSplitLinkType,
 } from "./types/entity-definition";
 export type { EntityVariantDefinition } from "./types/entity-variant-definition";
@@ -82,23 +32,6 @@ export type {
 	EntitySimulationBehaviorDeclaration,
 	EntitySimulationBehaviorType,
 } from "./types/entity-simulation-behavior";
-// AI-REMOVED 2026-08-19:
-// Reason: Domain Registry 公共出口不再暴露设备模式配置类型。
-// Trigger: 用户要求删除 simulationModeConfigs 及对应基础设施。
-// Evidence: entity-simulation-mode.ts 已无 Active Code，Registry 仅保留基础 behavior。
-// Replacement: 上方 entity-simulation-behavior 公共出口。
-// Risk: Medium - 外部类型引用必须迁移到基础 behavior 类型。
-// Human Review: Required
-//
-// Original code:
-// export type {
-// 	EntityInputRoutingSimulationBehaviorDeclaration,
-// 	EntityInputRoutingStrategy,
-// 	EntitySimulationBehaviorDeclaration,
-// 	EntitySimulationBehaviorType,
-// 	EntitySimulationModeConfig,
-// 	EntitySimulationModeConfigMap,
-// } from "./types/entity-simulation-mode";
 export type {
 	EntityInspectorDeclaration,
 	EntityInspectorType,

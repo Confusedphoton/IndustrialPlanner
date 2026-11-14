@@ -1,49 +1,13 @@
 import { SCREEN_PROFILES } from "./harness/profiles";
 import { expect, test } from "./harness/fixture";
 
-// AI-REMOVED 2026-10-05:
-// Reason: 屏幕尺寸、DPR 与触控设置收敛到唯一来源。
-// Trigger: 用户授权统一 E2E 基座。
-// Evidence: 当前用例重复管理相同运行资源。
-// Replacement: harness/profiles.ts
-// Risk: Low。Human Review: Required
-// Original code:
-// const SCREEN_PROFILES = [
-//   { name: "mobile", width: 764, height: 345, dpr: 3.125, isMobile: true },
-//   { name: "tablet", width: 711, height: 665, dpr: 3.125, isMobile: true },
-//   { name: "desktop", width: 2552, height: 1315, dpr: 1, isMobile: false },
-// ] as const;
 
 for (const profile of SCREEN_PROFILES) {
   test(`Ctrl 连续放置后，新预览与刚放下的设备位置和方向一致 [${profile.name}]`, async ({ browserSession: browser }, testInfo) => {
     test.setTimeout(90_000);
-    // AI-REMOVED 2026-10-05:
-    // Reason: 配置与主指针模拟收敛到公共入口。
-    // Trigger: E2E 基座迁移。Evidence: 每个用例曾重复配置同一 Screen Profile。
-    // Replacement: ManagedBrowser.profile 与 harness/profiles.ts。
-    // Risk: Low。Human Review: Required
-    // Original code:
-    //     const context = await browser.newContext({
-    //       viewport: { width: profile.width, height: profile.height },
-    //       deviceScaleFactor: profile.dpr,
-    //       hasTouch: true,
-    //       isMobile: profile.isMobile,
-    //       locale: "zh-CN",
-    //     });
     const context = await browser.profile(profile);
 
     try {
-      // AI-REMOVED 2026-10-05:
-      // Reason: 配置与主指针模拟收敛到公共入口。
-      // Trigger: E2E 基座迁移。Evidence: 每个用例曾重复配置同一 Screen Profile。
-      // Replacement: ManagedBrowser.profile 与 harness/profiles.ts。
-      // Risk: Low。Human Review: Required
-      // Original code:
-      // if (!profile.isMobile) {
-      //         await context.addInitScript(() => {
-      //           Object.defineProperty(navigator, "maxTouchPoints", { configurable: true, get: () => 1 });
-      //         });
-      //       }
       const page = await context.newPage();
       await page.goto("http://127.0.0.1:4174/");
       await expect(page.locator("canvas").first()).toBeVisible();
@@ -100,27 +64,6 @@ for (const profile of SCREEN_PROFILES) {
         contentType: "text/yaml",
       });
 
-      // AI-REMOVED 2026-09-23:
-      // Reason: 用户明确选择在创建后立即按鼠标绝对位置移动，创建瞬间为 0° 不再是失败条件。
-      // Trigger: 用户纠正「创建后立刻执行一次移动」作为本次修复语义。
-      // Evidence: 编辑器单设备草稿只接受中心格点，鼠标路径可复用 moveCollectionCenterPointTo；本用例仍验证同步后的锚点、最终位置和方向。
-      // Replacement: 上方 before.anchor 断言及下方 after.preview 的位置、方向断言。
-      // Risk: Low；初始草稿姿态不再被本用例单独观测。
-      // Human Review: Required
-      //
-      // Original code:
-      // await page.evaluate(() => {
-      //   const editor = window.__industrialPlannerAppHost!.workspace.editor!;
-      //   const createDraft = editor.actions.createSinglePlacementDraft;
-      //   editor.actions.createSinglePlacementDraft = (...args) => {
-      //     createDraft(...args);
-      //     const draftId = editor.state.collections.preview[0];
-      //     const draft = draftId === undefined ? null : editor.queries.getEntityById(draftId);
-      //     (window as unknown as { __ctrlPlacementCreatedPose?: unknown }).__ctrlPlacementCreatedPose = draft === null
-      //       ? null
-      //       : { position: { ...draft.position }, rotation: draft.rotation };
-      //   };
-      // });
 
       await page.keyboard.down("Control");
       try {
@@ -157,18 +100,6 @@ for (const profile of SCREEN_PROFILES) {
       expect(placed.rotation).toBe(90);
       expect(after.preview?.rotation).toBe(90);
       expect(after.preview?.position).toEqual(placed.position);
-      // AI-REMOVED 2026-09-23:
-      // Reason: 用户明确接受创建后同步按绝对鼠标位置回正，初始 0° 草稿姿态不再是回归判据。
-      // Trigger: 单设备连续放置改为复用既有的鼠标绝对定位动作。
-      // Evidence: 上方锚点断言及 after.preview 与 placed 的位置、方向断言覆盖实际可见结果。
-      // Replacement: expect(before.anchor) 与 expect(after.preview?.position/rotation)。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // expect(await page.evaluate(() =>
-      //   (window as unknown as { __ctrlPlacementCreatedPose?: unknown }).__ctrlPlacementCreatedPose,
-      // )).toEqual({ position: placed.position, rotation: placed.rotation });
     } finally {
       await browser.closeContext(context);
     }

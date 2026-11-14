@@ -55,25 +55,6 @@ describe("SyncInitialSyncGate", () => {
   it("blocks the whole workbench only while the current canvas is checking", () => {
     act(() => {
       setInitialStage(state, "canvas");
-      // AI-REMOVED 2026-07-29:
-      // Reason: SyncStateImpl 测试初始值的 tasks 为空，map 不会创建 canvas task，导致夹具始终把进度渲染为 0%。
-      // Trigger: 全量测试发现期望 55、实际 0；真实浏览器与 service 状态均正确输出 55/100。
-      // Evidence: SyncStateImpl.status.tasks 默认值为 []。
-      // Replacement: 下方显式 canvas task 夹具。
-      // Risk: None。
-      // Human Review: Required
-      //
-      // Original code:
-      // tasks: state.status.tasks.map((task) =>
-      //   task.kind === "canvas"
-      //     ? {
-      //       ...task,
-      //       phase: "running",
-      //       completedUnitCount: 55,
-      //       totalUnitCount: 100,
-      //     }
-      //     : task
-      // ),
       state.setStatus({
         ...state.status,
         tasks: [{

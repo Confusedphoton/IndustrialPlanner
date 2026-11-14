@@ -58,7 +58,6 @@ describe("REQ-080: dynamic simulation tick rate", () => {
   });
 
   it("keeps only phase-safe dynamic tick rates for the current belt and pipe transfer units", () => {
-    // AI-CORRECTION 2026-07-30: 回滚 — 管道恢复 10 tick 周期，当前 belt 为 20 tick、pipe 为 10 tick。
     // 最严格约束是 pipe 的 10 tick，因此测试使用 [10]。
     const transferUnitTicks = [10];
 
@@ -79,22 +78,11 @@ describe("REQ-080: dynamic simulation tick rate", () => {
       transportClass: "anchor" as const,
     };
 
-    // AI-REMOVED 2026-09-04:
-    // Reason: 测试准备阶段误加了与下方相位断言重复的 tick 赋值。
-    // Trigger: ST2-RQ-024 测试改写时匹配到了同形的 topology/state 初始化片段。
-    // Evidence: 下方首个断言前已经显式设置 state.tickNumber = 1。
-    // Replacement: 下方逐相位赋值。
-    // Risk: None
-    // Human Review: Required
-    //
-    // Original code:
-    // state.tickNumber = 1;
 
     state.tickNumber = 1;
     expect(canDeviceTransferAtCurrentPhase(registry, topology, state, pipeAnchor)).toBe(true);
     state.tickNumber = 2;
     expect(canDeviceTransferAtCurrentPhase(registry, topology, state, pipeAnchor)).toBe(false);
-    // AI-CORRECTION 2026-07-30: 回滚 — 0.5s 门禁，tick 11 也是合法相位。
     state.tickNumber = 11;
     expect(canDeviceTransferAtCurrentPhase(registry, topology, state, pipeAnchor)).toBe(true);
     state.tickNumber = 21;
@@ -487,102 +475,7 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     });
   });
 
-  // AI-REMOVED 2026-09-04:
-  // Reason: 旧回归测试把 Stage1 overrun 作为跨阶段公开结果，并要求 Stage5 把余量推进到下一轮。
-  // Trigger: ST2-RQ-024 明确禁止 overflow remainder chain。
-  // Evidence: 新用例分别验证成功完成后下一轮 progress=0，以及输出阻塞时 progress 钳制在 duration。
-  // Replacement: 上方两个 overrun 回归用例。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // it("carries production overflow across successful output writes", () => {
-  //   const topology = createProductionOverflowTopology(10);
-  //   const state = createSimulationMutableRuntimeState(topology);
-  //   state.persistent.devices["device:maker"]!.channelRecipes["main"] = createRunningRecipe(3);
-  //
-  //   const stage1AdvanceResult = advanceDevices(registry, topology, state, 7);
-  //   expect(stage1AdvanceResult.overflowTicksByDeviceChannel["device:maker"]?.main).toBe(5);
-  //
-  //   expect(state.persistent.slots["slot:out"]).toMatchObject({
-  //     itemType: "item_test",
-  //     count: 1,
-  //   });
-  //   expect(state.persistent.devices["device:maker"]!.channelRecipes["main"]).toBeNull();
-  //
-  //   settleRecipes(
-  //     registry,
-  //     topology,
-  //     state,
-  //     "infinite",
-  //     Infinity,
-  //     topology.totalPowerDemand,
-  //     stage1AdvanceResult,
-  //   );
-  //
-  //   expect(state.persistent.slots["slot:out"]).toMatchObject({
-  //     itemType: "item_test",
-  //     count: 2,
-  //   });
-  //   expect(state.persistent.devices["device:maker"]!.channelRecipes["main"]).toMatchObject({
-  //     recipeId: "recipe:test",
-  //     progressTicks: 0,
-  //     state: "running",
-  //   });
-  // });
-  //
-  // it("pins production progress at 100 percent and discards overflow when output is blocked", () => {
-  //   const topology = createProductionOverflowTopology(1);
-  //   const state = createSimulationMutableRuntimeState(topology);
-  //   state.persistent.devices["device:maker"]!.channelRecipes["main"] = createRunningRecipe(3);
-  //
-  //   const stage1AdvanceResult = advanceDevices(registry, topology, state, 9);
-  //
-  //   expect(state.persistent.slots["slot:out"]).toMatchObject({
-  //     itemType: "item_test",
-  //     count: 1,
-  //   });
-  //   expect(stage1AdvanceResult.overflowTicksByDeviceChannel["device:maker"]?.main)
-  //     .toBe(7);
-  //   expect(state.persistent.devices["device:maker"]!.channelRecipes["main"]).toBeNull();
-  //
-  //   settleRecipes(
-  //     registry,
-  //     topology,
-  //     state,
-  //     "infinite",
-  //     Infinity,
-  //     topology.totalPowerDemand,
-  //     stage1AdvanceResult,
-  //   );
-  //
-  //   expect(state.persistent.slots["slot:out"]).toMatchObject({
-  //     itemType: "item_test",
-  //     count: 1,
-  //   });
-  //   expect(state.persistent.devices["device:maker"]!.channelRecipes["main"]).toMatchObject({
-  //     recipeId: "recipe:test",
-  //     progressTicks: 5,
-  //     state: "waiting-output",
-  //   });
-  // });
 
-  // AI-REMOVED 2026-07-23:
-  // Reason: Stage1 已成功完成旧配方时必须保存 overflow=7；输出阻塞发生在 Stage5 尝试完成下一配方时。
-  // Trigger: 手动全量测试发现该用例错误地把 Stage5 的“阻塞后丢弃溢出”提前断言在 Stage1。
-  // Evidence: Stage1 完成后输出槽由 0 变为 1 且 channel=null，说明旧配方成功，overflow 必须交接给 Stage5。
-  // Replacement: 先断言 overflow=7 与 channel=null，再调用 settleRecipes 验证下一配方停在 waiting-output。
-  // Risk: None
-  // Human Review: Required
-  //
-  // Original code:
-  // expect(stage1AdvanceResult.overflowTicksByDeviceChannel["device:maker"]?.main)
-  //   .toBeUndefined();
-  // expect(state.persistent.devices["device:maker"]!.channelRecipes["main"]).toMatchObject({
-  //   recipeId: "recipe:test",
-  //   progressTicks: 5,
-  //   state: "waiting-output",
-  // });
 
   it("does not commit partial recipe outputs when local transaction preflight fails", () => {
     const topology = createProductionOverflowTopology(1);
@@ -660,21 +553,6 @@ describe("REQ-080: dynamic simulation tick rate", () => {
   });
 });
 
-// AI-REMOVED 2026-07-23:
-// Reason: 旧动态步长测试仍假设管道相位单位为 10 tick，旧溢出测试也假设 Stage1 会直接链式启动下一配方。
-// Trigger: 管道改为 1 秒周期，且所有新配方统一延后到 Stage5 启动。
-// Evidence: 新测试先断言 Stage1 返回 overflow=5 且 channel=null，再调用 Stage5 验证第二轮完成。
-// Replacement: transferUnitTicks=[20] 与 carries production overflow 测试中的 Stage1/Stage5 分段断言。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// const transferUnitTicks = [20, 10];
-// advanceDevices(topology, state, 7);
-// expect(state.persistent.slots["slot:out"]).toMatchObject({
-//   itemType: "item_test",
-//   count: 2,
-// });
 
 function readProductionStatsAtSpeed(
   simulationSpeed: number,

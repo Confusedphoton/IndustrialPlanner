@@ -27,33 +27,12 @@ import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 import { createLogger } from "@/shared/logging/logger";
 
 import type { GestureHandleResult, GestureMappingModule, ShortcutActionRoute } from "../types";
-// AI-REMOVED 2026-09-10:
-// Reason: 操作模式总开关已废弃，不再保留关闭分支
-// Trigger: 用户要求彻底移除 hypergryphOperationMode。
-// Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-// Replacement: gesture-action-router.ts 的默认启用语义
-// Risk: 历史 false 设置统一使用当前操作行为。
-// Human Review: Required
-//
-// Original code:
-// import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 import {
   closeCompactLeftDockOnPlacementEnter,
   PLACEMENT_DEVICE_SHORTCUT_KEYS,
   resolveDeviceIdForPlacementGroupShortcut,
   setPendingSinglePlacementEnter,
 } from "./hypergryph-single-placement-gesture-module";
-// AI-REMOVED 2026-08-30:
-// Reason: 物流快捷键的 key-to-action 解析已由本模块 Shortcut Route 完成。
-// Trigger: ST2-RQ-020 可执行 Route 单一事实源。
-// Evidence: Route 直接携带 logistics kind 或 shortcutIndex。
-// Replacement: shortcutRoutes in createHypergryphLogisticsPlacementGestureModule
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import { resolveDeviceShortcutIndex, resolvePlacementGroupByShortcut }
-// from "./hypergryph-single-placement-gesture-module";
 
 const LOGISTICS_TOOLBAR_BUTTON_IDS = [
   "canvas-floating-toolbar-button-cancel",
@@ -92,35 +71,11 @@ const PIPE_END_RIGHT_DOCK_TOOLBAR_ITEMS = [
   { operationId: "change-pipe-route-priority", presentation: "shortcut" },
 ] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
 
-// AI-REMOVED 2026-08-22:
-// Reason: 物流放置手势改为声明功能展示请求，不再直接传递右侧按钮 ID。
-// Trigger: 右侧工具列呼起接口统一为 operationId + presentation。
-// Evidence: LOGISTICS_RIGHT_DOCK_TOOLBAR_ITEMS 明确请求退出功能的纯按钮形态。
-// Replacement: LOGISTICS_RIGHT_DOCK_TOOLBAR_ITEMS。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// const LOGISTICS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS = [
-//   "canvas-right-dock-toolbar-button-exit",
-// ] as const;
 
 const BELT_DRAW_BUTTON_ID = "placement-action-belt-draw";
 const PIPE_DRAW_BUTTON_ID = "placement-action-pipe-draw";
 
 const logisticsLogger = createLogger("logistics-placement");
-// AI-REMOVED 2026-07-27:
-// Reason: app 手势层不应维护 3 个传送带节 definition ID。
-// Trigger: 用户要求 registry 外只使用 Query。
-// Evidence: RegistryQuery.isBelt 精确表示传送带节。
-// Replacement: shouldStopAfterApplyingToExistingBeltStart。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// const ORDINARY_BELT_DEFINITION_IDS = new Set([
-//   "belt_straight_1x1", "belt_turn_cw_1x1", "belt_turn_ccw_1x1",
-// ]);
 const GRID_EDGE_ORDER: readonly GridEdge[] = ["NORTH", "EAST", "SOUTH", "WEST"];
 
 interface LogisticsPlacementBehaviorOptions {
@@ -158,16 +113,6 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
 
   return {
     id: "hypergryph-logistics-placement-gesture",
-    // AI-REMOVED 2026-09-10:
-    // Reason: 操作模式总开关已废弃，不再保留关闭分支
-    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-    // Replacement: gesture-action-router.ts 的默认启用语义
-    // Risk: 历史 false 设置统一使用当前操作行为。
-    // Human Review: Required
-    //
-    // Original code:
-    // when: isHypergryphGestureEnabled,
     shortcutRoutes: [
       ...([
         [SHORTCUT_KEY.PLACE_CONVEYOR, LOGISTICS_KIND.belt],
@@ -254,15 +199,6 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
         context.canvas.state.runtime.logisticsPlacement.lastMousePosition = event.position;
       }
 
-      // AI-REMOVED 2026-08-30:
-      // Reason: 物流模式 E/Q 切换已迁入两条 allow-any-additional-modifiers Route。
-      // Trigger: ST2-RQ-020 操作模式 modifier 绑定兼容。
-      // Evidence: logistics-placement.switch-belt/pipe 直接持有 kind 和 handler。
-      // Replacement: shortcutRoutes in createHypergryphLogisticsPlacementGestureModule
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
       /*
       if (event.type === "key down") {
         // 2026-08-02 订正：物流放置模式下允许修饰键组合（Ctrl 连续放置时按 E/Q 切换种类仍生效）；
@@ -363,15 +299,6 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
       }
 
       switch (event.type) {
-        // AI-REMOVED 2026-08-30:
-        // Reason: R 路径翻转与 1-0 设备选择已迁入可执行 Route。
-        // Trigger: ST2-RQ-020 固定 Action 与操作 Action 统一。
-        // Evidence: current-operation.flip-logistics-route 和 logistics-placement.device-*。
-        // Replacement: shortcutRoutes in createHypergryphLogisticsPlacementGestureModule
-        // Risk: Low
-        // Human Review: Required
-        //
-        // Original code:
         /*
         case "key down":
           if (handleRouteOrderShortcut({
@@ -613,9 +540,8 @@ function handleTouchTap(options: {
     result,
   });
 
-  // 2026-05-23: 设备源创建 draft 后立即生成首个 freehand cell，
+  // 设备源创建 draft 后立即生成首个 freehand cell，
   // 保证 logisticsHead collection 非空，后续拖拽可正常继续。
-  // AI-CORRECTION 2026-05-30: 首个 cell 应在端口外侧相邻格 (outsideGridPoint)，
   // 而非触摸点所在设备内部格，否则第一节管道出现在设备身上而非向外伸出。
   moveTouchLogisticsEnd({
     canvas: options.canvas,
@@ -623,7 +549,7 @@ function handleTouchTap(options: {
     gridPoint: endpoint.outsideGridPoint,
   });
 
-  // 2026-05-30: showTouchToolbar 必须在 moveTouchLogisticsEnd 填充 logisticsHead 之后调用，
+  // showTouchToolbar 必须在 moveTouchLogisticsEnd 填充 logisticsHead 之后调用，
   // 否则 alignCanvasFloatingToolbar 因 collection 为空而失败，导致工具条被隐藏。
   showTouchToolbar(options.canvas);
 
@@ -781,7 +707,7 @@ function handleTouchDragMove(options: {
     return { status: "ignored" };
   }
 
-  // 2026-05-30: 记录是否在本帧从 waiting-touch-device-exit 转为 drawing，
+  // 记录是否在本帧从 waiting-touch-device-exit 转为 drawing，
   // 确保 showTouchToolbar 在 moveLogisticEnd 填充 logisticsHead 之后才调用。
   let didExitWaitingForDevice = false;
 
@@ -1026,7 +952,6 @@ function handleMouseLeftTap(options: {
   }
 
   // 自动创建汇流器后终止本次绘制，用户需重新选起点
-  // AI-CORRECTION 2026-06-03: 连入无合法上游且有合法下游的已有传送带起点时也终止本段绘制。
   if (isHeadConverger || shouldStopAtExistingBeltStart) {
     softResetLogisticsRuntime(options.canvas);
     return { status: "handled" };
@@ -1213,7 +1138,6 @@ function createContinuedMouseLogisticsStart(options: {
         continuedEntity.definitionId,
       );
   let result: LogisticsDraftActionResult;
-  // AI-CORRECTION 2026-06-19:
   // 自动续画必须继承刚提交的普通物流末端，不能被同格相邻设备输出端口重新解释。
   if (
     continuedEntity !== null
@@ -1235,7 +1159,7 @@ function createContinuedMouseLogisticsStart(options: {
       options.kind,
     );
     if (endpoint?.type !== "device-port" || endpoint.portDirection !== "output") {
-      // 2026-05-23: endpoint 非 logistics-entity 也非有效输出 device-port（如分流器/汇流器/桥接器
+      // endpoint 非 logistics-entity 也非有效输出 device-port（如分流器/汇流器/桥接器
       // 已替代原普通物流段），不应从该格以 empty-cell 继续，否则会产生重叠管道。
       softResetLogisticsRuntime(options.canvas);
       return;
@@ -1279,15 +1203,6 @@ function exitLogisticsPlacementToSelect(
   canvas.actions.setActiveTool("select");
 }
 
-// AI-REMOVED 2026-08-30:
-// Reason: R 的物理匹配由 current-operation.flip-logistics-route Route 负责，业务函数只翻转路径。
-// Trigger: ST2-RQ-020 修复组合绑定在操作模式失效。
-// Evidence: Route 使用 allow-any-additional-modifiers，并在命中后调用替代函数。
-// Replacement: handleRouteOrderChange and shortcutRoutes[current-operation.flip-logistics-route]
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
 /*
 function handleRouteOrderShortcut(options: {
   appHost: AppHost;
@@ -1296,56 +1211,7 @@ function handleRouteOrderShortcut(options: {
   key: string | null;
   modifiers: { alt: boolean; ctrl: boolean; meta: boolean };
 }): boolean {
-  // AI-REMOVED 2026-08-02:
-  // Reason: 物流放置模式快捷键不再拒绝修饰键组合
-  // Trigger: Ctrl 连续放置时按 R 误触 Ctrl+R 旋转画布；用户要求放置/移动模式快捷键可与任意 modifier 组合
-  // Evidence: 事件路由按注册顺序分发，本模块消费 key down 后 viewport-rotation 模块不再收到
-  // Replacement: 移除 modifier 检查，R 键路由翻转在物流放置模式下始终生效
-  // Risk: 物流放置模式下 Ctrl+R 不再旋转画布（预期）
-  // Human Review: Required
-  //
-  // if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
-  //   return false;
-  // }
-
-  const isRouteShortcut = options.appHost.internalActions.isShortcutFor(
-    SHORTCUT_KEY.ROTATE,
-    options.code,
-    options.key,
-  );
-  if (!isRouteShortcut) {
-    return false;
-  }
-
-  const runtime = options.appHost.internalState.runtime.logisticsPlacement;
-  runtime.routeOrder = flipRouteOrder(runtime.routeOrder);
-
-  const gridPoint = resolveGridPointFromGesturePosition(options.editor, runtime.lastMousePosition);
-  if (
-    gridPoint !== null
-    && options.editor.queries.resolveLogisticsDraftState() !== null
-    && !runtime.isHoverPreview
-  ) {
-    const result = options.editor.actions.moveLogisticEnd({
-      pointerGridPoint: gridPoint,
-      ...resolveMoveLogisticsDraftBehaviorOptions(options.appHost),
-      routeMode: {
-        type: "single-bend",
-        routeOrder: runtime.routeOrder,
-        allowTemporaryOrderFlip: true,
-      },
-    });
-    updateRuntimeFromResult({
-      appHost: options.appHost,
-      pointerMode: "mouse",
-      phase: result.targetEntityId === null ? "drawing" : "snapped-target",
-      result,
-    });
-  }
-
-  return true;
-}
-*/
+  */
 function handleRouteOrderChange(
   canvas: CanvasInteractionController,
   editor: NonNullable<AppHost["workspace"]["editor"]>,
@@ -1377,33 +1243,6 @@ function handleRouteOrderChange(
   }
 }
 
-// 2026-08-02 订正：物流放置模式允许修饰键组合（Ctrl 连续放置时按 1-0 切换设备仍生效）。
-// AI-CORRECTION 2026-08-30: modifier 匹配已由 logistics-placement.device-* Route 负责；
-// 本函数现在只接收 Route 已解析的 shortcutIndex，并继续保持原业务行为。
-// AI-REMOVED 2026-08-30:
-// Reason: 设备数字键解析已由 logistics-placement.device-* 固定 Route 完成。
-// Trigger: ST2-RQ-020 固定 Action 路由统一。
-// Evidence: 每条 Route 直接携带 shortcutIndex。
-// Replacement: handleLogisticsDeviceShortcutIndex signature below
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// function handleLogisticsDeviceShortcut(options: {
-//   appHost: AppHost;
-//   editor: NonNullable<AppHost["workspace"]["editor"]>;
-//   code: string | null;
-//   key: string | null;
-//   modifiers: { alt: boolean; ctrl: boolean; meta: boolean; shift: boolean };
-// }): GestureHandleResult {
-//   // 2026-08-02 订正：物流放置模式允许修饰键组合（Ctrl 连续放置时按 1-0 切换设备仍生效）。
-//   const shortcutIndex = resolveDeviceShortcutIndex({
-//     ...options,
-//     allowModifierKeys: true,
-//   });
-//   if (shortcutIndex === null) {
-//     return { status: "ignored" };
-//   }
 function handleLogisticsDeviceShortcutIndex(options: {
   canvas: CanvasInteractionController;
   editor: AppHost["workspace"]["editor"];

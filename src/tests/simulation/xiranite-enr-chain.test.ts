@@ -2,25 +2,6 @@ import { loadBlueprintFromFile } from "./blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "./blueprint-runner";
-// AI-REMOVED 2026-09-08:
-// Reason: 30 秒产线观察窗口不应换算为 Legacy 固定 tick 数。
-// Trigger: xiranite production chain 纳入全引擎矩阵。
-// Evidence: 用例标题和业务目标均直接声明 30 秒。
-// Replacement: maxDurationSeconds 与 getLastTick。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/tick-rate";
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/xiranite-enr-chain/index.json
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// import { createBlueprint, createEntity, getDevice, getLastTick } from "./blueprint-test-helpers";
 import { getDevice, getLastTick } from "./blueprint-test-helpers";
 import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 
@@ -30,41 +11,9 @@ import { SIMULATION_ENGINE_MATRIX } from "./simulation-engine-matrix";
 
 describe.each(SIMULATION_ENGINE_MATRIX)("重息壤产线配方链验证 [%s]", (engineKind) => {
   const MAX_DURATION_SECONDS = 30;
-  // AI-CORRECTION 2026-09-08: 30 秒现直接作为仿真时长，不再换算为固定引擎 tick。
-  // AI-REMOVED 2026-09-08:
-  // Reason: MAX_TICK 绑定 Legacy 20 TPS，Dense 的同一时长具有不同 tick 编号。
-  // Trigger: xiranite production chain 纳入全引擎矩阵。
-  // Evidence: Blueprint runner 已累计 elapsedSimulationSeconds。
-  // Replacement: MAX_DURATION_SECONDS。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // const MAX_TICK = 30 * STANDARD_TICK_RATE_PER_SECOND; // 30 秒
 
   it("步骤1: 混合池 — 息壤+水→液化息壤", { timeout: 300_000 }, async () => {
     const registry = createRegistryContract();
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/xiranite-enr-chain/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // createBlueprint("step1-xiranite-liquid", [
-    //         createEntity("pool", "mix_pool_1", 0, 0, 0, {
-    //           channelRecipes: {
-    //             ch1: "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic",
-    //           },
-    //           // 混合池 shared_input_buffer: kind=item, filter=any, 5 slots
-    //           "storageSlotGroups[0].slots[0].initialItemType": "item_xiranite_powder",
-    //           "storageSlotGroups[0].slots[0].initialCount": 10,
-    //           "storageSlotGroups[0].slots[1].initialItemType": "item_liquid_water",
-    //           "storageSlotGroups[0].slots[1].initialCount": 10,
-    //         }),
-    //         createEntity("power", "power_diffuser_1", 6, 0),
-    //       ])
     const report = await runBlueprintSimulation({
       blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/xiranite-enr-chain/scene-01-step1-xiranite-liquid-b9e91d12.schema7.json"),
       maxDurationSeconds: MAX_DURATION_SECONDS,
@@ -87,26 +36,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)("重息壤产线配方链验证 [%s]", (
 
   it("步骤2: 混合池 — 液化息壤+污水→废液+低聚废液", { timeout: 300_000 }, async () => {
     const registry = createRegistryContract();
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/xiranite-enr-chain/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // createBlueprint("step2-waste-liquid", [
-    //         createEntity("pool", "mix_pool_1", 0, 0, 0, {
-    //           channelRecipes: {
-    //             ch1: "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic",
-    //           },
-    //           "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_xiranite",
-    //           "storageSlotGroups[0].slots[0].initialCount": 10,
-    //           "storageSlotGroups[0].slots[1].initialItemType": "item_liquid_sewage",
-    //           "storageSlotGroups[0].slots[1].initialCount": 10,
-    //         }),
-    //         createEntity("power", "power_diffuser_1", 6, 0),
-    //       ])
     const report = await runBlueprintSimulation({
       blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/xiranite-enr-chain/scene-02-step2-waste-liquid-dfe9142a.schema7.json"),
       maxDurationSeconds: MAX_DURATION_SECONDS,
@@ -131,27 +60,6 @@ describe.each(SIMULATION_ENGINE_MATRIX)("重息壤产线配方链验证 [%s]", (
 
   it("步骤3: 希壤炉 — 息壤+废液→重息壤", { timeout: 300_000 }, async () => {
     const registry = createRegistryContract();
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/xiranite-enr-chain/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // createBlueprint("step3-xiranite-enr", [
-    //         createEntity("oven", "xiranite_oven_1", 0, 0, 0, {
-    //           channelRecipes: {
-    //             default: "r_xiranite_oven_xiranite_enr_powder_from_xiranite_powder_and_waste_liquid_basic",
-    //           },
-    //           // createSimpleProductionDevice: [item_input, fluid_input, item_output]
-    //           "storageSlotGroups[0].slots[0].initialItemType": "item_xiranite_powder",
-    //           "storageSlotGroups[0].slots[0].initialCount": 10,
-    //           "storageSlotGroups[1].slots[0].initialItemType": "item_liquid_xiranite_poly",
-    //           "storageSlotGroups[1].slots[0].initialCount": 5,
-    //         }),
-    //         createEntity("power", "power_diffuser_1", 6, 0),
-    //       ])
     const report = await runBlueprintSimulation({
       blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/xiranite-enr-chain/scene-03-step3-xiranite-enr-149d8711.schema7.json"),
       maxDurationSeconds: MAX_DURATION_SECONDS,

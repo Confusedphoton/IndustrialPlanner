@@ -7,19 +7,6 @@ import type { EntitySimulationBehaviorDeclaration } from "./entity-simulation-be
 import type { DeviceSpriteAnimationDefinition } from "./device-sprite-animation";
 import type { EntityPlacementWhitelistEntry } from "./entity-placement-whitelist";
 import type { EntityRangeDefinition } from "./entity-range";
-// AI-REMOVED 2026-08-19:
-// Reason: EntityDefinition 不再持有按 SimulationMode 覆盖的 Registry 配置类型。
-// Trigger: 用户要求删除 simulationModeConfigs 及其基础设施。
-// Evidence: simulationBehaviors 与 inspectors 已成为所有运行模式唯一的设备声明。
-// Replacement: 上方 EntitySimulationBehaviorDeclaration 基础行为导入。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// import type {
-//   EntitySimulationBehaviorDeclaration,
-//   EntitySimulationModeConfigMap,
-// } from "./entity-simulation-mode";
 
 export type ItemDomain = ItemDomainFlag;
 export type ItemFilterType = ItemDomainFlag;
@@ -30,9 +17,7 @@ export type ItemFilterType = ItemDomainFlag;
 
 export type UiGroup =
   | "beltLogistics"           // 传送带物流
-  // AI-CORRECTION 2026-07-27: 该 UI 分组称为“传送带物流设备”，不包括传送带节。
   | "pipeLogistics"           // 管道物流
-  // AI-CORRECTION 2026-07-27: 该 UI 分组称为“管道物流设备”，不包括管道节。
   | "resourcePower"           // 资源与电力
   | "warehouse"               // 仓库存取
   | "basicProduction"         // 基础生产
@@ -51,7 +36,6 @@ export type UiGroup =
 // 字段按设计文档的三大原语组织：
 //   1. 缓存 (storageSlotGroups + portStorageBindings) → 对应 §3.1 缓存类型
 //   2. 配方 (recipe)                                → 对应 §3.2 配方类型
-// AI-CORRECTION 2026-06-09: EntityDefinition.links 已移除。所有槽位链接（仓库物品链接、暗管链接）统一存放于 document.slotLinks。
 //
 // 求解图节点来源：每个存储槽组 (storageSlotGroup) 在编译时生成一个
 // CacheGroup，每个 CacheGroup = 一个求解图节点（见《仿真运行原理》§5.1）。
@@ -96,8 +80,6 @@ export interface EntityDefinition {
   /** 展示排序权重，数字越小越靠前 */
   displayOrder: number;
   /** 语义标签，如 "BeltFamily"（传送带族）、"武陵"（场景限定） */
-  /** AI-CORRECTION 2026-07-27: 物流族分类统一通过 RegistryQuery，不再使用 BeltFamily / PipeFamily tag。 */
-  /** AI-CORRECTION 2026-10-12: 地区标签仅保留搜索等元数据用途；地图与区域资格只由 placementWhitelist 决定。 */
   tags: string[];
   /** 未声明时不限制地图和区域；空数组禁止所有地图。 */
   readonly placementWhitelist?: readonly EntityPlacementWhitelistEntry[];
@@ -111,16 +93,6 @@ export interface EntityDefinition {
   requiresPower: boolean;
   /** 在电网中每 tick 消耗的电量 */
   powerDemand: number;
-  // AI-REMOVED 2026-10-13:
-  // Reason: 统一范围支持偏移、非正方形和设备方向。
-  // Trigger: 洒水机及后续定向区域设备接入。
-  // Evidence: 原字段只能表达以设备为中心的正方形。
-  // Replacement: EntityDefinition.ranges。
-  // Risk: 原电力范围消费者必须同步迁移。
-  // Human Review: Required
-  // Original code:
-  // /** 供电范围边长，单位：格。仅供电源类设备声明。 */
-  // powerRange?: number;
   readonly ranges?: readonly EntityRangeDefinition[];
   /** 基地未停电时，将设备的 idle 展示状态规一化为 normal。 */
   readonly isIdleAsRunning?: boolean;
@@ -132,20 +104,6 @@ export interface EntityDefinition {
    */
   inspectors: EntityInspectorDeclaration[];
 
-  // AI-REMOVED 2026-08-19:
-  // Reason: Registry 不再允许设备根据 SimulationMode 覆盖 behavior 或 Inspector。
-  // Trigger: 用户要求删除 simulationModeConfigs 这类 mode override 及对应基础设施。
-  // Evidence: 当前所有设备在单基地与区域多基地模式下使用相同声明。
-  // Replacement: simulationBehaviors 与 inspectors。
-  // Risk: Medium - 未来模式差异必须重新设计，不能通过恢复该字段局部加回。
-  // Human Review: Required
-  //
-  // Original code:
-  // /**
-  //  * 随仿真模式切换的静态行为与 Inspector 配置。
-  //  * 未声明某个模式时，设备沿用基础行为与 inspectors。
-  //  */
-  // readonly simulationModeConfigs?: EntitySimulationModeConfigMap;
 
   /** 不随仿真模式变化的基础运行行为。 */
   readonly simulationBehaviors?: readonly EntitySimulationBehaviorDeclaration[];
@@ -177,23 +135,6 @@ export interface EntityDefinition {
    */
   readonly blockageAutoClearance?: EntityBlockageAutoClearanceDefinition;
 
-  // AI-REMOVED 2026-07-23:
-  // Reason: 设备消耗改为真实缓存槽与 consumption-channel 上运行的 reserved-item 配方，
-  //   不再存在固定分钟窗口计数器。
-  // Trigger: 用户要求移除计数器机制，并以五路十秒消耗配方作为普通频道运行许可。
-  // Evidence: RecipeChannelDefinition.type 与运行中配方已经能够完整表达消耗状态和气体环境。
-  // Replacement: recipeChannels[type="consumption-channel"] + 对应真实 storageSlotGroup。
-  // Risk: Medium - 旧 meteredConsumption 定义不再参与拓扑编译，相关设备必须完成注册表迁移。
-  // Human Review: Required
-  //
-  // Original code:
-  // /**
-  //  * 按固定时间窗口吞噬物品并授予设备运行许可的配置。
-  //  * 输入物品不会进入普通库存；达到 startThreshold 后设备运行到当前窗口末尾，
-  //  * 上一窗口达标时会授权下一整个窗口。gasDiffusionRange 非空时，运行许可同时提供
-  //  * 与窗口锁定物品对应的气体环境。
-  //  */
-  // readonly meteredConsumption?: EntityMeteredConsumptionDefinition;
 
   // ---- 端口与存储槽组 ----
 
@@ -229,23 +170,6 @@ export interface EntityDefinition {
 
 }
 
-// AI-REMOVED 2026-07-23:
-// Reason: 固定窗口计量对象已经被真实槽位与 consumption-channel 配方取代。
-// Trigger: 用户要求物品进入容量 5 缓存、预留十秒后消耗，并直接以运行中配方授权设备。
-// Evidence: 所有旧字段都只服务于已移除的分钟计数窗口。
-// Replacement: RecipeChannelDefinition.type + RecipeDefinition(recipeType="reserved-item")。
-// Risk: Medium - domain 公共出口与所有旧调用方必须同步迁移。
-// Human Review: Required
-//
-// Original code:
-// export interface EntityMeteredConsumptionDefinition {
-//   readonly inputPortGroupId: string;
-//   readonly itemIds: readonly string[];
-//   readonly windowSeconds: number;
-//   readonly startThreshold: number;
-//   readonly acceptanceLimit: number;
-//   readonly gasDiffusionRange: number | null;
-// }
 
 // ---------------------------------------------------------------------------
 // EntityPlacementDefaults — 设备放置时的默认行为
@@ -323,8 +247,6 @@ export interface ItemFilterDefinition {
   /** 白名单/黑名单物品 ID 列表 */
   itemFilterIds?: string[];
   /** 按域过滤：solid（固体）、liquid（液体）、any（任意） */
-  /** AI-CORRECTION 2026-07-10: 新增 gas（气体）与 fluid（液体或气体），any 扩展为 solid/liquid/gas。 */
-  /** AI-CORRECTION 2026-07-28: itemFilterType 已迁移为位标志；联合域通过位或表达。 */
   itemFilterType?: ItemFilterType;
   /** 按标签过滤 */
   itemFilterTag?: string[];
@@ -338,7 +260,6 @@ export interface PortGroupDefinition {
   /** 端口组 ID，如 "item_input"、"fluid_output" */
   id: string;
   /** 物品域：item（固体物品）/ fluid（流体，含液体与气体） */
-  /** AI-CORRECTION 2026-07-28: kind 已迁移为物品域位标志，不再承担端口物理类型语义。 */
   kind: ItemDomainFlag;
   /** 是否为管道端口；物理连接类型只依据此字段判断。 */
   isPipe: boolean;
@@ -362,9 +283,7 @@ export interface PortGroupDefinition {
 export interface StorageSlotGroupDefinition {
   id: string;
   /** 物品域：item / fluid（液体+气体） / liquid / gas */
-  /** AI-CORRECTION 2026-07-28: kind 已迁移为物品域位标志，联合域通过位或表达。 */
   kind: ItemDomainFlag;
-  // AI-CORRECTION 2026-05-13: role 字段已删除。
   // 存储组的输入/输出能力由 portStorageBindings 绑定的端口方向推导；
   // 配方原料/产物角色由 Recipe Channel 的 ingredientStorageGroupIds / productStorageGroupIds 决定。
   /**
@@ -384,26 +303,6 @@ export interface StorageSlotGroupDefinition {
 }
 
 
-// AI-REMOVED 2026-06-12:
-// Reason: 端口/边的 per-tick count 不属于仿真设计文档，且会把准入口上限错误实现为单 tick 计数。
-// Trigger: 用户要求删除 per tick count，并以准入口 admissionRule 的跨 tick 计数替代。
-// Evidence: .docs/common/模拟器/仿真运行原理.md 已改为仅定义准入口跨 tick admission counter。
-// Replacement: EntityAdmissionRuleDefinition + Runtime admission counter。
-// Risk: Medium - 外部代码若仍引用 CountLimit 或 port.count 需要迁移到准入口 admissionRule。
-// Human Review: Required
-//
-// Original code:
-// export type CountLimit = number | "unlimited";
-// AI-REMOVED 2026-06-06:
-// Reason: submitMode 机制已删除，domain API 不应继续导出旧提交模式类型。
-// Trigger: 用户要求 submit mode 机制彻底删除，未来统一用 WarehouseSink 或 r_warehouse_submit 配方交货。
-// Evidence: simulation/types.ts 已删除 SimulationSubmitMode；运行时不再编译或消费 submitMode。
-// Replacement: WarehouseSink tag / r_warehouse_submit recipe.
-// Risk: Medium - 外部代码若仍引用 SubmitMode 会编译失败，需要迁移到新交货语义。
-// Human Review: Required
-//
-// Original code:
-// export type SubmitMode = "never" | "every-tick" | "every-n-seconds";
 export type StorageGroupSplitLinkType = "share-all" | "share-cap";
 
 /**
@@ -428,19 +327,6 @@ export interface StorageSlotDefinition extends ItemFilterDefinition {
    * 对应 entity.config 中的 "slots[N].ignoreStock"
    */
   ignoreStock: boolean;
-  // AI-REMOVED 2026-06-06:
-  // Reason: 槽位定义不再携带 submitMode；提交语义改为设备级 WarehouseSink 或配方通道。
-  // Trigger: 用户要求 submit mode 机制彻底删除。
-  // Evidence: RUN_ID 20260606-041337-509040 中 slot 级 submitMode 被全局扫描误消费。
-  // Replacement: src/simulation/runtime/runtime-slot-access.ts + r_warehouse_submit recipe.
-  // Risk: Medium - 旧蓝图中的同名 config 键将被忽略，legacy importer 会迁移 submitToWarehouse。
-  // Human Review: Required
-  //
-  // Original code:
-  // /** 提交模式：never（不自动提交）/ every-tick（每 tick）/ every-n-seconds（定时） */
-  // submitMode: SubmitMode;
-  // /** 当 submitMode="every-n-seconds" 时的间隔秒数 */
-  // submitIntervalSeconds: number | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -497,20 +383,8 @@ export interface PortDefinition {
    *
    * 只应挂在 admission 设备的 input port 上。itemId=null 表示未选择准入物品；
    * limit=null 表示不设总量上限。计数由仿真 runtime 持久化，不随 tick 清零。
-   * AI-CORRECTION 2026-07-10: 新增 perMinuteLimit 表示按仿真分钟重置的窗口上限；limit 仍只表示累计总量上限。
-   * AI-CORRECTION 2026-07-23: perMinuteLimit 保留每分钟配置单位，但实际按六个对齐的 10 秒窗口执行，每窗额度为配置值除以 6。
    */
   admissionRule?: EntityAdmissionRuleDefinition | null;
-  // AI-REMOVED 2026-06-12:
-  // Reason: 端口 per-tick count 是错误设计，不应继续作为通用 PortDefinition 字段。
-  // Trigger: 用户确认“per tick count 应删除，文档里没有这个概念”。
-  // Evidence: 新需求要求准入口限制为跨 tick 总计数，而不是 edge 每 tick 当前通过数。
-  // Replacement: admissionRule.limit + runtime admission counter。
-  // Risk: Medium - 旧 config 中 portGroups[*].ports[*].count 会被忽略。
-  // Human Review: Required
-  //
-  // Original code:
-  // count: CountLimit;
   /** 优先级分组（用于分流器调度，对应《仿真运行原理》中 routing 概念） */
   priorityGroup: number;
   /** 轮询种子（同一 priorityGroup 内用于 round-robin 调度） */
@@ -535,7 +409,6 @@ export interface EntityAdmissionRuleDefinition {
   /** 跨 tick 总准入上限。null 表示无总量上限。 */
   readonly limit: number | null;
   /** 每仿真分钟准入上限。null 表示无每分钟上限。 */
-  /** AI-CORRECTION 2026-07-23: 数值必须为 6 的正整数倍；运行时每 10 秒窗口放行 perMinuteLimit / 6。 */
   readonly perMinuteLimit?: number | null;
 }
 
@@ -561,17 +434,6 @@ export interface DeviceStateDefinition {
   readonly visualKey?: string;
   /** 进入时新建计时器；继承迁移保留来源状态的计时起点和截止时间。 */
   readonly timerDurationSeconds?: number;
-  // AI-REMOVED 2026-10-15:
-  // Reason: 单迁移无法同时监听育种完成和生长到期。
-  // Trigger: 用户要求分支状态机、继承计时及同 tick 连续迁移。
-  // Evidence: DeviceStateRuntime 原来只有一个 nextIndex。
-  // Replacement: transitions + DeviceStateTransitionDefinition
-  // Risk: Medium - 所有状态定义与消费者统一迁移。
-  // Human Review: Required
-  // Original code:
-  // readonly transition:
-  //   | { readonly kind: "elapsed"; readonly durationSeconds: number; readonly nextStateId: string }
-  //   | { readonly kind: "recipe-completed"; readonly recipeId: string; readonly nextStateId: string };
   /** 按声明顺序选取首个满足条件的迁移。 */
   readonly transitions: readonly DeviceStateTransitionDefinition[];
 }

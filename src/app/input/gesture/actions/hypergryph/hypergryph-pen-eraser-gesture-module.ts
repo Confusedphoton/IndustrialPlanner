@@ -7,7 +7,7 @@ import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 
 /**
- * 2026-11-13：手写笔橡皮擦端删除设备。
+ * 手写笔橡皮擦端删除设备。
  *
  * - 橡皮擦点按：删除笔下的设备。
  * - 橡皮擦拖动：划过的设备逐个加入选择集作为预览，抬笔时一次删除，形成单条撤销记录。

@@ -80,7 +80,7 @@ describe("武陵农用地自带围栏", () => {
     }
     expect(Array.from({ length: 40 }, (_, i) => i + 103).filter(x => !cells.has(`${x},38`)))
       .toEqual([136, 137, 138, 139, 140, 141, 142]);
-    // 2026-10-17：东入口单独核对内侧 38 行；东南角属于已核对的南入口。
+    // 东入口单独核对内侧 38 行；东南角属于已核对的南入口。
     expect(Array.from({ length: 38 }, (_, i) => i).filter(y => !cells.has(`142,${y}`)))
       .toEqual([22, 23, 24, 25, 26, 27, 28, 29]);
     expect(cells.has("142,38")).toBe(false);

@@ -120,25 +120,6 @@ export function createEditorMoveActions({
         return false;
       }
 
-      /*
-        AI-REMOVED 2026-08-23:
-        Reason: 原逻辑让任一受限设备阻断整个框选移动，无法在规则冲突时保留非法设备原位并移动合法设备。
-        Trigger: 用户要求框选移动与蓝图放置采用一致的合法子集提交语义。
-        Evidence: move preview 已逐实体校验，ghost 原实体会在未提交时自然保留原位。
-        Replacement: 上方 outsideBaseDraftIds + movablePreviewDrafts。
-        Risk: Medium；多选移动可能只移动部分设备，历史记录必须只包含实际移动成员。
-        Human Review: Required
-
-        Original code:
-        if (hasOutsideBasePlacementReason({
-          document: currentDocument,
-          entityIds: previewDrafts.map((draft) => draft.id),
-          state,
-          workspace,
-        })) {
-          return false;
-        }
-      */
 
       const nextEntities = { ...currentDocument.entities };
       const definitionChangedEntityIds = new Set<string>();

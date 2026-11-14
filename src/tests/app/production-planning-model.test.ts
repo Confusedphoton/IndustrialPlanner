@@ -9,10 +9,7 @@ import {
   type ProductionPlanningSourceConfig,
 } from "@/app/shell/production-planning/production-planning-model";
 import { buildProductionPlanningTreeRows } from "@/app/shell/production-planning/production-planning-panel";
-import { createBlueprintPlannerPlan } from "@/app/shell/production-planning/blueprint-planner-adapter";
 import { isProductionPlanningDeviceMinimumConsumptionRecipeId } from "@/app/shell/production-planning/production-planning-ledger";
-import { createProductionNetwork } from "@/blueprint-planner/production-network";
-import { materialBalance } from "@/blueprint-planner/terminals";
 import type { ProductionPlanningPort } from "@/app/shell/production-planning/production-planning-model";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import { createRegistryContract, WIKI_DEFAULT_CRAFT_DEFINITIONS } from "@/registry";
@@ -81,7 +78,6 @@ function createWaterPurifierPlanningIndex(sewageOutputAmount = 600) {
   return buildProductionPlanningIndex(registry);
 }
 
-// AI-CORRECTION 2026-05-22:
 // 自然资源不再通过 infiniteItemIds 补齐；缺失时走 null 配方生产。
 // baseInfiniteItemIds 返回空集，与 panel 的新 infiniteItemIds 构建逻辑一致。
 function baseInfiniteItemIds(_index: ReturnType<typeof buildProductionPlanningIndex>) {
@@ -186,7 +182,6 @@ describe("production planning model", () => {
     expect(root.recipeNode?.inputs).toEqual([
       expect.objectContaining({ itemId: "item_iron_ore", perMinute: 30 }),
     ]);
-    // AI-CORRECTION 2026-05-22:
     // 自然资源不再从 infiniteItemIds 补齐；铁矿石走矿机配方生产。
     expect(root.recipeNode?.inputItems[0]?.isInfiniteSource).toBe(false);
     expect(root.recipeNode?.inputItems[0]?.recipeNode).not.toBeNull();
@@ -691,17 +686,6 @@ describe("production planning model", () => {
     const pickerRow = rows.find((row) => row.recipeId === picker?.recipeId);
     const planterRow = rows.find((row) => row.recipeId === planter?.recipeId);
     expect(rows.some((row) => row.recipeId === "external-supply:item_plant_grass_2")).toBe(false);
-    // AI-REMOVED 2026-10-16:
-    // Reason: 植物内部回流不是独立的循环外需求，不能要求提取共享。
-    // Trigger: 用户确认旧回归将单线植物循环错误固化为共享。
-    // Evidence: 此例只有粉末生产一处循环外需求；原断言只检查了回流引用形状。
-    // Replacement: 下方植物循环引用、流量和非共享断言。
-    // Risk: Low；原配平与零持续外供断言保留。
-    // Human Review: Required
-    //
-    // Original code:
-    // expect(rows.some((row) => row.isSharedDemandReference && row.sourceRowId === planterRow?.id
-    //   && row.parentIds.includes(pickerRow?.id ?? ""))).toBe(true);
     expect(planterRow).toMatchObject({ isShared: false, isPlantCycle: true, depth: 1 });
     expect(pickerRow).toMatchObject({ isShared: false, isPlantCycle: true, depth: 2 });
     const feedbackRow = rows.find((row) => row.isPlantCycleReference && row.sourceRowId === planterRow?.id);
@@ -789,14 +773,6 @@ describe("production planning model", () => {
       supply: { cycle: 0, manual: 0, surplus: 0, infinite: 0 } });
     const rows = buildProductionPlanningTreeRows(result, "device");
     const sources = rows.filter((row) => row.recipeId === `external-supply:${itemId}`);
-    // AI-REMOVED 2026-10-29:
-    // Reason: 无真实来源的循环缺口必须报错，不能伪造外供。
-    // Trigger: 用户要求错误循环阻止 EDA，植物回流继续正常执行。
-    // Evidence: 互转净产出为零；原断言将需求缺口当作已满足。
-    // Replacement: 下方无外供与 cycleIssues 断言。Risk: Low；Human Review: Required。
-    // Original code:
-    // expect(sources).toHaveLength(1);
-    // expect(sources[0]?.recipeNode.outputs).toContainEqual(expect.objectContaining({ itemId, perMinute }));
     expect(sources).toHaveLength(0);
     expect(result.cycleIssues).toHaveLength(1);
     expect(rows.some((row) => row.isPlantCycle || row.isPlantCycleReference)).toBe(false);
@@ -810,41 +786,6 @@ describe("production planning model", () => {
       expect(total.producedPerMinute + total.suppliedPerMinute).toBe(total.demandPerMinute - total.unresolvedPerMinute);
     }
     expect(result.unresolvedPerMinute).toBe(perMinute);
-  });
-
-  it("优质芽针针剂目标会生成可持续的植物产量和清水需求", () => {
-    const registry = createRegistryContract();
-    const index = buildProductionPlanningIndex(registry);
-    const targets = [port("item_bottled_rec_hp_5", 6)];
-    const supplies = [port("item_copper_nugget", 240)];
-    const result = computeProductionPlan({
-      targets,
-      supplies,
-      infiniteItemIds: baseInfiniteItemIds(index),
-      recipeChoices: new Map(),
-      sourceConfig: DEFAULT_SOURCE_CONFIG,
-    }, index);
-    const picker = result.recipeTotals.find((entry) => entry.recipeId === "r_seedcol_grass_seed_2_from_grass_2_basic");
-    const planter = result.recipeTotals.find((entry) => entry.recipeId === "r_hydro_planter_grass_2_from_seed_2_and_water_basic");
-    const pump = result.recipeTotals.find((entry) => entry.recipeId === "r_pump_water_basic");
-    const grass = result.itemTotals.find((entry) => entry.itemId === "item_plant_grass_2");
-
-    expect(picker?.cyclesPerMinute).toBe(15);
-    expect(planter?.cyclesPerMinute).toBe(15);
-    expect(pump?.outputs[0]?.perMinute).toBe(45);
-    expect(grass?.producedPerMinute).toBe(grass?.demandPerMinute);
-    expect(result.unresolvedPerMinute).toBe(0);
-
-    const plan = createBlueprintPlannerPlan({ request: { targets, supplies, infiniteItemIds: new Set(),
-      recipeChoices: new Map(), sourceConfig: DEFAULT_SOURCE_CONFIG }, index,
-      activeActivityIds: ["activity-limited-formula-2"], sourceBaseId: "wuling_protocol_core", name: "" });
-    const network = createProductionNetwork(registry, { plan, options: {
-      warehousePortPlacement: "any", solidSupply: "warehouse", fluidSupply: "conduit", warehouseBus: "straight", solidOutput: "auto",
-      byproducts: "destroy", plantStartup: "preload", evaluationsPerRound: 1000,
-    } });
-    const balance = materialBalance(network);
-    expect(balance.get("item_plant_grass_2")).toBe(0);
-    expect(balance.get("item_plant_grass_seed_2")).toBe(0);
   });
 
   it("采种增产时为回流和外供计算两台种植机", () => {

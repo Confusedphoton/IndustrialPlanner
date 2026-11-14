@@ -5,52 +5,16 @@ import type { DragEvent } from "react";
 import type { AppHost } from "@/app/host/app-host";
 import type { LongPressState } from "@/app/input/gesture/adapter";
 import type { GestureDiagnosticsSnapshot } from "@/app/input/gesture/diagnostics";
-// AI-REMOVED 2026-09-12:
-// Reason: CanvasPanel 不再读取领域状态中的运行时统计类型，性能诊断统一经 SimulationQuery 拉取。
-// Trigger: 用户确认从公共 SimulationState contract 移除仿真计数。
-// Evidence: SimulationRuntimeStatistics 已退役，getPerformanceDiagnostics 返回跨引擎统一读模型。
-// Replacement: SimulationQuery.getPerformanceDiagnostics。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-// import type { SimulationRuntimeStatistics } from "@/domain/simulation";
 import { useViewportResizeAdapter } from "@/app/shell/canvas/viewport-resize-adapter";
 import { SyncSaveIndicator } from "@/app/shell/layout/sync-save-indicator";
 import { isTouchLandscapeScreenProfile } from "@/shared/browser/screen-profile";
 import { observer } from "mobx-react-lite";
 import { useEffect, useId, useRef, useState } from "react";
-// AI-REMOVED 2026-08-05:
-// Reason: CanvasPanel 不再接收可交互的 topRightOverlay，避免 overlay 进入画布手势输入树。
-// Trigger: 手机端折叠顶栏按钮的 pointer 被 CanvasPanel 捕获，导致 pointerup/click 无法到达按钮。
-// Evidence: 真实触摸事件中 pointerdown 命中按钮后被 canvas-panel 的 document capture 拦截并重定向 pointerup。
-// Replacement: WorkbenchApp 中与 CanvasPanel 并列的 workbench-floating-top-bar-controls。
-// Risk: Low；WebDAV 保存状态与 FPS 仍由 CanvasPanel 内部独立渲染。
-// Human Review: Required
-//
-// Original code:
-// import type { KeyboardEvent, PointerEvent, ReactNode, WheelEvent } from "react";
 import type { KeyboardEvent, PointerEvent, WheelEvent } from "react";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
-// AI-REMOVED 2026-09-12:
-// Reason: UI 不再从 timeline state 自行推导仿真缓存指标，避免 Dense 与 Legacy 语义分叉。
-// Trigger: 用户要求所有仿真性能统计统一由 SimulationQuery 提供。
-// Evidence: SimulationPerformanceDiagnosticsReadModel 已定义时间轴保留帧与生成速率。
-// Replacement: SimulationQuery.getPerformanceDiagnostics。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-// import {
-//   calculateTimelineFrameRate,
-//   countSavedTimelineFrames,
-//   createTimelineFrameStatisticsSample,
-//   type TimelineFrameStatisticsSample,
-// } from "@/app/shell/canvas/timeline-frame-statistics";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 
-// AI-CORRECTION 2026-09-12: 仿真指标改为统一 Query 读模型字段，FPS 仍由 UI 本地计数。
 interface FpsSnapshot {
   fps: number;
   tps: number;
@@ -76,22 +40,6 @@ function pollSimulationStats(appHost: AppHost): FpsSnapshot {
   };
 }
 
-// AI-REMOVED 2026-08-05:
-// Reason: CanvasPanel 的 topRightOverlay API 把普通 UI 错误纳入画布输入边界。
-// Trigger: 折叠顶栏四个按钮在触摸设备上被 CanvasPanel setPointerCapture 接管。
-// Evidence: topRightOverlay 是 CanvasPanel 中唯一由 Workbench 注入的可交互 ReactNode。
-// Replacement: WorkbenchApp 中与 CanvasPanel 并列的 workbench-floating-top-bar-controls。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// export const CanvasPanel = observer(function CanvasPanel({
-//   appHost,
-//   topRightOverlay,
-// }: {
-//   appHost: AppHost;
-//   topRightOverlay?: ReactNode;
-// }) {
 export const CanvasPanel = observer(function CanvasPanel({ appHost, canvas = appHost.mainCanvas, scene, onDrop, scopedKeyboard = false, ariaLabel }: {
   appHost: AppHost;
   canvas?: CanvasInteractionController;
@@ -123,34 +71,7 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost, canvas = app
     pollSimulationStats(appHost),
   );
   const fpsFrameCountRef = useRef(0);
-  // AI-REMOVED 2026-09-12:
-  // Reason: 时间轴帧速率改由仿真内部高速采样，UI 无需保留上一份领域状态样本。
-  // Trigger: 用户要求界面只按固定周期查询统一性能读模型。
-  // Evidence: SimulationQuery.getPerformanceDiagnostics 已返回 timelineGeneratedFramePerSecond。
-  // Replacement: SimulationPerformanceDiagnosticsReadModel.timelineGeneratedFramePerSecond。
-  // Risk: Low。
-  // Human Review: Required
-  //
-  // Original code:
-  // const timelineFrameSampleRef = useRef<TimelineFrameStatisticsSample | null>(null);
 
-  // AI-REMOVED 2026-11-12:
-  // Reason: FPS 只能统计所属 View 的实际绘制，UI 不再独立维持 rAF。
-  // Trigger: REQ-048 固定预览按需绘制。
-  // Evidence: 独立计数器会在无渲染时持续唤醒并误报 FPS。
-  // Replacement: renderBinding.subscribeFrames
-  // Risk: Low；Human Review: Required
-  //   // rAF 计数器：每帧递增
-  //   useEffect(() => {
-  //     let rafId: number;
-  //     const tick = () => {
-  //       fpsFrameCountRef.current += 1;
-  //       rafId = requestAnimationFrame(tick);
-  //     };
-  //     rafId = requestAnimationFrame(tick);
-  //     return () => cancelAnimationFrame(rafId);
-  //   }, []);
-  //
   useEffect(() => showFps ? canvas.renderBinding?.subscribeFrames(() => {
     fpsFrameCountRef.current += 1;
   }) : undefined, [canvas, renderContainer, showFps]);
@@ -348,16 +269,6 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost, canvas = app
             <CanvasGestureDiagnosticsOverlay snapshot={diagnosticsSnapshot} />
           ) : null}
           {showFps ? <CanvasFpsOverlay snapshot={fpsSnapshot} /> : null}
-          {/* AI-REMOVED 2026-08-05:
-              Reason: 可交互顶栏按钮不能渲染在 CanvasPanel 的手势输入树内。
-              Trigger: CanvasPanel 的 pointer capture 与 compat click 拦截导致手机端按钮失效。
-              Evidence: pointerup 被重定向到 canvas-panel，且合成 click 被 preventDefault 抑制。
-              Replacement: WorkbenchApp 中 CanvasPanel 后方的 sibling overlay。
-              Risk: Low
-              Human Review: Required
-
-              Original code:
-              {topRightOverlay} */}
           {canvas.canUseWorkbenchActions && appHost.workspace.sync !== null ? (
             <SyncSaveIndicator
               className={useCollapsedTopBarSavePosition
@@ -373,37 +284,6 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost, canvas = app
   );
 });
 
-// AI-REMOVED 2026-05-21:
-// Reason: 视口发光已改由 renderer 暴露的 container 内部 DOM overlay 承担，app shell 不再负责 renderer 视觉细节。
-// Trigger: 用户要求 renderer 对外从 canvas 改成 div，并让 CSS 属于 renderer。
-// Evidence: RenderContract.container 与 renderer-host.css 已接管 placement/marquee 全视口 glow。
-// Replacement: src/renderer/renderer-host.tsx, src/renderer/renderer-host.css, src/renderer/scene/render-scene-orchestrator.ts
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// const CanvasPlacementGlowOverlay = observer(function CanvasPlacementGlowOverlay({
-//   appHost,
-//   show,
-// }: {
-//   appHost: AppHost;
-//   show: boolean;
-// }) {
-//   if (!show) {
-//     return null;
-//   }
-//
-//   const activeTool = appHost.state.activeTool;
-//   const logisticsKind = appHost.internalState.runtime.logisticsPlacement.kind;
-//   const isSinglePlacement = activeTool === "single-placement";
-//   const isLogisticsPlacement = activeTool === "logistics-placement" && logisticsKind !== null;
-//
-//   if (!isSinglePlacement && !isLogisticsPlacement) {
-//     return null;
-//   }
-//
-//   return <div className={cm(styles, "canvas-placement-glow-overlay")} />;
-// });
 
 function CanvasFpsOverlay({
   snapshot,

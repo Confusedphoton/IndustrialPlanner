@@ -57,18 +57,6 @@ export const PwaGateway = observer(function PwaGateway({
     previousFullscreenNoticeRef.current = currentNotice;
   }, [pwaController.fullscreenNotice]);
 
-  // AI-REMOVED 2026-08-23:
-  // Reason: 离线能力不受支持时仍需承载由用户点击触发的全屏失败/PWA 引导。
-  // Trigger: iPhone Safari 不提供页面 Fullscreen API，开发环境也会把 offlineStatus 标记为 unsupported。
-  // Evidence: 原提前返回会让 fullscreenNotice 已更新但没有任何 UI 渲染。
-  // Replacement: 下方各离线 UI 继续按自身状态条件渲染，fullscreenNotice 独立渲染。
-  // Risk: Low；unsupported 状态下原有离线提示条件均为 false。
-  // Human Review: Required
-  //
-  // Original code:
-  // if (pwaController.offlineStatus === "unsupported") {
-  //   return null;
-  // }
 
   const pwaProgress = pwaController.deviceAudioProgress ?? pwaController.progress;
   const pwaStatus = pwaController.offlineStatus;

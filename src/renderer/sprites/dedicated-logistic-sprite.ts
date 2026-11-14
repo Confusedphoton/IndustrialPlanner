@@ -1,19 +1,3 @@
-// AI-REMOVED 2026-11-12:
-// Reason: 直接 Assets 加载绕过视图的资源租约和异步刷新。
-// Trigger: REQ-048 按需绘制及多视图资源释放。
-// Evidence: Sprite 存在三个直接加载入口；缓存消费者需重新通知所属 View。
-// Replacement: TextureActions.getTexture，optional 保留装饰失败降级。
-// Risk: Low；不改变必要纹理失败策略。
-// Human Review: Required
-// Original code:
-// import {
-//   Assets,
-//   Container,
-//   Graphics,
-//   Sprite,
-//   Texture,
-//   TilingSprite,
-// } from "pixi.js"
 import { Container, Graphics, Sprite, Texture, TilingSprite } from "pixi.js";
 
 import type { AppTheme } from "@/domain/app/types/theme"
@@ -27,15 +11,6 @@ import {
 import type { RenderSurfaceContext } from "@/renderer/render-surface-context"
 import { shouldUseGroupedPreviewVisuals } from "@/renderer/move-visual-policy"
 import { resolveDeviceBodyTextureKey } from "@/renderer/sprites/device-texture-key"
-// AI-REMOVED 2026-11-12:
-// Reason: 直接 Assets 加载绕过视图的资源租约和异步刷新。
-// Trigger: REQ-048 按需绘制及多视图资源释放。
-// Evidence: Sprite 存在三个直接加载入口；缓存消费者需重新通知所属 View。
-// Replacement: TextureActions.getTexture，optional 保留装饰失败降级。
-// Risk: Low；不改变必要纹理失败策略。
-// Human Review: Required
-// Original code:
-// import { createPublicAssetUrl } from "@/shared/browser/public-asset-url"
 
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 import { logisticsStaticFrameKey, resolveLogisticsMaterialSpec, type LogisticsMaterialEntityState } from "@/shared/logistics-material"
@@ -54,26 +29,7 @@ const SUPPRESSED_PIPE_COLOR = 0x448AFF
 const SUPPRESSED_LINE_WIDTH_RATIO = 1 / 6
 const SUPPRESSED_ARROW_LENGTH_RATIO = 1 / 5
 const SUPPRESSED_ARROW_WIDTH_RATIO = 1 / 6
-// AI-REMOVED 2026-11-12:
-// Reason: 直接 Assets 加载绕过视图的资源租约和异步刷新。
-// Trigger: REQ-048 按需绘制及多视图资源释放。
-// Evidence: Sprite 存在三个直接加载入口；缓存消费者需重新通知所属 View。
-// Replacement: TextureActions.getTexture，optional 保留装饰失败降级。
-// Risk: Low；不改变必要纹理失败策略。
-// Human Review: Required
-// Original code:
-// const SCANLINE_TEXTURE_PATH = createPublicAssetUrl("textures/scanline-45deg-50opacity.webp")
 
-// AI-REMOVED 2026-05-25:
-// Reason: 常量从 generic-device-sprite.ts 复制后从未在本文件中被引用
-// Trigger: ESLint @typescript-eslint/no-unused-vars
-// Evidence: grep 全文件未找到 SCANLINE_PADDING_TILES 的引用
-// Replacement: None
-// Risk: Low
-// Human Review: Not Required
-//
-// Original code:
-// const SCANLINE_PADDING_TILES = 2
 const SCANLINE_SCROLL_INTERVAL_MS = 2000
 const PREVIEW_BORDER_WIDTH = 1
 const PREVIEW_BORDER_ALPHA = 0.5
@@ -131,15 +87,6 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
     this.spriteId = definition.spriteId
     this.materialSpec = resolveLogisticsMaterialSpec(this.spriteId)
     this.materialState = this.materialSpec ? { ...this.materialSpec, start: 0, support: true, marker: true, fluidItemId: null } : null
-    // AI-REMOVED 2026-09-14:
-    // Reason: 物流状态不再用 "empty" 颜色哨兵表示空管。
-    // Trigger: 状态改为只传递 fluidItemId，颜色在渲染边界读取 Registry.fluidColors。
-    // Evidence: fluidItemId=null 已明确表达空管。
-    // Replacement: 上方 fluidItemId: null。
-    // Risk: Low
-    // Human Review: Required
-    // Original code:
-    // this.materialState = this.materialSpec ? { ...this.materialSpec, start: 0, support: true, marker: true, color: "empty" } : null
 
     this.body = new Sprite(Texture.EMPTY)
     this.body.anchor.set(0.5)
@@ -194,15 +141,6 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
     if (this.materialSpec) {
       this.materialState = context.logisticsMaterials?.entities.get(this.entityId) ?? {
         ...this.materialSpec, start: 0, support: true, marker: false, fluidItemId: null,
-        // AI-REMOVED 2026-09-14:
-        // Reason: 预览物流状态不再用 "empty" 颜色哨兵表达空管。
-        // Trigger: LogisticsMaterialEntityState 改为 fluidItemId。
-        // Evidence: 预览没有运行态物品，null 是直接语义。
-        // Replacement: 上方 fluidItemId: null。
-        // Risk: Low
-        // Human Review: Required
-        // Original code:
-        // ...this.materialSpec, start: 0, support: true, marker: false, color: "empty",
       }
     }
     this.syncDynamicMaterial(context)

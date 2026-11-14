@@ -12,9 +12,6 @@ import {
   type HoverTarget,
 } from "@/domain/editor/types/editor-types";
 import type { EditorState } from "@/domain/editor/editor-state";
-// AI-REMOVED 2026-11-12: Reason: 相机移至 View；Trigger: REQ-048 D4；Evidence: 旧 viewport 已退役；Replacement: EditorView；Risk: 消费者待迁移；Human Review: Required
-// Original code:
-// import type { ClientPixelRect } from "@/domain/shared/client-pixel";
 import type { GridRect } from "@/domain/shared/grid";
 import type { LogisticsDraftReadonlyState } from "@/domain/shared/logistics";
 import type { SlotLinkDefinition } from "@/domain/document/world-document";
@@ -31,56 +28,9 @@ import type {
 } from "@/domain/editor/types/region-annotation-types";
 
 import type { DraftEntity } from "./draft-entity";
-// AI-REMOVED 2026-11-12: Reason: 相机移至 View；Trigger: REQ-048 D4；Evidence: 旧 viewport 已退役；Replacement: EditorView；Risk: 消费者待迁移；Human Review: Required
-// Original code:
-// import {
-//   DEFAULT_VIEWPORT_GRID_SIZE,
-//   resolveViewportGridCellPixelSize,
-// } from "./viewport-settings";
 
-// AI-REMOVED 2026-11-12:
-// Reason: 相机属于独立 View，Editor 不再持有或驱动视口。
-// Trigger: REQ-048 已确认 D4 契约。
-// Evidence: 同源多视图需要独立相机，无头会话不创建动画驱动。
-// Replacement: EditorView 的私有可写状态
-// Risk: 全部坐标、聚焦、持久化消费者需要迁移。
-// Human Review: Required
-// Original code:
-// export interface GridFloatPointReadWrite {
-//   x: number;
-//   y: number;
-// }
 
-// AI-REMOVED 2026-11-12:
-// Reason: 相机属于独立 View，Editor 不再持有或驱动视口。
-// Trigger: REQ-048 已确认 D4 契约。
-// Evidence: 同源多视图需要独立相机，无头会话不创建动画驱动。
-// Replacement: EditorView 的私有可写状态
-// Risk: 全部坐标、聚焦、持久化消费者需要迁移。
-// Human Review: Required
-// Original code:
-// export interface ClientPixelRectReadWrite {
-//   left: number;
-//   top: number;
-//   width: number;
-//   height: number;
-// }
 
-// AI-REMOVED 2026-11-12:
-// Reason: 相机属于独立 View，Editor 不再持有或驱动视口。
-// Trigger: REQ-048 已确认 D4 契约。
-// Evidence: 同源多视图需要独立相机，无头会话不创建动画驱动。
-// Replacement: EditorView 的私有可写状态
-// Risk: 全部坐标、聚焦、持久化消费者需要迁移。
-// Human Review: Required
-// Original code:
-// export interface EditorViewportStateReadWrite {
-//   center: GridFloatPointReadWrite;
-//   clientRect: ClientPixelRectReadWrite;
-//   gridSize: number;
-//   gridCellPixelSize: number;
-//   displayRotation: GridRotation;
-// }
 
 export interface EditorInternalPersistStateReadWrite {
   lastDocumentId: string | null;
@@ -88,30 +38,9 @@ export interface EditorInternalPersistStateReadWrite {
 }
 
 export interface EditorInternalTransientStateReadWrite {
-  // AI-REMOVED 2026-11-12: Reason: 校验必须使用真实空间；Trigger: REQ-048；Evidence: unbounded 跳过资格；Replacement: EditorServices.placement；Risk: Low；Human Review: Required
-  //  placementBounds: "base" | "unbounded";
-  // AI-REMOVED 2026-11-12:
-// Reason: 相机属于独立 View，Editor 不再持有或驱动视口。
-// Trigger: REQ-048 已确认 D4 契约。
-// Evidence: 同源多视图需要独立相机，无头会话不创建动画驱动。
-// Replacement: EditorView 的私有可写状态
-// Risk: 全部坐标、聚焦、持久化消费者需要迁移。
-// Human Review: Required
-// Original code:
-// hasMeasuredViewportClientRect: boolean;
   logisticsDraft: LogisticsDraftReadonlyState | null;
   logisticsDeviceRouteCycleSignature: string | null;
   logisticsDeviceRouteCycleIndex: number;
-  // AI-REMOVED 2026-09-15:
-  // Reason: 物流预览应由当前拓扑和鼠标位置决定，删除上一帧汇流器预览的拦截及专用状态。
-  // Trigger: 用户明确允许汇流器预览在鼠标移过交叉点后变为桥接器。
-  // Evidence: logistics-placement-complete.test.ts 中当前规划已生成 pipe_connector，历史状态却将草稿判为 unknown。
-  // Replacement: rebuildLogisticsDraft 中 resolveAutoDraftPlan 与 resolveInvalidReason 的当前规划结果。
-  // Risk: 传送带和管道共享此规则，需验证终点汇流、正交穿越及非法重叠。
-  // Human Review: Required
-  //
-  // Original code:
-  // convergerEntityGridKey: string | null;
   placementDraftSlotLinks: SlotLinkDefinition[] | null;
   placementDraftEntityIdMap: ReadonlyMap<string, string> | null;
   placementHistoryAction: EditorHistoryActionDescriptor | null;
@@ -133,30 +62,9 @@ class EditorInternalPersistStateReadWriteImpl
 class EditorInternalTransientStateReadWriteImpl
   implements EditorInternalTransientStateReadWrite
 {
-  // AI-REMOVED 2026-11-12: Reason: 校验必须使用真实空间；Trigger: REQ-048；Evidence: unbounded 跳过资格；Replacement: EditorServices.placement；Risk: Low；Human Review: Required
-  //  placementBounds: "base" | "unbounded" = "base";
-  // AI-REMOVED 2026-11-12:
-// Reason: 相机属于独立 View，Editor 不再持有或驱动视口。
-// Trigger: REQ-048 已确认 D4 契约。
-// Evidence: 同源多视图需要独立相机，无头会话不创建动画驱动。
-// Replacement: EditorView 的私有可写状态
-// Risk: 全部坐标、聚焦、持久化消费者需要迁移。
-// Human Review: Required
-// Original code:
-// hasMeasuredViewportClientRect = false;
   logisticsDraft: LogisticsDraftReadonlyState | null = null;
   logisticsDeviceRouteCycleSignature: string | null = null;
   logisticsDeviceRouteCycleIndex = 0;
-  // AI-REMOVED 2026-09-15:
-  // Reason: 物流预览应由当前拓扑和鼠标位置决定，删除上一帧汇流器预览的拦截及专用状态。
-  // Trigger: 用户明确允许汇流器预览在鼠标移过交叉点后变为桥接器。
-  // Evidence: logistics-placement-complete.test.ts 中当前规划已生成 pipe_connector，历史状态却将草稿判为 unknown。
-  // Replacement: rebuildLogisticsDraft 中 resolveAutoDraftPlan 与 resolveInvalidReason 的当前规划结果。
-  // Risk: 传送带和管道共享此规则，需验证终点汇流、正交穿越及非法重叠。
-  // Human Review: Required
-  //
-  // Original code:
-  // convergerEntityGridKey: string | null = null;
   placementDraftSlotLinks: SlotLinkDefinition[] | null = null;
   placementDraftEntityIdMap: ReadonlyMap<string, string> | null = null;
   placementHistoryAction: EditorHistoryActionDescriptor | null = null;
@@ -189,23 +97,12 @@ function createEntityCollection(
 
 
 export interface EditorStateReadWrite extends EditorState {
-  // AI-REMOVED 2026-11-12:
-// Reason: 相机属于独立 View，Editor 不再持有或驱动视口。
-// Trigger: REQ-048 已确认 D4 契约。
-// Evidence: 同源多视图需要独立相机，无头会话不创建动画驱动。
-// Replacement: EditorView 的私有可写状态
-// Risk: 全部坐标、聚焦、持久化消费者需要迁移。
-// Human Review: Required
-// Original code:
-// viewport: EditorViewportStateReadWrite;
   marqueeGridRect: GridRect | null;
   history: EditorHistoryStateReadWrite;
   regionAnnotations: RegionAnnotationEditorStateReadWrite;
   hoverTarget: HoverTarget | null;
-  // AI-CORRECTION 2026-08-13: drafts 由构造函数中的 observable.shallow 注解管理，
   // MobX 只追踪数组引用替换，不深度代理 draft 内部对象，避免与文档快照共享的嵌套对象被原位 observable 化。
   drafts: DraftEntity[];
-  // AI-CORRECTION 2026-08-13: collections 同理；每个 collection 本身已是 observable.array（deep:false），
   // 字典只需追踪引用替换，不应再由 makeAutoObservable 默认 deep 处理。
   collections: Record<EntityCollectionTypeValue, EntityCollectionReadWrite>;
   suppressBelts: boolean;
@@ -284,40 +181,8 @@ class EditorHistoryStateReadWriteImpl implements EditorHistoryStateReadWrite {
   }
 }
 
-// AI-REMOVED 2026-11-12: Reason: 相机移至 View；Trigger: REQ-048 D4；Evidence: 旧 viewport 已退役；Replacement: EditorView；Risk: 消费者待迁移；Human Review: Required
-// Original code:
-// const DEFAULT_VIEWPORT_WIDTH = 800;
-// const DEFAULT_VIEWPORT_HEIGHT = 600;
-// const DEFAULT_VIEWPORT_CLIENT_RECT: ClientPixelRect = {
-//   left: 0,
-//   top: 0,
-//   width: DEFAULT_VIEWPORT_WIDTH,
-//   height: DEFAULT_VIEWPORT_HEIGHT,
-// };
 
 export class EditorStateReadWriteImpl implements EditorStateReadWrite {
-  // AI-REMOVED 2026-11-12:
-// Reason: 相机属于独立 View，Editor 不再持有或驱动视口。
-// Trigger: REQ-048 已确认 D4 契约。
-// Evidence: 同源多视图需要独立相机，无头会话不创建动画驱动。
-// Replacement: EditorView 的私有可写状态
-// Risk: 全部坐标、聚焦、持久化消费者需要迁移。
-// Human Review: Required
-// Original code:
-// viewport: EditorViewportStateReadWrite = {
-//     center: {
-//       x: 0,
-//       y: 0,
-//     },
-//     clientRect: {
-//       ...DEFAULT_VIEWPORT_CLIENT_RECT,
-//     },
-//     gridSize: DEFAULT_VIEWPORT_GRID_SIZE,
-//     gridCellPixelSize: resolveViewportGridCellPixelSize(
-//       DEFAULT_VIEWPORT_GRID_SIZE,
-//     ),
-//     displayRotation: 0,
-//   };
   marqueeGridRect: GridRect | null = null;
   history: EditorHistoryStateReadWrite = new EditorHistoryStateReadWriteImpl();
   regionAnnotations: RegionAnnotationEditorStateReadWrite =
@@ -344,11 +209,9 @@ export class EditorStateReadWriteImpl implements EditorStateReadWrite {
 
   public constructor() {
     makeAutoObservable(this, {
-      // AI-CORRECTION 2026-08-13: drafts 只追踪引用替换（所有更新路径均为 state.drafts = ... 替换式），
       // 深度代理会把 draft 内部对象（含与文档快照共享引用的 config 嵌套对象）原位 observable 化，
       // 污染快照并导致同步 structuredClone 失败。
       drafts: observable.shallow,
-      // AI-CORRECTION 2026-08-13: collections 字典本身可观察，字典 value（observable.array）
       // 已显式 deep:false，不应再被 makeAutoObservable 默认 deep 处理。
       collections: observable.shallow,
     }, { autoBind: true });

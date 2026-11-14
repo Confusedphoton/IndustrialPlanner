@@ -5,142 +5,18 @@ import { expect, test } from "./harness/fixture";
 
 const APP_URL = "http://127.0.0.1:4174/";
 
-// AI-REMOVED 2026-10-05:
-// Reason: 统一三屏配置。
-// Trigger: 用户授权基座与用例迁移。
-// Evidence: 旧用例重复配置与管理浏览器资源。
-// Replacement: harness/profiles.ts
-// Risk: Low。Human Review: Required
-// Original code:
-// const SCREEN_PROFILES = [
-//   {
-//     name: "mobile-landscape",
-//     viewport: { width: 764, height: 345 },
-//     deviceScaleFactor: 3.125,
-//     hasTouch: true,
-//     coarsePointer: true,
-//     isMobile: true,
-//     deviceClass: "mobile",
-//     screenShape: "landscape",
-//   },
-//   {
-//     name: "tablet-square",
-//     viewport: { width: 711, height: 665 },
-//     deviceScaleFactor: 3.125,
-//     hasTouch: true,
-//     coarsePointer: true,
-//     isMobile: true,
-//     deviceClass: "tablet",
-//     screenShape: "square",
-//   },
-//   {
-//     name: "desktop-landscape",
-//     viewport: { width: 2552, height: 1315 },
-//     deviceScaleFactor: 1,
-//     hasTouch: true,
-//     coarsePointer: false,
-//     isMobile: false,
-//     deviceClass: "desktop",
-//     screenShape: "landscape",
-//   },
-// ] as const;
 
-// AI-REMOVED 2026-08-30:
-// Reason: 单个 Playwright 用例串行执行三种 Screen Profile，共享 90 秒总超时，导致前两种配置完成后第三种配置被提前终止。
-// Trigger: full-check 中该用例以 Test timeout of 90000ms exceeded 失败，日志仅生成 mobile-landscape 与 tablet-square 的完成快照。
-// Evidence: .temp/full-check/runs/20260829-150117-854748/e2e.log；三种配置之间没有共享状态依赖。
-// Replacement: 下方按 SCREEN_PROFILES 注册三个独立 Playwright 用例，每个用例单独设置 90 秒超时。
-// Risk: Low；测试总执行时长仍包含三种配置，但单个慢配置不再消耗其他配置的超时预算。
-// Human Review: Required
-//
-// Original code:
-// test("stage action clears content before exposing the red delete action", async ({ browser }) => {
-//   test.setTimeout(90_000);
-//
-//   for (const profile of SCREEN_PROFILES) {
 for (const profile of SCREEN_PROFILES) {
   test(`stage action clears content before exposing the red delete action [${profile.name}]`, async ({ browserSession: browser }) => {
     test.setTimeout(90_000);
 
-    // AI-REMOVED 2026-10-05:
-    // Reason: 配置与精细主指针模拟由公共 profile 管理。
-    // Trigger: 用户授权基座与用例迁移。
-    // Evidence: 旧用例重复配置与管理浏览器资源。
-    // Replacement: ManagedBrowser.profile
-    // Risk: Low。Human Review: Required
-    // Original code:
-    //     const context = await browser.newContext({
-    //       deviceScaleFactor: profile.deviceScaleFactor,
-    //       hasTouch: profile.coarsePointer,
-    //       isMobile: profile.isMobile,
-    //       viewport: profile.viewport,
-    //     });
     const context = await browser.profile(profile);
     const page = await context.newPage();
 
     try {
-      // AI-REMOVED 2026-10-05:
-      // Reason: 统一指针配置。Trigger: 基座迁移。Evidence: ManagedBrowser.profile 已安装。
-      // Replacement: harness/profiles.ts。Risk: Low。Human Review: Required
-      // Original code:
-      //       if (true && !profile.isMobile) {
-      //         await page.addInitScript(() => {
-      //           Object.defineProperty(navigator, "maxTouchPoints", {
-      //             configurable: true,
-      //             get: () => 1,
-      //           });
-      //           const nativeMatchMedia = window.matchMedia.bind(window);
-      //           window.matchMedia = (query) => {
-      //             const result = nativeMatchMedia(query);
-      //             if (query !== "(pointer: coarse)" && query !== "(hover: none)") {
-      //               return result;
-      //             }
-      //             return new Proxy(result, {
-      //               get(target, property) {
-      //                 if (property === "matches") {
-      //                   return false;
-      //                 }
-      //                 const value = Reflect.get(target, property, target) as unknown;
-      //                 return typeof value === "function" ? value.bind(target) : value;
-      //               },
-      //             });
-      //           };
-      //         });
-      //       }
 
       await page.goto(APP_URL);
       await expect.poll(() => page.evaluate(() => window.__industrialPlannerAppHost !== undefined)).toBe(true);
-      // AI-REMOVED 2026-08-28:
-      // Reason: 直接写入 observable 会触发 MobX strict-mode 警告，UI 回归测试应通过真实交互构造阶段内容。
-      // Trigger: 三种 Screen Profile 的开发期浏览器验证捕获到 observable 非 action 写入警告。
-      // Evidence: Vite 浏览器日志明确报告 canvases[..].stages 与 activeCanvasId 在 action 外被修改。
-      // Replacement: 下方模块卡添加、新建阶段、清空及删除的真实浏览器交互。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // await page.evaluate(() => {
-      //   const appHost = window.__industrialPlannerAppHost;
-      //   const balancingState = appHost?.internalState.workbench.toolbox.moduleBalancing;
-      //   const canvas = balancingState?.canvases[0];
-      //   if (appHost === undefined || balancingState === undefined || canvas === undefined) {
-      //     throw new Error("Module balancing state unavailable");
-      //   }
-      //
-      //   canvas.stages = [
-      //     {
-      //       id: "e2e-stage-with-content",
-      //       name: "有内容阶段",
-      //       entries: [{ moduleId: "e2e-unresolved-module", quantity: 1 }],
-      //     },
-      //     {
-      //       id: "e2e-empty-stage",
-      //       name: "空阶段",
-      //       entries: [],
-      //     },
-      //   ];
-      //   balancingState.activeCanvasId = canvas.id;
-      // });
 
       const initialStage = await page.evaluate(() => {
         const stage = window.__industrialPlannerAppHost?.internalState.workbench.toolbox.moduleBalancing
@@ -253,7 +129,7 @@ for (const profile of SCREEN_PROFILES) {
         initialStage.id,
       ), { message: profile.name }).toBe(0);
 
-      // 2026-11-12：删除按钮颜色有 CSS transition；轮询相同终值，不更改颜色期望。
+      // 删除按钮颜色有 CSS transition；轮询相同终值，不更改颜色期望。
       await expect.poll(async () => {
         const deleteColor = await deleteButton.evaluate((button) => {
         const probe = document.createElement("span");
@@ -291,17 +167,6 @@ for (const profile of SCREEN_PROFILES) {
     } finally {
       await browser.closeContext(context);
     }
-    // AI-REMOVED 2026-08-30:
-    // Reason: 原结束符关闭单个测试内的 profile 循环与外层测试；拆分后结束符改为关闭当前 profile 测试与注册循环。
-    // Trigger: 三种 Screen Profile 必须拥有独立 Playwright 超时预算。
-    // Evidence: .temp/full-check/runs/20260829-150117-854748/e2e.log 显示原测试在 90 秒总超时后终止。
-    // Replacement: 紧随其后的 `});` 与 `}`。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    //   }
-    // });
   });
 }
 

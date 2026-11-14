@@ -1,13 +1,4 @@
 import { createRegionLabelStyle, resolveRegionLabelLayout, resolveRegionLabelText } from "@/shared/geometry/region-label-layout";
-// AI-REMOVED 2026-11-12:
-// Reason: 区域标签绘制与 App 命中测试共享样式及布局，Renderer 不持有编辑动作。
-// Trigger: REQ-048 D5/D6 只读场景与输入归属。
-// Evidence: 原 pointertap 已归档；重复计算会产生标签命中偏差。
-// Replacement: shared/geometry/region-label-layout.ts
-// Risk: 需真实浏览器验证旋转与边缘标签命中。
-// Human Review: Required
-// Original code:
-// import type { TextStyleOptions } from "pixi.js";
 import { Container, Graphics, Text } from "pixi.js";
 
 import type { RegionAnnotation } from "@/domain/document/region-annotation";
@@ -225,20 +216,6 @@ function resolveRegionLabel(options: {
   const text = new Text({ text: "", style: createRegionLabelStyle(0xffffff) });
   text.anchor.set(0.5);
   text.roundPixels = true;
-// AI-REMOVED 2026-11-12:
-// Reason: 统一只读场景输入，退出专用预览与隐式写动作。
-// Trigger: REQ-048 D5/D6。
-// Evidence: 同一场景需要用于静态、内存和主画布，不能伪造 Editor 或 Workspace。
-// Replacement: App Canvas region label input
-// Risk: 原交互入口需迁移 App。
-// Human Review: Required
-// Original code:
-//   text.eventMode = "static";
-//   text.cursor = "pointer";
-//   text.on("pointertap", () => {
-//     options.ctx.renderHost.input.source?.actions.selectRegion(options.regionId);
-//   });
-//
   text.eventMode = "none";
   options.container.addChild(text);
   options.labels.set(options.labelKey, { text, regionId: options.regionId });
@@ -250,51 +227,6 @@ function syncRegionLabel(options: {
   readonly label: Text;
   readonly region: DisplayRegion;
 }): void {
-// AI-REMOVED 2026-11-12:
-// Reason: 区域标签绘制与 App 命中测试共享样式及布局，Renderer 不持有编辑动作。
-// Trigger: REQ-048 D5/D6 只读场景与输入归属。
-// Evidence: 原 pointertap 已归档；重复计算会产生标签命中偏差。
-// Replacement: resolveRegionLabelLayout / resolveRegionLabelText
-// Risk: 需真实浏览器验证旋转与边缘标签命中。
-// Human Review: Required
-// Original code:
-//   const rect = resolveRegionLabelRect(options.region.annotation.rects);
-//   if (rect === null) {
-//     options.label.visible = false;
-//     return;
-//   }
-//
-//   const layout = resolveRegionRectLayout(options.ctx, rect);
-//   if (layout === null) {
-//     options.label.visible = false;
-//     return;
-//   }
-//
-//   const showSummary = options.region.highlighted || options.region.kind !== "persistent";
-//   const cellUnit = options.ctx.renderHost.input.presentation.getSnapshot()?.settings?.locale === "en-US"
-//     ? "cells"
-//     : "格";
-//   options.label.visible = true;
-//   options.label.text = showSummary
-//     ? `${options.region.annotation.name}\n${resolveRegionShapeSummary(options.region.annotation.rects, cellUnit)}`
-//     : options.region.annotation.name;
-//   options.label.style = createRegionLabelStyle(parseRegionColor(options.region.annotation.color));
-//   options.label.x = clamp(
-//     layout.left + layout.width / 2,
-//     REGION_LABEL_MARGIN + options.label.width / 2,
-//     Math.max(
-//       REGION_LABEL_MARGIN + options.label.width / 2,
-//       options.ctx.viewportBounds.width - REGION_LABEL_MARGIN - options.label.width / 2,
-//     ),
-//   );
-//   options.label.y = clamp(
-//     layout.top + layout.height / 2,
-//     REGION_LABEL_MARGIN + options.label.height / 2,
-//     Math.max(
-//       REGION_LABEL_MARGIN + options.label.height / 2,
-//       options.ctx.viewportBounds.height - REGION_LABEL_MARGIN - options.label.height / 2,
-//     ),
-//   );
   options.label.text = resolveRegionLabelText(
     options.region.annotation,
     options.region.highlighted || options.region.kind !== "persistent",
@@ -373,22 +305,6 @@ function syncRegionDraftMarquee(
   );
 }
 
-// AI-REMOVED 2026-11-12:
-// Reason: 区域标签绘制与 App 命中测试共享样式及布局，Renderer 不持有编辑动作。
-// Trigger: REQ-048 D5/D6 只读场景与输入归属。
-// Evidence: 原 pointertap 已归档；重复计算会产生标签命中偏差。
-// Replacement: shared/geometry/region-label-layout.ts
-// Risk: 需真实浏览器验证旋转与边缘标签命中。
-// Human Review: Required
-// Original code:
-// function resolveRegionLabelRect(rects: readonly GridRect[]): GridRect | null {
-//   return normalizeRegionRects(rects)
-//     .sort((left, right) => (
-//       right.width * right.height - left.width * left.height
-//       || left.y - right.y
-//       || left.x - right.x
-//     ))[0] ?? null;
-// }
 function resolveRegionRectLayout(ctx: DecorationSyncContext, rect: GridRect) {
   return resolveViewportRectFromWorldGridRect({
     gridRect: rect,
@@ -415,29 +331,6 @@ function resolveRegionPoint(ctx: DecorationSyncContext, x: number, y: number) {
   });
 }
 
-// AI-REMOVED 2026-11-12:
-// Reason: 区域标签绘制与 App 命中测试共享样式及布局，Renderer 不持有编辑动作。
-// Trigger: REQ-048 D5/D6 只读场景与输入归属。
-// Evidence: 原 pointertap 已归档；重复计算会产生标签命中偏差。
-// Replacement: shared/geometry/region-label-layout.ts
-// Risk: 需真实浏览器验证旋转与边缘标签命中。
-// Human Review: Required
-// Original code:
-// function createRegionLabelStyle(color: number): TextStyleOptions {
-//   return {
-//     align: "center",
-//     fill: color,
-//     fontFamily: "system-ui, sans-serif",
-//     fontSize: 12,
-//     fontWeight: "700",
-//     lineHeight: 14,
-//     stroke: {
-//       color: 0x101419,
-//       width: 3,
-//       alpha: 0.8,
-//     },
-//   };
-// }
 function parseRegionColor(color: string): number {
   return Number.parseInt(color.slice(1), 16);
 }

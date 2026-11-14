@@ -1,7 +1,6 @@
 import type { DeviceSpriteAnimationDefinition } from "../domain/registry";
 import type { SimulationDeviceOperatingStatus } from "../domain/simulation";
 
-/** AI-CORRECTION 2026-09-18: 四个名称现在只表示传统机械动画角色；正式 manifest 可包含任意显式 status 片段。 */
 export const DEVICE_SPRITE_ANIMATION_PHASES = ["open", "open_idle", "close", "close_idle"] as const;
 export const DEVICE_SPRITE_ANIMATION_STATUSES = [
   "closed",
@@ -26,17 +25,6 @@ export interface DeviceSpriteAnimationManifestPage {
 }
 
 export interface NormalizedDeviceSpriteAnimationClipDefinition {
-  // AI-REMOVED 2026-09-06:
-  // Reason: 逻辑片段不再绑定单张图集，行列属于 pages 中的单页布局。
-  // Trigger: 反应池一个阶段需要多页且末页包含透明空格。
-  // Evidence: manifest 为每页独立声明 rows、columns、frameCount。
-  // Replacement: pages: readonly DeviceSpriteAnimationManifestPage[]。
-  // Risk: Low；所有使用方改为通过 resolveDeviceSpriteAnimationFrame 定位页面。
-  // Human Review: Required
-  //
-  // Original code:
-  // readonly rows: number;
-  // readonly columns: number;
   readonly frameCount: number;
   readonly frameDurationMs: number;
   /** 每帧结束时刻；支持美术合并重复帧后保留的非等长停留时间。 */
@@ -344,9 +332,6 @@ export function validateDeviceSpriteAnimationId(spriteId: string): void {
 }
 
 /** 构建与运行时共用同一网格边界，禁止缩放、余数裁剪和跨阶段尺寸变化。 */
-/** AI-CORRECTION 2026-09-06: 校验单位由“四阶段各一张图”改为 manifest 中的单个分页。 */
-/** AI-CORRECTION 2026-09-12: 允许显式 resolution 表示位图缩放；清单和返回帧坐标仍为原逻辑尺寸，GPU 上限按实际像素校验。 */
-/** AI-CORRECTION 2026-09-13: 分辨率以发布清单为准，传入纹理密度时必须一致。 */
 export function resolveDeviceSpriteAnimationGrid(
   definition: NormalizedDeviceSpriteAnimationDefinition,
   page: DeviceSpriteAnimationManifestPage,

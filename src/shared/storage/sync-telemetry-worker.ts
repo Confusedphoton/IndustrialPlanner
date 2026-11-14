@@ -9,7 +9,6 @@ import {
 
 // 独立遥测上报 Worker。
 //
-// AI-CORRECTION 2026-08-08: 创建方必须先通过 attachWorkerRuntime() 发送 bootstrap，
 // 再通过业务 postMessage 推送 upload-telemetry payload；直接发送业务消息会被入口忽略。
 // Worker 自动执行 health check → POST，失败静默丢弃。
 // 自带 15 分钟节流，重复调用直接跳过。

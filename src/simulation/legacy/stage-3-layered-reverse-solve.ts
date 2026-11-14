@@ -23,16 +23,6 @@ import { canDeviceTransferAtCurrentPhase } from "./phase-gating";
 import { collectNodeRoutingCursorGroups } from "./routing-cursor-groups";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 
-// AI-REMOVED 2026-05-17:
-// Reason: TickPerfStage3Details 未在本文件使用，保留 import 会阻断 lint。
-// Trigger: REQ-078 验收运行定向 eslint 时暴露 unused import。
-// Evidence: rg 仅命中本文件 import 行，无有效引用。
-// Replacement: SolveTransferGraphPerf 作为本文件内部 perf 输入类型。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// TickPerfStage3Details,
 
 interface SourceSelection {
   readonly sourceSlotId: string;
@@ -68,7 +58,6 @@ export interface SolveTransferGraphPerf {
  * 穿透处理，非严格物流设备则等待其 output-view 的所有下游 input-view 已遍历。
  * 订正（2026-05-08）：非严格 output-view 等待的是所有下游 input-view 已求解完成；
  * 无容量的 input-view 会标记为 blocked-resolved，不再误阻塞同 output-view 的其他出口。
- * AI-CORRECTION 2026-09-16: 低优先级出口先延迟到当前分层释放完成；只有高级出口
  * 本 tick 仍未使用时才进入回退求解，避免设备顺序和传送带长度改变端口优先结果。
  */
 export function solveTransferGraph(
@@ -291,9 +280,7 @@ function searchUpstreamFromOutputNode(options: {
     return;
   }
 
-  // AI-CORRECTION 2026-07-23:
   // 一般 PipeFamily 组件也受整数秒相位门禁约束；BeltFamily 锚点仍保持原有逐 tick 行为。
-  // AI-CORRECTION 2026-07-27: 当前门禁依据编译期 logisticsKind；管道设备族全部受门禁，传送带族不受此门禁。
   if (!canDeviceTransferAtCurrentPhase(options.registry, options.topology, options.state, device)) {
     return;
   }
@@ -434,18 +421,6 @@ function solveOutputNode(
       if (edge === undefined || edgeState === undefined || edgeState.shadowPull !== "accept") {
         continue;
       }
-      // AI-REMOVED 2026-06-12:
-      // Reason: edge.currentThroughCount / edge.count 是 per-tick 限流旧设计。
-      // Trigger: 用户要求准入口上限使用跨 tick 计数。
-      // Evidence: CompiledSimulationTransferEdge.count 已删除。
-      // Replacement: canAdmitItemThroughTargetPort(topology, state, edge.targetPortId, itemType)。
-      // Risk: Medium - 这里必须在 moveOneItem 前重新检查，避免同 tick 内并发候选越过总量上限。
-      // Human Review: Required
-      //
-      // Original code:
-      // if (edgeState.currentThroughCount >= resolvePerTickLimit(edge.count)) {
-      //   continue;
-      // }
       if (edgeState.sourceSlotId === null || edgeState.targetSlotId === null || edgeState.itemType === null) {
         continue;
       }
@@ -716,7 +691,6 @@ export function canAdmitItemThroughTargetPort(
   if (rule.itemId !== itemType) {
     return false;
   }
-  // AI-CORRECTION 2026-07-24: 输入端只预留尚未输出的准入额度，不再把进入设备缓存视为已经准入。
   // 已输出计数与设备内同物品占用之和达到任一上限时停止预取，避免管道多拿一份后锁住其他流体。
   const bufferedCount = countBufferedAdmissionItems(
     topology,
@@ -751,7 +725,6 @@ export function canReleaseItemThroughSourcePort(
   return readAdmissionOutputRemainingAllowance(topology, state, admissionPort.id) > 0;
 }
 
-// AI-CORRECTION 2026-07-24: admission move 现在只表示物品从准入口输出口真实离开；
 // target input 缓存写入不再提交总计数或速率窗口计数。
 export function recordAdmissionMove(
   topology: CompiledSimulationTopology,
@@ -1098,7 +1071,6 @@ function refreshBlockedInputNodesAfterMove(
     if (inputNodeCanAcceptAtCurrentTick(registry, topology, state, node)) {
       markInputNodeUnresolved(state, node);
       nextAnchors.set(node.id, node);
-      // AI-CORRECTION 2026-05-27: 解除 blocked 时，撤销上游非严格 output-view 的 visited，
       // 并立即将该设备的 input-view 加入下一层锚点，确保本层即可重新处理上传。
       unvisitUpstreamNonStrictOutputViews(registry, topology, state, node, nextAnchors);
     }
@@ -1218,18 +1190,6 @@ function sortInputAnchors(
   });
 }
 
-// AI-REMOVED 2026-06-12:
-// Reason: per-tick count resolver 属于被删除的旧限流设计。
-// Trigger: 用户确认文档没有 per tick count。
-// Evidence: SimulationCountLimit 已删除，准入口限制改由 canAdmitItemThroughTargetPort 读取 persistent counter。
-// Replacement: canAdmitItemThroughTargetPort。
-// Risk: Low - 所有调用点已移除。
-// Human Review: Required
-//
-// Original code:
-// function resolvePerTickLimit(count: SimulationCountLimit): number {
-//   return count === "unlimited" ? Number.MAX_SAFE_INTEGER : count;
-// }
 
 function getOrderedInputEdgeIds(
   topology: CompiledSimulationTopology,
@@ -1307,28 +1267,6 @@ function getOrderedPorts(
   return ordered;
 }
 
-// AI-REMOVED 2026-08-27:
-// Reason: Stage 3 的游标分组必须与 Stage 4 共用 Node 级定义，不能继续按首个 PortGroup 生成 key。
-// Trigger: 反应池两个独立液体输出组绑定同一库存 Node 时，Stage 3 按双端口排序但 Stage 4 各自按单端口推进。
-// Evidence: reactor-dual-fluid-output-routing.test.ts 修复前六次产出均从 out_w_1 输出。
-// Replacement: routing-cursor-groups.ts 的 collectNodeRoutingCursorGroups。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// function comparePortsForRouting(left: CompiledSimulationPort, right: CompiledSimulationPort): number {
-//   return left.priorityGroup - right.priorityGroup
-//     || left.roundRobinSeed - right.roundRobinSeed
-//     || left.order - right.order
-//     || left.id.localeCompare(right.id);
-// }
-//
-// function getRoutingCursorGroupKey(port: CompiledSimulationPort | undefined): string {
-//   if (port === undefined) {
-//     return "unknown";
-//   }
-//   return `${port.deviceId}:${port.portGroupId}:${port.direction}:priority-${port.priorityGroup}`;
-// }
 
 function getRawOutputEdgeIds(
   topology: CompiledSimulationTopology,

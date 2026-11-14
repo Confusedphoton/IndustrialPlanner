@@ -22,7 +22,6 @@ function createWorkspace(): WorkspaceContract {
     simulation: null,
     sync: null,
     audio: null,
-    blueprintPlanner: null,
   };
 }
 
@@ -384,7 +383,6 @@ describe("EncyclopediaPanel", () => {
     });
 
     // 当前拆瓶器全部 67 条配方均带 liquid_bottle_dismantle 标签，asMachine 分组为空不渲染
-    // AI-CORRECTION 2026-07-16: 新增气罐拆解配方已补同标签，拆解机仍不渲染 asMachine 分组。
     expect(getRecipeGroupTitles(container)).toEqual([
       currentAppHost.actions.translate("encyclopedia.group.liquidDismantle"),
     ]);

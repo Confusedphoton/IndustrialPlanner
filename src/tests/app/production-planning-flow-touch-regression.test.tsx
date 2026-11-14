@@ -558,7 +558,7 @@ describe("ProductionFlowGraph touch regression", () => {
     expect(wheel.defaultPrevented).toBe(false);
     expect(surface.style.transform).toBe(initialTransform);
     act(() => { Array.from(canvas.querySelectorAll("button")).find(button => button.textContent === "+")!.click(); });
-    expect(surface.style.transform).toBe("translate(22px, 22px) scale(1.12)");
+    expect(surface.style.transform).toBe("translate(22px, 22px) scale(1.15)");
   });
 
   it("resets dragged nodes to the initial flow layout", () => {
@@ -756,9 +756,10 @@ describe("ProductionFlowGraph touch regression", () => {
 
     const reportedViewport = onViewportChange.mock.calls.at(-1)?.[0];
     expect(reportedViewport).toBeDefined();
-    expect(reportedViewport.x).toBeCloseTo(59.8);
-    expect(reportedViewport.y).toBeCloseTo(49.8);
-    expect(reportedViewport.scale).toBeCloseTo(0.9);
+    // 原期望 x 59.8 / y 49.8 / scale 0.9（固定 -0.1）。
+    expect(reportedViewport.x).toBeCloseTo(400 - Math.exp(-0.18) * 378);
+    expect(reportedViewport.y).toBeCloseTo(300 - Math.exp(-0.18) * 278);
+    expect(reportedViewport.scale).toBeCloseTo(Math.exp(-0.18));
   });
 
   // ==================== Test 4: 双指 pinch 进入 pinch 状态 ====================

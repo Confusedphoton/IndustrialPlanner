@@ -1,8 +1,8 @@
 import { resolve } from "node:path";
 import { expect, SCREEN_PROFILES, test } from "./harness/fixture";
 
-// 2026-10-26：三屏开发验证完成后独立编写；仅覆盖真实布局，原料和配方状态由 production-planning-ui.test.tsx 验证。
-// 2026-10-26：使用植物加工目标，回归新增种子节点的首列边界；植物回路结构由 process-graph-builder.test.ts 验证。
+// 三屏开发验证完成后独立编写；仅覆盖真实布局，原料和配方状态由 production-planning-ui.test.tsx 验证。
+// 使用植物加工目标，回归新增种子节点的首列边界；植物回路结构由 process-graph-builder.test.ts 验证。
 for (const profile of SCREEN_PROFILES) {
   test(`产线规划三栏高度、顶栏与节点交互：${profile.name}`, async ({ browserSession, baseURL }) => {
     test.setTimeout(150_000);
@@ -36,7 +36,7 @@ for (const profile of SCREEN_PROFILES) {
       await page.getByText('产线规划', { exact: true }).click();
       const panel = page.locator('[class*="production-planning-panel_"]');
       const toolbar = panel.locator('[class*="production-planning-toolbar_"]');
-      // 2026-10-30：结果页滑动结束后再测量绝对坐标，避免将入场位移误判为节点锚定失效。
+      // 结果页滑动结束后再测量绝对坐标，避免将入场位移误判为节点锚定失效。
       const waitForResultTransition = () => panel.locator('[class*="production-planning-stage_"]').evaluate(async element => {
         await Promise.all(element.getAnimations().map(animation => animation.finished));
       });
@@ -84,7 +84,7 @@ for (const profile of SCREEN_PROFILES) {
       const populatedColumns = await readColumnLayout();
       await toolbar.getByRole('button', { name: '计算', exact: true }).click();
       await waitForResultTransition();
-      // 2026-10-29：三屏开发验证通过后补充两态操作栏的真实几何回归。
+      // 三屏开发验证通过后补充两态操作栏的真实几何回归。
       const toolbarLayout = await toolbar.evaluate(element => {
         const actions = element.querySelector('[class*="production-planning-toolbar-controls_"]');
         const primary = actions.lastElementChild.getBoundingClientRect(), bounds = element.getBoundingClientRect();

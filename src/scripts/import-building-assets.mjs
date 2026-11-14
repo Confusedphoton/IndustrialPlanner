@@ -12,8 +12,6 @@ import sharp from 'sharp';
 import { tsImport } from 'tsx/esm/api';
 import { resolveBuildingAssetPublishTargets } from './building-asset-publish-config.mjs';
 import { publishDeviceSprite, publishDeviceSpriteAnimations } from './sync-device-sprites.mjs';
-// AI-REMOVED 2026-09-14: 旧实时物流发布入口退役；Trigger: 烘焙接入；Evidence: 新版 fluidPlayback 协议；Replacement: publishLogisticsBaked；Risk: Low；Human Review: Required。
-// Original code: import { publishLogisticsMaterials } from './publish-logistics-materials.mjs';
 import { publishLogisticsBaked } from './publish-logistics-baked.mjs';
 import { publishBuildingPortEffects } from './publish-building-port-effects.mjs';
 import { buildingBodyPairs, sharePublishedBuildingBodies } from './share-building-body-assets.mjs';
@@ -85,19 +83,6 @@ function isRepositorySourcePayload(relative) {
 
 async function verifyOriginals(batch, plan) {
   const receipt = await json(path.join(batch, 'source-receipt.json'));
-  // AI-REMOVED 2026-10-14:
-  // Reason: 原件完整性校验不拥有 Registry，且保留类别的计划不包含 statics。
-  // Trigger: building-assets-site 两个既有用例报 undefined.filter。
-  // Evidence: verifyOriginals 被 retain/defer 与发布入口共享。
-  // Replacement: publishWebsiteBatch / validateWebsiteBatch 获取 Registry 后校验状态外观。
-  // Risk: Low
-  // Human Review: Required
-  // Original code:
-  //   for (const visual of plan.statics.filter(item => item.stateVisualKey)) {
-  //     const definition = definitions.entityDefinitions.find(entry => entry.id === visual.entityId);
-  //     if (!definition?.stateMachine?.states.some(state => state.visualKey === visual.stateVisualKey)
-  //       || visual.spriteId !== definition.spriteId + "--" + visual.stateVisualKey) throw new Error("State visual does not match Registry: " + visual.spriteId);
-  //   }
   const root = sourceRootFor(batch, plan);
   const indexBytes = await readFile(path.join(root, 'integrity.json'));
   if (hash(indexBytes) !== receipt.indexSha256 || plan.sourceSite.indexSha256 !== receipt.indexSha256
@@ -211,7 +196,7 @@ export async function publishWebsiteBatch(batch, category = 'all') {
     const { outputDirectory, resolution } = target;
     const spriteDirectory = path.join(outputDirectory, 'sprites');
     const maskDirectory = path.join(outputDirectory, 'sprite-masks');
-    // 2026-10-16：独立俯视素材可复用已确认的蓝图几何和头像；复制仍进入同一暂存、验收与应用计划。
+    // 独立俯视素材可复用已确认的蓝图几何和头像；复制仍进入同一暂存、验收与应用计划。
     if (includes('static')) for (const entry of collection.entries.filter((item) => selectedEntityIds.has(item.entityId))) {
       for (const [rootName, folder, sourceId] of [
         ['blueprint-view', 'sprites', entry.blueprintSpriteId],
@@ -243,17 +228,6 @@ export async function publishWebsiteBatch(batch, category = 'all') {
         const mask = path.join(blueprint, 'sprite-masks', `${item.spriteId}.webp`);
         await mkdir(path.dirname(body), { recursive: true });
         await mkdir(path.dirname(mask), { recursive: true });
-        // AI-REMOVED 2026-10-15:
-        // Reason: Sharp 的 removeAlpha 与 joinChannel 组合会让蓝图轮廓丢失透明通道。
-        // Trigger: 静态专题像素回归发现透明背景被发布为不透明白色。
-        // Evidence: 透明源像素生成的蓝图 RGBA 为 [255,255,255,255]，而遮罩为零。
-        // Replacement: 下方独立白色 RGB 图像与单通道 raw Alpha 合并。
-        // Risk: 原实现会遮挡整张图片的透明留边。
-        // Human Review: Required
-        // Original code:
-        // const alpha = await sharp(path.join(spriteDirectory, `${item.spriteId}.webp`)).extractChannel(3).png().toBuffer();
-        // await sharp(path.join(spriteDirectory, `${item.spriteId}.webp`)).removeAlpha().linear(0, 255)
-        //   .joinChannel(alpha).webp({ lossless: true }).toFile(body);
         const { data: alpha, info } = await sharp(path.join(spriteDirectory, `${item.spriteId}.webp`))
           .extractChannel(3).raw().toBuffer({ resolveWithObject: true });
         await sharp({ create: { width: info.width, height: info.height, channels: 3, background: '#ffffff' } })
@@ -656,7 +630,6 @@ export async function applyWebsiteBatch(batch, destinationRoot = projectRoot) {
   const application = await json(path.join(batch, 'application-plan.json'));
   if (destinationRoot === projectRoot) {
     const plan = await json(path.join(batch, 'import-plan.json'));
-    // AI-CORRECTION 2026-09-14: 用户已授权烘焙运行时，只允许新版物流协议进入正式目录。
     if (plan.logistics) {
       const manifest = await json(path.join(batch, 'stage/public/3d-top-view/logistics/baked/manifest.json'));
       if (manifest.format !== 'logistics-spritesheet-v2') throw new Error('Website logistics requires baked playback');

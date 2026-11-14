@@ -10,30 +10,6 @@ import { settleRecipes } from "@/simulation/legacy/stage-5-settle-recipes";
 import { startRecipes } from "@/simulation/legacy/stage-7-start-recipes";
 import { compileSimulationTopology } from "@/simulation/topology/compiler";
 import type { CompiledSimulationTopology } from "@/simulation/contracts/types";
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: src/tests/fixtures/blueprints/simulation/metered-consumption/index.json
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// import {
-//   createBlueprint,
-//   createEntity,
-//   createWorldDocumentFromBlueprint,
-//   findSlot,
-//   getDevice,
-// } from "./blueprint-test-helpers";
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: BlueprintDocument 类型与现有文件装载器
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// import { createBlueprint, createWorldDocumentFromBlueprint, findSlot, getDevice } from "./blueprint-test-helpers";
 import { createWorldDocumentFromBlueprint, findSlot, getDevice } from "./blueprint-test-helpers";
 import { runBlueprintSimulation } from "./blueprint-runner";
 import { describeSimulationEngineMatrix } from "./simulation-engine-matrix";
@@ -45,22 +21,6 @@ const registry = createRegistryContract();
 describeSimulationEngineMatrix("consumption channel device gate", (engineKind) => {
   it("does not start a normal recipe while the consumption buffer is empty", async () => {
     const finalTick = 2;
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/metered-consumption/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // createBlueprint(`empty-consumption-${engineKind}`, [
-    //         createEntity("transmuter", "transmuter_2_gastrans", 0, 0, 0, {
-    //           channelRecipes: { default: "liquid_transmuter_2_gas_gas_copper_1" },
-    //           "storageSlotGroups[0].slots[0].initialItemType": "item_copper_nugget",
-    //           "storageSlotGroups[0].slots[0].initialCount": 2,
-    //         }),
-    //         createEntity("power", "power_diffuser_1", 5, 0),
-    //       ])
     const report = await runBlueprintSimulation({
       blueprint: loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/simulation/metered-consumption/index.json", "scene-01", { engineKind }),
       registry,
@@ -96,17 +56,6 @@ describe("consumption channel device mechanism", () => {
       "transmuter_2_solidtrans",
       "vaporizer_1",
       ] as const) {
-      // AI-REMOVED 2026-09-14:
-      // Reason: 场景构造已批量固化为带版本的蓝图文件。
-      // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-      // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-      // Replacement: src/tests/fixtures/blueprints/simulation/metered-consumption/index.json
-      // Risk: Low；断言与被测动作不变。
-      // Human Review: Required
-      // Original code:
-      // createBlueprint(`synthetic-${definitionId}`, [
-      //         createEntity("device", definitionId, 0, 0),
-      //       ])
       const topology = compilePoweredBlueprint(loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/simulation/metered-consumption/index.json", "scene-02", { definitionId }));
       const device = topology.devices["device:device"]!;
       const portId = device.portIds.find(
@@ -135,17 +84,6 @@ describe("consumption channel device mechanism", () => {
   });
 
   it("keeps one reserved item in the slot until exactly ten seconds complete", () => {
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/metered-consumption/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // createBlueprint("one-consumption-item", [
-    //       createEntity("vaporizer", "vaporizer_1", 0, 0),
-    //     ])
     const topology = compilePoweredBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/metered-consumption/scene-03-one-consumption-item-62849b3a.schema7.json"));
     const device = topology.devices["device:vaporizer"]!;
     const state = createSimulationMutableRuntimeState(topology);
@@ -169,17 +107,6 @@ describe("consumption channel device mechanism", () => {
   });
 
   it("starts five recipes concurrently and leaves no capacity for a sixth item", () => {
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/metered-consumption/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // createBlueprint("five-consumption-items", [
-    //       createEntity("vaporizer", "vaporizer_1", 0, 0),
-    //     ])
     const topology = compilePoweredBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/metered-consumption/scene-04-five-consumption-items-d13b6eff.schema7.json"));
     const device = topology.devices["device:vaporizer"]!;
     const state = createSimulationMutableRuntimeState(topology);
@@ -200,17 +127,6 @@ describe("consumption channel device mechanism", () => {
   });
 
   it("starts and completes consumption while the device is outside every power range", () => {
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/metered-consumption/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // createBlueprint("out-of-range-consumption", [
-    //       createEntity("transmuter", "transmuter_1_gastrans", 0, 0),
-    //     ])
     const topology = compileBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/metered-consumption/scene-05-out-of-range-consumption-cd40b977.schema7.json"), false);
     const device = topology.devices["device:transmuter"]!;
     const state = createSimulationMutableRuntimeState(topology);
@@ -227,17 +143,6 @@ describe("consumption channel device mechanism", () => {
   });
 
   it("keeps staggered arrivals on independent ten-second lifetimes", () => {
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/metered-consumption/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // createBlueprint("staggered-consumption", [
-    //       createEntity("vaporizer", "vaporizer_1", 0, 0),
-    //     ])
     const topology = compilePoweredBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/metered-consumption/scene-06-staggered-consumption-5134c1df.schema7.json"));
     const vaporizer = topology.devices["device:vaporizer"]!;
     const state = createSimulationMutableRuntimeState(topology);
@@ -261,19 +166,6 @@ describe("consumption channel device mechanism", () => {
 
   it("starts a normal recipe in the same settle frame, then freezes and resumes it with consumption", () => {
     const recipeId = "liquid_transmuter_1_gas_gas_xiranite_enr_1";
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/metered-consumption/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // createBlueprint("consumption-gated-transmuter", [
-    //       createEntity("transmuter", "transmuter_1_gastrans", 0, 0, 0, {
-    //         channelRecipes: { default: recipeId },
-    //       }),
-    //     ])
     const topology = compilePoweredBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/metered-consumption/scene-07-consumption-gated-transmuter-db40639e.schema7.json"));
     const device = topology.devices["device:transmuter"]!;
     const state = createSimulationMutableRuntimeState(topology);
@@ -311,23 +203,6 @@ describe("consumption channel device mechanism", () => {
   });
 
   it("runs consumption without power and commits waiting output after power and consumption stop", () => {
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/metered-consumption/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // createBlueprint("powerless-consumption", [
-    //       createEntity("transmuter", "transmuter_1_gastrans", 0, 0, 0, {
-    //         channelRecipes: { default: "liquid_transmuter_1_gas_gas_water_1" },
-    //         "storageSlotGroups[0].slots[0].initialItemType": "item_liquid_water",
-    //         "storageSlotGroups[0].slots[0].initialCount": 1,
-    //         "storageSlotGroups[1].slots[0].initialItemType": "item_gas_water",
-    //         "storageSlotGroups[1].slots[0].initialCount": 50,
-    //       }),
-    //     ])
     const topology = compilePoweredBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/metered-consumption/scene-08-powerless-consumption-67b7fae1.schema7.json"));
     const device = topology.devices["device:transmuter"]!;
     const state = createSimulationMutableRuntimeState(topology);

@@ -2,17 +2,6 @@ import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 
 export const CHANGELOG_INDEX_PATH = createPublicAssetUrl("changelog/index.json");
 
-// AI-REMOVED 2026-08-14:
-// Reason: 图片不再依赖全局目录，而是按 Markdown 文件位置解析标准相对路径。
-// Trigger: 增量日志迁移到 incremental/{version}/，图片迁移到 images/v{version}/。
-// Evidence: 全局图片基址无法同时表达根目录日志的 ./images 与嵌套日志的 ../../images。
-// Replacement: changelog-section.tsx/resolveChangelogImageUrl
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// export const CHANGELOG_IMG_BASE = createPublicAssetUrl("changelog/img/");
-// AI-CORRECTION 2026-08-14: 删除发生前该常量已随本次迁移改为 createPublicAssetUrl("changelog/images/")。
 
 const CHANGELOG_VERSION_PATTERN = /(?:^|[^0-9])v?(\d+\.\d+\.\d+(?:\.\d+)?)(?=$|[^0-9])/i;
 const CHANGELOG_INDEX_VERSION_PATTERN = /^\d+\.\d+\.\d+(?:\.\d+)?(?:-[0-9a-z.-]+)?$/i;
@@ -75,36 +64,6 @@ export async function loadChangelogIndexEntries(): Promise<ChangelogIndexEntry[]
 
   const indexData: unknown = await indexResp.json();
 
-  // AI-REMOVED 2026-08-28:
-  // Reason: string[] 索引把显示标题和版本语义绑定在文件名上，章节名前缀会破坏文件排序。
-  // Trigger: 用户要求标题进入 index.json，Markdown 文件名仅保留版本号。
-  // Evidence: 旧映射直接从 file basename 派生 title，并从 title 正则提取 version。
-  // Replacement: normalizeChangelogIndexEntry 与下方结构化索引加载逻辑
-  // Risk: 历史 string[] 索引不再兼容，必须与新版前端同步发布结构化 index.json。
-  // Human Review: Required
-  //
-  // Original code:
-  // const fileList: unknown = await indexResp.json();
-  //
-  // if (
-  //   !Array.isArray(fileList)
-  //   || fileList.length === 0
-  //   || fileList.some((file) => typeof file !== "string")
-  // ) {
-  //   throw new Error("更新日志索引为空");
-  // }
-  //
-  // // 倒序：最新在前
-  // const reversed = [...fileList].reverse();
-  //
-  // return reversed.map((file) => {
-  //   const title = file.slice(file.lastIndexOf("/") + 1).replace(/\.md$/i, "");
-  //   return {
-  //     file,
-  //     title,
-  //     version: parseChangelogVersion(title),
-  //   };
-  // });
 
   if (!Array.isArray(indexData) || indexData.length === 0) {
     throw new Error("更新日志索引为空");

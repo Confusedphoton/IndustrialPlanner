@@ -22,7 +22,7 @@ import { createInitialSimulationTimelineState } from "@/simulation/contracts";
 import { SIMULATION_RECIPE_STATUS_RUNTIME_INSPECTOR_KEY } from "@/app/shell/inspector/simulation-recipe-status-runtime-inspector";
 import { lookupText } from "@/shared/i18n";
 
-// 2026-11-13：界面文案改走 i18n，测试使用真实中文译文断言。
+// 界面文案改走 i18n，测试使用真实中文译文断言。
 const zhTranslate = (key: string): string => lookupText("zh-CN", key) ?? key;
 
 function createWorkspace(): WorkspaceContract {
@@ -35,7 +35,6 @@ function createWorkspace(): WorkspaceContract {
     simulation: null,
     sync: null,
     audio: null,
-    blueprintPlanner: null,
   };
 }
 
@@ -133,17 +132,6 @@ function attachSimulationStub(
       runningState: options.state,
       simulationMode: "single-base",
       simulationSpeed: 1,
-      // AI-REMOVED 2026-09-12:
-      // Reason: SimulationState 测试桩同步移除已退役的 diagnostics 字段。
-      // Trigger: 用户确认性能统计改由统一 Query 提供。
-      // Evidence: SimulationState contract 已不再声明 statistics / bufferSize。
-      // Replacement: queries.getPerformanceDiagnostics。
-      // Risk: Low。
-      // Human Review: Required
-      //
-      // Original code:
-      // statistics: { tickPerSecond: 0, targetTickPerSecond: 0, baseBatteryJoules: 0, baseBatteryCapacity: 0 },
-      // bufferSize: 0,
       timeline: createInitialSimulationTimelineState(),
     },
     topology: createSnapshotStore(null),
@@ -195,16 +183,6 @@ function attachSimulationStub(
     },
     actions: {
       start: vi.fn(async () => {}),
-      // AI-REMOVED 2026-09-20:
-      // Reason: Simulation 公共 Action 不再允许外部写入会话模式。
-      // Trigger: ST2-RQ-035 改为 start 从 AppSettings 固化模式。
-      // Evidence: SimulationAction Contract 已移除该方法。
-      // Replacement: AppSettings.regionalMultiBaseEnabled。
-      // Risk: Low；本 mock 不调用该动作。
-      // Human Review: Required
-      //
-      // Original code:
-      // setRegionalMultiBaseEnabled: vi.fn(),
       pause: vi.fn(),
       resume: vi.fn(),
       stop: vi.fn(),
@@ -557,23 +535,11 @@ describe("SelectionInspectorSlot", () => {
 
     expect(getDeviceRuntimeStatus).toHaveBeenCalledWith("dummy-recipe-device");
     // item_port_mix_pool_1 有 4 个 recipeChannel: ch1-ch4
-    // AI-CORRECTION 2026-05-29: 新组件不再按 channel 生成独立 article，
     // 改为单个 article 内部分区展示。
     expect(queryInspectorKeys(container)).toContain(
       SIMULATION_RECIPE_STATUS_RUNTIME_INSPECTOR_KEY,
     );
-    // AI-CORRECTION 2026-11-13：未填写的手动频道直接内嵌配方磁贴，原断言为“添加配方”按钮文本。
     expect(container.querySelector("[data-recipe-id]")).not.toBeNull();
-    // AI-REMOVED 2026-06-01:
-    // Reason: 添加配方按钮已按 UI 要求移除说明文案。
-    // Trigger: 用户要求“把添加配方按钮下面的说明去掉”。
-    // Evidence: SimulationRecipeStatusRuntimeInspector 不再渲染 productionPlanning.recipeStatusEmptyHint。
-    // Replacement: 上一行只断言 productionPlanning.addRecipe 入口存在。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // expect(container.textContent).toContain("productionPlanning.recipeStatusEmptyHint");
   });
 
   it("renders auto recipe channels as read-only in the recipe status inspector", () => {

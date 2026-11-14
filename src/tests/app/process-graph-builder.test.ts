@@ -308,7 +308,6 @@ describe("buildProcessGraph", () => {
     expect(copperTargetNode).toBeDefined();
 
     // 自然资源目标是零输入配方，不应有对应的 natural 节点
-    // AI-CORRECTION 2026-09-01: 赤铜采集已恢复清水输入；赤铜仍不重复为 natural 节点，但工序图必须显示其清水条件。
     const naturalNodes = graph.nodes.filter((n) => n.type === "natural");
     const copperNaturalNode = naturalNodes.find(
       (n) => n.itemId === "item_copper_ore",
@@ -408,7 +407,7 @@ describe("buildProcessGraph", () => {
       expect(expanded.nodes.length).toBeGreaterThanOrEqual(
         baseGraph.nodes.length - 1,
       );
-      // 2026-10-26：只有确实有子级的支线提供展开入口，点击后必须增加节点。
+      // 只有确实有子级的支线提供展开入口，点击后必须增加节点。
       expect(expanded.nodes.length).toBeGreaterThan(baseGraph.nodes.length);
       expect(expanded.nodes.find(node => node.branch?.id === expandId)?.branch?.expanded).toBe(true);
     }

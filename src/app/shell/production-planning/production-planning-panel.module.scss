@@ -90,23 +90,6 @@
   background: var(--surface-2);
 }
 
-/* AI-REMOVED 2026-10-26:
-Reason: 底栏操作已迁移到共享顶栏。
-Trigger: 用户要求统一工具入口。
-Evidence: ProductionPlanningPanel 不再渲染 input-footer。
-Replacement: production-planning-toolbar。Risk: Low。Human Review: Required
-Original code:
-.production-planning-input-footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  min-width: 0;
-  padding: 10px 12px;
-  border-top: 1px solid var(--line);
-  background: var(--surface-1);
-}
-*/
 
 .production-planning-module-toggle {
   display: inline-flex;
@@ -165,19 +148,6 @@ Original code:
   outline-offset: 2px;
 }
 
-/* AI-REMOVED 2026-10-26:
-Reason: Checkbox 外观改用现有 switch-track 和 switch-thumb。
-Trigger: 用户要求使用模块改为 Switch。
-Evidence: 顶栏已添加 role=switch 与轨道。
-Replacement: production-planning-switch-row。Risk: Low。Human Review: Required
-Original code:
-.production-planning-module-toggle input {
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  accent-color: var(--accent);
-}
-*/
 
 .production-planning-workspace {
   display: grid;
@@ -187,12 +157,6 @@ Original code:
 }
 
 .production-planning-toolbar {
-  /* AI-REMOVED 2026-10-29:
-  Reason: 顶栏改为左右两列 Grid，换行由左侧工具组承担。
-  Trigger: 用户要求主操作固定右上角。Evidence: 三种 Screen Profile 的顶栏几何验证。
-  Replacement: production-planning-toolbar-views。Risk: Low。Human Review: Required
-  Original code: flex-wrap: wrap;
-  */
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: flex-start;
@@ -237,17 +201,6 @@ Original code:
   font-size: 0.74rem;
 }
 
-.production-planning-auto-plan-button:not(:disabled) {
-  border-color: var(--accent-strong);
-  background: var(--accent-strong);
-  color: var(--surface-1);
-  box-shadow: 0 2px 8px var(--accent-soft);
-}
-
-.production-planning-auto-plan-button:not(:disabled):hover {
-  filter: brightness(1.1);
-}
-
 .production-planning-material-guide {
   display: grid;
   justify-items: center;
@@ -261,62 +214,6 @@ Original code:
   p { margin: 0; }
 }
 
-/* AI-REMOVED 2026-10-26:
-Reason: 抽象物流示意和视图标签不能指示真实按钮位置。
-Trigger: 用户要求接近真实界面的按钮位置示意。
-Evidence: 用户提供树表详情截图，旧引导只有方框连线和名称标签。
-Replacement: 树表详情与工序图浮层的 production-planning-guide-* 样式。
-Risk: Low。Human Review: Required
-Original code:
-.production-planning-material-illustration {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  padding: 6px 0;
-  opacity: 0.38;
-
-  span {
-    display: grid;
-    place-items: center;
-    width: 40px;
-    height: 40px;
-    border: 1px solid var(--line-strong);
-    border-radius: 10px;
-    background: var(--surface-2);
-  }
-  span:nth-of-type(2) { color: var(--accent-strong); }
-  svg { width: 22px; height: 22px; }
-  i { width: 20px; border-top: 1px dashed var(--text-2); }
-}
-
-.production-planning-material-guide-paths {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-
-  > span, strong {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-  }
-  > span {
-    padding: 5px 7px;
-    border: 1px solid var(--line);
-    border-radius: 7px;
-  }
-  strong {
-    padding: 2px 5px;
-    border-radius: 4px;
-    background: var(--accent-soft);
-    color: var(--accent-strong);
-    font-weight: 700;
-  }
-  svg { width: 13px; height: 13px; flex: 0 0 auto; }
-}
-
-*/
 .production-planning-material-guide-paths {
   display: grid;
   gap: 12px;
@@ -895,77 +792,6 @@ Original code:
   font-size: 0.76rem;
 }
 
-/*
-AI-REMOVED 2026-07-22:
-Reason: 原生 checkbox 滑块被现有二选一分段控件替代，以下专用样式不再参与渲染。
-Trigger: 用户明确要求该选项与右侧其他 switch 使用相同交互逻辑。
-Evidence: DeviceMinimumConsumptionToggle 复用 production-planning-special-source 与 production-planning-two-option-toggle。
-Replacement: .production-planning-special-source / .production-planning-two-option-toggle
-Risk: Low；仅移除已无活动 DOM 引用的样式。
-Human Review: Required
-
-Original code:
-.production-planning-switch-row {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  min-height: 42px;
-  padding: 8px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-2);
-  color: var(--text-0);
-  font-size: 0.76rem;
-  cursor: pointer;
-}
-
-.production-planning-switch-row input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.production-planning-switch-track {
-  position: relative;
-  flex: 0 0 auto;
-  width: 34px;
-  height: 20px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface-3);
-  transition: border-color 160ms ease, background 160ms ease;
-}
-
-.production-planning-switch-thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--text-2);
-  transition: transform 160ms ease, background 160ms ease;
-}
-
-.production-planning-switch-row input:checked + .production-planning-switch-track {
-  border-color: var(--accent-strong);
-  background: var(--accent-soft);
-}
-
-.production-planning-switch-row input:checked + .production-planning-switch-track .production-planning-switch-thumb {
-  background: var(--accent-strong);
-  transform: translateX(14px);
-}
-
-.production-planning-switch-row input:focus-visible + .production-planning-switch-track {
-  outline: 2px solid var(--accent-strong);
-  outline-offset: 2px;
-}
-*/
 
 .production-planning-two-option-toggle,
 .production-planning-segmented {
@@ -1319,24 +1145,6 @@ Original code:
   display: none;
 }
 
-/* AI-REMOVED 2026-10-26:
-Reason: 根据详情区固定阈值折叠按钮会提前隐藏仍能放下的文字。
-Trigger: 用户要求按钮按自身可用容器宽度收缩。
-Evidence: 原 is-compact 在详情宽度小于 340px 时无条件隐藏文字。
-Replacement: production-planning-supply-action-container + ResizeObserver。
-Risk: Low；配方选择器仍使用原有紧凑布局。Human Review: Required
-Original code:
-.production-planning-tree-detail-stack.is-compact .production-planning-external-supply-action {
-  width: 32px;
-  padding: 0;
-}
-
-.production-planning-tree-detail-stack.is-compact .production-planning-external-supply-action > span,
-.production-planning-tree-detail-stack.is-compact .production-planning-recipe-choice-summary,
-.production-planning-tree-detail-stack.is-compact .production-planning-recipe-choice-wide-auto {
-  display: none;
-}
-*/
 .production-planning-tree-detail-stack.is-compact .production-planning-recipe-choice-summary,
 .production-planning-tree-detail-stack.is-compact .production-planning-recipe-choice-wide-auto {
   display: none;
@@ -1832,7 +1640,7 @@ Original code:
     stroke: color-mix(in srgb, var(--accent-strong) 72%, var(--line-strong));
   }
   stroke-linecap: round;
-  stroke-opacity: 0.5;
+  stroke-opacity: 0.7;
 }
 
 .production-flow-edge.is-backward .production-flow-edge-path,
@@ -1848,14 +1656,14 @@ Original code:
 }
 
 .production-flow-edge text {
-  fill: var(--text-2);
-  font-size: 0.62rem;
+  fill: var(--text-0);
+  font-size: 0.74rem;
   font-weight: 700;
   paint-order: stroke;
   pointer-events: none;
   stroke: var(--surface-1);
   stroke-linejoin: round;
-  stroke-width: 3px;
+  stroke-width: 5px;
 }
 
 .production-flow-edge-label-path {
@@ -1908,12 +1716,12 @@ Original code:
 
 .production-flow-node strong {
   color: var(--text-0);
-  font-size: 0.76rem;
+  font-size: 0.86rem;
 }
 
 .production-flow-node span {
-  color: var(--text-2);
-  font-size: 0.66rem;
+  color: var(--text-1);
+  font-size: 0.74rem;
   font-weight: 700;
 }
 
@@ -1969,14 +1777,6 @@ Original code:
 
 .production-planning-panel.is-touch .production-planning-main {
   grid-template-columns: minmax(0, 1fr);
-  /* AI-REMOVED 2026-10-29:
-  Reason: 单行定义已统一到基础 main，触控覆写会覆盖错误区的两行布局。
-  Trigger: 手机横屏错误提示挤掉工序图。
-  Evidence: production-cycle/mobile/invalid.png；触控单行规则覆盖 has-cycle-errors。
-  Replacement: 基础 production-planning-main 与 has-cycle-errors。
-  Risk: Low；Human Review: Required。
-  Original code: grid-template-rows: minmax(0, 1fr);
-  */
 }
 
 .production-planning-panel.is-touch .production-planning-graph {
@@ -1987,15 +1787,6 @@ Original code:
   padding: 7px 8px;
 }
 
-/* AI-REMOVED 2026-10-26:
-Reason: 输入页底栏已统一迁移顶栏。
-Trigger: 用户要求顶部操作。Evidence: input-footer 已归档。
-Replacement: production-planning-toolbar。Risk: Low。Human Review: Required
-Original code:
-.production-planning-panel.is-touch .production-planning-input-footer {
-  padding: 7px 8px;
-}
-*/
 
 .production-planning-panel.is-touch .production-planning-toolbar-controls {
   flex: 1 1 0;
@@ -2008,46 +1799,11 @@ Original code:
   line-height: 1.5;
 }
 
-/* AI-REMOVED 2026-10-26:
-Reason: 旧图标链及标签样式会干扰新界面示意图中的控件。
-Trigger: 用户要求真实按钮位置引导。Evidence: 旧样式统一缩放所有 span 和 svg。
-Replacement: production-planning-guide-* 的组件尺寸。
-Risk: Low。Human Review: Required
-Original code:
-.production-planning-panel.is-touch .production-planning-material-illustration {
-  padding: 0;
-  span { width: 28px; height: 28px; border-radius: 7px; }
-  svg { width: 17px; height: 17px; }
-}
-
-.production-planning-panel.is-touch .production-planning-material-guide-paths {
-  gap: 5px;
-  > span { padding: 3px 5px; }
-}
-
-*/
 
 .production-planning-panel.is-touch .production-planning-line-row {
   grid-template-columns: minmax(0, 1fr) 84px 32px;
 }
 
-/*
-AI-REMOVED 2026-05-22:
-Reason: 设备/物品模式现在共享同一套 pair 树，用户明确要求设备模式保持和物品模式一致的左右详情布局。
-Trigger: 用户指出设备模式不应改成上下分栏。
-Evidence: production-planning-tree-table-layout.is-device-mode 不再覆盖 grid-template-columns / rows。
-Replacement: base production-planning-tree-table-layout left/right grid
-Risk: Low；仅撤销设备模式触屏下的额外分栏方向。
-Human Review: Required
-
-Original code:
-.production-planning-panel.is-touch .production-planning-tree-table-layout.is-device-mode {
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: minmax(180px, 52vh) auto;
-  height: auto;
-  min-height: 100%;
-}
-*/
 
 .production-planning-panel.is-touch .production-planning-tree-table-layout.is-device-mode .production-planning-tree-table {
   min-width: 0;
@@ -2063,20 +1819,6 @@ Original code:
   white-space: normal;
 }
 
-/*
-AI-REMOVED 2026-05-22:
-Reason: 撤销设备模式上下分栏后，详情面板需要和物品模式一样保持自身滚动。
-Trigger: 用户指出设备模式不应改成上下分栏。
-Evidence: production-planning-tree-detail 回到基础 overflow: auto。
-Replacement: base production-planning-tree-detail overflow
-Risk: Low；只影响设备模式触屏布局滚动容器。
-Human Review: Required
-
-Original code:
-.production-planning-panel.is-touch .production-planning-tree-table-layout.is-device-mode .production-planning-tree-detail {
-  overflow: visible;
-}
-*/
 
 // 树状图折叠信息：物品模式下的 recipe 摘要（嵌在 node 列内）
 .production-planning-tree-table-folded-recipe {
@@ -2100,60 +1842,6 @@ Original code:
   }
 }
 
-/*
-AI-REMOVED 2026-05-22:
-Reason: 设备模式的树节点已收敛为“设备 + 目标产物”pair，输出物品 chip 会重复产物文本并削弱设备模式语义。
-Trigger: 用户指出设备模式不应继续出现物品 node。
-Evidence: production-planning-tree-table-folded-items / folded-item-chip 不再由 ProductionPlanningTreeTableRow 渲染。
-Replacement: production-planning-recipe-identity subtitle + production-planning-tree-table-rate
-Risk: Low；仅删除未使用的重复样式。
-Human Review: Required
-
-Original code:
-// 树状图折叠信息：设备模式下的输出物品芯片（嵌在 node 列内）
-.production-planning-tree-table-folded-items {
-  grid-area: folded;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding-left: 4px;
-  min-width: 0;
-  max-width: 100%;
-}
-
-.production-planning-tree-table-folded-item-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  max-width: 100%;
-  min-width: 0;
-  padding: 1px 5px;
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  background: var(--surface-2);
-  color: var(--text-2);
-  font-size: 0.62rem;
-
-  img {
-    width: 14px;
-    height: 14px;
-    object-fit: contain;
-  }
-
-  span:last-child {
-    flex: 0 0 auto;
-    color: var(--text-0);
-    font-weight: 700;
-  }
-
-  span:not(:last-child) {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-}
-*/
 
 /*
   TapTap 手机端按 Chrome 89 兼容：

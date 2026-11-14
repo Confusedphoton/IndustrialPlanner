@@ -2,18 +2,6 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: BlueprintDocument 类型导入；文件装载替代动态场景工厂
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// import {
-//   createBlueprintDocument,
-//   type BlueprintDocument,
-// } from "@/domain/document/blueprint-document";
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import {
   type SlotLinkDefinition,
@@ -22,15 +10,6 @@ import {
   type WorldEntity,
 } from "@/domain/document/world-document";
 import { normalizeBlueprintDocument } from "@/shared/blueprints/blueprint-document-codec";
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: loadBlueprintFromFile；实际放置动作显式使用当前 schema 朝向
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// import { rotateGridRotation } from "@/shared/geometry/grid";
 import type {
   BlueprintSimulationReport,
   BlueprintSimulationTickReport,
@@ -55,95 +34,8 @@ export function createWarehouseSlotLink(entityId: string, itemId: string, storag
 export const BASE_ID = "wuling_protocol_core";
 export const TIMESTAMP = new Date(0).toISOString();
 
-// AI-CORRECTION 2026-09-11: 这些历史 simulation 夹具按 AKEData 校准前的默认端口布局书写。
-// 端口 registry 已统一到 raw 坐标；将夹具实体显式转 180°，保持测试场景的世界连接语义。
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: loadBlueprintFromFile；实际放置动作显式使用当前 schema 朝向
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// const LEGACY_DEFAULT_ORIENTATION_FIXTURE_IDS = new Set([
-//   "storager_1",
-//   "mix_pool_1",
-//   "grinder_1",
-//   "filling_pd_mc_1_liquid",
-//   "filling_pd_mc_1",
-//   "udpipe_loader_1",
-//   "udpipe_unloader_1",
-//   "furnance_1",
-//   "furnance_1_liquid",
-//   "cmpt_mc_1",
-//   "shaper_1",
-//   "shaper_1_gas",
-//   "seedcol_1",
-//   "planter_1",
-//   "planter_1_liquid",
-//   "winder_1",
-//   "tools_asm_mc_1",
-//   "thickener_1",
-//   "power_sta_1",
-//   "mix_pool_2",
-//   "liquid_purifier_1",
-//   "liquid_purifier_1_gas",
-//   "xiranite_oven_1",
-//   "dismantler_1",
-//   "transmuter_2_gastrans",
-//   "transmuter_2_solidtrans",
-//   "gas_reactor_1",
-//   "transmuter_1_gastrans",
-//   "transmuter_1_liquidtrans",
-//   "water_pump_1",
-//   "udpipe_loader_2",
-//   "udpipe_unloader_2",
-//   "liquid_cleaner_1",
-//   "liquid_storager_1",
-//   "gas_storager_1",
-//   "vaporizer_1",
-//   "gas_pump_1",
-// ]);
 
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: loadBlueprintFromFile；实际放置动作显式使用当前 schema 朝向
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// export function createBlueprint(
-//   name: string,
-//   entities: readonly WorldEntity[],
-//   slotLinks: readonly SlotLinkDefinition[] = [],
-// ): BlueprintDocument {
-//   return createBlueprintDocument({
-//     blueprintId: `req-076-${name}`,
-//     name,
-//     description: "",
-//     baseId: BASE_ID,
-//     initialGridPoint: { x: 0, y: 0 },
-//     entities: Object.fromEntries(entities.map((entity) => [entity.id, entity])) as Record<string, WorldEntity>,
-//     entityOrder: entities.map((entity) => entity.id),
-//     slotLinks: [...slotLinks],
-//     createdAt: TIMESTAMP,
-//     updatedAt: TIMESTAMP,
-//   });
-// }
 
-// AI-CORRECTION 2026-09-14: 场景已迁移至文件；此工厂仅供增删/放置动作使用，rotation 为当前 schema 的真实朝向。
-// AI-REMOVED 2026-09-14:
-// Reason: 运行时夹具补偿与正式蓝图迁移规则重复，且遗漏准入口的 270° 迁移。
-// Trigger: 测试场景统一保存当前 schema 蓝图，不再携带隐式旧版朝向。
-// Evidence: 物流完全测试与仿真回归在文件迁移后通过；剩余调用已显式保留原世界朝向。
-// Replacement: 下方 rotation 直接赋值；历史场景通过 normalizeBlueprintDocument 迁移。
-// Risk: 新增动作调用必须使用当前 Registry 朝向。
-// Human Review: Required
-// Original code:
-// rotation: LEGACY_DEFAULT_ORIENTATION_FIXTURE_IDS.has(definitionId)
-//   ? rotateGridRotation(rotation, 180)
-//   : rotation,
 export function createEntity(
   id: string,
   definitionId: string,
@@ -242,27 +134,6 @@ export function getFirstTickAtSimulationMilliseconds(
       elapsedMilliseconds,
     ),
   );
-  // AI-REMOVED 2026-09-08:
-  // Reason: 整数毫秒到第一 tick 的换算需要同时供 Blueprint report 与直接 Host 测试复用。
-  // Trigger: 用户要求把 Legacy Worker 门禁测试改为公共 Host 行为矩阵。
-  // Evidence: Host 测试只有 topology.standardTickRate，没有 BlueprintSimulationReport。
-  // Replacement: resolveFirstTickNumberAtSimulationMilliseconds。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // if (!Number.isSafeInteger(elapsedMilliseconds) || elapsedMilliseconds < 0) {
-  //   throw new Error(
-  //     `Expected elapsedMilliseconds to be a non-negative safe integer, received: ${elapsedMilliseconds}.`,
-  //   );
-  // }
-  // const scaledTickOffset = elapsedMilliseconds * report.topology.standardTickRate;
-  // if (!Number.isSafeInteger(scaledTickOffset) || scaledTickOffset % 1_000 !== 0) {
-  //   throw new Error(
-  //     `Simulation time ${elapsedMilliseconds}ms is not exactly representable at ${report.topology.standardTickRate} TPS.`,
-  //   );
-  // }
-  // return getTick(report, (scaledTickOffset / 1_000) + 1);
 }
 
 export function getLastTick(
@@ -404,53 +275,6 @@ export function loadBlueprintVariantFromFile(
  * extraEntities 会生成 test-extra-{index} 格式的 ID，不会与蓝图中已有的
  * legacy_ 前缀实体冲突。
  */
-// AI-REMOVED 2026-09-14:
-// Reason: 场景构造已批量固化为带版本的蓝图文件。
-// Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-// Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-// Replacement: loadBlueprintFromFile；实际放置动作显式使用当前 schema 朝向
-// Risk: Low；断言与被测动作不变。
-// Human Review: Required
-// Original code:
-// export function loadBlueprintWithExtras(
-//   filePath: string,
-//   extraEntities: readonly WorldEntity[],
-//   extraSlotLinks: readonly SlotLinkDefinition[] = [],
-// ): BlueprintDocument {
-//   const blueprint = loadBlueprintFromFile(filePath);
-//
-//   const entities = { ...blueprint.entities };
-//   const entityOrder = [...blueprint.entityOrder];
-//   const slotLinks = [...blueprint.slotLinks];
-//
-//   // 构建 extra entity 的原始 ID → 重命名后 ID 映射
-//   const extraIdMap = new Map<string, string>();
-//   for (let i = 0; i < extraEntities.length; i++) {
-//     const entityId = `test-extra-${i}`;
-//     const entity: WorldEntity = { ...extraEntities[i]!, id: entityId };
-//     entities[entityId] = entity;
-//     entityOrder.push(entityId);
-//     extraIdMap.set(extraEntities[i]!.id, entityId);
-//   }
-//
-//   // 重写 extraSlotLinks 中的 entity ID
-//   for (const link of extraSlotLinks) {
-//     const newSourceId = extraIdMap.get(link.source.entityId) ?? link.source.entityId;
-//     const newTargetId = extraIdMap.get(link.target.entityId) ?? link.target.entityId;
-//     slotLinks.push({
-//       ...link,
-//       source: { ...link.source, entityId: newSourceId },
-//       target: { ...link.target, entityId: newTargetId },
-//     });
-//   }
-//
-//   return {
-//     ...blueprint,
-//     entities,
-//     entityOrder,
-//     slotLinks,
-//   };
-// }
 
 // ===============================
 // Blueprint → WorldDocument 转换

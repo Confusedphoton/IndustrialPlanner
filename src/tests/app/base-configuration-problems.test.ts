@@ -20,19 +20,6 @@ const registry = createRegistryContract();
 
 describe("base configuration problems", () => {
   it("为每个作弊设备生成一条问题", () => {
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections/app/base-configuration-problems/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [
-    //       createEntity("cheat-solid", "cheat_infinite_solid"),
-    //       createEntity("cheat-liquid", "cheat_infinite_liquid"),
-    //       createEntity("cheat-gas", "cheat_infinite_gas"),
-    //     ]
     const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/base-configuration-problems/scene-01-variant-1.schema7.json"));
 
     expect(collectProblems({ entities })).toEqual([
@@ -50,17 +37,6 @@ describe("base configuration problems", () => {
         "item_originium_ore",
         "item_quartz_sand",
       ],
-      // AI-REMOVED 2026-08-19:
-      // Reason: 两类采集泵不再拥有 warehouseItemLink inspector，真实自然资源改由手选配方生产。
-      // Trigger: 新版泵彻底退出仓库代理模式。
-      // Evidence: Registry 契约测试已断言两类泵无 warehouse-item-link inspector。
-      // Replacement: recipe-channel-definition.test.ts + resource-pump-production.test.ts
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // gas_pump_1: ["item_gas_inert", "item_gas_xiranite"],
-      // water_pump_1: ["item_liquid_acid", "item_liquid_water"],
     } as const;
     const entities: WorldEntity[] = [];
     const slotLinks: SlotLinkDefinition[] = [];
@@ -81,17 +57,6 @@ describe("base configuration problems", () => {
     const invalidEntries = [
       createWarehouseInfiniteEntry("invalid-unloader", "unloader_1", "item_liquid_water"),
       createWarehouseInfiniteEntry("invalid-hub", "sp_hub_1", "item_copper_ore"),
-      // AI-REMOVED 2026-08-19:
-      // Reason: 新版泵没有可用于构造仓库链接的 inspector。
-      // Trigger: 泵改为真实配方生产。
-      // Evidence: createWarehouseInfiniteEntry 会拒绝没有 warehouse-item-link inspector 的设备。
-      // Replacement: schema 5 迁移测试覆盖旧泵非法物品替换。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // createWarehouseInfiniteEntry("invalid-gas-pump", "gas_pump_1", "item_liquid_acid"),
-      // createWarehouseInfiniteEntry("invalid-water-pump", "water_pump_1", "item_gas_inert"),
     ];
     const finiteEntry = createWarehouseInfiniteEntry(
       "finite-hub",
@@ -112,17 +77,6 @@ describe("base configuration problems", () => {
     const entries = [
       createWarehouseInfiniteEntry("multi-unloader", "unloader_1", "item_copper_ore"),
       createWarehouseInfiniteEntry("multi-hub", "sp_hub_1", "item_copper_ore"),
-      // AI-REMOVED 2026-08-19:
-      // Reason: 新版泵不再参与多基地仓库出口分类。
-      // Trigger: 泵移除 warehouseItemLink inspector。
-      // Evidence: 多基地与单基地均由相同泵配方生产，不再读取仓库源槽。
-      // Replacement: 真实泵仿真回归。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // createWarehouseInfiniteEntry("multi-gas-pump", "gas_pump_1", "item_liquid_water"),
-      // createWarehouseInfiniteEntry("multi-water-pump", "water_pump_1", "item_gas_inert"),
     ];
 
     expect(collectProblems({
@@ -135,19 +89,6 @@ describe("base configuration problems", () => {
   });
 
   it("编辑配置或运行时状态中的普通槽位无限均按设备报错", () => {
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/simulation/base-configuration-problems/index.json
-    // AI-CORRECTION 2026-09-14: 上述自动归档路径按仿真目录生成；实际替代场景索引为 src/tests/fixtures/blueprints/collections/app/base-configuration-problems/index.json、src/tests/fixtures/blueprints/collections-extra/app/base-configuration-problems/index.json。
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // const configuredEntity = createEntity("configured-storage", "storager_1", {
-    //       "storageSlotGroups[0].slots[0].ignoreStock": true,
-    //       "storageSlotGroups[1].slots[0].ignoreStock": true,
-    //     });
     const runtimeEntity = createEntity("runtime-storage", "storager_1");
     const finiteEntity = createEntity("finite-storage", "storager_1");
     const waterPump = createEntity("runtime-water-pump", "water_pump_1");
@@ -156,15 +97,6 @@ describe("base configuration problems", () => {
       [finiteEntity.id, [createRuntimeSlotItem("storager_1", false)]],
       [waterPump.id, [createRuntimeSlotItem("water_pump_1", true)]],
     ]);
-    // AI-REMOVED 2026-09-14:
-    // Reason: 场景构造已批量固化为带版本的蓝图文件。
-    // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-    // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-    // Replacement: src/tests/fixtures/blueprints/collections-extra/app/base-configuration-problems/index.json
-    // Risk: Low；断言与被测动作不变。
-    // Human Review: Required
-    // Original code:
-    // [configuredEntity, runtimeEntity, finiteEntity, waterPump]
     const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/base-configuration-problems/scene-01-variant-1.schema7.json"));
     const runtimeInfiniteStorageEntityIds = collectRuntimeInfiniteStorageEntityIds({
       entities,

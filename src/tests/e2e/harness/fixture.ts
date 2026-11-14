@@ -189,7 +189,7 @@ export class ManagedCli {
         "async page => { await page.__finishCanvasLockAudit?.(); }"], "canvas-lock-audit.log", 15_000);
     } catch (error) { errors.push(error); }
     if (this.tracing) {
-      // 2026-10-16：live trace 停止需排空写入队列，与原生 context 的 trace 收尾使用相同的有界预算。
+      // live trace 停止需排空写入队列，与原生 context 的 trace 收尾使用相同的有界预算。
       try { await this.round.command("playwright-cli", [`-s=${this.session}`, "tracing-stop"], "trace-stop.log", 30_000); }
       catch (error) { this.cleanupFailed = true; errors.push(error); }
     }
@@ -206,7 +206,7 @@ type HarnessFixtures = {
 
 export const test = base.extend<HarnessFixtures>({
   appServer: [true, { option: true }],
-  // 2026-10-30：常规首轮免去全程 trace；重试自动取证，trace 专项可显式开启。
+  // 常规首轮免去全程 trace；重试自动取证，trace 专项可显式开启。
   recordTrace: [false, { option: true }],
   round: [async ({ appServer }, provide, info) => {
     const stopped = resolve(info.project.outputDir, "cleanup-failed");
@@ -217,18 +217,6 @@ export const test = base.extend<HarnessFixtures>({
     const errors: unknown[] = [];
     try {
       if (appServer) {
-        // AI-REMOVED 2026-10-30:
-        // Reason: Vite 的所有权提升到整轮，复用源码转换缓存，避免逐例重启。
-        // Trigger: 用户明确要求只启动一次 Vite 并观察前 30 分钟进度。
-        // Evidence: 原始基座每例创建开发服务；首轮关闭 trace 后相同前缀仍耗时约 30 分钟。
-        // Replacement: scripts/e2e/setup.mjs；本处仅核验共享服务身份。
-        // Risk: 共享 Vite 常驻期间保留转换缓存；浏览器存储与有状态后端仍隔离。
-        // Human Review: Required
-        // Original code:
-        // if (await portIsOpen(4174)) throw new Error("4174 已被其他服务占用");
-        // 同一 worker 中的 Vite build 会设置 NODE_ENV；开发服务不能继承前例的构建模式。
-        // const server = await round.start(process.execPath, ["scripts/e2e/serve.mjs"], "vite.log", { NODE_ENV: "development" });
-        // await round.waitForServer(server, APP_URL);
         const { appServer: server } = JSON.parse(await readFile(resolve(info.project.outputDir, "run.json"), "utf8"));
         const owner = (await browserProcesses()).find(item => item.pid === server?.pid && item.started === server.started);
         if (!owner || !(await portIsOpen(4174))) throw new Error("本轮共享 Vite 已退出或不可用，禁止接管或重启其他服务");

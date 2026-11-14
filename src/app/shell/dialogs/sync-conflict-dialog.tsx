@@ -67,7 +67,6 @@ export const SyncConflictDialog = observer(function SyncConflictDialog({
   );
 
   useEffect(() => {
-    // AI-CORRECTION 2026-08-13: 按条目类型预设默认决议——
     // 上传条目默认“用我的”，下载条目默认“用远端”，冲突条目无默认必须显式选择。
     setDecisions(new Map(conflict?.items.flatMap((item): Array<[string, SyncConflictResolution]> =>
       item.kind === "upload"
@@ -177,16 +176,6 @@ export const SyncConflictDialog = observer(function SyncConflictDialog({
               const kindLabel = resolveConflictItemKindLabel(item.kind, t);
               const localChoiceDeletesBase = item.adapterId === "world-documents"
                 && item.kind === "download"
-                // AI-REMOVED 2026-09-26:
-                // Reason: 弹窗状态的 SyncConflictItem 不包含 localValue，直接访问无法通过类型检查。
-                // Trigger: TypeScript TS2339；本次未知基地删除提示。
-                // Evidence: SyncStateImpl.requestConflictResolutions 仅保存 adapterId、assetId、kind、remoteUpdatedAt。
-                // Replacement: 条目类型与注册表缺席共同确定提示，并在文案中保留条件说明。
-                // Risk: 弹窗无法直接区分同步前是否存在本地文档；提示采用条件表达。
-                // Human Review: Required
-                //
-                // Original code:
-                // && item.localValue === null
                 && !appHost.workspace.registry.baseDefinitions.some(
                   (definition) => definition.id === item.assetId,
                 );
@@ -201,18 +190,6 @@ export const SyncConflictDialog = observer(function SyncConflictDialog({
                     <span className={cm(styles, "sync-conflict-item-kind")}>
                       {kindLabel}
                     </span>
-                    {/*
-                      AI-REMOVED 2026-08-08:
-                      Reason: 内部 assetId 不是面向用户的资源名称，且长 ID 会破坏弹窗对齐。
-                      Trigger: 用户要求移除基地 ID、蓝图 ID，并将类型与名称合并展示。
-                      Evidence: 三种规定屏幕尺寸截图均显示 ID 折行或挤占标题空间。
-                      Replacement: 上方本地化的 itemLabel。
-                      Risk: Low；内部 ID 仍保留在表单 key 与提交决议中。
-                      Human Review: Required
-
-                      Original code:
-                      <span>{item.assetId}</span>
-                    */}
                   </legend>
                   {item.kind === "conflict" ? (
                     <p>
@@ -312,16 +289,6 @@ export const SyncConflictDialog = observer(function SyncConflictDialog({
 const CONFLICT_RESOLUTIONS: readonly SyncConflictResolution[] = [
   "use-local",
   "use-remote",
-  // AI-REMOVED 2026-08-08:
-  // Reason: pause 是关闭整个同步流程的全局决议，不是单项资源的独立选择。
-  // Trigger: 用户要求从子项移除拒绝冲突，并改为底部红色全局操作按钮。
-  // Evidence: 任意一个 pause 都会保留双方数据并结束本次同步，逐项重复展示会误导用户。
-  // Replacement: WebDavConflictDialog 的 webdav-conflict-stop-sync 按钮。
-  // Risk: Low；pause 仍由同步状态的 cancelConflictWorkflow 为全部冲突统一提交。
-  // Human Review: Required
-  //
-  // Original code:
-  // "pause",
 ];
 
 function createConflictItemKey(adapterId: string, assetId: string): string {

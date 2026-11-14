@@ -159,14 +159,12 @@ export function resolveCenteredRotatedGridPoint(options: {
 /**
  * 将 rotation=0 坐标系下的 spriteOffset 旋转到指定 rotation 坐标系。
  * 旋转公式：90° CW = (x,y) → (-y,x)，尺寸宽高互换。
- * AI-CORRECTION 2026-05-26: spriteOffset 现在绕 footprint 中心旋转，再换算回旋转后 footprint 左上角；只旋转 offset 原点会导致水泵 180°/270° 多偏移 2 格。
  *
  * @param offset rotation=0 下的精灵偏移 { x, y, width, height }
  * @param footprint rotation=0 下的设备占地尺寸
  * @param rotation 目标旋转角度
  * @returns 旋转后的偏移
  */
-// AI-CORRECTION 2026-10-13: 将原 rotateSpriteOffset 提升为通用局部矩形变换，精灵与作用范围共用。
 export function rotateLocalGridRect(
   offset: { x: number; y: number; width: number; height: number },
   footprint: GridRectSize,

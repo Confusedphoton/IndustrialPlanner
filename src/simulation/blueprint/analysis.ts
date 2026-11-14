@@ -11,7 +11,7 @@ export class BlueprintAnalysisCollector {
   constructor(private readonly topology: CompiledSimulationTopology, private readonly registry: RegistryContract) {}
 
   sample(engine: BlueprintExecutionEngine, observationFraction: number | null): void {
-    // 2026-10-08：配方稳定性只统计正式观察期；预热物流仍由下方全程转移记录保留。
+    // 配方稳定性只统计正式观察期；预热物流仍由下方全程转移记录保留。
     const windowIndex = observationFraction === null ? null : Math.min(3, Math.max(0, Math.ceil(observationFraction * 4) - 1));
     if (windowIndex !== null) this.observeRecipes(engine, windowIndex);
     engine.visitTransfers(transfer => {

@@ -38,9 +38,9 @@ const TWO_FINGER_MOVE_THRESHOLD_PX = 2;
 const WHEEL_ACCUMULATE_THRESHOLD = 1;
 const DOUBLE_TAP_MS = 300;
 const DOUBLE_TAP_SLOP_PX = 12;
-/** 2026-11-13：手写笔精确输入的防误触窗口；笔接触或最近一次笔活动（含悬停）后该时长内的触摸视为手掌。 */
+/** 手写笔精确输入的防误触窗口；笔接触或最近一次笔活动（含悬停）后该时长内的触摸视为手掌。 */
 const PEN_PALM_REJECTION_MS = 400;
-/** 2026-11-13：笔尖有轻微抖动，拖动判定阈值略大于鼠标。 */
+/** 笔尖有轻微抖动，拖动判定阈值略大于鼠标。 */
 const PEN_DRAG_SLOP_PX = 10;
 /** Pointer Events 规范中手写笔橡皮擦端的 button / buttons 值。 */
 export const PEN_ERASER_BUTTON = 5;
@@ -157,34 +157,10 @@ export interface GestureAdapterOptions {
   readonly onFrameDemand?: () => void;
   readonly onCancel?: () => void;
   readonly onAcquireInput?: () => void;
-  /** 2026-11-13：返回 true 时手写笔走鼠标会话（精确输入），否则沿用触控会话。未提供时视为 false。 */
+  /** 返回 true 时手写笔走鼠标会话（精确输入），否则沿用触控会话。未提供时视为 false。 */
   readonly queryPenPreciseInput?: () => boolean;
 }
 
-// AI-REMOVED 2026-11-12:
-// Reason: 输入适配器依赖所属画布的窄接口，退出工作台单例读取。
-// Trigger: REQ-048 D7。
-// Evidence: 命中检测、工具切换和悬浮清理由同一画布提供。
-// Replacement: GestureAdapterCanvas
-// Risk: 所有适配器构造点须同步迁移。
-// Human Review: Required
-// Original code:
-// export interface GestureAdapterAppHost {
-//   readonly mainCanvas: { readonly view: EditorViewContract };
-//   readonly workspace: {
-//     readonly editor: {
-//       readonly queries: {
-//         findEntityAtClientPixelPoint: (position: GesturePosition, viewport: EditorViewState) => WorldEntity | null;
-//       };
-//       readonly actions: {
-//         clearHoverPoint(): void;
-//       };
-//     } | null;
-//   };
-//   readonly internalState: {
-//     activeTool: ActiveTool;
-//   };
-// }
 export interface GestureAdapterCanvas {
  readonly isInputSuspended: boolean;
  readonly isCommandInputSuspended: boolean;
@@ -202,7 +178,7 @@ interface MouseSession {
   readonly pressModifiers: GestureModifiers;
   readonly pressStartedAt: number;
   readonly startPosition: GesturePosition;
-  /** 2026-11-13：该会话来自精确输入的手写笔。 */
+  /** 该会话来自精确输入的手写笔。 */
   readonly isPen: boolean;
   lastPosition: GesturePosition;
   longPressIndicatorTimer: TimerHandle | null;
@@ -285,7 +261,7 @@ export class GestureAdapter {
   private lastMousePosition: GesturePosition | null = null;
   private touchSession: TouchSession | null = null;
   private readonly activeTouches = new Map<number, TouchPoint>();
-  /** 2026-11-13：手写笔防误触拒收的触摸指针；其后续 move/up/cancel 一并忽略。 */
+  /** 手写笔防误触拒收的触摸指针；其后续 move/up/cancel 一并忽略。 */
   private readonly rejectedTouchPointerIds = new Set<number>();
   private penContactPointerId: number | null = null;
   private lastPenActivityAt = Number.NEGATIVE_INFINITY;
@@ -298,15 +274,6 @@ export class GestureAdapter {
     initialPosition: GesturePosition;
   } | null = null;
 
-  // AI-REMOVED 2026-11-12:
-  // Reason: 输入由所属画布按需驱动，不自建常驻动画循环。
-  // Trigger: REQ-048 显式驱动及生命周期约定。
-  // Evidence: 只有合并移动和按住平移需要下一帧。
-  // Replacement: CanvasInteractionController.inputDriver
-  // Risk: 需验证失焦、取消和连续按键。
-  // Human Review: Required
-  // Original code:
-  // private rafId: number | null = null;
 
   private gestureRafPerfWindow: GestureRafPerfWindow | null = null;
   private gestureRafPreviousTickEndedAtMs: number | null = null;
@@ -390,15 +357,6 @@ export class GestureAdapter {
       }
       : null
 
-    // AI-REMOVED 2026-11-12:
-    // Reason: 输入由所属画布按需驱动，不自建常驻动画循环。
-    // Trigger: REQ-048 显式驱动及生命周期约定。
-    // Evidence: 只有合并移动和按住平移需要下一帧。
-    // Replacement: CanvasInteractionController.inputDriver
-    // Risk: 需验证失焦、取消和连续按键。
-    // Human Review: Required
-    // Original code:
-    // this.startRafLoop();
 
   }
 
@@ -635,7 +593,7 @@ export class GestureAdapter {
   public handleUiButtonPressStart(event: GestureUiButtonPressEventLike): void {
     if (this.canvas.isInputSuspended) return;
     this.adapterOptions.onAcquireInput?.();
-    // 2026-11-13：UI 按钮的按压会话保持手写笔按触控处理，按钮反馈与手指一致。
+    // UI 按钮的按压会话保持手写笔按触控处理，按钮反馈与手指一致。
     const pointerKind = getPointerKind(event.pointerType);
     if (pointerKind === "unknown") {
       return;
@@ -726,16 +684,6 @@ export class GestureAdapter {
   }
 
   public handleBlur(): void {
-    // 2026-11-12：先向当前手势发出取消，再清理 router claim，避免取消落到其他模块。
-    // AI-REMOVED 2026-11-12:
-    // Reason: 取消输入不得补交尚未分发的移动。
-    // Trigger: REQ-048 挂起与失焦取消语义。
-    // Evidence: 旧 flush 会在取消后推进拖动位置。
-    // Replacement: 清空 pendingMergedMove。
-    // Risk: Low
-    // Human Review: Required
-    // Original code:
-    // this.flushPendingMergedMove();
     this.pendingMergedMove = null;
     this.cancelAllPointerSessions();
     this.cancelAllUiButtonPressSessions();
@@ -752,25 +700,7 @@ export class GestureAdapter {
 
   public dispose(): void {
 
-    // AI-REMOVED 2026-11-12:
-    // Reason: 输入由所属画布按需驱动，不自建常驻动画循环。
-    // Trigger: REQ-048 显式驱动及生命周期约定。
-    // Evidence: 只有合并移动和按住平移需要下一帧。
-    // Replacement: CanvasInteractionController.inputDriver
-    // Risk: 需验证失焦、取消和连续按键。
-    // Human Review: Required
-    // Original code:
-    // this.stopRafLoop();
 
-    // AI-REMOVED 2026-11-12:
-    // Reason: 取消输入不得补交尚未分发的移动。
-    // Trigger: REQ-048 挂起与失焦取消语义。
-    // Evidence: 旧 flush 会在取消后推进拖动位置。
-    // Replacement: 清空 pendingMergedMove。
-    // Risk: Low
-    // Human Review: Required
-    // Original code:
-    // this.flushPendingMergedMove();
     this.pendingMergedMove = null;
     this.unsubscribeActiveToolReaction();
     this.cancelAllPointerSessions();
@@ -920,7 +850,7 @@ export class GestureAdapter {
       const tapEvent: Extract<GestureEvent, { type: "mouse tap" }> = {
         type: "mouse tap",
         gestureId: session.gestureId,
-        // 2026-11-13：手写笔抬起时 buttons 已清零，以按下时解析出的按钮为准（橡皮擦端为 5）。
+        // 手写笔抬起时 buttons 已清零，以按下时解析出的按钮为准（橡皮擦端为 5）。
         button: session.isPen ? session.originButton : event.button,
         buttons: event.buttons,
         position,
@@ -1236,15 +1166,6 @@ export class GestureAdapter {
   }
 
   private cancelAllPointerSessions(): void {
-    // AI-REMOVED 2026-11-12:
-    // Reason: 取消输入不得补交尚未分发的移动。
-    // Trigger: REQ-048 挂起与失焦取消语义。
-    // Evidence: 旧 flush 会在取消后推进拖动位置。
-    // Replacement: 清空 pendingMergedMove。
-    // Risk: Low
-    // Human Review: Required
-    // Original code:
-    // this.flushPendingMergedMove();
     this.pendingMergedMove = null;
     const mouseSession = this.mouseSession;
     if (mouseSession !== null) {
@@ -1499,7 +1420,7 @@ export class GestureAdapter {
     return event.pointerType === "pen" && this.isPrecisePenEnabled();
   }
 
-  /** 2026-11-13：精确输入开启时手写笔走鼠标会话；UI 按钮等其余入口仍使用 getPointerKind。 */
+  /** 精确输入开启时手写笔走鼠标会话；UI 按钮等其余入口仍使用 getPointerKind。 */
   private resolvePointerKind(pointerType: string): "mouse" | "touch" | "unknown" {
     if (pointerType === "pen" && this.isPrecisePenEnabled()) {
       return "mouse";
@@ -1592,65 +1513,9 @@ export class GestureAdapter {
   }
 
 
-  // AI-REMOVED 2026-11-12:
-  // Reason: 输入由所属画布按需驱动，不自建常驻动画循环。
-  // Trigger: REQ-048 显式驱动及生命周期约定。
-  // Evidence: 只有合并移动和按住平移需要下一帧。
-  // Replacement: advanceFrame
-  // Risk: 需验证失焦、取消和连续按键。
-  // Human Review: Required
-  // Original code:
-  // private startRafLoop(): void {
-  //     const canvas = this.canvas
-  //     const perfWindow = this.gestureRafPerfWindow
-  //     const tick = () => {
-  //       this.rafId = requestAnimationFrame(tick);
-  //       if (perfWindow !== null) {
-  //         const tickStartedAtMs = performance.now()
-  //         if (this.gestureRafPreviousTickEndedAtMs === null) {
-  //           this.gestureRafPreviousTickEndedAtMs = tickStartedAtMs
-  //         }
-  //         if (perfWindow.startedAtMs === 0) {
-  //           perfWindow.startedAtMs = tickStartedAtMs
-  //         }
-  //         const hadPendingMove = this.pendingMergedMove !== null
-  //         this.flushPendingMergedMove();
-  //         const tickSelfMs = performance.now() - tickStartedAtMs
-  //         perfWindow.tickCount += 1
-  //         perfWindow.totalTickSelfMs += tickSelfMs
-  //         perfWindow.maxTickMs = Math.max(perfWindow.maxTickMs, tickSelfMs)
-  //         if (hadPendingMove) {
-  //           perfWindow.flushCount += 1
-  //         }
-  //         flushGestureRafPerfLogIfReady(
-  //           canvas,
-  //           perfWindow,
-  //           performance.now(),
-  //           canvas.state.activeTool ?? "unknown",
-  //         )
-  //       } else {
-  //         this.flushPendingMergedMove();
-  //       }
-  //     };
-  //     this.rafId = requestAnimationFrame(tick);
-  //   }
 
 
 
-  // AI-REMOVED 2026-11-12:
-  // Reason: 输入由所属画布按需驱动，不自建常驻动画循环。
-  // Trigger: REQ-048 显式驱动及生命周期约定。
-  // Evidence: 只有合并移动和按住平移需要下一帧。
-  // Replacement: advanceFrame
-  // Risk: 需验证失焦、取消和连续按键。
-  // Human Review: Required
-  // Original code:
-  // private stopRafLoop(): void {
-  //     if (this.rafId !== null) {
-  //       cancelAnimationFrame(this.rafId);
-  //       this.rafId = null;
-  //     }
-  //   }
 
 
   private doDispatchGesture(event: GestureEvent): boolean {
@@ -1800,7 +1665,7 @@ function getEventMergeKey(event: GestureEvent): string {
   return `${event.type}|alt:${m.alt}|ctrl:${m.ctrl}|meta:${m.meta}|shift:${m.shift}`;
 }
 
-/** 2026-11-13：手写笔橡皮擦端统一解析为 PEN_ERASER_BUTTON；部分驱动只在 buttons 中报告橡皮擦位。 */
+/** 手写笔橡皮擦端统一解析为 PEN_ERASER_BUTTON；部分驱动只在 buttons 中报告橡皮擦位。 */
 function resolvePenAwareButton(event: GesturePointerEventLike): number {
   if (
     event.pointerType === "pen"

@@ -6,16 +6,6 @@ import { readFromLocalStorage, saveToLocalStorage } from "@/shared/storage";
 import { BUILD_BACKEND_API_BASE_URL } from "@/shared/storage/backend-api-address";
 import type { SyncProviderId } from "@/shared/storage/sync-provider-activation";
 
-// AI-REMOVED 2026-08-24:
-// Reason: app 模块不能跨模块读取 src/sync 的 UI 配置；provider 类型已下沉 shared。
-// Trigger: 同步 provider 两阶段激活改造需要修正既有跨模块引用。
-// Evidence: 项目模块隔离规范只允许 app 引用 shared 与 domain。
-// Replacement: 下方 SYNC_PROVIDER_OPTIONS 与 shared SyncProviderId。
-// Risk: Low。
-// Human Review: Required
-//
-// Original code:
-// import { SYNC_PROVIDER_CONFIGS, type SyncProviderId } from "@/sync/sync-providers";
 
 const SYNC_PROVIDER_OPTIONS: readonly {
   readonly value: SyncProviderId;
@@ -29,18 +19,6 @@ const SYNC_PROVIDER_OPTIONS: readonly {
 
 export const USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY = "v3-user-settings-dialog";
 
-/* AI-REMOVED 2026-08-03:
-Reason: 快捷键不再作为通用设置页面分组。
-Trigger: ST2-RQ-002 要求取消“快捷键”组，并在“游戏”组只保留独立对话框入口。
-Evidence: SettingsDialog 通过 KeyboardShortcutSettingsDialog 展示快捷键。
-Replacement: keyboard-shortcut-settings-dialog.tsx。
-Risk: 旧 localStorage 中 selectedGroupId="shortcuts" 将回退到默认分组。
-Human Review: Required
-
-Original code:
-export type SettingsGroupId = "display-system" | "game" | "operation" | "shortcuts" | "other" | "experimental" | "debug";
-*/
-// AI-CORRECTION 2026-09-09: “快捷键”重新作为入口分组出现，但具体快捷键仍由独立对话框维护；同时按用户意图拆分其余设置分组。
 export type SettingsGroupId =
   | "system"
   | "display"
@@ -99,20 +77,6 @@ interface WorkbenchSwitchSettingDefinition extends WorkbenchSettingBaseDefinitio
   readonly defaultValue: boolean;
 }
 
-/* AI-REMOVED 2026-08-03:
-Reason: 通用设置定义不再包含快捷键控件类型。
-Trigger: ST2-RQ-002 快捷键录入收拢。
-Evidence: KeyboardShortcutSettingDefinition 已位于独立快捷键设置模块。
-Replacement: keyboard-shortcut-settings-dialog.tsx。
-Risk: Low
-Human Review: Required
-
-Original code:
-interface WorkbenchKeybindingSettingDefinition extends WorkbenchSettingBaseDefinition {
-  readonly kind: "keybinding";
-  readonly defaultValue: string;
-}
-*/
 
 interface WorkbenchTextSettingDefinition extends WorkbenchSettingBaseDefinition {
   readonly kind: "text";
@@ -130,16 +94,6 @@ export type WorkbenchSettingDefinition =
   | WorkbenchSelectSettingDefinition
   | WorkbenchSliderSettingDefinition
   | WorkbenchSwitchSettingDefinition
-  // AI-REMOVED 2026-08-03:
-  // Reason: keybinding 控件定义已迁出通用设置模型。
-  // Trigger: ST2-RQ-002 快捷键录入收拢。
-  // Evidence: 独立快捷键设置对话框直接使用 ShortcutKeyId。
-  // Replacement: keyboard-shortcut-settings-dialog.tsx。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // | WorkbenchKeybindingSettingDefinition
   | WorkbenchPasswordSettingDefinition
   | WorkbenchTextSettingDefinition;
 
@@ -159,18 +113,6 @@ interface WorkbenchSettingExternalBinding {
 
 interface WorkbenchSettingsDialogControllerOptions {
   readonly externalBindings?: Readonly<Record<string, WorkbenchSettingExternalBinding>>;
-  // AI-REMOVED 2026-08-03:
-  // Reason: 通用设置控制器不再代理快捷键读写与重置。
-  // Trigger: ST2-RQ-002 快捷键设置独立化。
-  // Evidence: KeyboardShortcutSettingsDialog 直接调用 appHost internalActions。
-  // Replacement: keyboard-shortcut-settings-dialog.tsx。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // readonly shortcutReader?: (key: string) => string;
-  // readonly shortcutWriter?: (key: string, value: string) => void;
-  // readonly shortcutResetAll?: () => void;
 }
 
 interface PersistedUserSettingsDialogState {
@@ -213,183 +155,12 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         defaultValue: "ayu-light",
         options: [
           { value: "ayu-light", labelKey: "settingsOption.ayuLight" },
-          // AI-CORRECTION 2026-11-13: Ayu Dark 由 Graphite Dark 取代，原选项为
           // { value: "ayu-dark", labelKey: "settingsOption.ayuDark" }。
           { value: "graphite-dark", labelKey: "settingsOption.graphiteDark" },
         ],
       },
     ],
   },
-  /* AI-REMOVED 2026-09-09:
-  Reason: 原“游戏”分组混合了显示、交互、活动、快捷键和辅助显示职责，无法表达调整后的信息架构。
-  Trigger: 用户要求将原“游戏”拆分为“显示”“交互模式”“活动”“快捷键”，并将剩余内容归入“辅助显示”。
-  Evidence: WORKBENCH_SETTINGS_GROUPS 中原 game.items 同时包含以上五类设置，SettingsDialog 还依赖数组索引插入活动卡片与分隔符。
-  Replacement: 下方 display、interaction-mode、auxiliary-display、activity、shortcuts 分组。
-  Risk: 旧 localStorage 中 selectedGroupId="game" 会回退到默认“系统”分组；设置值 ID 与行为保持不变。
-  Human Review: Required
-
-  Original code:
-  {
-    id: "game",
-    labelKey: "settingsGroup.game",
-    descriptionKey: "settingsGroup.gameDescription",
-    // AI-REMOVED 2026-05-26:
-    // Reason: 鹰角网络操作模式开关不再为用户可见设置，取消图形化入口。
-    //        该字段仍保留且为 true，但不再与其他设置项关联。
-    // Trigger: 用户需求 — 取消该设置的图像化入口，解耦关联。
-    // Evidence: 用户明确指令。
-    // Replacement: None（仅移除 UI 入口，字段本身保留于 state-impl.ts）。
-    // Risk: Low
-    // Human Review: Not Required
-    //
-    // Original code:
-    // {
-    //   id: "game-arknights-operation-mode",
-    //   kind: "switch",
-    //   labelKey: "settingsField.arknightsOperationMode",
-    //   descriptionKey: "settingsField.arknightsOperationModeDescription",
-    //   defaultValue: true,
-    //   disabled: true,
-    // },
-    items: [
-      {
-        id: "game-use-blueprint-style-device-images",
-        kind: "switch",
-        labelKey: "settingsField.game-use-blueprint-style-device-images",
-        descriptionKey: "settingsField.game-use-blueprint-style-device-imagesDescription",
-        defaultValue: false,
-      },
-      // AI-REMOVED 2026-09-06:
-      // Reason: 设备动画仍处于实验阶段，不应作为常规游戏设置出现。
-      // Trigger: 用户要求将“播放设备动画”移入实验性功能，并受实验总开关控制。
-      // Evidence: 实验性分组已有统一准入入口，Renderer 继续消费归一后的 AppSettings 字段。
-      // Replacement: WORKBENCH_SETTINGS_GROUPS 的 experimental 分组。
-      // Risk: Low；设置 ID 和持久化字段不变。
-      // Human Review: Required
-      //
-      // Original code:
-      // {
-      //   id: "game-play-device-animations",
-      //   kind: "switch",
-      //   labelKey: "settingsField.game-play-device-animations",
-      //   descriptionKey: "settingsField.game-play-device-animationsDescription",
-      //   defaultValue: false,
-      //   editableWhen: {
-      //     settingId: SIMPLIFIED_DEVICE_ICONS_SETTING_ID,
-      //     equals: false,
-      //   },
-      // },
-      {
-        id: SHOW_DEVICE_NAMES_SETTING_ID,
-        kind: "switch",
-        labelKey: "settingsField.game-show-device-names",
-        descriptionKey: "settingsField.game-show-device-namesDescription",
-        defaultValue: true,
-      },
-      {
-        id: "game-show-region-annotations",
-        kind: "switch",
-        labelKey: "settingsField.game-show-region-annotations",
-        descriptionKey: "settingsField.game-show-region-annotationsDescription",
-        defaultValue: true,
-      },
-      {
-        id: SHOW_DEVICE_ICONS_SETTING_ID,
-        kind: "switch",
-        labelKey: "settingsField.game-show-device-icons",
-        descriptionKey: "settingsField.game-show-device-iconsDescription",
-        defaultValue: false,
-        editableWhen: {
-          settingId: SIMPLIFIED_DEVICE_ICONS_SETTING_ID,
-          equals: false,
-        },
-      },
-      {
-        id: "other-toolbox-show-all-activity-content",
-        kind: "switch",
-        labelKey: "settingsField.other-toolbox-show-all-activity-content",
-        descriptionKey: "settingsField.other-toolbox-show-all-activity-contentDescription",
-        defaultValue: true,
-      },
-      {
-        id: "game-use-inspector-panel",
-        kind: "switch",
-        labelKey: "settingsField.game-use-inspector-panel",
-        descriptionKey: "settingsField.game-use-inspector-panelDescription",
-        defaultValue: false,
-      },
-      {
-        id: "game-arknights-selection-right-dock-sync",
-        kind: "switch",
-        labelKey: "settingsField.game-arknights-selection-right-dock-sync",
-        descriptionKey: "settingsField.game-arknights-selection-right-dock-syncDescription",
-        defaultValue: true,
-        editableWhen: {
-          settingId: "game-use-inspector-panel",
-          equals: true,
-        },
-      },
-      {
-        id: "game-arknights-inspector-open-on-second-click",
-        kind: "switch",
-        labelKey: "settingsField.game-arknights-inspector-open-on-second-click",
-        descriptionKey: "settingsField.game-arknights-inspector-open-on-second-clickDescription",
-        defaultValue: false,
-      },
-      {
-        id: "game-show-hotkeys",
-        kind: "switch",
-        labelKey: "settingsField.game-show-hotkeys",
-        descriptionKey: "settingsField.game-show-hotkeysDescription",
-        defaultValue: true,
-        mobileHidden: true,
-      },
-      {
-        id: "game-always-show-grid-lines",
-        kind: "switch",
-        labelKey: "settingsField.game-always-show-grid-lines",
-        descriptionKey: "settingsField.game-always-show-grid-linesDescription",
-        defaultValue: true,
-        editableWhen: {
-          settingId: "game-use-blueprint-style-device-images",
-          equals: false,
-        },
-      },
-      {
-        id: "game-always-show-power-range",
-        kind: "switch",
-        labelKey: "settingsField.game-always-show-power-range",
-        descriptionKey: "settingsField.game-always-show-power-rangeDescription",
-        defaultValue: false,
-      },
-      {
-        id: "game-show-grass-background",
-        kind: "switch",
-        labelKey: "settingsField.game-show-grass-background",
-        descriptionKey: "settingsField.game-show-grass-backgroundDescription",
-        defaultValue: false,
-        editableWhen: {
-          settingId: "game-use-blueprint-style-device-images",
-          equals: false,
-        },
-      },
-      {
-        id: COLLAPSE_DEVICE_MODES_SETTING_ID,
-        kind: "switch",
-        labelKey: "settingsField.game-collapse-device-modes",
-        descriptionKey: "settingsField.game-collapse-device-modesDescription",
-        defaultValue: true,
-      },
-      {
-        id: SHOW_PIPE_EXACT_FLUID_POSITION_SETTING_ID,
-        kind: "switch",
-        labelKey: "settingsField.game-show-pipe-exact-fluid-position",
-        descriptionKey: "settingsField.game-show-pipe-exact-fluid-positionDescription",
-        defaultValue: false,
-      },
-    ],
-  },
-  */
   {
     id: "display",
     labelKey: "settingsGroup.display",
@@ -446,22 +217,6 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         descriptionKey: "settingsField.game-show-device-namesDescription",
         defaultValue: true,
       },
-      // AI-REMOVED 2026-09-09:
-      // Reason: 区域标注恢复为实验性功能。
-      // Trigger: 用户要求现有开关受实验性功能总开关控制。
-      // Evidence: 实验性分组统一处理准入和默认值重置。
-      // Replacement: WORKBENCH_SETTINGS_GROUPS.experimental 中同 ID 设置。
-      // Risk: 已有标注会隐藏，数据仍保留。
-      // Human Review: Required
-      //
-      // Original code:
-      // {
-      //   id: "game-show-region-annotations",
-      //   kind: "switch",
-      //   labelKey: "settingsField.game-show-region-annotations",
-      //   descriptionKey: "settingsField.game-show-region-annotationsDescription",
-      //   defaultValue: true,
-      // },
       {
         id: SHOW_DEVICE_ICONS_SETTING_ID,
         kind: "switch",
@@ -499,7 +254,6 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         kind: "switch",
         labelKey: "settingsField.game-use-inspector-panel",
         descriptionKey: "settingsField.game-use-inspector-panelDescription",
-        // AI-CORRECTION 2026-11-13：属性面板默认停靠右侧，不再以模态对话框遮挡画布；原默认值为 false。
         defaultValue: true,
       },
       {
@@ -507,7 +261,7 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         kind: "switch",
         labelKey: "settingsField.game-arknights-selection-right-dock-sync",
         descriptionKey: "settingsField.game-arknights-selection-right-dock-syncDescription",
-        defaultValue: true,
+        defaultValue: false,
         editableWhen: {
           settingId: "game-use-inspector-panel",
           equals: true,
@@ -552,21 +306,6 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         descriptionKey: "settingsField.game-always-show-power-rangeDescription",
         defaultValue: false,
       },
-      // AI-REMOVED 2026-09-23:
-      // Reason: 管壁反射属于画面材质设置。
-      // Trigger: 用户要求移入“显示”分组。
-      // Evidence: 本次明确的设置分组要求。
-      // Replacement: 本文件 display 分组中的同 ID 设置。
-      // Risk: Low; Human Review: Required
-      // Original code:
-      // {
-      // id: "game-pipe-wall-reflection",
-      // kind: "switch",
-      // labelKey: "settingsField.game-pipe-wall-reflection",
-      // descriptionKey: "settingsField.game-pipe-wall-reflectionDescription",
-      // defaultValue: false,
-      // editableWhen: { settingId: "game-use-blueprint-style-device-images", equals: false },
-      // },
       {
         id: SHOW_PIPE_EXACT_FLUID_POSITION_SETTING_ID,
         kind: "switch",
@@ -576,45 +315,6 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
       },
     ],
   },
-  /* AI-REMOVED 2026-09-09:
-  Reason: 首次拆分时将“活动”“快捷键”置于“便捷操作”之前，不符合用户给出的目标顺序。
-  Trigger: 对照最终分组顺序时发现“原操作更名”应先于随后新增的活动与快捷键分组。
-  Evidence: 用户需求顺序为系统、显示、交互模式、辅助显示、便捷操作、活动、快捷键。
-  Replacement: 下方 convenience-operation 之后的 activity 与 shortcuts 分组。
-  Risk: Low。
-  Human Review: Required
-
-  Original code:
-  {
-    id: "activity",
-    labelKey: "settingsGroup.activity",
-    descriptionKey: "settingsGroup.activityDescription",
-    items: [
-      {
-        id: "other-toolbox-show-all-activity-content",
-        kind: "switch",
-        labelKey: "settingsField.other-toolbox-show-all-activity-content",
-        descriptionKey: "settingsField.other-toolbox-show-all-activity-contentDescription",
-        defaultValue: true,
-      },
-    ],
-  },
-  {
-    id: "shortcuts",
-    labelKey: "settingsGroup.shortcuts",
-    descriptionKey: "settingsGroup.shortcutsDescription",
-    items: [
-      {
-        id: "game-show-hotkeys",
-        kind: "switch",
-        labelKey: "settingsField.game-show-hotkeys",
-        descriptionKey: "settingsField.game-show-hotkeysDescription",
-        defaultValue: true,
-        mobileHidden: true,
-      },
-    ],
-  },
-  */
   {
     id: "convenience-operation",
     labelKey: "settingsGroup.convenienceOperation",
@@ -700,207 +400,6 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
       },
     ],
   },
-  // AI-CORRECTION 2026-09-09: “快捷键”作为快捷键提示与独立设置入口分组恢复；下方历史 keybinding 内嵌实现仍保持归档。
-  /* AI-REMOVED 2026-08-03:
-  Reason: 通用设置页面不再存在“快捷键”分组。
-  Trigger: ST2-RQ-002 新建独立快捷键设置对话框。
-  Evidence: SettingsDialog 的“游戏”组新增 KeyboardShortcutSettingsDialog 入口。
-  Replacement: keyboard-shortcut-settings-dialog.tsx。
-  Risk: Low
-  Human Review: Required
-
-  Original code:
-  {
-    id: "shortcuts",
-    labelKey: "settingsGroup.shortcuts",
-    descriptionKey: "settingsGroup.shortcutsDescription",
-    mobileHidden: true,
-    items: [
-      {
-        id: "shortcut-quick-place",
-        kind: "keybinding",
-        labelKey: shortcutKeybindingLabelKey("shortcut-quick-place"),
-        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-quick-place"),
-        defaultValue: "Z",
-      },
-      {
-        id: "shortcut-place-conveyor",
-        kind: "keybinding",
-        labelKey: shortcutKeybindingLabelKey("shortcut-place-conveyor"),
-        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-place-conveyor"),
-        defaultValue: "E",
-      },
-      {
-        id: "shortcut-place-pipe",
-        kind: "keybinding",
-        labelKey: shortcutKeybindingLabelKey("shortcut-place-pipe"),
-        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-place-pipe"),
-        defaultValue: "Q",
-      },
-      {
-        id: "shortcut-resources-power",
-        kind: "keybinding",
-        labelKey: shortcutKeybindingLabelKey("shortcut-resources-power"),
-        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-resources-power"),
-        defaultValue: "G",
-      },
-      {
-        id: "shortcut-warehouse",
-        kind: "keybinding",
-        labelKey: shortcutKeybindingLabelKey("shortcut-warehouse"),
-        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-warehouse"),
-        defaultValue: "C",
-      },
-      {
-        id: "shortcut-basic-production",
-        kind: "keybinding",
-        labelKey: shortcutKeybindingLabelKey("shortcut-basic-production"),
-        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-basic-production"),
-        defaultValue: "V",
-      },
-      {
-        id: "shortcut-synthesis",
-        kind: "keybinding",
-        labelKey: shortcutKeybindingLabelKey("shortcut-synthesis"),
-        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-synthesis"),
-        defaultValue: "B",
-      },
-      {
-        id: "shortcut-save-blueprint",
-        kind: "keybinding",
-        labelKey: shortcutKeybindingLabelKey("shortcut-save-blueprint"),
-        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-save-blueprint"),
-        defaultValue: "Ctrl+S",
-      },
-      {
-        id: "shortcut-return-select",
-        kind: "keybinding",
-        labelKey: shortcutKeybindingLabelKey("shortcut-return-select"),
-        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-return-select"),
-        defaultValue: "Esc",
-      },
-      {
-        id: "shortcut-rotate",
-        kind: "keybinding",
-        labelKey: shortcutKeybindingLabelKey("shortcut-rotate"),
-        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-rotate"),
-        defaultValue: "R",
-      },
-      {
-        id: "shortcut-switch-device-mode",
-        kind: "keybinding",
-        labelKey: shortcutKeybindingLabelKey("shortcut-switch-device-mode"),
-        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-switch-device-mode"),
-        defaultValue: "Tab",
-      },
-      {
-        id: "shortcut-rotate-viewport",
-        kind: "keybinding",
-        labelKey: shortcutKeybindingLabelKey("shortcut-rotate-viewport"),
-        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-rotate-viewport"),
-        defaultValue: "Ctrl+R",
-      },
-      {
-        id: "shortcut-pan-viewport-up",
-        kind: "keybinding",
-        labelKey: shortcutKeybindingLabelKey("shortcut-pan-viewport-up"),
-        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-pan-viewport-up"),
-        defaultValue: "W",
-      },
-      {
-        id: "shortcut-pan-viewport-down",
-        kind: "keybinding",
-        labelKey: shortcutKeybindingLabelKey("shortcut-pan-viewport-down"),
-        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-pan-viewport-down"),
-        defaultValue: "S",
-      },
-      {
-        id: "shortcut-pan-viewport-left",
-        kind: "keybinding",
-        labelKey: shortcutKeybindingLabelKey("shortcut-pan-viewport-left"),
-        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-pan-viewport-left"),
-        defaultValue: "A",
-      },
-      {
-        id: "shortcut-pan-viewport-right",
-        kind: "keybinding",
-        labelKey: shortcutKeybindingLabelKey("shortcut-pan-viewport-right"),
-        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-pan-viewport-right"),
-        defaultValue: "D",
-      },
-      {
-        id: "shortcut-delete-device",
-        kind: "keybinding",
-        labelKey: shortcutKeybindingLabelKey("shortcut-delete-device"),
-        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-delete-device"),
-        defaultValue: "F",
-      },
-      {
-        id: "shortcut-move-selection",
-        kind: "keybinding",
-        labelKey: shortcutKeybindingLabelKey("shortcut-move-selection"),
-        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-move-selection"),
-        defaultValue: "M",
-      },
-      {
-        id: "shortcut-copy-selection",
-        kind: "keybinding",
-        labelKey: shortcutKeybindingLabelKey("shortcut-copy-selection"),
-        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-copy-selection"),
-        defaultValue: "Ctrl+C",
-      },
-      {
-        id: "shortcut-paste-selection",
-        kind: "keybinding",
-        labelKey: shortcutKeybindingLabelKey("shortcut-paste-selection"),
-        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-paste-selection"),
-        defaultValue: "Ctrl+V",
-      },
-      {
-        id: "shortcut-undo",
-        kind: "keybinding",
-        labelKey: shortcutKeybindingLabelKey("shortcut-undo"),
-        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-undo"),
-        defaultValue: "Ctrl+Z",
-      },
-      {
-        id: "shortcut-redo",
-        kind: "keybinding",
-        labelKey: shortcutKeybindingLabelKey("shortcut-redo"),
-        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-redo"),
-        defaultValue: "Ctrl+Y",
-      },
-      {
-        id: "shortcut-toggle-placement-panel",
-        kind: "keybinding",
-        labelKey: shortcutKeybindingLabelKey("shortcut-toggle-placement-panel"),
-        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-toggle-placement-panel"),
-        defaultValue: "P",
-      },
-      {
-        id: "shortcut-toggle-blueprint-panel",
-        kind: "keybinding",
-        labelKey: shortcutKeybindingLabelKey("shortcut-toggle-blueprint-panel"),
-        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-toggle-blueprint-panel"),
-        defaultValue: "L",
-      },
-      {
-        id: "shortcut-toggle-history-panel",
-        kind: "keybinding",
-        labelKey: shortcutKeybindingLabelKey("shortcut-toggle-history-panel"),
-        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-toggle-history-panel"),
-        defaultValue: "H",
-      },
-      {
-        id: "shortcut-toggle-base-panel",
-        kind: "keybinding",
-        labelKey: shortcutKeybindingLabelKey("shortcut-toggle-base-panel"),
-        descriptionKey: shortcutKeybindingDescriptionKey("shortcut-toggle-base-panel"),
-        defaultValue: "K",
-      },
-    ],
-  },
-  */
   {
     id: "other",
     labelKey: "settingsGroup.other",
@@ -921,117 +420,20 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
     descriptionKey: "settingsGroup.experimentalDescription" as UiKey,
     items: [
       {
-        id: "experimental-blueprint-production-planning",
-        kind: "switch",
-        labelKey: "settingsField.experimental-blueprint-production-planning",
-        descriptionKey: "settingsField.experimental-blueprint-production-planningDescription",
-        defaultValue: false,
-      },
-      {
         id: "game-show-region-annotations",
         kind: "switch",
         labelKey: "settingsField.game-show-region-annotations",
         descriptionKey: "settingsField.game-show-region-annotationsDescription",
         defaultValue: false,
       },
-      // AI-REMOVED 2026-10-14:
-      // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
-      // Trigger: 用户要求 EDA 默认可用且不再需要开启。
-      // Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
-      // Replacement: EDA 入口直接显示，BlueprintPlannerDialogController 不再持有启用状态。
-      // Risk: Low；规划任务与业务可用性校验保持原行为。
-      // Human Review: Required
-      //
-      // Original code:
-      //       {
-      //         id: "experimental-blueprint-planner",
-      //         kind: "switch",
-      //         labelKey: "settingsField.experimental-blueprint-planner",
-      //         descriptionKey: "settingsField.experimental-blueprint-plannerDescription",
-      //         defaultValue: false,
-      //       },
 
-      // AI-REMOVED 2026-09-26:
-      // Reason: 旧选项表示启用 Dense，调试选项现表示启用 Legacy。
-      // Trigger: 用户要求默认 Dense，并将旧版求解器开关移到调试分组。
-      // Evidence: 本分组的设置会受实验性总开关禁用和归零，语义不符。
-      // Replacement: 下方 debug 分组的 debug-legacy-simulation-engine。
-      // Risk: 原本启用 Dense 的用户升级后使用默认 Dense。
-      // Human Review: Required
-      //
-      // Original code:
-      // {
-      //   id: "experimental-dense-simulation-engine",
-      //   kind: "switch",
-      //   labelKey: "settingsField.experimental-dense-simulation-engine",
-      //   descriptionKey: "settingsField.experimental-dense-simulation-engineDescription",
-      //   defaultValue: false,
-      //   editableWhen: {
-      //     settingId: "other-experimental-features",
-      //     equals: true,
-      //   },
-      // },
-      // AI-REMOVED 2026-09-26:
-      // Reason: 设备动画与音效已移入常规显示设置，不再受实验总开关控制或重置。
-      // Trigger: 用户要求将两项移入“显示与性能”。
-      // Evidence: 实验分组统一决定准入与默认值重置，运行时直接读取现有设置字段。
-      // Replacement: WORKBENCH_SETTINGS_GROUPS 的 display 分组。
-      // Risk: Low；保留设置 ID、默认值与动画的蓝图样式互斥条件。
-      // Human Review: Required
-      //
-      // Original code:
-      // {
-      //   id: DEVICE_ANIMATIONS_SETTING_ID,
-      //   kind: "switch",
-      //   labelKey: "settingsField.game-play-device-animations",
-      //   descriptionKey: "settingsField.game-play-device-animationsDescription",
-      //   defaultValue: false,
-      //   editableWhen: [
-      //     {
-      //       settingId: EXPERIMENTAL_FEATURES_SETTING_ID,
-      //       equals: true,
-      //     },
-      //     {
-      //       settingId: SIMPLIFIED_DEVICE_ICONS_SETTING_ID,
-      //       equals: false,
-      //     },
-      //   ],
-      // },
-      // {
-      //   id: "game-play-device-audio",
-      //   kind: "switch",
-      //   labelKey: "settingsField.game-play-device-audio",
-      //   descriptionKey: "settingsField.game-play-device-audioDescription",
-      //   defaultValue: false,
-      //   editableWhen: { settingId: EXPERIMENTAL_FEATURES_SETTING_ID, equals: true },
-      // },
       {
         id: "sync-provider",
         kind: "select",
         labelKey: "settingsField.sync-provider" as UiKey,
         descriptionKey: "settingsField.sync-providerDescription" as UiKey,
         defaultValue: "none" satisfies SyncProviderId,
-        // AI-REMOVED 2026-08-24:
-        // Reason: app 设置定义不能再从 sync 模块映射 provider UI 配置。
-        // Trigger: provider 标识及选择状态已下沉 shared，修复 app → sync 跨模块引用。
-        // Evidence: 上方 SYNC_PROVIDER_OPTIONS 在 app owner 内定义展示顺序与文案 key。
-        // Replacement: SYNC_PROVIDER_OPTIONS。
-        // Risk: Low。
-        // Human Review: Required
-        //
-        // Original code:
-        // options: SYNC_PROVIDER_CONFIGS.map((c) => ({
-        //   value: c.id,
-        //   labelKey: c.labelKey,
-        // })),
         options: SYNC_PROVIDER_OPTIONS,
-      },
-      {
-        id: "experimental-regional-multi-base",
-        kind: "switch",
-        labelKey: "settingsField.experimental-regional-multi-base",
-        descriptionKey: "settingsField.experimental-regional-multi-baseDescription",
-        defaultValue: false,
       },
       {
         id: "experimental-virtual-mouse-pointer",
@@ -1053,14 +455,6 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         labelKey: "settingsField.other-debug-mode",
         descriptionKey: "settingsField.other-debug-modeDescription",
         defaultValue: false,
-      },
-      {
-        id: "debug-legacy-simulation-engine",
-        kind: "switch",
-        labelKey: "settingsField.debug-legacy-simulation-engine",
-        descriptionKey: "settingsField.debug-legacy-simulation-engineDescription",
-        defaultValue: false,
-        editableWhen: { settingId: "other-debug-mode", equals: true },
       },
       {
         id: "debug-simulation-worker-detailed-report",
@@ -1125,30 +519,6 @@ const SETTING_DEFINITION_BY_ID = new Map<string, WorkbenchSettingDefinition>(
   ),
 );
 
-// AI-REMOVED 2026-08-03:
-// Reason: 快捷键定义、标签与描述推导已迁入独立快捷键设置模块。
-// Trigger: ST2-RQ-002 快捷键录入收拢。
-// Evidence: KEYBOARD_SHORTCUT_SETTINGS 统一声明所有可配置快捷键。
-// Replacement: keyboard-shortcut-settings-dialog.tsx。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// /** 所有 keybinding 类型的 setting 定义 */
-// export const ALL_KEYBINDING_SETTINGS: readonly WorkbenchKeybindingSettingDefinition[] =
-//   WORKBENCH_SETTINGS_GROUPS.flatMap((group) =>
-//     group.items.filter((setting) => setting.kind === "keybinding"),
-//   ) as WorkbenchKeybindingSettingDefinition[];
-//
-// /** 从 shortcut setting id 推导 i18n label key。前缀 `settingsField.` + setting id */
-// function shortcutKeybindingLabelKey(id: string): UiKey {
-//   return `settingsField.${id}` as UiKey;
-// }
-//
-// /** 从 shortcut setting id 推导 i18n description key。前缀 `settingsField.` + setting id + `Description` */
-// function shortcutKeybindingDescriptionKey(id: string): UiKey {
-//   return `settingsField.${id}Description` as UiKey;
-// }
 
 function createDefaultValues(externalBindingIds: ReadonlySet<string> = new Set()): Record<string, WorkbenchSettingControlValue> {
   const values = Object.fromEntries(
@@ -1168,18 +538,6 @@ export class WorkbenchSettingsDialogController {
   public selectedGroupId: SettingsGroupId = DEFAULT_SETTINGS_GROUP.id;
   public values: Record<string, WorkbenchSettingControlValue> = {};
 
-  // Hardcoded：重置「操作」和「快捷键」时需要恢复为默认值的 setting id。
-  // AI-CORRECTION 2026-08-03: 快捷键重置已迁入独立对话框；此列表现在只负责“操作”设置。
-  // AI-REMOVED 2026-08-03:
-  // Reason: 原常量名包含已迁出的快捷键职责。
-  // Trigger: ST2-RQ-002 快捷键设置独立化。
-  // Evidence: 新列表仅保留 game-* 操作项。
-  // Replacement: RESET_OPERATION_KEYS in this class。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // private static readonly RESET_OPERATION_AND_SHORTCUT_KEYS: readonly string[] = [
   private static readonly RESET_OPERATION_KEYS: readonly string[] = [
     // 操作
     "game-quick-place",
@@ -1189,87 +547,15 @@ export class WorkbenchSettingsDialogController {
     "game-blueprint-placement-default-continuous",
     "game-arknights-allow-empty-logistics-endpoints",
     "game-arknights-auto-create-splitters-and-convergers",
-    // AI-REMOVED 2026-08-03:
-    // Reason: 快捷键由独立对话框单独重置。
-    // Trigger: ST2-RQ-002 快捷键设置独立化。
-    // Evidence: KeyboardShortcutSettingsDialog 调用 resetAllShortcutsToDefaults。
-    // Replacement: keyboard-shortcut-settings-dialog.tsx。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // // 快捷键
-    // "shortcut-quick-place",
-    // "shortcut-place-conveyor",
-    // "shortcut-place-pipe",
-    // "shortcut-resources-power",
-    // "shortcut-warehouse",
-    // "shortcut-basic-production",
-    // "shortcut-synthesis",
-    // "shortcut-save-blueprint",
-    // "shortcut-return-select",
-    // "shortcut-rotate",
-    // "shortcut-switch-device-mode",
-    // "shortcut-rotate-viewport",
-    // "shortcut-pan-viewport-up",
-    // "shortcut-pan-viewport-down",
-    // "shortcut-pan-viewport-left",
-    // "shortcut-pan-viewport-right",
-    // "shortcut-delete-device",
-    // "shortcut-move-selection",
-    // "shortcut-copy-selection",
-    // "shortcut-paste-selection",
-    // "shortcut-undo",
-    // "shortcut-redo",
-    // "shortcut-toggle-placement-panel",
-    // "shortcut-toggle-blueprint-panel",
-    // "shortcut-toggle-history-panel",
-    // "shortcut-toggle-base-panel",
   ];
 
   private readonly externalBindings: ReadonlyMap<string, WorkbenchSettingExternalBinding>;
   private readonly externalBindingIds: ReadonlySet<string>;
-  // AI-REMOVED 2026-08-03:
-  // Reason: 通用设置控制器不再持有快捷键重置回调。
-  // Trigger: ST2-RQ-002 快捷键设置独立化。
-  // Evidence: 独立对话框直接调用 appHost internalActions。
-  // Replacement: keyboard-shortcut-settings-dialog.tsx。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // private readonly shortcutResetAll?: () => void;
   private externalBindingRevision = 0;
 
   public constructor(options: WorkbenchSettingsDialogControllerOptions = {}) {
     const explicitBindings = new Map(Object.entries(options.externalBindings ?? {}));
 
-    // AI-REMOVED 2026-08-03:
-    // Reason: 通用设置控制器不再为快捷键生成 externalBinding，也不再保存快捷键重置回调。
-    // Trigger: ST2-RQ-002 快捷键设置独立化。
-    // Evidence: KeyboardShortcutSettingsDialog 直接读写 KeyboardShortcutManager。
-    // Replacement: keyboard-shortcut-settings-dialog.tsx。
-    // Risk: Low
-    // Human Review: Required
-    //
-    // Original code:
-    // // 自动为所有 keybinding 类型生成 externalBinding
-    // if (options.shortcutReader && options.shortcutWriter) {
-    //   for (const setting of ALL_KEYBINDING_SETTINGS) {
-    //     if (explicitBindings.has(setting.id)) continue;
-    //
-    //     explicitBindings.set(setting.id, {
-    //       readValue: () => options.shortcutReader!(setting.id),
-    //       writeValue: (value: WorkbenchSettingControlValue) => {
-    //         if (typeof value === "string") {
-    //           options.shortcutWriter!(setting.id, value);
-    //         }
-    //       },
-    //     });
-    //   }
-    // }
-    //
-    // this.shortcutResetAll = options.shortcutResetAll;
     this.externalBindings = explicitBindings;
     this.externalBindingIds = new Set(this.externalBindings.keys());
     this.values = createDefaultValues(this.externalBindingIds);
@@ -1418,37 +704,6 @@ export class WorkbenchSettingsDialogController {
     this.persist();
   }
 
-  /* AI-REMOVED 2026-08-03:
-  Reason: 快捷键写入已迁入独立快捷键设置对话框。
-  Trigger: ST2-RQ-002 快捷键录入收拢。
-  Evidence: KeyboardShortcutSettingsDialog 的 updateSlot 统一写入 manager。
-  Replacement: keyboard-shortcut-settings-dialog.tsx。
-  Risk: Low
-  Human Review: Required
-
-  Original code:
-  public updateKeybindingValue(settingId: string, value: string): void {
-    const setting = SETTING_DEFINITION_BY_ID.get(settingId);
-    if (setting?.kind !== "keybinding" || !this.isSettingEditable(settingId)) {
-      return;
-    }
-
-    const normalizedValue = normalizeKeybindingValue(value);
-    if (normalizedValue === null) {
-      return;
-    }
-
-    const externalBinding = this.externalBindings.get(settingId);
-    if (externalBinding) {
-      this.writeExternalBinding(externalBinding, normalizedValue);
-
-      return;
-    }
-
-    this.values[settingId] = normalizedValue;
-    this.persist();
-  }
-  */
 
   public updateTextValue(settingId: string, value: string): void {
     const setting = SETTING_DEFINITION_BY_ID.get(settingId);
@@ -1468,86 +723,7 @@ export class WorkbenchSettingsDialogController {
     this.persist();
   }
 
-  /* AI-REMOVED 2026-08-03:
-  Reason: 冲突检测与逐槽清空已迁入独立快捷键设置对话框。
-  Trigger: ST2-RQ-002 双槽位与快捷键录入收拢。
-  Evidence: keyboard-shortcut-settings-dialog.tsx 的 findKeybindingConflict / updateSlot。
-  Replacement: keyboard-shortcut-settings-dialog.tsx。
-  Risk: Low
-  Human Review: Required
 
-  Original code:
-  // [Original documentation start]
-  //  * 查找与给定值冲突的快捷键设置。
-  //  * 返回冲突的 settingId，若没有冲突返回 null。
-  //  * 排除 currentSettingId 自身。
-  // [Original documentation end]
-  public findKeybindingConflict(currentSettingId: string, value: string): string | null {
-    const normalizedValue = normalizeKeybindingValue(value);
-    if (normalizedValue === null) {
-      return null;
-    }
-
-    for (const setting of ALL_KEYBINDING_SETTINGS) {
-      if (setting.id === currentSettingId) continue;
-
-      const existingValue = this.getValue(setting.id);
-      if (typeof existingValue === "string" && normalizeKeybindingValue(existingValue) === normalizedValue) {
-        return setting.id;
-      }
-    }
-
-    return null;
-  }
-
-  // [Original documentation] 清空指定快捷键设置的值（设为空字符串）。
-  public clearKeybinding(settingId: string): void {
-    const setting = SETTING_DEFINITION_BY_ID.get(settingId);
-    if (setting?.kind !== "keybinding") return;
-
-    const externalBinding = this.externalBindings.get(settingId);
-    if (externalBinding) {
-      this.writeExternalBinding(externalBinding, "");
-    } else {
-      this.values[settingId] = "";
-    }
-
-    this.persist();
-  }
-  */
-
-  // AI-REMOVED 2026-08-03:
-  // Reason: 操作设置与快捷键不再共用重置动作。
-  // Trigger: ST2-RQ-002 独立快捷键设置对话框。
-  // Evidence: 快捷键重置位于 KeyboardShortcutSettingsDialog；本控制器只重置操作项。
-  // Replacement: resetArknightsOperation in this class；快捷键重置见 keyboard-shortcut-settings-dialog.tsx。
-  // Risk: Low
-  // Human Review: Required
-  //
-  // Original code:
-  // /**
-  //  * 将鹰角操作模式相关开关和所有快捷键恢复为默认值。
-  //  * 快捷键通过 shortcutResetAll 直接批量重置。
-  //  */
-  // public resetArknightsOperationAndShortcuts(): void {
-  //   // 先批量重置快捷键默认值
-  //   this.shortcutResetAll?.();
-  //
-  //   for (const settingId of WorkbenchSettingsDialogController.RESET_OPERATION_AND_SHORTCUT_KEYS) {
-  //     const setting = SETTING_DEFINITION_BY_ID.get(settingId);
-  //     if (!setting) continue;
-  //
-  //     const externalBinding = this.externalBindings.get(settingId);
-  //     if (externalBinding) {
-  //       this.writeExternalBinding(externalBinding, setting.defaultValue);
-  //     } else {
-  //       this.values[settingId] = setting.defaultValue;
-  //     }
-  //   }
-  //
-  //   this.normalizeLocalValues();
-  //   this.persist();
-  // }
 
   /** 将鹰角操作模式相关开关恢复为默认值。 */
   public resetArknightsOperation(): void {
@@ -1568,19 +744,7 @@ export class WorkbenchSettingsDialogController {
   }
 
   /** 重置所有设置为默认值，包括快捷键、外部绑定和本地值。 */
-  // AI-CORRECTION 2026-08-03: 快捷键已迁出通用设置控制器；此方法只重置通用设置、外部绑定和本地值。
   public resetAllSettings(): void {
-    // AI-REMOVED 2026-08-03:
-    // Reason: 通用设置的全部重置不再跨界重置独立快捷键设置。
-    // Trigger: ST2-RQ-002 快捷键设置独立化。
-    // Evidence: KeyboardShortcutSettingsDialog 提供独立重置按钮。
-    // Replacement: keyboard-shortcut-settings-dialog.tsx。
-    // Risk: 用户需在快捷键设置对话框中单独重置快捷键。
-    // Human Review: Required
-    //
-    // Original code:
-    // // 先批量重置快捷键默认值
-    // this.shortcutResetAll?.();
 
     for (const setting of SETTING_DEFINITION_BY_ID.values()) {
       const externalBinding = this.externalBindings.get(setting.id);
@@ -1643,23 +807,6 @@ export class WorkbenchSettingsDialogController {
         continue;
       }
 
-      // AI-REMOVED 2026-08-03:
-      // Reason: 通用设置 localStorage 不再持久化快捷键。
-      // Trigger: ST2-RQ-002 快捷键设置独立化。
-      // Evidence: KeyboardShortcutManager 使用 v3-app-shortcuts 独立持久化。
-      // Replacement: keyboard-shortcut-manager.ts。
-      // Risk: Low
-      // Human Review: Required
-      //
-      // Original code:
-      // if (setting.kind === "keybinding" && typeof rawValue === "string") {
-      //   const normalizedValue = normalizeKeybindingValue(rawValue);
-      //   if (normalizedValue !== null) {
-      //     nextValues[settingId] = normalizedValue;
-      //   }
-      //
-      //   continue;
-      // }
 
       if ((setting.kind === "text" || setting.kind === "password") && typeof rawValue === "string") {
         nextValues[settingId] = rawValue;
@@ -1763,20 +910,6 @@ function countDecimals(step: number): number {
   return decimals.length;
 }
 
-// AI-REMOVED 2026-08-03:
-// Reason: 快捷键值规范化已迁入独立快捷键设置对话框与 manager。
-// Trigger: ST2-RQ-002 快捷键录入收拢。
-// Evidence: keyboard-shortcut-settings-dialog.tsx 负责槽位序列化，manager 负责写入 trim。
-// Replacement: keyboard-shortcut-settings-dialog.tsx and keyboard-shortcut-manager.ts。
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
-// function normalizeKeybindingValue(value: string): string | null {
-//   const normalized = value.trim();
-//
-//   return normalized === "" ? null : normalized;
-// }
 
 function isSettingsGroupId(value: unknown): value is SettingsGroupId {
   return WORKBENCH_SETTINGS_GROUPS.some((group) => group.id === value);

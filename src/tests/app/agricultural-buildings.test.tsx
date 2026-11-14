@@ -56,8 +56,6 @@ describe("农业建筑分类与普通田块摆放", () => {
     const section = [...container.querySelectorAll("section")]
       .find((candidate) => candidate.querySelector("h3")?.textContent === "农业建筑")!;
     expect(section).toBeDefined();
-    // AI-CORRECTION 2026-10-15: 缘缘庄新增十二种田块，与既有十种田块及洒水机共同展示。
-    // AI-CORRECTION 2026-10-15: 用户要求隐藏三种独立优质田块，当前展示十九种田块及洒水机。
     expect(section.querySelectorAll(".placement-device-button")).toHaveLength(20);
     for (const id of ["soil_corp_cabbage_2", "soil_corp_mushroom_2", "soil_corp_strawberry_2"]) {
       expect(section.querySelector(`[data-ui-button-id='placement-${id}']`)).toBeNull();
@@ -73,8 +71,6 @@ describe("农业建筑分类与普通田块摆放", () => {
   });
 
   it("十种田块均能实际放入主区域与缘缘庄，其他所有地图均拒绝摆放", () => {
-    // AI-CORRECTION 2026-10-13: 分类新增洒水机，保留十种田块原有摆放断言。
-    // AI-CORRECTION 2026-10-15: 新食材田块仅限缘缘庄，主区域权限由下方独立用例验证。
     const plots = session.workspace.registry.entityDefinitions.filter((definition) => definition.id.startsWith("soil_") && !definition.id.startsWith("soil_corp_"));
     expect(plots).toHaveLength(10);
     for (const [index, definition] of plots.entries()) {

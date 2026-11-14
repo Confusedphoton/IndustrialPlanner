@@ -106,7 +106,7 @@ export function createSelectionBlueprintDocument(options: {
       continue;
     }
 
-    // 2026-05-31: 防御 entityOrder 重复条目——若当前 entityId 已被前序循环处理过则跳过。
+    // 防御 entityOrder 重复条目——若当前 entityId 已被前序循环处理过则跳过。
     if (entities[entityId] !== undefined) {
       continue;
     }
@@ -304,7 +304,6 @@ function isValidSlotLinkEndpointForBlueprint(
   if (selectedIdSet.has(entityId)) {
     return true;
   }
-  // AI-CORRECTION 2026-06-10: warehouse 和 base-builtin 蛇兵不在选中的实体中，
   // 但必须保留——否则 Ctrl+C 取货口再粘贴会丢失仓库链接。
   if (entityId === "warehouse" || entityId.startsWith("warehouse:") || entityId.startsWith("base-builtin:")) {
     return true;

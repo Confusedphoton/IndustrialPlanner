@@ -21,16 +21,6 @@ import type { EntityDefinition } from "@/domain/registry/types/entity-definition
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { placeBlueprintFromMoveAndContinue } from "./hypergryph-blueprint-placement-gesture-module";
-// AI-REMOVED 2026-09-10:
-// Reason: 操作模式总开关已废弃，不再保留关闭分支
-// Trigger: 用户要求彻底移除 hypergryphOperationMode。
-// Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-// Replacement: gesture-action-router.ts 的默认启用语义
-// Risk: 历史 false 设置统一使用当前操作行为。
-// Human Review: Required
-//
-// Original code:
-// import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 import {
   didPreviewRectChange,
   isPreviewBoundingBoxAtClientPoint,
@@ -85,16 +75,6 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
 
   return {
     id: "hypergryph-move-gesture",
-    // AI-REMOVED 2026-09-10:
-    // Reason: 操作模式总开关已废弃，不再保留关闭分支
-    // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-    // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-    // Replacement: gesture-action-router.ts 的默认启用语义
-    // Risk: 历史 false 设置统一使用当前操作行为。
-    // Human Review: Required
-    //
-    // Original code:
-    // when: isHypergryphGestureEnabled,
     shortcutRoutes: [
       {
         id: "move.enter-selection",
@@ -200,15 +180,6 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
           case "tap-long-press-ready":
             return { status: "handled" };
 
-          // AI-REMOVED 2026-08-30:
-          // Reason: move 内的 Tab/F/R 已拆为三条 allow-any-additional-modifiers Route。
-          // Trigger: ST2-RQ-020 操作模式快捷键自定义 modifier 兼容。
-          // Evidence: move.switch-device-mode、move.delete-operation、current-operation.rotate-move。
-          // Replacement: shortcutRoutes in createHypergryphMoveGestureModule
-          // Risk: Low
-          // Human Review: Required
-          //
-          // Original code:
           /*
           case "key down":
             if (isSwitchDeviceModeShortcut({
@@ -470,15 +441,6 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             menuInitialMousePosition: null,
           });
 
-        // AI-REMOVED 2026-08-30:
-        // Reason: 移动选区入口已迁入 move.enter-selection Route，并显式支持 Inspector 穿透层。
-        // Trigger: ST2-RQ-020 输入层统一。
-        // Evidence: Route 覆盖 select/marquee 的 canvas 与 inspector-dialog。
-        // Replacement: shortcutRoutes[move.enter-selection] in this module
-        // Risk: Low
-        // Human Review: Required
-        //
-        // Original code:
         /*
         case "key down":
           if (!context.appHost.internalActions.isShortcutFor(
@@ -510,31 +472,6 @@ function handleMoveEntryButtonTap(options: {
   return tryEnterMoveModeFromSelection(options);
 }
 
-// AI-REMOVED 2026-07-03:
-// Reason: 移动入口现在必须在真正进入 move 前支持重叠设备菜单；旧实现直接使用 event.pointerEntity，无法让用户在同一格多个设备中选择目标。
-// Trigger: 用户需求——重叠设备点击选择与长按移动时必须弹出设备菜单，用户选择后才执行操作。
-// Evidence: Search-First 定位到 mouse dragstart / mouse-long-press-ready / tap-long-press-ready 均直接调用 tryEnterMoveMode；新实现统一通过 tryEnterMoveModeFromPointerEvent 先解析多候选。
-// Replacement: tryEnterMoveModeFromPointerEvent
-// Risk: Medium；立即拖拽多候选时不延续原始拖拽链，选择后进入 move 模式等待后续操作。
-// Human Review: Required
-//
-// Original code:
-// return tryEnterMoveMode({
-//   appHost: context.appHost,
-//   editor,
-//   pointerEntity: event.pointerEntity,
-//   position: event.position,
-//   source: "mouse",
-//   initialMousePosition: event.position,
-// });
-// return tryEnterMoveMode({
-//   appHost: context.appHost,
-//   editor,
-//   pointerEntity: event.pointerEntity,
-//   position: event.position,
-//   source: "touch",
-//   initialMousePosition: null,
-// });
 function tryEnterMoveModeFromPointerEvent(options: {
   canvas: CanvasInteractionController;
   editor: EditorContract;
@@ -1595,15 +1532,6 @@ function safelyCancelMoveDraft(editor: EditorContract): void {
   }
 }
 
-// AI-REMOVED 2026-08-30:
-// Reason: 旧辅助函数绕过 Action Route，自行决定 modifier 匹配，造成运行时与设置冲突判定可漂移。
-// Trigger: ST2-RQ-020 要求作用域和触发策略来自实际可执行路由。
-// Evidence: 全仓调用检索仅命中这些定义；移动模式键盘入口已全部注册为 shortcutRoutes。
-// Replacement: createHypergryphMoveGestureModule().shortcutRoutes
-// Risk: Low
-// Human Review: Required
-//
-// Original code:
 /*
 function isRotateMoveShortcut(options: {
   appHost: AppHost;
@@ -1615,83 +1543,7 @@ function isRotateMoveShortcut(options: {
     meta: boolean;
   };
 }): boolean {
-  // AI-REMOVED 2026-08-02:
-  // Reason: 移动模式快捷键不再拒绝修饰键组合
-  // Trigger: Ctrl 连续放置时按 R 误触 Ctrl+R 旋转画布；用户要求放置/移动模式快捷键可与任意 modifier 组合
-  // Evidence: 事件路由按注册顺序分发，本模块消费 key down 后 viewport-rotation 模块不再收到
-  // Replacement: 移除 modifier 检查，isShortcutFor 未传 modifiers 时仅匹配主键
-  // Risk: 移动模式下 Ctrl+R 不再旋转画布（预期）
-  // Human Review: Required
-  //
-  // if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
-  //   return false;
-  // }
-
-  return options.appHost.internalActions.isShortcutFor(
-    SHORTCUT_KEY.ROTATE,
-    options.code,
-    options.key,
-  );
-}
-
-function isDeleteDeviceShortcut(options: {
-  appHost: AppHost;
-  code: string | null;
-  key: string | null;
-  modifiers: {
-    alt: boolean;
-    ctrl: boolean;
-    meta: boolean;
-  };
-}): boolean {
-  // AI-REMOVED 2026-08-02:
-  // Reason: 移动模式快捷键不再拒绝修饰键组合
-  // Trigger: 用户要求放置/移动模式快捷键可与任意 modifier 组合（如 Ctrl+F 删除设备）
-  // Evidence: 事件路由按注册顺序分发，本模块消费 key down 后后续模块不再收到
-  // Replacement: 移除 modifier 检查，isShortcutFor 未传 modifiers 时仅匹配主键
-  // Risk: 浏览器级组合键 Ctrl+F（查找）无法被 JS 完全拦截，可能同时触发删除设备与浏览器查找
-  // Human Review: Required
-  //
-  // if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
-  //   return false;
-  // }
-
-  return options.appHost.internalActions.isShortcutFor(
-    SHORTCUT_KEY.DELETE_DEVICE,
-    options.code,
-    options.key,
-  );
-}
-
-function isSwitchDeviceModeShortcut(options: {
-  appHost: AppHost;
-  code: string | null;
-  key: string | null;
-  modifiers: {
-    alt: boolean;
-    ctrl: boolean;
-    meta: boolean;
-  };
-}): boolean {
-  // AI-REMOVED 2026-08-02:
-  // Reason: 移动模式快捷键不再拒绝修饰键组合
-  // Trigger: 用户要求放置/移动模式快捷键可与任意 modifier 组合
-  // Evidence: 事件路由按注册顺序分发，本模块消费 key down 后后续模块不再收到
-  // Replacement: 移除 modifier 检查，isShortcutFor 未传 modifiers 时仅匹配主键
-  // Risk: 移动模式下 Ctrl+Tab 同时触发切换设备变体与浏览器标签行为（浏览器组合键无法被 JS 完全拦截）
-  // Human Review: Required
-  //
-  // if (options.modifiers.alt || options.modifiers.ctrl || options.modifiers.meta) {
-  //   return false;
-  // }
-
-  return options.appHost.internalActions.isShortcutFor(
-    SHORTCUT_KEY.SWITCH_DEVICE_MODE,
-    options.code,
-    options.key,
-  );
-}
-*/
+  */
 
 function resolveSinglePreviewEntity(editor: EditorContract): WorldEntity | null {
   const preview = editor.state.collections[EntityCollectionType.preview];
@@ -1744,60 +1596,7 @@ function isPreviewEntityAtClientPoint(options: {
   });
 }
 
-// AI-REMOVED 2026-07-06:
-// Reason: 移动端 move drag start 需要按当前 preview 包围盒命中，而不是逐个 preview 实体 footprint 命中；否则包围盒仍可见但实体虚影已移出屏幕时无法再次拖动。
-// Trigger: 用户需求——移动端放置和移动模式在 drag start 时判断当前位置是否在虚影包围盒内。
-// Evidence: Search-First 定位到 primeMoveAnchorFromPreview 仅通过 isPreviewEntityAtClientPoint 命中实体 footprint；新实现统一使用 isPreviewBoundingBoxAtClientPoint。
-// Replacement: isPreviewEntityAtClientPoint -> isPreviewBoundingBoxAtClientPoint
-// Risk: Low；命中范围扩大到 preview 包围盒，符合移动端多设备/蓝图拖动需求。
-// Human Review: Required
-//
-// Original code:
-// function isGridCellInsideEntity(options: {
-//   cell: GridPoint;
-//   entity: WorldEntity;
-//   footprint: EntityDefinition["footprint"];
-// }): boolean {
-//   const footprint = getRotatedGridFootprint(
-//     options.footprint,
-//     options.entity.rotation,
-//   );
-//
-//   return (
-//     options.cell.x >= options.entity.position.x
-//     && options.cell.x < options.entity.position.x + footprint.width
-//     && options.cell.y >= options.entity.position.y
-//     && options.cell.y < options.entity.position.y + footprint.height
-//   );
-// }
 
-// AI-REMOVED 2026-07-11:
-// Reason: 移动模式触控拖动吸附设备时，旧函数要求 footprint 完全按手指向量移动，无法表达沿边吸附的单轴跟随行为。
-// Trigger: 用户反馈移动端净水节点吸附后，拖动位移被异常放大。
-// Evidence: driveMovePreview 已改用 resolveTouchDragAnchorAfterPreviewMove 按轴更新 moveAnchor。
-// Replacement: src/app/input/gesture/actions/hypergryph/mobile-preview-bounds.ts resolveTouchDragAnchorAfterPreviewMove
-// Risk: Low；普通非吸附拖动在两个轴上仍会得到相同 anchor 更新结果。
-// Human Review: Required
-//
-// Original code:
-// function didRectMoveByGridVector(options: {
-//   beforeRect: GridRect;
-//   afterRect: GridRect;
-//   startGridPoint: GridPoint;
-//   endGridPoint: GridPoint;
-// }): boolean {
-//   const vector = {
-//     x: options.endGridPoint.x - options.startGridPoint.x,
-//     y: options.endGridPoint.y - options.startGridPoint.y,
-//   };
-//
-//   return (
-//     options.afterRect.x === options.beforeRect.x + vector.x
-//     && options.afterRect.y === options.beforeRect.y + vector.y
-//     && options.afterRect.width === options.beforeRect.width
-//     && options.afterRect.height === options.beforeRect.height
-//   );
-// }
 
 function areGridPointsEqual(left: GridPoint, right: GridPoint): boolean {
   return left.x === right.x && left.y === right.y;
