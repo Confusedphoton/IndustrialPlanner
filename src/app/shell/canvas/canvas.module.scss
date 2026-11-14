@@ -780,7 +780,7 @@
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  max-height: calc(100% - 24px);
+  max-height: calc(100% - 16px);
   padding: 5px;
   border: 1px solid var(--in-canvas-toolbar-button-border);
   border-radius: 14px;
@@ -789,6 +789,27 @@
   backdrop-filter: blur(10px);
   transform: translateY(-50%);
   pointer-events: auto;
+}
+
+// 上下文按钮组与「更多」弹出组贴在工具条朝向画布的一侧，不改变工具条本身的尺寸与按钮位置。
+.canvas-tool-rail-attached {
+  position: absolute;
+  top: var(--canvas-tool-rail-attached-top, 0px);
+  left: calc(100% + 6px + var(--canvas-tool-rail-attached-offset, 0px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 5px;
+  border: 1px solid var(--in-canvas-toolbar-button-border);
+  border-radius: 14px;
+  background: var(--in-canvas-toolbar-button-bg);
+  box-shadow: 0 10px 28px var(--in-canvas-toolbar-shadow);
+}
+
+.canvas-tool-rail.is-right .canvas-tool-rail-attached {
+  right: calc(100% + 6px + var(--canvas-tool-rail-attached-offset, 0px));
+  left: auto;
 }
 
 .canvas-tool-rail-area {
@@ -821,6 +842,11 @@
   left: auto;
 }
 
+// 「更多」弹出组打开时压在画布左上角工具条等同层浮层之上。
+.canvas-tool-rail.is-expanded {
+  z-index: 5;
+}
+
 .canvas-tool-rail.is-dragging {
   box-shadow: 0 14px 34px var(--in-canvas-toolbar-shadow);
   opacity: 0.92;
@@ -832,11 +858,10 @@
   align-items: center;
   justify-content: center;
   width: var(--canvas-tool-rail-button-size, 44px);
-  height: var(--pen-target);
-  margin: -5px 0 -2px;
+  height: var(--canvas-tool-rail-button-size, 44px);
   padding: 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: 10px;
   background: transparent;
   color: var(--in-canvas-toolbar-button-text);
   cursor: grab;

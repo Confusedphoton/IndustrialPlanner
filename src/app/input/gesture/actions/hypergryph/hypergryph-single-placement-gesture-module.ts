@@ -52,13 +52,7 @@ type PendingPlacementEnter = {
   pointerMode: "mouse" | "touch";
   initialMousePosition: GesturePosition | null;
 };
-
-
-
-// 2026-05-19 订正：将进入参数从 state.runtime 中收回，改为手势模块私有闭包变量。
-// 触发点只写此变量 + setActiveTool，on-enter 执行业务（创建 draft / 同步 UI）。
 // 物流设备快捷插入
-
 const TRANSPORT_INSERT_SHORTCUTS: readonly { readonly shortcutId: ShortcutKeyId; readonly role: LogisticsRole }[] = [
   { shortcutId: SHORTCUT_KEY.INSERT_SPLITTER, role: "splitter" },
   { shortcutId: SHORTCUT_KEY.INSERT_CONVERGER, role: "converger" },
@@ -95,6 +89,18 @@ export const PLACEMENT_TOOLBAR_BUTTON_IDS = [
   "canvas-floating-toolbar-button-rotate",
   "canvas-floating-toolbar-button-ok",
 ] as const;
+
+/** 画布工具条在单设备与蓝图放置模式下的上下文按钮：旋转预览、退出放置；与浮动工具条的同名按钮行为一致。 */
+export const PLACEMENT_RAIL_ROTATE_BUTTON_ID = "canvas-tool-rail-placement-rotate";
+export const PLACEMENT_RAIL_CANCEL_BUTTON_ID = "canvas-tool-rail-placement-cancel";
+
+export function isPlacementRotateButtonId(uiButtonId: string): boolean {
+  return uiButtonId === "canvas-floating-toolbar-button-rotate" || uiButtonId === PLACEMENT_RAIL_ROTATE_BUTTON_ID;
+}
+
+export function isPlacementCancelButtonId(uiButtonId: string): boolean {
+  return uiButtonId === "canvas-floating-toolbar-button-cancel" || uiButtonId === PLACEMENT_RAIL_CANCEL_BUTTON_ID;
+}
 
 const CONTINUOUS_PLACEMENT_TOGGLE_BUTTON_ID =
   "canvas-top-left-corner-toolbar-button-toggle-continuous-placement";
@@ -135,133 +141,6 @@ const PLACEMENT_GROUP_SHORTCUTS = {
 
 export function createHypergryphSinglePlacementGestureModule(): GestureMappingModule<AppHost> {
   let lastMousePosition: GesturePosition | null = null;
-
-  // AI-DIAG 2026-05-21: placement preview 性能统计
-  let perfCallCount = 0
-  let perfTotalMs = 0
-  let perfFindGridMs = 0
-  let perfBeforeRectMs = 0
-  let perfMoveCollectionMs = 0
-  let perfAfterRectMs = 0
-  let perfAlignToolbarMs = 0
-  let perfSkippedCount = 0
-  const PERF_WINDOW_CALLS = 100
-
-  const flushPlacementPreviewPerf = (activeToolName: string) => {
-    if (perfCallCount >= PERF_WINDOW_CALLS) {
-      console.debug("[placement-preview-perf] " + JSON.stringify({
-        calls: perfCallCount,
-        skipped: perfSkippedCount,
-        activeTool: activeToolName,
-        avgTotalMs: Math.round((perfTotalMs / perfCallCount) * 100) / 100,
-        avgFindGridMs: Math.round((perfFindGridMs / perfCallCount) * 100) / 100,
-        avgBeforeRectMs: Math.round((perfBeforeRectMs / perfCallCount) * 100) / 100,
-        avgMoveCollectionMs: Math.round((perfMoveCollectionMs / perfCallCount) * 100) / 100,
-        avgAfterRectMs: Math.round((perfAfterRectMs / perfCallCount) * 100) / 100,
-        avgAlignToolbarMs: Math.round((perfAlignToolbarMs / perfCallCount) * 100) / 100,
-      }))
-      perfCallCount = 0
-      perfTotalMs = 0
-      perfFindGridMs = 0
-      perfBeforeRectMs = 0
-      perfMoveCollectionMs = 0
-      perfAfterRectMs = 0
-      perfAlignToolbarMs = 0
-      perfSkippedCount = 0
-    }
-  }
-
-  const drivePlacementPreviewWithPerf = (options: {
-    canvas: CanvasInteractionController;
-    editor: EditorContract;
-    position: GesturePosition;
-  }): GestureHandleResult => {
-    const placementAnchor = options.canvas.state.runtime.placementAnchor;
-    if (placementAnchor === null) {
-      return { status: "ignored" };
-    }
-
-    const debugOn = options.canvas.workbench.internalState.settings?.debugMode === true
-
-    const startedAtMs = debugOn ? performance.now() : 0
-    const t0 = debugOn ? performance.now() : 0
-    const nextGridPoint = options.canvas.view.queries.findGridCellForClientPixelPoint(options.position);
-    if (debugOn) perfFindGridMs += performance.now() - t0
-
-    if (nextGridPoint === null) {
-      if (debugOn) {
-        perfTotalMs += performance.now() - startedAtMs
-        perfCallCount += 1
-        perfSkippedCount += 1
-      }
-      return { status: "ignored" };
-    }
-
-    if (areGridPointsEqual(placementAnchor, nextGridPoint)) {
-      if (debugOn) {
-        perfTotalMs += performance.now() - startedAtMs
-        perfCallCount += 1
-        perfSkippedCount += 1
-      }
-      return { status: "handled" };
-    }
-
-    const t1 = debugOn ? performance.now() : 0
-    const beforeRect = options.editor.queries.findEntityCollectionGridRect(EntityCollectionType.preview);
-    if (debugOn) perfBeforeRectMs += performance.now() - t1
-
-    if (beforeRect === null) {
-      if (debugOn) {
-        perfTotalMs += performance.now() - startedAtMs
-        perfCallCount += 1
-      }
-      return { status: "ignored" };
-    }
-
-    // 非跳过路径: drivePlacementPreview 核心逻辑
-    const t2 = debugOn ? performance.now() : 0
-    options.editor.actions.moveCollectionTo({
-      collectionType: EntityCollectionType.preview,
-      startGridPoint: placementAnchor,
-      endGridPoint: nextGridPoint,
-    });
-    if (debugOn) perfMoveCollectionMs += performance.now() - t2
-
-    const t3 = debugOn ? performance.now() : 0
-    const movedRect = options.editor.queries.findEntityCollectionGridRect(EntityCollectionType.preview);
-    if (movedRect !== null && didPreviewRectChange(beforeRect, movedRect)) {
-      rotatePlacementPreviewToBuildingSnap({
-        canvas: options.canvas,
-        editor: options.editor,
-        trigger: "after-move",
-        pointerMode: options.canvas.state.runtime.singlePlacementPointerMode,
-        currentMousePosition: null,
-      });
-    }
-    const afterRect = options.editor.queries.findEntityCollectionGridRect(EntityCollectionType.preview);
-    if (debugOn) perfAfterRectMs += performance.now() - t3
-
-    if (afterRect !== null) {
-      options.canvas.state.runtime.placementAnchor = resolveTouchDragAnchorAfterPreviewMove({
-        beforeRect,
-        afterRect,
-        startGridPoint: placementAnchor,
-        endGridPoint: nextGridPoint,
-      });
-
-      if (didPreviewRectChange(beforeRect, afterRect)) {
-        const t4 = debugOn ? performance.now() : 0
-        options.canvas.actions.alignCanvasFloatingToolbar();
-        if (debugOn) perfAlignToolbarMs += performance.now() - t4
-      }
-    }
-
-    if (debugOn) {
-      perfTotalMs += performance.now() - startedAtMs
-      perfCallCount += 1
-    }
-    return { status: "handled" };
-  }
 
   return {
     id: "hypergryph-single-placement-gesture",
@@ -392,7 +271,6 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
         if (event.to === "select") {
           context.canvas.setPlacementPanelSuppressed(false);
         }
-        flushPlacementPreviewPerf("on-exit-single-placement")
         return { status: "handled" };
       }
 
@@ -410,7 +288,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
 
           const editor = context.canvas.editor;
 
-          // 2026-06-23 订正：mouse 模式延迟创建 draft，鼠标滑入 canvas 时才出现。
+          // mouse 模式延迟创建 draft，鼠标滑入 canvas 时才出现；
           // 但如果鼠标在点击时已位于 viewport 内（如快捷键触发），则立即创建。
           if (pointerMode === "mouse") {
             context.canvas.state.runtime.singlePlacementPointerMode = pointerMode;
@@ -602,7 +480,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           });
 
         case "touch dragmove":
-          return drivePlacementPreviewWithPerf({
+          return drivePlacementPreview({
             canvas: context.canvas,
             editor,
             position: event.position,
@@ -620,6 +498,11 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           return context.canvas.state.runtime.placementAnchor !== null
             ? { status: "handled" }
             : { status: "ignored" };
+
+        case "touch tap":
+          // 在画布上落笔即结束对浮动工具条的悬停冻结。
+          context.canvas.actions.trackCanvasFloatingToolbarHover(null);
+          return { status: "ignored" };
 
         case "mouse tap":
           if (event.button === 2) {
@@ -661,7 +544,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
             return { status: "handled" };
           }
 
-          if (event.uiButtonId === "canvas-floating-toolbar-button-rotate") {
+          if (isPlacementRotateButtonId(event.uiButtonId)) {
             rotatePlacementPreview(context.canvas, editor, {
               pointerMode: "touch",
               currentMousePosition: null,
@@ -669,7 +552,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
             return { status: "handled" };
           }
 
-          if (event.uiButtonId === "canvas-floating-toolbar-button-cancel") {
+          if (isPlacementCancelButtonId(event.uiButtonId)) {
             cancelPlacementOperation(context.canvas, editor);
             return { status: "handled" };
           }
@@ -703,7 +586,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
             return { status: "handled" };
           }
 
-          if (event.uiButtonId === "canvas-floating-toolbar-button-rotate") {
+          if (isPlacementRotateButtonId(event.uiButtonId)) {
             rotatePlacementPreview(context.canvas, editor, {
               pointerMode: "mouse",
               currentMousePosition: lastMousePosition,
@@ -711,7 +594,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
             return { status: "handled" };
           }
 
-          if (event.uiButtonId === "canvas-floating-toolbar-button-cancel") {
+          if (isPlacementCancelButtonId(event.uiButtonId)) {
             cancelPlacementOperation(context.canvas, editor);
             return { status: "handled" };
           }
@@ -719,7 +602,6 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           return { status: "ignored" };
 
         default:
-          flushPlacementPreviewPerf(context.canvas.state.activeTool)
           return { status: "ignored" };
       }
     },
@@ -852,9 +734,9 @@ function finalizePlacementEnter(options: {
     return { status: "ignored" };
   }
 
-  // 2026-05-19 订正：shouldSetActiveTool 路径改为写桥接变量 + setActiveTool，
+  // shouldSetActiveTool 路径只写桥接变量 + setActiveTool，
   // draft 创建和 UI 同步交由 on-enter-active-tool 统一处理，
-  // 彻底消除"先切工具 vs 先创建 draft"的时序问题。
+  // 避免"先切工具 vs 先创建 draft"的时序问题。
   if (options.shouldSetActiveTool) {
     setPendingSinglePlacementEnter(options.canvas, {
       deviceId: options.deviceId,
@@ -868,8 +750,7 @@ function finalizePlacementEnter(options: {
 
   // shouldSetActiveTool: false 路径：已在 single-placement 中，不走生命周期，保持原位创建
   try {
-    // 2026-06-23 订正：mouse 模式延迟创建 draft。
-    // 仅当鼠标不在 viewport 内且为全新入口（无 initialPlacementAnchor）时才延迟。
+    // mouse 模式延迟创建 draft：仅当鼠标不在 viewport 内且为全新入口（无 initialPlacementAnchor）时才延迟。
     // 有 initialPlacementAnchor 时（如快捷键、continuation）说明鼠标在 canvas 内，立即创建。
     const isFreshMouseEntry =
       options.initialPlacementAnchor === undefined
@@ -966,6 +847,7 @@ export function primePlacementAnchorFromPreview(options: {
   position: GesturePosition;
   hitSlopPx?: number;
 }): GestureHandleResult {
+  options.canvas.actions.trackCanvasFloatingToolbarHover(null);
   try {
     if (!isPreviewEntityAtClientPoint(
       options.editor, options.canvas.view,
@@ -1073,6 +955,7 @@ export function driveMousePlacementPreview(options: {
   position: GesturePosition;
 }): GestureHandleResult {
   try {
+    options.canvas.actions.trackCanvasFloatingToolbarHover(options.position);
     const beforeRect = options.editor.queries.findEntityCollectionGridRect(
       EntityCollectionType.preview,
     );

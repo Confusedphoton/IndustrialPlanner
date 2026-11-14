@@ -33,7 +33,7 @@ import {
 import type { AppHost } from "@/app/host/app-host";
 import { useEditorDocumentSnapshot } from "../hooks";
 import { cm } from "@/app/shell/shared/css-module-class";
-import { avoidCanvasToolRail } from "@/app/shell/canvas/canvas-tool-rail-bounds";
+import { avoidCanvasToolRail, type CanvasRect } from "@/app/shell/canvas/canvas-tool-rail-bounds";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import styles from "@/app/shell/app-shell.module.scss";
 
@@ -181,7 +181,7 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
     return null;
   }
 
-  const popupStyle = resolvePopupStyle(anchor.x, anchor.y);
+  const popupStyle = resolvePopupStyle(anchor.x, anchor.y, appHost.mainCanvas.view.state.clientRect);
   const favoriteSlots = Array.from({ length: QUICK_PLACE_FAVORITE_LIMIT }, (_, index) => {
     const id = favorites[index];
     return id !== null && id !== undefined && availableEntityIds.has(id) ? id : null;
@@ -617,7 +617,9 @@ function isPointInsideElement(event: DragEvent<HTMLElement>, element: HTMLElemen
   );
 }
 
-function resolvePopupStyle(anchorX: number, anchorY: number): CSSProperties {
+const STATUS_BAR_HEIGHT_PX = 28;
+
+function resolvePopupStyle(anchorX: number, anchorY: number, canvas: CanvasRect): CSSProperties {
   const viewportMargin = 8;
   const popupPaddingBlock = 20;
   const popupPaddingInline = 20;
@@ -630,14 +632,17 @@ function resolvePopupStyle(anchorX: number, anchorY: number): CSSProperties {
   const menuMaxWidth = 418;
   const minHeight = popupPaddingBlock + favoriteRows * favoriteMinSlotSize + (favoriteRows - 1) * favoriteGap;
   const maxHeight = popupPaddingBlock + favoriteRows * favoriteMaxSlotSize + (favoriteRows - 1) * favoriteGap;
-  const height = Math.min(maxHeight, Math.max(minHeight, window.innerHeight - viewportMargin * 2));
+  // 底部 28px 状态栏不被弹出层覆盖。
+  const availableHeight = window.innerHeight - STATUS_BAR_HEIGHT_PX;
+  const height = Math.min(maxHeight, Math.max(minHeight, availableHeight - viewportMargin * 2));
   const favoriteSlotSize = (height - popupPaddingBlock - (favoriteRows - 1) * favoriteGap) / favoriteRows;
   const favoriteColumnWidth = favoriteSlotSize * 2 + favoriteGap;
   const minWidth = popupPaddingInline + favoriteColumnWidth + contentGap + menuMinWidth;
   const maxWidth = popupPaddingInline + favoriteColumnWidth + contentGap + menuMaxWidth;
   const width = Math.min(maxWidth, Math.max(minWidth, window.innerWidth - viewportMargin * 2));
-  const top = clamp(anchorY - 20, viewportMargin, window.innerHeight - height - viewportMargin);
+  const top = clamp(anchorY - 20, viewportMargin, availableHeight - height - viewportMargin);
   const left = avoidCanvasToolRail({
+    canvas,
     left: anchorX - favoriteColumnWidth - 10,
     width,
     top,

@@ -8,7 +8,7 @@ import { resolveCompensatedViewportCenter, resolveWorldVectorFromViewportVector 
 import { resolveClientRectForGridCell, resolveGridCellAtClientPixelPoint } from "./queries/viewport-geometry";
 import {
   resolveContentBoundedViewport,
-  resolveViewportGridCellPixelSize, resolveViewportGridSizeAfterZoom,
+  resolveViewportGridCellPixelSize, resolveViewportGridSizeAfterZoom, resolveViewportMinimumGridSize,
 } from "./viewport-settings";
 
 interface ViewMotion {
@@ -100,7 +100,13 @@ export function createEditorView(options: EditorViewOptions): EditorViewContract
       }),
       zoom: action((step) => {
         if (!allowed("zoom-viewport")) return;
-        const next = resolveViewportGridSizeAfterZoom({ currentGridSize: state.gridSize, step });
+        const next = resolveViewportGridSizeAfterZoom({
+          currentGridSize: state.gridSize,
+          step,
+          minimumGridSize: bounds.kind === "space"
+            ? resolveViewportMinimumGridSize({ bounds: bounds.bounds, clientRect: state.clientRect, displayRotation: state.displayRotation })
+            : undefined,
+        });
         if (next === null) return;
         motion.set(null);
         state.gridSize = next;
@@ -116,8 +122,7 @@ export function createEditorView(options: EditorViewOptions): EditorViewContract
       focusOnBounds: action((rect, focusOptions = {}) => {
         if (disposed || !isFiniteContentRect(rect)) return;
         const durationMs = focusOptions.durationMs ?? 750;
-        // 订正（2026-09-23）：聚焦目标缩放由固定 100% 提升到 252% 档，原「缩放到 gridSize=1」的行为不再成立。
-        // 252% 是级缩放的档位值（每档 ×2^(1/6)），对应 gridSize = 2^(4/3) ≈ 2.5198；不可写成 2.52，否则会脱离档位体系。
+        // 默认聚焦到 252% 档（每档 ×2^(1/6)，gridSize = 2^(4/3) ≈ 2.5198）；不可写成 2.52，否则会脱离档位体系。
         const gridSize = focusOptions.gridSize ?? 2 ** (4 / 3);
         if (!Number.isFinite(durationMs) || durationMs < 0 || !Number.isFinite(gridSize * resolveViewportGridCellPixelSize(1)) || gridSize <= 0) return;
         const target = { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, gridSize };

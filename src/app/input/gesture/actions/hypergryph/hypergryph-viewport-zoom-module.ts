@@ -7,6 +7,7 @@ import type { GestureMappingModule } from "../types";
 import { resolveWheelZoomDirection } from "@/shared/browser/wheel-zoom";
 import { resolveBaseOuterBounds } from "@/shared/geometry/base-areas";
 import { sceneBoundsToFiniteRect } from "@/shared/geometry/scene-space";
+import { resolveWorldVectorFromViewportVector } from "@/shared/geometry/viewport-transform";
 import {
   nudgeMobilePreviewIntoSafeViewport,
 } from "./mobile-preview-bounds";
@@ -74,11 +75,22 @@ export function zoomCanvasViewportByButton(canvas: CanvasInteractionController, 
   syncViewportDependents(canvas, editor);
 }
 
+/** 画布左右两侧被常驻浮层（如画布工具条）遮挡的宽度（px）。 */
+export interface CanvasViewportObstruction {
+  readonly left: number;
+  readonly right: number;
+}
+
+const NO_OBSTRUCTION: CanvasViewportObstruction = { left: 0, right: 0 };
+
 /**
- * 把当前基地外框居中，并沿缩放档位调整到能完整显示基地的最大档位（受缩放上下限约束）。
+ * 把当前基地外框居中到画布未被遮挡的区域，并沿缩放档位调整到能完整显示基地的最大档位（受缩放上下限约束）。
  * 结果停在档位上，之后的滚轮与按钮缩放保持连续。
  */
-export function fitCanvasViewportToBase(canvas: CanvasInteractionController): void {
+export function fitCanvasViewportToBase(
+  canvas: CanvasInteractionController,
+  obstruction: CanvasViewportObstruction = NO_OBSTRUCTION,
+): void {
   const editor = canvas.editor;
   const view = canvas.view;
   if (editor === null || view.state.clientRect.width <= 0 || view.state.clientRect.height <= 0) {
@@ -95,6 +107,13 @@ export function fitCanvasViewportToBase(canvas: CanvasInteractionController): vo
     return;
   }
 
+  const obstructedWidth = Math.max(0, obstruction.left) + Math.max(0, obstruction.right);
+  const visibleWidth = view.state.clientRect.width - obstructedWidth;
+  if (visibleWidth <= 0) {
+    return;
+  }
+  const fits = () => doesRectFitViewport(canvas, baseRect, visibleWidth);
+
   view.actions.focusOnBounds(baseRect, { durationMs: 0, gridSize: view.state.gridSize });
   const zoomOneStep = (step: 1 | -1): boolean => {
     const before = view.state.gridSize;
@@ -102,25 +121,38 @@ export function fitCanvasViewportToBase(canvas: CanvasInteractionController): vo
     return view.state.gridSize !== before;
   };
 
-  for (let index = 0; index < MAX_FIT_ZOOM_STEPS && !doesRectFitViewport(canvas, baseRect); index += 1) {
+  for (let index = 0; index < MAX_FIT_ZOOM_STEPS && !fits(); index += 1) {
     if (!zoomOneStep(-1)) break;
   }
-  for (let index = 0; index < MAX_FIT_ZOOM_STEPS && doesRectFitViewport(canvas, baseRect); index += 1) {
+  for (let index = 0; index < MAX_FIT_ZOOM_STEPS && fits(); index += 1) {
     if (!zoomOneStep(1)) break;
-    if (!doesRectFitViewport(canvas, baseRect)) {
+    if (!fits()) {
       zoomOneStep(-1);
       break;
     }
   }
+
+  // 视口中心向遮挡较多的一侧偏移半个遮挡差，使基地落在未遮挡区域的中央。
+  const shift = resolveWorldVectorFromViewportVector({
+    viewportVector: { x: (obstruction.right - obstruction.left) / 2, y: 0 },
+    displayRotation: view.state.displayRotation,
+  });
+  const cellSize = view.state.gridCellPixelSize;
+  view.actions.focusOnBounds({
+    x: baseRect.x + baseRect.width / 2 + shift.x / cellSize,
+    y: baseRect.y + baseRect.height / 2 + shift.y / cellSize,
+    width: 0,
+    height: 0,
+  }, { durationMs: 0, gridSize: view.state.gridSize });
   syncViewportDependents(canvas, editor);
 }
 
-function doesRectFitViewport(canvas: CanvasInteractionController, rect: GridRect): boolean {
+function doesRectFitViewport(canvas: CanvasInteractionController, rect: GridRect, visibleWidth: number): boolean {
   const { clientRect, displayRotation, gridCellPixelSize } = canvas.view.state;
   const rotated = displayRotation === 90 || displayRotation === 270;
   const pixelWidth = (rotated ? rect.height : rect.width) * gridCellPixelSize;
   const pixelHeight = (rotated ? rect.width : rect.height) * gridCellPixelSize;
-  return pixelWidth <= clientRect.width * FIT_BASE_VIEWPORT_FRACTION
+  return pixelWidth <= visibleWidth * FIT_BASE_VIEWPORT_FRACTION
     && pixelHeight <= clientRect.height * FIT_BASE_VIEWPORT_FRACTION;
 }
 

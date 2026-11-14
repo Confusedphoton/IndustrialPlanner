@@ -16,6 +16,7 @@ import LucideChevronUp from "~icons/lucide/chevron-up";
 import LucideGripHorizontal from "~icons/lucide/grip-horizontal";
 import LucideListTree from "~icons/lucide/list-tree";
 import LucideMinus from "~icons/lucide/minus";
+import LucidePlus from "~icons/lucide/plus";
 import LucideLibrary from "~icons/lucide/library-big";
 import LucidePin from "~icons/lucide/pin";
 import LucidePinOff from "~icons/lucide/pin-off";
@@ -74,6 +75,8 @@ const RECIPE_TREE_INFINITE_ITEM_IDS: ReadonlySet<string> = new Set(["item_liquid
 const SEARCH_RESULT_LIMIT = 8;
 const VIEWPORT_MARGIN_PX = 8;
 const TOP_BAR_CLEARANCE_PX = 56;
+/** 底部状态栏高度；浮层不压到状态栏上。 */
+const STATUS_BAR_CLEARANCE_PX = 28;
 
 export const RecipeTreeOverlay = observer(function RecipeTreeOverlay({ appHost }: { appHost: AppHost }) {
   useEffect(() => hookRecipeTreeOverlayPersistence(), []);
@@ -400,6 +403,7 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
           {actionTarget === null ? null : (
             <RecipeActionMenu
               appHost={appHost}
+              editor={<RecipeTreeNodeEditor index={index} itemId={actionTarget.itemId} t={t} />}
               index={index}
               onClose={closeActionMenu}
               t={t}
@@ -900,13 +904,16 @@ function clampRectToViewport(rect: RecipeTreeOverlayRect, viewport: ViewportSize
   const viewportWidth = viewport.width;
   const viewportHeight = viewport.height;
   const width = Math.min(Math.max(RECIPE_TREE_MIN_WIDTH, rect.width), viewportWidth - VIEWPORT_MARGIN_PX * 2);
-  const height = Math.min(Math.max(RECIPE_TREE_MIN_HEIGHT, rect.height), viewportHeight - TOP_BAR_CLEARANCE_PX - VIEWPORT_MARGIN_PX);
+  const height = Math.min(
+    Math.max(RECIPE_TREE_MIN_HEIGHT, rect.height),
+    viewportHeight - TOP_BAR_CLEARANCE_PX - STATUS_BAR_CLEARANCE_PX - VIEWPORT_MARGIN_PX,
+  );
   return {
     width,
     height,
     x: Math.max(VIEWPORT_MARGIN_PX, Math.min(rect.x, viewportWidth - width - VIEWPORT_MARGIN_PX)),
     // 整个卡片保持在顶栏下方的视口内，不遮挡仿真控制；矮屏下高度先被收窄。
-    y: Math.max(TOP_BAR_CLEARANCE_PX, Math.min(rect.y, viewportHeight - height - VIEWPORT_MARGIN_PX)),
+    y: Math.max(TOP_BAR_CLEARANCE_PX, Math.min(rect.y, viewportHeight - height - STATUS_BAR_CLEARANCE_PX - VIEWPORT_MARGIN_PX)),
   };
 }
 
@@ -970,6 +977,100 @@ const RecipeTreeGraph = observer(function RecipeTreeGraph({
         plan={plan}
         t={t}
       />
+    </div>
+  );
+});
+
+/**
+ * 节点菜单里的就地编辑：钉住的目标可直接调整产量，有多条配方的物品可直接切换配方，
+ * 不必切回树形视图使用原生下拉框。配方选择作用于所有钉住目标（流程图合并了它们）。
+ */
+const RecipeTreeNodeEditor = observer(function RecipeTreeNodeEditor({
+  index,
+  itemId,
+  t,
+}: {
+  index: ProductionPlanningIndex;
+  itemId: string | null;
+  t: Translate;
+}) {
+  const state = recipeTreeOverlayState;
+  if (itemId === null) {
+    return null;
+  }
+  const pin = state.pins.find((candidate) => candidate.itemId === itemId);
+  const candidates = (index.candidatesByOutputItem.get(itemId) ?? [])
+    .filter((candidate) => candidate.sourceType === "system-recipe");
+  const selectedCandidateId = state.pins.map((candidate) => candidate.recipeChoices[itemId]).find((id) => id !== undefined) ?? null;
+  if (pin === undefined && candidates.length < 2) {
+    return null;
+  }
+  const chooseRecipe = (candidateId: string | null) => {
+    for (const candidate of state.pins) {
+      state.setRecipeChoice(candidate.id, itemId, candidateId);
+    }
+  };
+  const step = pin === undefined ? 1 : pin.perMinute >= 60 ? 10 : pin.perMinute >= 10 ? 5 : 1;
+
+  return (
+    <div className={cm(styles, "recipe-action-menu-editor")}>
+      {pin === undefined ? null : (
+        <div className={cm(styles, "recipe-action-menu-rate")}>
+          <span>{t("recipeTree.targetRate")}</span>
+          <button
+            aria-label={t("recipeTree.decreaseRate")}
+            className={cm(styles, "recipe-tree-icon-button")}
+            disabled={pin.perMinute - step <= 0}
+            onClick={() => state.updatePin(pin.id, { perMinute: pin.perMinute - step })}
+            type="button"
+          >
+            <LucideMinus />
+          </button>
+          <NumberInput
+            aria-label={t("recipeTree.targetRate")}
+            className={cm(styles, "recipe-tree-rate-input")}
+            emptyFallback={pin.perMinute}
+            min={0.01}
+            onCommit={(value) => {
+              if (value > 0) {
+                state.updatePin(pin.id, { perMinute: value });
+              }
+            }}
+            value={pin.perMinute}
+          />
+          <button
+            aria-label={t("recipeTree.increaseRate")}
+            className={cm(styles, "recipe-tree-icon-button")}
+            onClick={() => state.updatePin(pin.id, { perMinute: pin.perMinute + step })}
+            type="button"
+          >
+            <LucidePlus />
+          </button>
+        </div>
+      )}
+      {candidates.length < 2 ? null : (
+        <div aria-label={t("recipeTree.recipe")} className={cm(styles, "recipe-action-menu-recipes")} role="group">
+          <button
+            aria-pressed={selectedCandidateId === null}
+            className={cm(styles, "recipe-action-menu-recipe")}
+            onClick={() => chooseRecipe(null)}
+            type="button"
+          >
+            {t("productionPlanning.autoRecipe")}
+          </button>
+          {candidates.map((candidate) => (
+            <button
+              aria-pressed={selectedCandidateId === candidate.id}
+              className={cm(styles, "recipe-action-menu-recipe")}
+              key={candidate.id}
+              onClick={() => chooseRecipe(candidate.id)}
+              type="button"
+            >
+              {resolveProductionPlanningCandidateName(candidate, index, t)}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 });

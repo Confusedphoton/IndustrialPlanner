@@ -28,6 +28,8 @@ export {
 export {
   cleanupPlacementDraft,
   createHypergryphSinglePlacementGestureModule,
+  PLACEMENT_RAIL_CANCEL_BUTTON_ID,
+  PLACEMENT_RAIL_ROTATE_BUTTON_ID,
 } from "./hypergryph/hypergryph-single-placement-gesture-module";
 export { createHypergryphBlueprintPlacementGestureModule } from "./hypergryph/hypergryph-blueprint-placement-gesture-module";
 export { createHypergryphSaveBlueprintGestureModule } from "./hypergryph/hypergryph-save-blueprint-gesture-module";
@@ -38,6 +40,7 @@ export {
   createHypergryphSelectGestureModule,
 } from "./hypergryph/hypergryph-select-gesture-module";
 export {
+  type CanvasViewportObstruction,
   createHypergryphViewportZoomModule,
   fitCanvasViewportToBase,
   zoomCanvasViewportByButton,

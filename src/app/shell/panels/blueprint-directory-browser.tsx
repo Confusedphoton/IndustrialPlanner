@@ -158,7 +158,7 @@ export function BlueprintDirectoryBrowser({
         textOverflow: "ellipsis",
       };
   const navigationButtonStyle = {
-    minWidth: isTouchLayout ? "30px" : "32px",
+    minWidth: "var(--pen-target)",
     minHeight: "var(--pen-target)",
     padding: 0,
     borderWidth: 0,
@@ -167,9 +167,9 @@ export function BlueprintDirectoryBrowser({
     background: "var(--surface-3)",
   };
   const createButtonStyle = {
-    minWidth: isTouchLayout ? "30px" : undefined,
+    minWidth: "var(--pen-target)",
     minHeight: "var(--pen-target)",
-    width: isTouchLayout ? "30px" : undefined,
+    width: isTouchLayout ? "var(--pen-target)" : undefined,
     padding: isTouchLayout ? 0 : "0 10px",
     borderWidth: 0,
     borderRadius: "10px",

@@ -22,6 +22,8 @@ import {
   closeCompactLeftDockOnPlacementEnter,
   driveMousePlacementPreview,
   drivePlacementPreview,
+  isPlacementCancelButtonId,
+  isPlacementRotateButtonId,
   primePlacementAnchorFromPreview,
   PLACEMENT_TOOLBAR_BUTTON_IDS,
   resolveViewportCenterGridPoint,
@@ -408,6 +410,11 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
             ? { status: "handled" }
             : { status: "ignored" };
 
+        case "touch tap":
+          // 在画布上落笔即结束对浮动工具条的悬停冻结。
+          context.canvas.actions.trackCanvasFloatingToolbarHover(null);
+          return { status: "ignored" };
+
         case "mouse tap":
           if (event.button === 2) {
             cancelBlueprintPlacement(context.canvas, editor);
@@ -443,12 +450,12 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
             return { status: "handled" };
           }
 
-          if (event.uiButtonId === "canvas-floating-toolbar-button-rotate") {
+          if (isPlacementRotateButtonId(event.uiButtonId)) {
             rotateBlueprintPlacementPreview(context.canvas, editor, null);
             return { status: "handled" };
           }
 
-          if (event.uiButtonId === "canvas-floating-toolbar-button-cancel") {
+          if (isPlacementCancelButtonId(event.uiButtonId)) {
             cancelBlueprintPlacement(context.canvas, editor);
             return { status: "handled" };
           }
@@ -478,12 +485,12 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
             return { status: "handled" };
           }
 
-          if (event.uiButtonId === "canvas-floating-toolbar-button-rotate") {
+          if (isPlacementRotateButtonId(event.uiButtonId)) {
             rotateBlueprintPlacementPreview(context.canvas, editor, lastMousePosition);
             return { status: "handled" };
           }
 
-          if (event.uiButtonId === "canvas-floating-toolbar-button-cancel") {
+          if (isPlacementCancelButtonId(event.uiButtonId)) {
             cancelBlueprintPlacement(context.canvas, editor);
             return { status: "handled" };
           }

@@ -615,12 +615,6 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     }
 
     this.canvas.view.actions.setViewportClientRect(predictedRect);
-
-    // 面板盖住了正在编辑的设备时，把它平移回可见区域。
-    const selection = editor.state.collections.selection;
-    if (options.willOpen && selection.length === 1 && selection[0] !== undefined) {
-      this.canvas.keepEntityInView(selection[0]);
-    }
   }
 
   private ensureDialogState(dialogKey: DialogKey) {

@@ -755,6 +755,27 @@ export const WorkbenchApp = observer(function WorkbenchApp({
   useEffect(() => {
     recipeTreeOverlayState.setStacked(dockLayoutBudget.stackRightDocks);
   }, [dockLayoutBudget.stackRightDocks]);
+  // 右侧面板布局变化（打开、叠放、宽度变化）落定后，若选中的设备被挡住，平移让它避开面板与工具条重新可见。
+  const rightLayoutSignature = `${dockLayoutBudget.rightDockWidth}|${dockLayoutBudget.recipeDockWidth}|${dockLayoutBudget.stackRightDocks}`;
+  useEffect(() => {
+    let firstFrame = 0;
+    let secondFrame = 0;
+    firstFrame = requestAnimationFrame(() => {
+      secondFrame = requestAnimationFrame(() => {
+        const selection = appHost.workspace.editor?.state.collections.selection ?? [];
+        const entityId = selection.length === 1 ? selection[0] : undefined;
+        if (entityId === undefined) return;
+        appHost.mainCanvas.keepEntityInView(entityId, {
+          left: canvasToolRailState.side === "left" ? canvasToolRailState.width : 0,
+          right: canvasToolRailState.side === "right" ? canvasToolRailState.width : 0,
+        });
+      });
+    });
+    return () => {
+      cancelAnimationFrame(firstFrame);
+      cancelAnimationFrame(secondFrame);
+    };
+  }, [appHost, rightLayoutSignature]);
   const locale = appHost.state.settings.locale;
   useEffect(() => {
     document.documentElement.lang = locale === "zh-CN" ? "zh-CN" : "en";

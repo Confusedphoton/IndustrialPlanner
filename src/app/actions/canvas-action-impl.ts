@@ -9,6 +9,20 @@ import { CANVAS_FLOATING_TOOLBAR_BUTTON_IDS, CANVAS_TOP_LEFT_CORNER_TOOLBAR_BUTT
 type CanvasInternalAction = Pick<AppInternalAction, "showCanvasToast" | "setCanvasAlert" | "setActiveTool" | "showCanvasFloatingToolbar" | "showCanvasFloatingToolbarForCollection" | "moveCanvasFloatingToolbar" | "alignCanvasFloatingToolbar" | "setCanvasFloatingToolbarSize" | "hideCanvasFloatingToolbar" | "showCanvasRightDockToolbar" | "hideCanvasRightDockToolbar" | "showCanvasTopLeftCornerToolbar" | "hideCanvasTopLeftCornerToolbar">;
 const DEFAULT_CANVAS_FLOATING_TOOLBAR_HEIGHT = 44;
 const FLOATING_TOOLBAR_DEVICE_GAP_PX = 6;
+/** 悬停指针与浮动工具条的距离不超过此值时冻结工具条位置。 */
+const FLOATING_TOOLBAR_HOVER_HOLD_DISTANCE_PX = 80;
+
+interface FloatingToolbarHold {
+  readonly centerX: number;
+  readonly centerY: number;
+  readonly gridSize: number;
+  readonly displayRotation: number;
+  readonly left: number;
+  readonly top: number;
+  readonly width: number;
+  readonly height: number;
+  pendingAlign: boolean;
+}
 
 export class CanvasActionImpl implements CanvasInternalAction {
 constructor(private readonly state: CanvasInteractionStateReadWriteImpl, private readonly canvas: CanvasInteractionController) {}
@@ -17,6 +31,8 @@ private canvasToastTimer: ReturnType<typeof setTimeout> | null = null;
 private canvasToastRevision = 0;
 
 private disposed = false;
+
+private floatingToolbarHold: FloatingToolbarHold | null = null;
 
 public readonly showCanvasToast: CanvasInternalAction["showCanvasToast"] = action((messageKey) => {
     if (this.disposed) return;
@@ -74,6 +90,7 @@ public readonly showCanvasFloatingToolbar: CanvasInternalAction["showCanvasFloat
       return;
     }
 
+    this.floatingToolbarHold = null;
     this.state.runtime.canvasFloatingToolbar.visible = true;
     this.state.runtime.canvasFloatingToolbar.buttonIds = nextButtonIds;
     this.state.runtime.canvasFloatingToolbar.anchor = nextAnchor;
@@ -91,6 +108,10 @@ public readonly showCanvasFloatingToolbarForCollection: CanvasInternalAction["sh
       return false;
     }
 
+    if (!this.state.runtime.canvasFloatingToolbar.visible
+      || this.state.runtime.canvasFloatingToolbar.attachedCollection !== collectionType) {
+      this.floatingToolbarHold = null;
+    }
     this.state.runtime.canvasFloatingToolbar.visible = true;
     this.state.runtime.canvasFloatingToolbar.buttonIds = nextButtonIds;
     this.state.runtime.canvasFloatingToolbar.attachedCollection = collectionType;
@@ -118,10 +139,61 @@ public readonly moveCanvasFloatingToolbar: CanvasInternalAction["moveCanvasFloat
     this.state.runtime.canvasFloatingToolbar.anchor = nextAnchor;
   });
 
+/**
+ * 悬停中的笔或鼠标靠近浮动工具条时冻结其位置：预览继续跟随指针，工具条不再随之跳开，笔可以直接滑到按钮上。
+ * 指针离开该范围或在画布上落笔（传入 null）时恢复跟随，并补做冻结期间被跳过的对齐；视口移动或缩放后总是重新对齐。
+ */
+public readonly trackCanvasFloatingToolbarHover = action((pointer: ClientPixelPoint | null) => {
+    const toolbar = this.state.runtime.canvasFloatingToolbar;
+    const anchor = toolbar.anchor;
+    if (pointer !== null && toolbar.visible && anchor !== null
+      && Math.abs(pointer.x - anchor.x) <= (toolbar.measuredSize?.width ?? 0) / 2 + FLOATING_TOOLBAR_HOVER_HOLD_DISTANCE_PX
+      && Math.abs(pointer.y - anchor.y)
+        <= (toolbar.measuredSize?.height ?? DEFAULT_CANVAS_FLOATING_TOOLBAR_HEIGHT) / 2 + FLOATING_TOOLBAR_HOVER_HOLD_DISTANCE_PX) {
+      if (this.floatingToolbarHold === null) {
+        const view = this.canvas.view.state;
+        this.floatingToolbarHold = {
+          centerX: view.center.x,
+          centerY: view.center.y,
+          gridSize: view.gridSize,
+          displayRotation: view.displayRotation,
+          left: view.clientRect.left,
+          top: view.clientRect.top,
+          width: view.clientRect.width,
+          height: view.clientRect.height,
+          pendingAlign: false,
+        };
+      }
+      return;
+    }
+
+    const hold = this.floatingToolbarHold;
+    if (hold === null) {
+      return;
+    }
+    this.floatingToolbarHold = null;
+    if (hold.pendingAlign) {
+      this.alignCanvasFloatingToolbar();
+    }
+  });
+
 public readonly alignCanvasFloatingToolbar: CanvasInternalAction["alignCanvasFloatingToolbar"] = action(() => {
     const toolbar = this.state.runtime.canvasFloatingToolbar;
     if (!toolbar.visible || toolbar.attachedCollection === null) {
       return false;
+    }
+
+    const hold = this.floatingToolbarHold;
+    if (hold !== null && toolbar.anchor !== null) {
+      const view = this.canvas.view.state;
+      if (hold.centerX === view.center.x && hold.centerY === view.center.y && hold.gridSize === view.gridSize
+        && hold.displayRotation === view.displayRotation && hold.left === view.clientRect.left
+        && hold.top === view.clientRect.top && hold.width === view.clientRect.width
+        && hold.height === view.clientRect.height) {
+        hold.pendingAlign = true;
+        return true;
+      }
+      this.floatingToolbarHold = null;
     }
 
     const editor = this.canvas.editor;
@@ -236,6 +308,7 @@ public readonly hideCanvasFloatingToolbar: CanvasInternalAction["hideCanvasFloat
       return;
     }
 
+    this.floatingToolbarHold = null;
     this.state.runtime.canvasFloatingToolbar.visible = false;
     this.state.runtime.canvasFloatingToolbar.buttonIds = [];
     this.state.runtime.canvasFloatingToolbar.anchor = null;

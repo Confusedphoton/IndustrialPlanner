@@ -20,8 +20,8 @@
 }
 
 .inspector-dialog-header-button {
-  width: 30px;
-  height: 30px;
+  width: var(--pen-target);
+  height: var(--pen-target);
   border: 1px solid var(--line-strong);
   @supports (background: color-mix(in srgb, red 50%, blue)) {
     border: 1px solid color-mix(in srgb, var(--line-strong) 54%, var(--line));
@@ -327,8 +327,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: var(--pen-target);
+  height: var(--pen-target);
   padding: 0;
   border-radius: 999px;
 }

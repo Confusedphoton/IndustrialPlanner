@@ -21,6 +21,7 @@ import { resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { avoidCanvasToolRail } from "./canvas-tool-rail-bounds";
+import { canvasToolRailState } from "./canvas-tool-rail-state";
 
 const POPUP_WIDTH = 340;
 /** 展开配方磁贴时加宽，配方以多列显示。 */
@@ -82,13 +83,16 @@ export const DevicePopup = observer(function DevicePopup({ appHost }: { appHost:
   // 水平居中并限制在画布视口内，高度不超过可用空间（内容滚动）。
   const viewport = view.clientRect;
   const centerX = deviceRect.left + deviceRect.width / 2;
-  const popupWidth = Math.min(recipesExpanded ? POPUP_EXPANDED_WIDTH : POPUP_WIDTH, viewport.width - POPUP_MARGIN * 2);
+  // 宽度以画布去掉工具条占用带后的空间为上限，展开配方时也不会盖住工具条。
+  const railFreeWidth = viewport.width - canvasToolRailState.width - POPUP_MARGIN * 2;
+  const popupWidth = Math.max(POPUP_WIDTH, Math.min(recipesExpanded ? POPUP_EXPANDED_WIDTH : POPUP_WIDTH, railFreeWidth));
   const spaceAbove = deviceRect.top - viewport.top - POPUP_GAP - POPUP_MARGIN;
   const spaceBelow = viewport.top + viewport.height - (deviceRect.top + deviceRect.height) - POPUP_GAP - POPUP_MARGIN;
   const toolbarAbove = canvas.state.runtime.canvasFloatingToolbar.visible;
   const placeAbove = !toolbarAbove && (spaceAbove >= 260 || spaceAbove >= spaceBelow);
   // 水平居中于设备，并避开画布工具条；纵向范围按弹出层可能占用的最大高度估算。
   const left = avoidCanvasToolRail({
+    canvas: viewport,
     left: centerX - popupWidth / 2,
     width: popupWidth,
     top: placeAbove ? viewport.top : deviceRect.top + deviceRect.height,

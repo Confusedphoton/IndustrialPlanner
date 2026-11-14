@@ -14,8 +14,10 @@ export class CanvasToolRailState {
   public side: CanvasToolRailSide = "left";
   /** 工具条中心在画布高度中的比例（0–1）。 */
   public center = DEFAULT_CENTER;
-  /** 工具条占据的画布边缘带宽（px，含与画布边缘的间距）；矮窗口下分列后变宽，供画布内其他浮层避让。 */
+  /** 工具条占据的画布边缘带宽（px，含与画布边缘的间距与贴附的上下文按钮组）；矮窗口下分列后变宽，供画布内其他浮层避让。 */
   public width = DEFAULT_WIDTH;
+  /** 工具条本体的渲染高度（px）；其纵向中心按 center 定位，并夹紧在画布内。 */
+  public height = 0;
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
@@ -26,9 +28,12 @@ export class CanvasToolRailState {
     this.center = Math.min(1, Math.max(0, center));
   }
 
-  public setWidth(width: number): void {
-    if (Number.isFinite(width) && width > 0) {
+  public setSize(width: number, height: number): void {
+    if (Number.isFinite(width) && width > 0 && Math.round(width) !== this.width) {
       this.width = Math.round(width);
+    }
+    if (Number.isFinite(height) && height >= 0 && Math.round(height) !== this.height) {
+      this.height = Math.round(height);
     }
   }
 

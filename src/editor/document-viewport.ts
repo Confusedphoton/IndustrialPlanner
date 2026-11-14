@@ -3,11 +3,14 @@ import { comparer, reaction } from "mobx";
 import type { WorldDocument, WorldDocumentViewportSettings } from "@/domain/document/world-document";
 import type { EditorViewContract } from "@/domain/editor/editor-view-contract";
 import type { EditorViewState } from "@/domain/editor/editor-view-state";
-import type { SceneSpace } from "@/domain/shared/scene-space";
+import type { SceneBounds, SceneSpace } from "@/domain/shared/scene-space";
 import type { SceneSnapshotSource } from "@/domain/shared/scene-snapshot";
 import { resolveBaseOuterBounds } from "@/shared/geometry/base-areas";
 import type { EditorDocumentWriter } from "./history";
 import { clampViewportGridSize, DEFAULT_VIEWPORT_GRID_SIZE } from "./viewport-settings";
+
+/** 保存/恢复的缩放下限低于交互缩放下限：矮画布里“显示整个基地”可能缩到 0.5 以下，重新打开时应保持；实际缩放仍由视图按当前画布夹紧。 */
+const PERSISTED_VIEWPORT_GRID_SIZE_MINIMUM = 0.1;
 
 export function createDefaultWorldDocumentViewportSettings(): WorldDocumentViewportSettings {
   return { center: { x: 0, y: 0 }, gridSize: DEFAULT_VIEWPORT_GRID_SIZE, displayRotation: 0 };
@@ -22,7 +25,7 @@ export function normalizeWorldDocumentViewportSettings(value: unknown): WorldDoc
   const rotation = "displayRotation" in value ? value.displayRotation : 0;
   return {
     center: { x: value.center.x, y: value.center.y },
-    gridSize: "gridSize" in value && typeof value.gridSize === "number" ? clampViewportGridSize(value.gridSize) : DEFAULT_VIEWPORT_GRID_SIZE,
+    gridSize: "gridSize" in value && typeof value.gridSize === "number" ? clampViewportGridSize(value.gridSize, PERSISTED_VIEWPORT_GRID_SIZE_MINIMUM) : DEFAULT_VIEWPORT_GRID_SIZE,
     displayRotation: rotation === 90 || rotation === 180 || rotation === 270 ? rotation : 0,
   };
 }
@@ -30,17 +33,26 @@ export function normalizeWorldDocumentViewportSettings(value: unknown): WorldDoc
 export function applyWorldDocumentViewportSettings(options: {
   document: WorldDocument; view: EditorViewContract; space: SceneSpace;
 }): void {
+  const baseBounds = resolveBaseOuterBounds(options.space);
+  // 没有保存过视口的文档首次打开时对准基地中心，而不是坐标原点。
   const saved = normalizeWorldDocumentViewportSettings(options.document.documentSettings.viewport)
-    ?? createDefaultWorldDocumentViewportSettings();
+    ?? { ...createDefaultWorldDocumentViewportSettings(), center: resolveSceneBoundsCenter(baseBounds) };
   options.view.actions.setBoundsPolicy({ kind: "space", padding: 2,
-    bounds: resolveBaseOuterBounds(options.space) ?? { minX: null, minY: null, maxX: null, maxY: null } });
+    bounds: baseBounds ?? { minX: null, minY: null, maxX: null, maxY: null } });
   options.view.actions.setViewportDisplayRotation(saved.displayRotation);
   options.view.actions.focusOnBounds({ x: saved.center.x - 0.5, y: saved.center.y - 0.5, width: 1, height: 1 },
     { durationMs: 0, gridSize: saved.gridSize });
 }
 
+function resolveSceneBoundsCenter(bounds: SceneBounds | null): { x: number; y: number } {
+  if (bounds === null || bounds.minX === null || bounds.maxX === null || bounds.minY === null || bounds.maxY === null) {
+    return { x: 0, y: 0 };
+  }
+  return { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 };
+}
+
 export function withWorldDocumentViewportSettings(document: WorldDocument, viewport: EditorViewState): WorldDocument {
-  const next = { center: { ...viewport.center }, gridSize: clampViewportGridSize(viewport.gridSize), displayRotation: viewport.displayRotation };
+  const next = { center: { ...viewport.center }, gridSize: clampViewportGridSize(viewport.gridSize, PERSISTED_VIEWPORT_GRID_SIZE_MINIMUM), displayRotation: viewport.displayRotation };
   const current = normalizeWorldDocumentViewportSettings(document.documentSettings.viewport);
   if (current !== null && comparer.structural(current, next)) return document;
   return { ...document, documentSettings: { ...document.documentSettings, viewport: next } };

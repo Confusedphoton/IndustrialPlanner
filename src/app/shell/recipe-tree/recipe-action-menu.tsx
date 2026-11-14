@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import LucideFilter from "~icons/lucide/filter";
 import LucideHammer from "~icons/lucide/hammer";
@@ -52,12 +52,15 @@ export function RecipeActionMenu({
   index,
   target,
   onClose,
+  editor,
   t,
 }: {
   appHost: AppHost;
   index: ProductionPlanningIndex;
   target: RecipeActionTarget;
   onClose: () => void;
+  /** 调用方提供的就地编辑区（例如配方树里的目标产量与配方选择），显示在明细下方。 */
+  editor?: ReactNode;
   t: (key: string) => string;
 }) {
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -132,6 +135,7 @@ export function RecipeActionMenu({
           {target.details.map((line) => <span key={line}>{line}</span>)}
         </div>
       )}
+      {editor}
       {recipe !== undefined && machineName !== null ? (
         <>
           <button

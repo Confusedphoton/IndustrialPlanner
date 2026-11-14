@@ -19,6 +19,7 @@ import {
 } from "react";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import { useLastInputKind } from "@/app/shell/shared/use-last-input-kind";
 import {
   resolveCanvasRightDockToolbarShortcut,
   type CanvasRightDockToolbarShortcutDefinition,
@@ -275,6 +276,7 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
   items,
 }: CanvasRightDockToolbarProps) {
   const t = canvas.workbench.actions.translate;
+  const showShortcuts = useLastInputKind() === "pointer";
 
   const visibleItems = items.flatMap((item) => {
     const availability = canvas.getOperationAvailability(item.operationId);
@@ -284,7 +286,7 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
     const wantsButton = item.presentation === "button" || item.presentation === "both";
     const wantsShortcut = item.presentation === "shortcut" || item.presentation === "both";
     const button = wantsButton ? definition.button ?? null : null;
-    const shortcut = wantsShortcut && definition.shortcut
+    const shortcut = wantsShortcut && showShortcuts && definition.shortcut
       ? resolveCanvasRightDockToolbarShortcut(
         definition.shortcut,
         canvas.workbench.internalActions.getKeyboardShortcutFor,

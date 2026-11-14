@@ -521,14 +521,27 @@ export function ProductionFlowGraph({
   // 卡片缩到只有几像素时，点中与否不应决定完全不同的结果。可读比例下点卡片才打开操作。
   const handleTap = useCallback((event: React.PointerEvent<HTMLDivElement>, nodeId: string | null) => {
     if (viewportRef.current.scale < MIN_READABLE_FIT_SCALE) {
-      const rect = canvasRef.current?.getBoundingClientRect();
-      zoomAt(event.clientX - (rect?.left ?? 0), event.clientY - (rect?.top ?? 0), 1);
+      const element = canvasRef.current;
+      const node = nodeId === null ? undefined : graphRef.current.nodes.find((candidate) => candidate.id === nodeId);
+      if (element !== null && node !== undefined) {
+        // 点中卡片：把这张卡片放到视图中央并放大到可读比例，保证它完整可见。
+        const card = resolveCardRect(node, orientation, metrics);
+        const scale = MIN_READABLE_FIT_SCALE;
+        setViewport({
+          x: element.clientWidth / 2 - (card.left + SURFACE_PADDING + card.width / 2) * scale,
+          y: element.clientHeight / 2 - (card.top + SURFACE_PADDING + card.height / 2) * scale,
+          scale,
+        });
+        return;
+      }
+      const rect = element?.getBoundingClientRect();
+      zoomAt(event.clientX - (rect?.left ?? 0), event.clientY - (rect?.top ?? 0), MIN_READABLE_FIT_SCALE);
       return;
     }
     if (nodeId !== null) {
       activateNode(nodeId);
     }
-  }, [activateNode, zoomAt]);
+  }, [activateNode, metrics, orientation, setViewport, zoomAt]);
 
   const handlePointerUp = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     const interaction = interactionRef.current;
@@ -786,7 +799,7 @@ function FlowNode({
       data-flow-node-id={node.id}
       title={tooltip}
     >
-      <CompositeItemIcon iconSrcs={source.iconSrcs} size={compact ? 52 : 32} />
+      <CompositeItemIcon iconSrcs={source.iconSrcs} size={compact ? 44 : 32} />
       <div className={styles["production-flow-node-text"]}>
         <strong>{source.title}</strong>
         <span className={styles["production-flow-node-meta"]}>
@@ -797,7 +810,9 @@ function FlowNode({
             </span>
           )}
           {showSubtitle ? <span className={styles["production-flow-node-subtitle"]}>{source.subtitle}</span> : null}
-          {source.rate === undefined ? null : <b className={styles["production-flow-node-rate"]}>{source.rate}</b>}
+          {source.rate === undefined ? null : (
+            <b className={styles["production-flow-node-rate"]}>{compact ? source.rateValue ?? source.rate : source.rate}</b>
+          )}
         </span>
       </div>
     </div>

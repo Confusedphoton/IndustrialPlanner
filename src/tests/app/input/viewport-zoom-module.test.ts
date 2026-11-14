@@ -88,6 +88,33 @@ describe("canvas viewport zoom buttons", () => {
     test.view.actions.zoom(1);
     expect(fits()).toBe(false);
   });
+
+  it("zooms out past the default floor to show the whole base beside the tool rail in a short canvas", () => {
+    const test = createCanvasTestSession({ document: createWorldDocument({ baseId: "wuling_protocol_core" }) });
+    cleanups.push(test.dispose);
+    const base = test.workspace.registry.baseDefinitions.find((candidate) => candidate.id === "wuling_protocol_core")!;
+    const bounds = resolveBaseOuterBounds(base)!;
+    test.view.actions.setBoundsPolicy({ kind: "space", bounds, padding: 2 });
+    test.view.actions.setViewportClientRect({ left: 0, top: 0, width: 1100, height: 300 });
+    const rail = 70;
+
+    fitCanvasViewportToBase(test.canvas, { left: rail, right: 0 });
+
+    const { center, gridCellPixelSize } = test.view.state;
+    const toScreenX = (worldX: number) => 550 + (worldX - center.x) * gridCellPixelSize;
+    const toScreenY = (worldY: number) => 150 + (worldY - center.y) * gridCellPixelSize;
+    expect(test.view.state.gridSize).toBeLessThan(0.5);
+    expect(toScreenX(bounds.minX!)).toBeGreaterThanOrEqual(rail);
+    expect(toScreenX(bounds.maxX!)).toBeLessThanOrEqual(1100);
+    expect(toScreenY(bounds.minY!)).toBeGreaterThanOrEqual(0);
+    expect(toScreenY(bounds.maxY!)).toBeLessThanOrEqual(300);
+    expect((toScreenX(bounds.minX!) + toScreenX(bounds.maxX!)) / 2).toBeCloseTo(rail + (1100 - rail) / 2);
+
+    // 缩小后滚轮仍连续：再缩小不会反向放大。
+    const fitted = test.view.state.gridSize;
+    zoomCanvasViewportByButton(test.canvas, -1);
+    expect(test.view.state.gridSize).toBeLessThanOrEqual(fitted);
+  });
 });
 
 function createMobilePlacementContext() {

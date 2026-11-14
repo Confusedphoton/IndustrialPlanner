@@ -263,9 +263,9 @@ export class CanvasInteractionController {
 
   /**
    * 视口变窄（例如打开右侧面板）后，若设备落到可见区域之外，按最小距离平移让它重新完整可见；
-   * 本来就可见时不动视图。
+   * 本来就可见时不动视图。obstruction 是画布两侧被常驻浮层（工具条）占用的宽度，设备也要避开。
    */
-  public keepEntityInView(entityId: string): void {
+  public keepEntityInView(entityId: string, obstruction: { readonly left: number; readonly right: number }): void {
     const entity = this.editor?.queries.getEntityById(entityId);
     if (entity == null) return;
     const definition = this.options.registry.queries.findEntityDefinition(entity.definitionId);
@@ -283,7 +283,12 @@ export class CanvasInteractionController {
     const shift = (start: number, end: number, min: number, max: number) => (
       start < min ? min - start : end > max ? Math.max(min - start, max - end) : 0
     );
-    const dx = shift(left, right, viewport.left + margin, viewport.left + viewport.width - margin);
+    const dx = shift(
+      left,
+      right,
+      viewport.left + obstruction.left + margin,
+      viewport.left + viewport.width - obstruction.right - margin,
+    );
     const dy = shift(top, bottom, viewport.top + margin, viewport.top + viewport.height - margin);
     if (dx === 0 && dy === 0) return;
     const start = { x: viewport.left + viewport.width / 2, y: viewport.top + viewport.height / 2 };

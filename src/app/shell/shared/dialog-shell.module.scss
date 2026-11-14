@@ -754,27 +754,17 @@
   gap: 6px;
 }
 
+// 矮窗口下标签页仍保持笔触尺寸，只收紧横向留白与字号。
 .dialog-shell.is-mobile-compact .dialog-shell-tab {
-  min-height: 0;
-  height: 18px;
-  padding: 0 6px 1px;
-  font-size: 0.5rem;
+  height: var(--pen-target);
+  padding: 0 8px;
+  font-size: 0.72rem;
   line-height: 1;
-  transform: translateY(3px);
-}
-
-.dialog-shell.is-mobile-compact .dialog-shell-tab:hover {
-  transform: translateY(2px);
-}
-
-.dialog-shell.is-mobile-compact .dialog-shell-tab.is-active {
-  height: 22px;
-  padding-inline: 8px;
 }
 
 .dialog-shell.has-tabs.is-mobile-compact .dialog-shell-header {
-  --dialog-shell-header-row-height: 36px;
-  --dialog-shell-tab-track-height: 30px;
+  --dialog-shell-header-row-height: 44px;
+  --dialog-shell-tab-track-height: var(--pen-target);
   min-height: 0;
   padding: 0 10px;
 }

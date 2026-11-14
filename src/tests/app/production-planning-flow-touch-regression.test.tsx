@@ -491,7 +491,7 @@ describe("ProductionFlowGraph touch regression", () => {
 
     tapNode(2);
     expect(onNodeActivate).not.toHaveBeenCalled();
-    expect(surface.style.transform).toContain("scale(1)");
+    expect(surface.style.transform).toContain("scale(0.85)");
 
     tapNode(3);
     expect(onNodeActivate).toHaveBeenCalledTimes(1);

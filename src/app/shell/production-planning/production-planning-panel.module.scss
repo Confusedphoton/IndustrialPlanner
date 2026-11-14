@@ -192,8 +192,8 @@
 }
 
 .production-planning-toolbar .production-planning-segmented button {
-  min-height: 30px;
-  height: 30px;
+  min-height: var(--pen-target);
+  height: var(--pen-target);
 }
 
 .production-planning-toolbar .production-planning-module-toggle {
@@ -1838,15 +1838,16 @@
   font-weight: 800;
 }
 
-// 总览缩放下的简化卡片：去掉小字，只留放大的物品图标与速率，缩小后仍能辨认。
+// 总览缩放下的简化卡片：去掉小字，只留放大的物品图标与不带单位的速率；字号按卡片宽度取值，不会溢出到相邻卡片。
 .production-flow-nodes.is-compact .production-flow-node {
-  grid-template-columns: 52px minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 8px;
+  overflow: hidden;
 }
 
 .production-flow-nodes.is-compact .production-flow-node > :first-child img {
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
 }
 
 .production-flow-nodes.is-compact .production-flow-node strong,
@@ -1856,9 +1857,12 @@
 }
 
 .production-flow-nodes.is-compact .production-flow-node-rate {
+  overflow: hidden;
   margin-left: 0;
-  font-size: 2rem;
+  font-size: 1.6rem;
   line-height: 1;
+  text-overflow: clip;
+  white-space: nowrap;
 }
 
 .production-flow-node.is-target {

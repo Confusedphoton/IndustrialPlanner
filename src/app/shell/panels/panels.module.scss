@@ -992,12 +992,12 @@
 
 .regional-resource-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 24px 24px;
+  grid-template-columns: minmax(0, 1fr) var(--pen-target) var(--pen-target);
   grid-template-areas:
     "item item item"
     "rate infinity remove";
   align-items: center;
-  gap: 3px;
+  gap: 6px;
   min-width: 0;
   min-height: 38px;
   padding: 4px 5px;
@@ -1009,7 +1009,7 @@
 }
 
 .regional-resources-card[data-device-class="desktop"] .regional-resource-row {
-  grid-template-columns: minmax(0, 1fr) 88px 24px 24px;
+  grid-template-columns: minmax(0, 1fr) 88px var(--pen-target) var(--pen-target);
   grid-template-areas: "item rate infinity remove";
 }
 
@@ -1072,15 +1072,16 @@
   text-align: right;
 }
 
+// 轨道宽度与按钮同为笔触尺寸，相邻的“无限供应”和“删除”不重叠，笔偏一点也不会误触删除。
 .regional-resource-infinity,
 .regional-resource-remove {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: var(--pen-target);
+  height: var(--pen-target);
   padding: 0;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--surface-2);
   color: var(--text-2);
 }

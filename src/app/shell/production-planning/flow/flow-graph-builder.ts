@@ -35,6 +35,8 @@ export interface ProductionFlowNode extends SankeyInputNode {
   readonly subtitle: string;
   /** 节点自身产物（处置类为处置量）的速率，卡片上单独强调显示。 */
   readonly rate?: string;
+  /** 不带单位的速率数值，总览简化卡片只显示数字。 */
+  readonly rateValue?: string;
   /** 设备数（“×N”），卡片上常驻显示，不随副标题截断。 */
   readonly machineCount?: string;
   /** 物品模式下生产该物品的设备图标。 */
@@ -216,6 +218,7 @@ function addLedgerRowNode(row: ProductionPlanningLedgerRow, context: LedgerBuild
     title,
     subtitle,
     rate: `${formatProductionFlow(displayRate)}/min`,
+    rateValue: formatProductionFlow(displayRate),
     machineCount: isExternal ? undefined : `×${deviceCount}`,
     machineIconSrc: isExternal || context.displayMode !== "item"
       ? undefined
@@ -485,6 +488,7 @@ function addTransientItemNode(itemId: string, value: number, context: LedgerBuil
     title: resolveProductionPlanningItemName(itemId, context.index, context.translate),
     subtitle: "",
     rate: `${formatProductionFlow(value)}/min`,
+    rateValue: formatProductionFlow(value),
     iconSrcs: [resolveProductionPlanningItemIconSrc(itemId, context.index)],
     value: Math.max(value, 1),
     itemId,
