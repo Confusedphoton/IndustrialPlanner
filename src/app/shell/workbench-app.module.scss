@@ -48,8 +48,8 @@
   border-top-width: 1px;
 }
 
-// 叠放时没有选中设备：属性面板只保留标题栏，高度全部让给配方树。
-.workbench.is-stacked-inspector-empty {
+// 右栏高度不足以同时展开两栏（或属性面板为空）时只展开一栏，另一栏收起为可点按的标题栏。
+.workbench.is-stack-recipe-only {
   grid-template-rows:
     var(--top-bar-height, 48px)
     auto
@@ -58,8 +58,30 @@
     var(--bottom-bar-height, 28px);
 }
 
-.workbench.is-stacked-inspector-empty .dock-right .section-body {
+.workbench.is-stack-recipe-only .dock-right .section-body {
   display: none;
+}
+
+.workbench.is-stack-inspector-only {
+  grid-template-rows:
+    var(--top-bar-height, 48px)
+    minmax(0, 1fr)
+    auto
+    var(--toolbox-bottom-dock-height, 0px)
+    var(--bottom-bar-height, 28px);
+}
+
+.workbench.is-stack-inspector-only .recipe-tree-overlay.is-docked > :not(.recipe-tree-header) {
+  display: none;
+}
+
+.workbench.is-stack-recipe-only .recipe-tree-stack-resize {
+  display: none;
+}
+
+.workbench.is-stack-recipe-only .dock-right .section-header,
+.workbench.is-stack-inspector-only .recipe-tree-overlay.is-docked .recipe-tree-header {
+  cursor: pointer;
 }
 
 .overlay-stack-root {
@@ -105,5 +127,5 @@
 }
 
 .workbench.is-right-stacked .recipe-tree-overlay.is-docked .recipe-tree-header {
-  padding-top: 12px;
+  padding-top: 16px;
 }

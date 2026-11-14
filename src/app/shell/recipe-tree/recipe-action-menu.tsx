@@ -73,11 +73,15 @@ export function RecipeActionMenu({
         onClose();
       }
     };
+    // 视口变化后锚点卡片已移动，旧位置不再可信，直接收起菜单。
+    const handleResize = () => onClose();
     document.addEventListener("pointerdown", handlePointerDown, true);
     window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("resize", handleResize);
     return () => {
       document.removeEventListener("pointerdown", handlePointerDown, true);
       window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("resize", handleResize);
     };
   }, [onClose]);
 

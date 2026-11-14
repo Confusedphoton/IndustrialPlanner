@@ -63,6 +63,8 @@ export class RecipeTreeOverlayState {
   public stacked = false;
   /** 叠放时配方树占右栏高度的比例。 */
   public stackRatio = RECIPE_TREE_STACK_DEFAULT_RATIO;
+  /** 右栏高度不足以同时展开两栏时展开哪一栏，不持久化。 */
+  public stackFocus: "inspector" | "recipe" = "inspector";
   /** x 为 -1 表示尚未定位，首次显示时贴靠画布右侧。 */
   public rect: RecipeTreeOverlayRect = DEFAULT_RECT;
   public pins: RecipeTreePin[] = [];
@@ -95,6 +97,10 @@ export class RecipeTreeOverlayState {
 
   public setStacked(stacked: boolean): void {
     this.stacked = stacked;
+  }
+
+  public setStackFocus(focus: "inspector" | "recipe"): void {
+    this.stackFocus = focus;
   }
 
   public setStackRatio(ratio: number): void {

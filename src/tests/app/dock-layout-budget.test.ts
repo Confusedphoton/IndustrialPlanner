@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   MIN_CANVAS_WIDTH_PX,
   MIN_RIGHT_DOCK_WIDTH_PX,
+  STACK_MIN_INSPECTOR_HEIGHT_PX,
+  STACK_MIN_RECIPE_HEIGHT_PX,
   resolveDockLayoutBudget,
+  resolveStackedRightColumn,
 } from "@/app/shell/layout/dock-layout-budget";
 
 const RECIPE_DOCK_MIN_WIDTH = 300;
@@ -69,5 +72,30 @@ describe("resolveDockLayoutBudget", () => {
 
     expect(budget.recipeDockWidth).toBe(budget.recipeDockMaxWidth);
     expect(canvasWidth(1440, 68, 320, budget)).toBe(Math.round(1440 * 0.3));
+  });
+});
+
+describe("resolveStackedRightColumn", () => {
+  it.each([0, 0.1, 0.5, 0.95, 1])("keeps both stacked panes at their minimum heights for a persisted ratio of %s", (recipeRatio) => {
+    const columnHeight = 824;
+    const column = resolveStackedRightColumn({ columnHeight, recipeRatio, inspectorEmpty: false, focus: "inspector" });
+
+    expect(column.mode).toBe("split");
+    if (column.mode === "split") {
+      expect(column.recipeRatio * columnHeight).toBeGreaterThanOrEqual(STACK_MIN_RECIPE_HEIGHT_PX);
+      expect((1 - column.recipeRatio) * columnHeight).toBeGreaterThanOrEqual(STACK_MIN_INSPECTOR_HEIGHT_PX);
+    }
+  });
+
+  it("expands only the focused pane when the column is too short for both", () => {
+    expect(resolveStackedRightColumn({ columnHeight: 464, recipeRatio: 0.25, inspectorEmpty: false, focus: "recipe" }))
+      .toEqual({ mode: "single", expanded: "recipe" });
+    expect(resolveStackedRightColumn({ columnHeight: 464, recipeRatio: 0.25, inspectorEmpty: false, focus: "inspector" }))
+      .toEqual({ mode: "single", expanded: "inspector" });
+  });
+
+  it("gives the whole column to the recipe tree while nothing is selected", () => {
+    expect(resolveStackedRightColumn({ columnHeight: 824, recipeRatio: 0.3, inspectorEmpty: true, focus: "inspector" }))
+      .toEqual({ mode: "single", expanded: "recipe" });
   });
 });

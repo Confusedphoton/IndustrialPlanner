@@ -77,7 +77,10 @@ import {
 } from "@/shared/dark-pipe-link";
 import { DEFAULT_RIGHT_DOCK_WIDTH } from "@/app/state/state-impl";
 import { resolveLeftDockWidthForScreenProfile } from "@/app/state/state-impl";
-import { resolveDockLayoutBudget } from "@/app/shell/layout/dock-layout-budget";
+import { resolveDockLayoutBudget, resolveStackedRightColumn } from "@/app/shell/layout/dock-layout-budget";
+
+const TOP_BAR_HEIGHT_PX = 48;
+const BOTTOM_BAR_HEIGHT_PX = 28;
 import { RECIPE_TREE_DOCK_MIN_WIDTH } from "@/app/shell/recipe-tree/recipe-tree-state";
 import { isAppThemeId } from "@/app/theme";
 import {
@@ -753,6 +756,27 @@ export const WorkbenchApp = observer(function WorkbenchApp({
   useEffect(() => {
     recipeTreeOverlayState.setStacked(dockLayoutBudget.stackRightDocks);
   }, [dockLayoutBudget.stackRightDocks]);
+  const locale = appHost.state.settings.locale;
+  useEffect(() => {
+    document.documentElement.lang = locale === "zh-CN" ? "zh-CN" : "en";
+  }, [locale]);
+  const stackedRightColumn = dockLayoutBudget.stackRightDocks
+    ? resolveStackedRightColumn({
+      columnHeight: screenProfile.viewportHeight
+        - (showFloatingTopBarControls ? 0 : TOP_BAR_HEIGHT_PX)
+        - (showBottomStatusBar ? BOTTOM_BAR_HEIGHT_PX : 0),
+      recipeRatio: recipeTreeOverlayState.stackRatio,
+      inspectorEmpty: selectionCount === 0,
+      focus: recipeTreeOverlayState.stackFocus,
+    })
+    : null;
+  // 选中新的设备时，若右栏只能展开一栏，切到属性面板。
+  const firstSelectedId = appHost.workspace.editor?.state.collections.selection[0] ?? null;
+  useEffect(() => {
+    if (firstSelectedId !== null) {
+      recipeTreeOverlayState.setStackFocus("inspector");
+    }
+  }, [firstSelectedId]);
   const canKeepInspectorDialogOpen = !useInspectorPanel
     && (activeTool === "select" || activeTool === "dark-pipe-link")
     && selectionCount === 1
@@ -1106,12 +1130,12 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     "--right-dock-width": `${dockLayoutBudget.rightDockWidth}px`,
     // 配方树停靠栏占用最右侧一列。
     "--recipe-dock-width": `${dockLayoutBudget.recipeDockWidth}px`,
-    "--right-stack-top": `${1 - recipeTreeOverlayState.stackRatio}fr`,
-    "--right-stack-bottom": `${recipeTreeOverlayState.stackRatio}fr`,
+    "--right-stack-top": `${1 - (stackedRightColumn?.mode === "split" ? stackedRightColumn.recipeRatio : 0.5)}fr`,
+    "--right-stack-bottom": `${stackedRightColumn?.mode === "split" ? stackedRightColumn.recipeRatio : 0.5}fr`,
     "--canvas-tool-rail-width": canvasToolRailState.side === "left" ? "60px" : "0px",
     "--canvas-tool-rail-right-width": canvasToolRailState.side === "right" ? "60px" : "0px",
-    "--top-bar-height": showFloatingTopBarControls ? "0px" : "48px",
-    "--bottom-bar-height": showBottomStatusBar ? "28px" : "0px",
+    "--top-bar-height": showFloatingTopBarControls ? "0px" : `${TOP_BAR_HEIGHT_PX}px`,
+    "--bottom-bar-height": showBottomStatusBar ? `${BOTTOM_BAR_HEIGHT_PX}px` : "0px",
     "--toolbox-bottom-dock-height": `${bottomDockGridHeight}px`,
     "--canvas-bottom-obstruction-height": "calc(var(--bottom-bar-height, 28px) + var(--toolbox-bottom-dock-height, 0px))",
   } as CSSProperties;
@@ -1120,8 +1144,8 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     <div
       className={cm(styles, [
         "workbench",
-        dockLayoutBudget.stackRightDocks ? "is-right-stacked" : "",
-        dockLayoutBudget.stackRightDocks && selectionCount === 0 ? "is-stacked-inspector-empty" : "",
+        stackedRightColumn === null ? "" : "is-right-stacked",
+        stackedRightColumn?.mode === "single" ? `is-stack-${stackedRightColumn.expanded}-only` : "",
       ].filter(Boolean).join(" "))}
       onAuxClick={preventNativeBrowserEvent}
       onContextMenu={preventNativeBrowserEvent}

@@ -4,6 +4,7 @@ import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { AppHost } from "@/app/host/app-host";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import { recipeTreeOverlayState } from "@/app/shell/recipe-tree/recipe-tree-state";
 
 export const RightDock = observer(function RightDock({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
@@ -13,7 +14,15 @@ export const RightDock = observer(function RightDock({ appHost }: { appHost: App
   return (
     <aside className={cm(styles, "dock dock-right panel-surface")}>
       <section className={cm(styles, "dock-section")}>
-        <div className={cm(styles, "section-header")}>
+        <div
+          className={cm(styles, "section-header")}
+          onClick={(event) => {
+            // 叠放右栏只能展开一栏时，点按标题栏切换到属性面板。
+            if ((event.target as HTMLElement).closest("button") === null) {
+              recipeTreeOverlayState.setStackFocus("inspector");
+            }
+          }}
+        >
           <div className={cm(styles, "section-header-copy")}>
             <h2>{t("rightDock.selection")}</h2>
           </div>

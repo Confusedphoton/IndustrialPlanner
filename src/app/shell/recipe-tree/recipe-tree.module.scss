@@ -549,16 +549,18 @@
 .recipe-tree-dock-resize::after {
   content: "";
   position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
+  top: 50%;
+  left: 4px;
   width: 4px;
-  border-radius: 0 2px 2px 0;
+  height: 40px;
+  border-radius: 2px;
+  background: var(--line-strong);
+  transform: translateY(-50%);
 }
 
 .recipe-tree-dock-resize:hover::after,
 .recipe-tree-dock-resize:active::after {
-  background: var(--dock-resize-hover);
+  background: var(--accent);
 }
 
 .recipe-tree-icon-button[aria-pressed="true"] {
@@ -587,21 +589,97 @@
   top: 0;
   right: 0;
   left: 14px;
-  height: 12px;
+  height: 18px;
   cursor: ns-resize;
   touch-action: none;
 }
 
+// 常驻可见的抓手，笔用户不必悬停才能发现可拖动。
 .recipe-tree-stack-resize::after {
   content: "";
   position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
+  top: 5px;
+  left: 50%;
+  width: 40px;
   height: 4px;
+  border-radius: 2px;
+  background: var(--line-strong);
+  transform: translateX(-50%);
 }
 
 .recipe-tree-stack-resize:hover::after,
 .recipe-tree-stack-resize:active::after {
-  background: var(--dock-resize-hover);
+  background: var(--accent);
+}
+
+button.recipe-tree-chip {
+  min-height: 32px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-0);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  touch-action: manipulation;
+}
+
+button.recipe-tree-chip:hover {
+  border-color: var(--line);
+  background: var(--surface-3);
+}
+
+.recipe-tree-totals.is-expanded {
+  max-height: 45%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.recipe-tree-totals-toggle {
+  justify-self: end;
+  min-height: var(--pen-target);
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-1);
+  color: var(--text-1);
+  font-size: 12px;
+}
+
+.recipe-tree-totals-list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+
+.recipe-tree-totals-list dt {
+  margin-top: 4px;
+  color: var(--text-2);
+  font-size: 11px;
+}
+
+.recipe-tree-totals-list dd {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  margin: 0;
+  color: var(--text-0);
+}
+
+.recipe-tree-totals-list dd img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.recipe-tree-totals-list dd span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recipe-tree-totals-list dd b {
+  font-variant-numeric: tabular-nums;
 }

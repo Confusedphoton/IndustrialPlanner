@@ -57,3 +57,35 @@ export function resolveDockLayoutBudget(input: DockLayoutBudgetInput): DockLayou
 
   return { rightDockWidth, recipeDockWidth, recipeDockMaxWidth, stackRightDocks: false };
 }
+
+/** 叠放时配方树至少需要的高度：标题栏、搜索/工具栏行、合计与可用的流程图区域。 */
+export const STACK_MIN_RECIPE_HEIGHT_PX = 340;
+/** 叠放时属性面板至少需要的高度：标题栏与设备操作卡片。 */
+export const STACK_MIN_INSPECTOR_HEIGHT_PX = 180;
+
+export type StackedPane = "inspector" | "recipe";
+
+export type StackedRightColumn =
+  | { readonly mode: "split"; readonly recipeRatio: number }
+  | { readonly mode: "single"; readonly expanded: StackedPane };
+
+/**
+ * 叠放右栏的高度分配：两栏都能达到最小高度时按用户比例分割（比例被夹紧到两侧最小高度之内）；
+ * 放不下时只展开一栏，另一栏收起为标题栏，点按标题栏切换。属性面板为空时总是让给配方树。
+ */
+export function resolveStackedRightColumn(input: {
+  readonly columnHeight: number;
+  readonly recipeRatio: number;
+  readonly inspectorEmpty: boolean;
+  readonly focus: StackedPane;
+}): StackedRightColumn {
+  if (input.inspectorEmpty) {
+    return { mode: "single", expanded: "recipe" };
+  }
+  if (input.columnHeight < STACK_MIN_RECIPE_HEIGHT_PX + STACK_MIN_INSPECTOR_HEIGHT_PX) {
+    return { mode: "single", expanded: input.focus };
+  }
+  const minRatio = STACK_MIN_RECIPE_HEIGHT_PX / input.columnHeight;
+  const maxRatio = 1 - STACK_MIN_INSPECTOR_HEIGHT_PX / input.columnHeight;
+  return { mode: "split", recipeRatio: Math.min(maxRatio, Math.max(minRatio, input.recipeRatio)) };
+}

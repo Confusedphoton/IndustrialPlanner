@@ -2428,7 +2428,9 @@
   font-size: 0.74rem;
   line-height: 1.2;
   white-space: normal;
-  overflow-wrap: anywhere;
+  // 按词换行并按页面语言断字，避免 “Purificatio / n” 这类任意断词。
+  overflow-wrap: normal;
+  hyphens: auto;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -2439,11 +2441,18 @@
   inset-inline-end: 3px;
   grid-template-columns: 16px 10px;
   width: 34px;
-  height: 24px;
+  height: 28px;
   padding: 0 3px;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--surface-1);
+}
+
+// 命中区域延伸到磁贴右上角边缘（约 40×34px），不覆盖中间的设备图标。
+.placement-button-list.is-tile-grid .placement-entity-variant-trigger::before {
+  content: "";
+  position: absolute;
+  inset: -3px -3px -3px -3px;
 }
 
 .placement-button-list.is-tile-grid .placement-entity-variant-indicator {

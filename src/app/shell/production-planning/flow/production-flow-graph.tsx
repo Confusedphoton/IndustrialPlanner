@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import LucideArrowDownUp from "~icons/lucide/arrow-down-up";
 import LucideArrowRightLeft from "~icons/lucide/arrow-right-left";
 import LucideRotateCcw from "~icons/lucide/rotate-ccw";
+import LucideLocateFixed from "~icons/lucide/locate-fixed";
 import LucideScan from "~icons/lucide/scan";
 import LucideZoomIn from "~icons/lucide/zoom-in";
 import LucideZoomOut from "~icons/lucide/zoom-out";
@@ -159,7 +160,11 @@ export function ProductionFlowGraph({
     }, VIEWPORT_NOTIFY_DELAY_MS);
   }, []);
 
-  const fit = useCallback(() => {
+  /**
+   * "focus"：保持可读缩放并把规划目标放进视野；整图放不下时沿流向平移查看。
+   * "overview"：不设可读下限，整条产线一次显示；随后点按空白处可在该处放大到可读比例。
+   */
+  const fit = useCallback((mode: "focus" | "overview" = "focus") => {
     const element = canvasRef.current;
     if (element === null || initialLayout.nodes.length === 0) return;
     const rects = initialLayout.nodes.map((node) => resolveCardRect(node, orientation, metrics));
@@ -177,7 +182,9 @@ export function ProductionFlowGraph({
     const fullScale = Math.min(availableWidth / bounds.width, availableHeight / bounds.height);
     const crossScale = orientation === "vertical" ? availableWidth / bounds.width : availableHeight / bounds.height;
     const scale = clamp(
-      Math.min(1, fullScale >= MIN_READABLE_FIT_SCALE ? fullScale : Math.max(MIN_READABLE_FIT_SCALE, crossScale)),
+      Math.min(1, mode === "overview" || fullScale >= MIN_READABLE_FIT_SCALE
+        ? fullScale
+        : Math.max(MIN_READABLE_FIT_SCALE, crossScale)),
       MIN_SCALE,
       MAX_SCALE,
     );
@@ -254,20 +261,23 @@ export function ProductionFlowGraph({
     fit();
   }, [fit, initialLayout]);
 
-  const zoomAroundCenter = useCallback((factor: number) => {
-    const element = canvasRef.current;
-    const centerX = (element?.clientWidth ?? 0) / 2;
-    const centerY = (element?.clientHeight ?? 0) / 2;
+  /** 以容器内一点为锚缩放到指定比例。 */
+  const zoomAt = useCallback((anchorX: number, anchorY: number, scale: number) => {
     setViewport((current) => {
-      const nextScale = clamp(current.scale * factor, MIN_SCALE, MAX_SCALE);
+      const nextScale = clamp(scale, MIN_SCALE, MAX_SCALE);
       const ratio = nextScale / current.scale;
       return {
-        x: centerX - ratio * (centerX - current.x),
-        y: centerY - ratio * (centerY - current.y),
+        x: anchorX - ratio * (anchorX - current.x),
+        y: anchorY - ratio * (anchorY - current.y),
         scale: nextScale,
       };
     });
   }, [setViewport]);
+
+  const zoomAroundCenter = useCallback((factor: number) => {
+    const element = canvasRef.current;
+    zoomAt((element?.clientWidth ?? 0) / 2, (element?.clientHeight ?? 0) / 2, viewportRef.current.scale * factor);
+  }, [zoomAt]);
 
   const handleWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -468,13 +478,15 @@ export function ProductionFlowGraph({
         pinch.secondClientY,
         viewportRef.current,
       );
-      if (
-        pinch === null
+      const isTap = pinch === null
         && event.type === "pointerup"
-        && pan.pressedNodeId !== null
-        && Math.hypot(event.clientX - pan.startClientX, event.clientY - pan.startClientY) < TAP_SLOP_PX
-      ) {
+        && Math.hypot(event.clientX - pan.startClientX, event.clientY - pan.startClientY) < TAP_SLOP_PX;
+      if (isTap && pan.pressedNodeId !== null) {
         activateNode(pan.pressedNodeId);
+      } else if (isTap && viewportRef.current.scale < MIN_READABLE_FIT_SCALE) {
+        // 总览时点按空白处：以该点为中心放大到可读比例。
+        const rect = canvasRef.current?.getBoundingClientRect();
+        zoomAt(event.clientX - (rect?.left ?? 0), event.clientY - (rect?.top ?? 0), 1);
       }
       return;
     }
@@ -500,7 +512,7 @@ export function ProductionFlowGraph({
         activateNode(press.nodeId);
       }
     }
-  }, [activateNode]);
+  }, [activateNode, zoomAt]);
 
   const surfaceSize = useMemo(() => {
     const bounds = unionRects(graph.nodes.map((node) => resolveCardRect(node, orientation, metrics)));
@@ -527,8 +539,11 @@ export function ProductionFlowGraph({
       <div className={styles["production-flow-toolbar"]}>
         {toolbarLeading === undefined ? null : <div className={styles["production-flow-toolbar-leading"]}>{toolbarLeading}</div>}
         <div className={styles["production-flow-toolbar-buttons"]} role="toolbar">
-        <FlowToolbarButton label={t("productionPlanning.flowFit")} onClick={fit}>
+        <FlowToolbarButton label={t("productionPlanning.flowOverview")} onClick={() => fit("overview")}>
           <LucideScan aria-hidden="true" />
+        </FlowToolbarButton>
+        <FlowToolbarButton label={t("productionPlanning.flowFocusTarget")} onClick={() => fit("focus")}>
+          <LucideLocateFixed aria-hidden="true" />
         </FlowToolbarButton>
         <FlowToolbarButton label={t("productionPlanning.flowZoomOut")} onClick={() => zoomAroundCenter(1 / 1.2)}>
           <LucideZoomOut aria-hidden="true" />

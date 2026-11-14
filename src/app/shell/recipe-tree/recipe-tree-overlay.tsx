@@ -197,15 +197,18 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
     }
     event.preventDefault();
     const target = event.currentTarget;
-    const overlay = target.parentElement;
     const pointerId = event.pointerId;
-    const startY = event.clientY;
-    const startRatio = state.stackRatio;
-    const columnHeight = (overlay?.getBoundingClientRect().height ?? 1) / startRatio;
+    // 右栏从属性面板顶边到配方树底边；比例按指针到底边的距离计算。
+    const overlayRect = target.parentElement?.getBoundingClientRect();
+    const columnTop = document.querySelector(`.${cm(styles, "dock-right")}`)?.getBoundingClientRect().top;
+    if (overlayRect === undefined || columnTop === undefined) {
+      return;
+    }
+    const columnHeight = Math.max(1, overlayRect.bottom - columnTop);
     target.setPointerCapture(pointerId);
     const handleMove = (moveEvent: PointerEvent) => {
       if (moveEvent.pointerId === pointerId) {
-        state.setStackRatio(startRatio + (startY - moveEvent.clientY) / columnHeight);
+        state.setStackRatio((overlayRect.bottom - moveEvent.clientY) / columnHeight);
       }
     };
     const stop = (endEvent: PointerEvent) => {
@@ -252,7 +255,16 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
           onPointerDown={handleStackResizePointerDown}
         />
       ) : null}
-      <header className={cm(styles, "recipe-tree-header")} onPointerDown={handleHeaderPointerDown}>
+      <header
+        className={cm(styles, "recipe-tree-header")}
+        onClick={(event) => {
+          // 叠放右栏只能展开一栏时，点按标题栏切换到配方树。
+          if (docked && (event.target as HTMLElement).closest("button") === null) {
+            state.setStackFocus("recipe");
+          }
+        }}
+        onPointerDown={handleHeaderPointerDown}
+      >
         <LucideListTree aria-hidden className={cm(styles, "recipe-tree-header-icon")} />
         <h2>{title}</h2>
         <span className={cm(styles, "recipe-tree-header-count")}>{state.pins.length}</span>
@@ -700,8 +712,44 @@ function RecipeTreeTotals({
     return [...totals.entries()].filter(([, perMinute]) => perMinute > 0.0001);
   }, [plan]);
 
+  const [expanded, setExpanded] = useState(false);
+
   if (machineTotals.length === 0 && rawTotals.length === 0) {
     return null;
+  }
+
+  // 合计默认是紧凑的图标 + 数字；点按任一项展开带名称与精确数值的列表（笔无法依赖悬停提示）。
+  if (expanded) {
+    return (
+      <div className={cm(styles, "recipe-tree-totals is-expanded")}>
+        <button
+          aria-expanded
+          className={cm(styles, "recipe-tree-totals-toggle")}
+          onClick={() => setExpanded(false)}
+          type="button"
+        >
+          {t("action.collapse")}
+        </button>
+        <dl className={cm(styles, "recipe-tree-totals-list")}>
+          {machineTotals.length > 0 ? <dt>{t("recipeTree.machines")}</dt> : null}
+          {machineTotals.map(([machineId, count]) => (
+            <dd key={machineId}>
+              <img alt="" src={resolveProductionPlanningEntityIconSrc(machineId, index)} />
+              <span>{t(index.entityById.get(machineId)?.nameKey ?? machineId)}</span>
+              <b>×{formatProductionDeviceCount(count)}</b>
+            </dd>
+          ))}
+          {rawTotals.length > 0 ? <dt>{t("recipeTree.inputs")}</dt> : null}
+          {rawTotals.map(([itemId, perMinute]) => (
+            <dd key={itemId}>
+              <img alt="" src={resolveProductionPlanningItemIconSrc(itemId, index)} />
+              <span>{resolveProductionPlanningItemName(itemId, index, t)}</span>
+              <b>{formatProductionFlow(perMinute)}{t("recipeTree.perMinute")}</b>
+            </dd>
+          ))}
+        </dl>
+      </div>
+    );
   }
 
   return (
@@ -710,14 +758,17 @@ function RecipeTreeTotals({
         <div className={cm(styles, "recipe-tree-totals-row")}>
           <span className={cm(styles, "recipe-tree-totals-label")}>{t("recipeTree.machines")}</span>
           {machineTotals.map(([machineId, count]) => (
-            <span
+            <button
+              aria-expanded={false}
+              aria-label={`${t(index.entityById.get(machineId)?.nameKey ?? machineId)} ×${formatProductionDeviceCount(count)}`}
               className={cm(styles, "recipe-tree-chip")}
               key={machineId}
-              title={`${t(index.entityById.get(machineId)?.nameKey ?? machineId)} × ${formatProductionDeviceCount(count)}`}
+              onClick={() => setExpanded(true)}
+              type="button"
             >
               <img alt="" src={resolveProductionPlanningEntityIconSrc(machineId, index)} />
               {Math.ceil(count - 0.0001)}
-            </span>
+            </button>
           ))}
         </div>
       ) : null}
@@ -725,14 +776,17 @@ function RecipeTreeTotals({
         <div className={cm(styles, "recipe-tree-totals-row")}>
           <span className={cm(styles, "recipe-tree-totals-label")}>{t("recipeTree.inputs")}</span>
           {rawTotals.map(([itemId, perMinute]) => (
-            <span
+            <button
+              aria-expanded={false}
+              aria-label={`${resolveProductionPlanningItemName(itemId, index, t)} ${formatProductionFlow(perMinute)}${t("recipeTree.perMinute")}`}
               className={cm(styles, "recipe-tree-chip")}
               key={itemId}
-              title={`${resolveProductionPlanningItemName(itemId, index, t)} ${formatProductionFlow(perMinute)}${t("recipeTree.perMinute")}`}
+              onClick={() => setExpanded(true)}
+              type="button"
             >
               <img alt="" src={resolveProductionPlanningItemIconSrc(itemId, index)} />
               {formatProductionFlow(perMinute)}
-            </span>
+            </button>
           ))}
         </div>
       ) : null}
