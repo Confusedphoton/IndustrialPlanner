@@ -21,13 +21,14 @@ import {
   BACKEND_API_ADDRESS_OVERRIDE_LOCAL_STORAGE_KEY,
 } from "@/shared/storage/backend-api-address";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import { MIN_RIGHT_DOCK_WIDTH_PX } from "@/app/shell/layout/dock-layout-budget";
 import { WorkbenchApp } from "@/app/shell/workbench-app";
 import {
   DEFAULT_HELP_DIALOG_TAB_ID,
+  DEFAULT_LEFT_DOCK_WIDTH,
   DEFAULT_MODULE_BALANCING_CANVAS_ID,
   DEFAULT_MODULE_BALANCING_STAGE_ID,
   DEFAULT_RIGHT_DOCK_TAB_ID,
-  DEFAULT_RIGHT_DOCK_WIDTH,
   COLLAPSED_TOOLBOX_BOTTOM_DOCK_HEIGHT,
   DEFAULT_TIMELINE_BOTTOM_DOCK_HEIGHT,
   DEFAULT_TOOLBOX_BOTTOM_DOCK_HEIGHT,
@@ -270,7 +271,7 @@ function createWorkbenchStorageSnapshot(options: {
     leftDockOpen: options.leftDockOpen ?? true,
     leftDockSuppressed: false,
     rightDockOpen: options.rightDockOpen ?? false,
-    leftDockWidth: options.leftDockWidth ?? 375,
+    leftDockWidth: options.leftDockWidth ?? DEFAULT_LEFT_DOCK_WIDTH,
     topBarCollapsed: options.topBarCollapsed ?? false,
     rightDockActiveTab: options.rightDockActiveTab ?? DEFAULT_RIGHT_DOCK_TAB_ID,
     selectedPlacementVariantByCraftGroup:
@@ -612,7 +613,6 @@ describe("WorkbenchApp", () => {
     expect(appHost.state.screenProfile.deviceClass).toBe("desktop");
     expect(appHost.state.screenProfile.screenShape).toBe("landscape");
     expect(workbench?.style.getPropertyValue("--left-toolbar-width")).toBe("68px");
-    expect(workbench?.style.getPropertyValue("--left-toolbar-button-scale")).toBe("1");
 
     coarsePointer = true;
     hoverNone = true;
@@ -631,7 +631,6 @@ describe("WorkbenchApp", () => {
     expect(appHost.state.screenProfile.deviceClass).toBe("tablet");
     expect(appHost.state.screenProfile.screenShape).toBe("portrait");
     expect(workbench?.style.getPropertyValue("--left-toolbar-width")).toBe("51px");
-    expect(workbench?.style.getPropertyValue("--left-toolbar-button-scale")).toBe("0.75");
   });
 
   it("does not request fullscreen automatically after a phone rotates to landscape", () => {
@@ -903,8 +902,8 @@ describe("WorkbenchApp", () => {
     expect(workbench).not.toBeNull();
 
     act(() => {
-      handle?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, clientX: 375 }));
-      window.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: 470 }));
+      handle?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, clientX: DEFAULT_LEFT_DOCK_WIDTH - 50 }));
+      window.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: 420 }));
       window.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, clientX: 470 }));
     });
 
@@ -943,7 +942,7 @@ describe("WorkbenchApp", () => {
       JSON.stringify({
         leftDockOpen: true,
         rightDockOpen: true,
-        leftDockWidth: 375,
+        leftDockWidth: DEFAULT_LEFT_DOCK_WIDTH,
         topBarCollapsed: true,
         rightDockActiveTab: DEFAULT_RIGHT_DOCK_TAB_ID,
       }),
@@ -1041,7 +1040,7 @@ describe("WorkbenchApp", () => {
       JSON.stringify({
         leftDockOpen: true,
         rightDockOpen: false,
-        leftDockWidth: 375,
+        leftDockWidth: DEFAULT_LEFT_DOCK_WIDTH,
         topBarCollapsed: true,
         rightDockActiveTab: DEFAULT_RIGHT_DOCK_TAB_ID,
       }),
@@ -1075,8 +1074,9 @@ describe("WorkbenchApp", () => {
     });
 
     expect(appHost.state.workbench.rightDockOpen).toBe(true);
+    // 窄屏上属性面板让出宽度，保证画布最小可用宽度。
     expect(workbench?.style.getPropertyValue("--right-dock-width")).toBe(
-      `${DEFAULT_RIGHT_DOCK_WIDTH}px`,
+      `${MIN_RIGHT_DOCK_WIDTH_PX}px`,
     );
     expect(container.querySelector(".workbench-floating-right-dock-button")).toBeNull();
     expect(container.querySelector(".dock-right")).not.toBeNull();
@@ -1456,7 +1456,7 @@ describe("WorkbenchApp", () => {
       JSON.stringify({
         leftDockOpen: true,
         rightDockOpen: true,
-        leftDockWidth: 375,
+        leftDockWidth: DEFAULT_LEFT_DOCK_WIDTH,
         topBarCollapsed: false,
         rightDockActiveTab: DEFAULT_RIGHT_DOCK_TAB_ID,
       }),
@@ -1513,11 +1513,10 @@ describe("WorkbenchApp", () => {
     expect(appHost.state.workbench.leftDockWidth).toBe(512);
     expect(workbench?.style.getPropertyValue("--left-dock-width")).toBe(`${MOBILE_LEFT_DOCK_WIDTH}px`);
     expect(workbench?.style.getPropertyValue("--left-toolbar-width")).toBe("51px");
-    expect(workbench?.style.getPropertyValue("--left-toolbar-button-scale")).toBe("0.75");
     expect(container.querySelector(".dock-resize-handle")).toBeNull();
   });
 
-  it("uses the same touch left dock width and floating operation toolbar on tablets", async () => {
+  it("uses the touch left dock width and keeps the canvas tool rail on tablets", async () => {
     coarsePointer = true;
     hoverNone = true;
     setViewport({
@@ -1547,7 +1546,6 @@ describe("WorkbenchApp", () => {
     });
 
     const workbench = container.querySelector(".workbench") as HTMLDivElement | null;
-    const canvasBottomLeftToolbar = container.querySelector(".canvas-bottom-left-toolbar") as HTMLDivElement | null;
     const canvasBottomLeftSecondaryToolbar = container.querySelector(".canvas-bottom-left-secondary-toolbar") as HTMLDivElement | null;
     const rotateViewButton = container.querySelector(
       '[data-ui-button-id="canvas-bottom-left-secondary-toolbar-button-rotate-view"]',
@@ -1558,12 +1556,9 @@ describe("WorkbenchApp", () => {
     expect(appHost.state.workbench.leftDockWidth).toBe(512);
     expect(workbench?.style.getPropertyValue("--left-dock-width")).toBe("0px");
     expect(workbench?.style.getPropertyValue("--left-toolbar-width")).toBe("51px");
-    expect(workbench?.style.getPropertyValue("--left-toolbar-button-scale")).toBe("0.75");
     expect(container.querySelector(".dock-resize-handle")).toBeNull();
-    expect(canvasBottomLeftToolbar).not.toBeNull();
-    expect(canvasBottomLeftToolbar?.querySelectorAll(".canvas-bottom-left-toolbar-button")).toHaveLength(4);
+    expect(container.querySelector('[data-ui-button-id="placement-tool-select"]')).not.toBeNull();
     expect(canvasBottomLeftSecondaryToolbar).not.toBeNull();
-    expect(canvasBottomLeftSecondaryToolbar?.classList.contains("is-offset-for-floating-tools")).toBe(true);
     expect(rotateViewButton?.getAttribute("aria-label")).toBe("旋转视角");
     expect(
       rotateViewButton?.querySelector("svg")?.getAttribute("data-workbench-icon"),
@@ -1574,10 +1569,7 @@ describe("WorkbenchApp", () => {
     });
 
     expect(workbench?.style.getPropertyValue("--left-dock-width")).toBe(`${MOBILE_LEFT_DOCK_WIDTH}px`);
-    expect(container.querySelector(".canvas-bottom-left-toolbar")).toBeNull();
-    expect(
-      container.querySelector(".canvas-bottom-left-secondary-toolbar")?.classList.contains("is-offset-for-floating-tools"),
-    ).toBe(false);
+    expect(container.querySelector('[data-ui-button-id="placement-tool-select"]')).not.toBeNull();
   });
 
   it("keeps full desktop left toolbar sizing on touch-enabled desktop devices", async () => {
@@ -1614,21 +1606,16 @@ describe("WorkbenchApp", () => {
     expect(appHost.state.workbench.leftDockWidth).toBe(512);
     expect(workbench?.style.getPropertyValue("--left-dock-width")).toBe("512px");
     expect(workbench?.style.getPropertyValue("--left-toolbar-width")).toBe("68px");
-    expect(workbench?.style.getPropertyValue("--left-toolbar-button-scale")).toBe("1");
     expect(container.querySelector(".dock-resize-handle")).not.toBeNull();
-    expect(container.querySelector(".canvas-bottom-left-toolbar")).toBeNull();
-    expect(container.querySelector(".placement-panel-group-operation.is-mobile-layout")).toBeNull();
+    expect(container.querySelector('[data-ui-button-id="placement-tool-select"]')).not.toBeNull();
     expect(container.querySelector(".placement-button-list.is-single-column")).toBeNull();
 
     act(() => {
       appHost.internalActions.toggleLeftDock();
     });
 
-    const canvasBottomLeftToolbar = container.querySelector(".canvas-bottom-left-toolbar") as HTMLDivElement | null;
-
     expect(workbench?.style.getPropertyValue("--left-dock-width")).toBe("0px");
-    expect(canvasBottomLeftToolbar).not.toBeNull();
-    expect(canvasBottomLeftToolbar?.querySelectorAll(".canvas-bottom-left-toolbar-button")).toHaveLength(4);
+    expect(container.querySelector('[data-ui-button-id="placement-tool-select"]')).not.toBeNull();
   });
 
   it("prevents middle mouse native pointerdown behavior at the outer shell", () => {
@@ -1685,7 +1672,6 @@ describe("WorkbenchApp", () => {
     ) as HTMLButtonElement | null;
 
     expect(toolbar).not.toBeNull();
-    expect(toolbar?.classList.contains("is-offset-for-floating-tools")).toBe(false);
     expect(rotateViewButton).not.toBeNull();
 
     if (!toolbar || !rotateViewButton) {

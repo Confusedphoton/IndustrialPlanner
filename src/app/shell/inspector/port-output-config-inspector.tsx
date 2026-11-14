@@ -151,7 +151,7 @@ export function PortOutputConfigInspector({
               data-is-pipe={row.portGroup.isPipe ? "true" : "false"}
               key={row.portGroup.id}
             >
-              {/* 2026-11-13：定位标识可点击，与物品区一致地打开物品选择。 */}
+              {/* 定位标识可点击，与物品区一致地打开物品选择。 */}
               <button
                 className={cm(styles, "port-output-locator-button")}
                 onClick={() => {

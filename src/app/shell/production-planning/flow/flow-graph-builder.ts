@@ -1,7 +1,6 @@
 import type {
   ProductionPlanningDisplayMode,
   ProductionPlanningIndex,
-  ProductionPlanningItemNode,
   ProductionPlanningRecipeNode,
   ProductionPlanningResult,
 } from "../production-planning-model";
@@ -12,7 +11,6 @@ import {
   resolveProductionPlanningItemIconSrc,
   resolveProductionPlanningItemName,
   resolveProductionPlanningModuleIconSrcs,
-  resolveProductionPlanningRecipeName,
 } from "../production-planning-model";
 import {
   buildProductionPlanningLedgerRows,
@@ -35,11 +33,14 @@ export interface ProductionFlowNode extends SankeyInputNode {
   readonly tone: ProductionFlowNodeTone;
   readonly title: string;
   readonly subtitle: string;
+  /** 节点自身产物（处置类为处置量）的速率，卡片上单独强调显示。 */
+  readonly rate?: string;
   readonly iconSrcs: readonly string[];
   readonly itemId?: string;
   readonly recipeId?: string;
   readonly isTransient?: boolean;
-  readonly itemNode?: ProductionPlanningItemNode;
+  /** 规划目标的产出节点，流程图中加以强调。 */
+  readonly isTarget?: boolean;
   readonly ledgerRow?: ProductionPlanningLedgerRow;
   readonly recipeNode?: ProductionPlanningRecipeNode;
 }
@@ -48,6 +49,7 @@ export interface ProductionFlowLink extends SankeyInputLink {
   readonly itemId: string;
   readonly title: string;
   readonly label: string;
+  readonly iconSrc?: string;
   readonly isDeviceMinimumConsumption: boolean;
   readonly sourceSide?: ProductionFlowLinkNodeSide;
   readonly targetSide?: ProductionFlowLinkNodeSide;
@@ -58,18 +60,12 @@ export interface ProductionFlowGraphInput {
   readonly links: ProductionFlowLink[];
 }
 
-interface BuildContext {
-  readonly index: ProductionPlanningIndex;
-  readonly translate: (key: string) => string;
-  readonly nodes: Map<string, ProductionFlowNode>;
-  readonly links: Map<string, ProductionFlowLink>;
-}
-
 interface LedgerBuildContext {
   readonly displayMode: ProductionPlanningDisplayMode;
   readonly index: ProductionPlanningIndex;
   readonly plan: ProductionPlanningResult;
   readonly translate: (key: string) => string;
+  readonly targetItemIds: ReadonlySet<string>;
   readonly nodes: Map<string, ProductionFlowNode>;
   readonly links: Map<string, ProductionFlowLink>;
 }
@@ -98,6 +94,7 @@ export function buildProductionFlowGraph(
     index,
     plan,
     translate,
+    targetItemIds: new Set(plan.roots.map((root) => root.itemId)),
     nodes: new Map(),
     links: new Map(),
   };
@@ -194,34 +191,25 @@ function addLedgerRowNode(row: ProductionPlanningLedgerRow, context: LedgerBuild
   }
 
   const isExternal = isProductionPlanningExternalSupplyRecipeId(row.recipeId);
-  // 设备最低消耗行已由 buildProductionFlowGraph 主循环跳过（continue），不再创建独立节点。
-  // 此处 isDeviceMinimumConsumption 相关分支变为死代码，保留以备将来恢复独立节点形态。
-  const isDeviceMinimumConsumption = isProductionPlanningDeviceMinimumConsumptionRecipeId(row.recipeId);
   const targetName = resolveProductionPlanningItemName(row.targetItemId, context.index, context.translate);
   const machineName = resolveLedgerRowMachineName(row, context.index, context.translate);
   const producedPerMinute = findOutputFlow(row.recipeNode, row.targetItemId);
   const consumedPerMinute = sumPorts(resolveLedgerRowConsumerPorts(row));
-  const flowPerMinute = Math.max(producedPerMinute, consumedPerMinute);
-  // 2026-07-20 订正：副标题中 {targetName} 的数值应对应该物品的产率，
-  // 而非所有输入端的总吞吐（例如精炼炉同时消耗矿石和水，但 target 是赤铜块，应显示赤铜块产率）。
-  // 处置类配方无产出时回退到 consumedPerMinute（处置速率）。
+  // 处置类配方没有产物，速率取处置量。
   const displayRate = producedPerMinute > 0 ? producedPerMinute : consumedPerMinute;
+  const deviceCount = formatProductionDeviceCount(row.recipeNode.deviceCount);
   const kind: ProductionFlowNodeKind = context.displayMode === "item" ? "item" : "recipe";
-  const title = isDeviceMinimumConsumption
-    ? context.displayMode === "item" ? targetName : context.translate("productionPlanning.deviceMinimumConsumptionNode")
-    : context.displayMode === "item" ? targetName : machineName;
-  const subtitle = isDeviceMinimumConsumption
-    ? context.displayMode === "item"
-      ? `${context.translate("productionPlanning.deviceMinimumConsumptionNode")} · ${context.translate("productionPlanning.consumed")} ${formatProductionFlow(consumedPerMinute)}/min`
-      : `${targetName} · ${context.translate("productionPlanning.consumed")} ${formatProductionFlow(consumedPerMinute)}/min`
-    : context.displayMode === "item"
-      ? `${machineName} · ${formatProductionFlow(flowPerMinute)}/min`
-      : isExternal
-        ? `${targetName} · ${formatProductionFlow(displayRate)}/min`
-        : `${targetName} · ${formatProductionDeviceCount(row.recipeNode.deviceCount)} ${context.translate(
-          row.recipeNode.module === null ? "productionPlanning.devices" : "productionPlanning.modules",
-        )} · ${formatProductionFlow(displayRate)}/min`;
-  const iconSrcs = isDeviceMinimumConsumption || context.displayMode === "item"
+  const title = context.displayMode === "item" ? targetName : machineName;
+  const subtitle = context.displayMode === "item"
+    ? isExternal
+      ? machineName
+      : context.translate("productionPlanning.flowMachineCount").replace("{machine}", machineName).replace("{count}", deviceCount)
+    : isExternal
+      ? targetName
+      : `${targetName} · ${deviceCount} ${context.translate(
+        row.recipeNode.module === null ? "productionPlanning.devices" : "productionPlanning.modules",
+      )}`;
+  const iconSrcs = context.displayMode === "item"
     ? [resolveProductionPlanningItemIconSrc(row.targetItemId, context.index)]
     : resolveLedgerRowMachineIconSrcs(row, context.index);
 
@@ -231,10 +219,12 @@ function addLedgerRowNode(row: ProductionPlanningLedgerRow, context: LedgerBuild
     tone: resolveLedgerRowTone(row),
     title,
     subtitle,
+    rate: `${formatProductionFlow(displayRate)}/min`,
     iconSrcs,
-    value: Math.max(flowPerMinute, 1),
+    value: Math.max(producedPerMinute, consumedPerMinute, 1),
     itemId: row.targetItemId,
     recipeId: row.recipeId,
+    isTarget: !isExternal && !row.isByproduct && context.targetItemIds.has(row.targetItemId),
     ledgerRow: row,
     recipeNode: row.recipeNode,
   });
@@ -493,7 +483,8 @@ function addTransientItemNode(itemId: string, value: number, context: LedgerBuil
     kind: "item",
     tone: context.plan.byproductItemIds.has(itemId) ? "byproduct" : "normal",
     title: resolveProductionPlanningItemName(itemId, context.index, context.translate),
-    subtitle: `${formatProductionFlow(value)}/min`,
+    subtitle: "",
+    rate: `${formatProductionFlow(value)}/min`,
     iconSrcs: [resolveProductionPlanningItemIconSrc(itemId, context.index)],
     value: Math.max(value, 1),
     itemId,
@@ -524,6 +515,7 @@ function addLedgerLink(
     value: nextValue,
     title: resolveProductionPlanningItemName(itemId, context.index, context.translate),
     label: `${formatProductionFlow(nextValue)}/min`,
+    iconSrc: resolveProductionPlanningItemIconSrc(itemId, context.index),
     ...options,
     isDeviceMinimumConsumption: options.isDeviceMinimumConsumption ?? false,
   });
@@ -533,368 +525,10 @@ function transientItemFlowNodeId(itemId: string): string {
   return `item:${itemId}`;
 }
 
-function _archivedVisitItemNode(
-  node: ProductionPlanningItemNode,
-  context: BuildContext,
-  ancestors: ReadonlyMap<string, string>,
-): void {
-  const itemNodeId = itemFlowNodeId(node);
-  addItemNode(node, context);
-  const nextAncestors = new Map(ancestors);
-  if (!nextAncestors.has(node.itemId)) {
-    nextAncestors.set(node.itemId, itemNodeId);
-  }
-
-  if (node.recipeNode === null) {
-    return;
-  }
-
-  const recipeNodeId = recipeFlowNodeId(node.recipeNode);
-  addRecipeNode(node.recipeNode, context);
-  addLink({
-    id: `${recipeNodeId}->${itemNodeId}:${node.itemId}`,
-    source: recipeNodeId,
-    target: itemNodeId,
-    itemId: node.itemId,
-    value: findOutputFlow(node.recipeNode, node.itemId) || node.producedPerMinute || node.demandPerMinute,
-  }, context);
-
-  for (const output of node.recipeNode.outputs) {
-    if (output.itemId === node.itemId || output.perMinute <= 0) {
-      continue;
-    }
-
-    const byproductId = `byproduct:${node.recipeNode.id}:${output.itemId}`;
-    addByproductNode(byproductId, output.itemId, output.perMinute, context);
-    addLink({
-      id: `${recipeNodeId}->${byproductId}:${output.itemId}`,
-      source: recipeNodeId,
-      target: byproductId,
-      itemId: output.itemId,
-      value: output.perMinute,
-    }, context);
-  }
-
-  for (const child of node.recipeNode.inputItems) {
-    const ancestorNodeId = child.isCycleSource ? nextAncestors.get(child.itemId) : undefined;
-    const childNodeId = ancestorNodeId ?? itemFlowNodeId(child);
-    if (ancestorNodeId === undefined) {
-      _archivedVisitItemNode(child, context, nextAncestors);
-    } else {
-      upgradeNodeTone(ancestorNodeId, "cycle", context);
-    }
-    addLink({
-      id: `${childNodeId}->${recipeNodeId}:${child.itemId}:${child.id}`,
-      source: childNodeId,
-      target: recipeNodeId,
-      itemId: child.itemId,
-      value: findInputFlow(node.recipeNode, child.itemId) || child.demandPerMinute,
-    }, context);
-  }
-}
-
-function addItemNode(node: ProductionPlanningItemNode, context: BuildContext): void {
-  const id = itemFlowNodeId(node);
-  if (context.nodes.has(id)) {
-    return;
-  }
-
-  const tone: ProductionFlowNodeTone = node.unresolvedPerMinute > 0
-    ? "unresolved"
-    : node.isCycleSource
-      ? "cycle"
-      : node.isInfiniteSource || (node.suppliedPerMinute > 0 && node.recipeNode === null)
-        ? "source"
-        : "normal";
-  const rate = Math.max(node.demandPerMinute, node.suppliedPerMinute, node.producedPerMinute, node.unresolvedPerMinute, 1);
-
-  context.nodes.set(id, {
-    id,
-    kind: "item",
-    tone,
-    title: resolveProductionPlanningItemName(node.itemId, context.index, context.translate),
-    subtitle: `${formatProductionFlow(node.demandPerMinute)}/min`,
-    iconSrcs: [resolveProductionPlanningItemIconSrc(node.itemId, context.index)],
-    value: rate,
-    itemId: node.itemId,
-    itemNode: node,
-  });
-}
-
-function upgradeNodeTone(id: string, tone: ProductionFlowNodeTone, context: BuildContext): void {
-  const node = context.nodes.get(id);
-  if (node === undefined || node.tone !== "normal") {
-    return;
-  }
-
-  context.nodes.set(id, { ...node, tone });
-}
-
-function addByproductNode(
-  id: string,
-  itemId: string,
-  perMinute: number,
-  context: BuildContext,
-): void {
-  if (context.nodes.has(id)) {
-    return;
-  }
-
-  context.nodes.set(id, {
-    id,
-    kind: "item",
-    tone: "byproduct",
-    title: resolveProductionPlanningItemName(itemId, context.index, context.translate),
-    subtitle: `${formatProductionFlow(perMinute)}/min`,
-    iconSrcs: [resolveProductionPlanningItemIconSrc(itemId, context.index)],
-    value: Math.max(perMinute, 1),
-    itemId,
-  });
-}
-
-function addRecipeNode(node: ProductionPlanningRecipeNode, context: BuildContext): void {
-  const id = recipeFlowNodeId(node);
-  if (context.nodes.has(id)) {
-    return;
-  }
-
-  const recipe = node.module === null && node.recipeId !== null
-    ? context.index.recipeById.get(node.recipeId)
-    : undefined;
-  const title = node.module?.name
-    ?? (recipe === undefined
-      ? node.recipeId ?? node.candidateId
-      : resolveProductionPlanningRecipeName(recipe, context.index, context.translate));
-  const machineId = recipe?.machineId ?? "grinder_1";
-  context.nodes.set(id, {
-    id,
-    kind: "recipe",
-    tone: "normal",
-    title,
-    subtitle: `${formatProductionDeviceCount(node.deviceCount)} ${context.translate(
-      node.module === null ? "productionPlanning.devices" : "productionPlanning.modules",
-    )} · ${formatProductionFlow(node.cyclesPerMinute)}/min`,
-    iconSrcs: node.module === null
-      ? [resolveProductionPlanningEntityIconSrc(machineId, context.index)]
-      : resolveProductionPlanningModuleIconSrcs(node.module, context.index),
-    value: Math.max(sumPorts(node.inputs), sumPorts(node.outputs), 1),
-    recipeId: node.recipeId ?? undefined,
-    recipeNode: node,
-  });
-}
-
-
-function addLink(
-  link: Pick<ProductionFlowLink, "id" | "source" | "target" | "itemId" | "value">,
-  context: BuildContext,
-): void {
-  if (context.links.has(link.id) || link.value <= 0) {
-    return;
-  }
-
-  context.links.set(link.id, {
-    ...link,
-    title: resolveProductionPlanningItemName(link.itemId, context.index, context.translate),
-    label: `${formatProductionFlow(link.value)}/min`,
-    isDeviceMinimumConsumption: false,
-  });
-}
-
-function itemFlowNodeId(node: ProductionPlanningItemNode): string {
-  return `item:${node.id}`;
-}
-
-function recipeFlowNodeId(node: ProductionPlanningRecipeNode): string {
-  return `recipe:${node.id}`;
-}
-
-function findInputFlow(node: ProductionPlanningRecipeNode, itemId: string): number {
-  return node.inputs.find((input) => input.itemId === itemId)?.perMinute ?? 0;
-}
-
 function findOutputFlow(node: ProductionPlanningRecipeNode, itemId: string): number {
   return node.outputs.find((output) => output.itemId === itemId)?.perMinute ?? 0;
 }
 
 function sumPorts(ports: readonly { readonly perMinute: number }[]): number {
   return ports.reduce((sum, port) => sum + port.perMinute, 0);
-}
-
-// --- Graph collapse for display modes ---
-
-/**
- * Item mode: remove recipe nodes and connect items directly.
- * For each recipe R with inputs {A,B} and outputs {X,Y}:
- *   Create edges A→X, A→Y, B→X, B→Y.
- * Flow rate on each new edge = input flow rate for that item.
- * Edge label includes the recipe name.
- */
-function _archivedCollapseRecipeNodes(input: ProductionFlowGraphInput): ProductionFlowGraphInput {
-  const nodeById = new Map(input.nodes.map((node) => [node.id, node]));
-  const nodes = new Map(input.nodes.filter((node) => node.kind === "item").map((node) => [node.id, node]));
-  const links: ProductionFlowLink[] = [];
-
-  // group links by recipe node
-  const recipeInputs = new Map<string, ProductionFlowLink[]>();  // recipeId → incoming links
-  const recipeOutputs = new Map<string, ProductionFlowLink[]>(); // recipeId → outgoing links
-
-  for (const link of input.links) {
-    const target = nodeById.get(link.target);
-    if (target !== undefined && target.kind === "recipe") {
-      const list = recipeInputs.get(link.target) ?? [];
-      list.push(link);
-      recipeInputs.set(link.target, list);
-    } else {
-      // Non-recipe target — could be a source node directly connected to recipe
-      // In our graph, edges always go item→recipe or recipe→item, so this shouldn't happen
-    }
-
-    const source = nodeById.get(link.source);
-    if (source !== undefined && source.kind === "recipe") {
-      const list = recipeOutputs.get(link.source) ?? [];
-      list.push(link);
-      recipeOutputs.set(link.source, list);
-    }
-  }
-
-  let edgeIndex = 0;
-  for (const recipeId of new Set([...recipeInputs.keys(), ...recipeOutputs.keys()])) {
-    const srcLinks = recipeInputs.get(recipeId) ?? [];
-    const dstLinks = recipeOutputs.get(recipeId) ?? [];
-    const recipeNode = nodeById.get(recipeId);
-
-    for (const inLink of srcLinks) {
-      for (const outLink of dstLinks) {
-        const value = Math.min(inLink.value, outLink.value);
-        const label = recipeNode === undefined
-          ? `${formatProductionFlow(value)}/min`
-          : `${recipeNode.title} · ${formatProductionFlow(value)}/min`;
-        links.push({
-          id: `collapsed:${edgeIndex}`,
-          source: inLink.source,
-          target: outLink.target,
-          itemId: outLink.itemId,
-          value,
-          title: recipeNode?.title ?? outLink.title,
-          label,
-          isDeviceMinimumConsumption: false,
-        });
-        edgeIndex += 1;
-      }
-    }
-  }
-
-  return {
-    nodes: [...nodes.values()],
-    links,
-  };
-}
-
-/**
- * Device mode: remove intermediate item nodes and connect recipes directly.
- * Intermediate items = items that both consume from and produce to recipes.
- * Source items (no incoming recipe link) and sink items (no outgoing recipe link) are kept.
- */
-function _archivedCollapseItemNodes(input: ProductionFlowGraphInput): ProductionFlowGraphInput {
-  const nodeById = new Map(input.nodes.map((node) => [node.id, node]));
-
-  // classify item nodes
-  const itemIncomingRecipe = new Set<string>();   // itemId — has recipe→item edge
-  const itemOutgoingRecipe = new Set<string>();   // itemId — has item→recipe edge
-
-  for (const link of input.links) {
-    const sourceNode = nodeById.get(link.source);
-    const targetNode = nodeById.get(link.target);
-    if (sourceNode?.kind === "recipe" && targetNode?.kind === "item") {
-      itemIncomingRecipe.add(link.target);
-    }
-    if (sourceNode?.kind === "item" && targetNode?.kind === "recipe") {
-      itemOutgoingRecipe.add(link.source);
-    }
-  }
-
-  // intermediate items = items that sit BETWEEN recipes
-  // Exclude cycle items — they form feedback loops and should be preserved in all modes
-  const collapsedItemIds = new Set<string>();
-  for (const itemId of new Set([...itemIncomingRecipe, ...itemOutgoingRecipe])) {
-    const hasRecipeInput = itemIncomingRecipe.has(itemId);
-    const hasRecipeOutput = itemOutgoingRecipe.has(itemId);
-    const itemNode = nodeById.get(itemId);
-    if (hasRecipeInput && hasRecipeOutput && itemNode?.tone !== "cycle") {
-      collapsedItemIds.add(itemId);
-    }
-  }
-
-  // Build new links: recipe → recipe through collapsed items
-  // Group by intermediate item
-  const itemToRecipeOutputs = new Map<string, ProductionFlowLink[]>(); // itemId → R→item links
-  const itemToRecipeInputs = new Map<string, ProductionFlowLink[]>();  // itemId → item→R links
-
-  for (const link of input.links) {
-    const sourceNode = nodeById.get(link.source);
-    const targetNode = nodeById.get(link.target);
-
-    if (sourceNode?.kind === "recipe" && targetNode?.kind === "item" && collapsedItemIds.has(link.target)) {
-      const list = itemToRecipeOutputs.get(link.target) ?? [];
-      list.push(link);
-      itemToRecipeOutputs.set(link.target, list);
-    }
-    if (sourceNode?.kind === "item" && targetNode?.kind === "recipe" && collapsedItemIds.has(link.source)) {
-      const list = itemToRecipeInputs.get(link.source) ?? [];
-      list.push(link);
-      itemToRecipeInputs.set(link.source, list);
-    }
-  }
-
-  const newLinks: ProductionFlowLink[] = [];
-  let edgeIndex = 0;
-
-  for (const itemId of collapsedItemIds) {
-    const inLinks = itemToRecipeOutputs.get(itemId) ?? []; // recipe→item
-    const outLinks = itemToRecipeInputs.get(itemId) ?? []; // item→recipe
-    const itemNode = nodeById.get(itemId);
-
-    for (const inLink of inLinks) {
-      for (const outLink of outLinks) {
-        const value = Math.min(inLink.value, outLink.value);
-        const label = `${itemNode?.title ?? itemId} · ${formatProductionFlow(value)}/min`;
-        newLinks.push({
-          id: `collapsed:${edgeIndex}`,
-          source: inLink.source,
-          target: outLink.target,
-          itemId: itemId,
-          value,
-          title: itemNode?.title ?? itemId,
-          label,
-          isDeviceMinimumConsumption: false,
-        });
-        edgeIndex += 1;
-      }
-    }
-  }
-
-  // Keep non-collapsed links (edges that don't involve intermediate items)
-  const keptLinks = input.links.filter((link) => {
-    const sourceNode = nodeById.get(link.source);
-    const targetNode = nodeById.get(link.target);
-    const involvesCollapsedItem = (
-      (sourceNode?.kind === "item" && collapsedItemIds.has(link.source)) ||
-      (targetNode?.kind === "item" && collapsedItemIds.has(link.target))
-    );
-    return !involvesCollapsedItem;
-  });
-
-  // Keep non-collapsed nodes (recipes + source/sink items)
-  const keptNodes = input.nodes.filter((node) => {
-    if (node.kind === "recipe") {
-      return true;
-    }
-
-    return !collapsedItemIds.has(node.id);
-  });
-
-  return {
-    nodes: keptNodes,
-    links: [...keptLinks, ...newLinks],
-  };
 }

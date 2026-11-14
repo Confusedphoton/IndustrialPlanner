@@ -23,10 +23,6 @@ import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import { OverlayStackLayer } from "@/app/shell/shared/overlay-stack";
 import { KeyboardShortcutPrompt, PlacementPaletteRow } from "@/app/shell/shared";
 import LucideChevronDown from "~icons/lucide/chevron-down";
-import {
-  getVisiblePlacementOperationButtons,
-  type PlacementOperationButtonDefinition,
-} from "@/app/shell/panels/placement-operation-buttons";
 import { createEntityIconAssetUrl, createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 import { isMobileOrTabletScreenProfile } from "@/shared/browser/screen-profile";
 import {
@@ -291,7 +287,6 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
   readonly onButtonPointerUp: (
     event: ReactPointerEvent<HTMLButtonElement>,
     button: Pick<PlacementButtonDefinition, "uiButtonId">,
-    isDeviceButton: boolean,
   ) => void;
   readonly showDeviceHotkey: boolean;
 }) {
@@ -389,7 +384,7 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
       persistSelectedPlacementVariant(appHost, craftGroupKey, definition);
     }
     setMenuAnchor(null);
-    onButtonPointerUp(event, { uiButtonId: `placement-${definition.id}` }, true);
+    onButtonPointerUp(event, { uiButtonId: `placement-${definition.id}` });
   };
 
   const handleVariantSelectionKeyDown = (
@@ -422,7 +417,7 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
         className: cm(styles, className, entityVariant === undefined ? null : "has-entity-variant"),
         "data-ui-button-id": button.uiButtonId,
         onPointerDown: onButtonPointerDown,
-        onPointerUp: event => onButtonPointerUp(event, button, true),
+        onPointerUp: event => onButtonPointerUp(event, button),
         ref: mainButtonRef,
       }}
       buttonSuffix={<>
@@ -590,7 +585,6 @@ export const PlacementPanel = observer(function PlacementPanel({
   const firstMatchedDeviceId = normalizedDeviceQuery.length === 0
     ? null
     : deviceSections[0]?.buttons[0]?.uiButtonId.replace("placement-", "") ?? null;
-  const visibleOperationButtons = getVisiblePlacementOperationButtons(appHost);
 
   const handleButtonPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
     preventTouchPointerCompatibilityMouseEvents(event);
@@ -599,18 +593,16 @@ export const PlacementPanel = observer(function PlacementPanel({
   const handleButtonPointerUp = (
     event: ReactPointerEvent<HTMLButtonElement>,
     button: Pick<PlacementButtonDefinition, "uiButtonId">,
-    isDeviceButton: boolean,
   ) => {
-    if (isDeviceButton && (event.pointerType !== "mouse" || event.button === 0)) {
-      setRecentDeviceIds(recordRecentPlacementDevice(button.uiButtonId.replace("placement-", "")));
+    const deviceId = button.uiButtonId.replace("placement-", "");
+    if (event.pointerType !== "mouse" || event.button === 0) {
+      setRecentDeviceIds(recordRecentPlacementDevice(deviceId));
       // 从面板选择设备时清除配方树带入的放置配置，避免旧配方带到新放置。
       runInAction(() => {
         appHost.mainCanvas.state.runtime.singlePlacementConfig = null;
       });
     }
-    const uiButtonId = isDeviceButton
-      ? `ui-left-dock-placement-mode-${button.uiButtonId.replace("placement-", "")}-${event.pointerType === "mouse" ? "mouse-tap" : "touch-tap"}`
-      : button.uiButtonId;
+    const uiButtonId = `ui-left-dock-placement-mode-${deviceId}-${event.pointerType === "mouse" ? "mouse-tap" : "touch-tap"}`;
 
     if (event.pointerType === "mouse") {
       appHost.gestureAdapter.handleUiButtonMouseTap({
@@ -637,49 +629,9 @@ export const PlacementPanel = observer(function PlacementPanel({
     }
   };
 
-  const renderOperationButton = (button: PlacementOperationButtonDefinition) => {
-    const buttonLabel = t(button.labelKey);
-    const hotkey = button.hotkey
-      ?? (button.hotkeyKeyId
-        ? appHost.internalActions.getKeyboardShortcutFor(button.hotkeyKeyId)
-        : null);
-    const isActive = button.activeWhen?.(appHost) ?? false;
-    const className = isActive
-      ? "placement-button placement-action-button is-active"
-      : "placement-button placement-action-button";
-
-    return (
-      <button
-        aria-label={buttonLabel}
-        aria-pressed={button.activeWhen ? isActive : undefined}
-        className={cm(styles, className)}
-        data-ui-button-id={button.uiButtonId}
-        key={button.uiButtonId}
-        onPointerDown={handleButtonPointerDown}
-        onPointerUp={(event) => {
-          handleButtonPointerUp(event, button, false);
-        }}
-        title={buttonLabel}
-        type="button"
-      >
-        <span className={cm(styles, "button-icon")} aria-hidden="true">
-          {button.icon ? <WorkbenchIcon className={cm(styles, "button-icon-image")} kind={button.icon} /> : null}
-          {button.iconSrc ? <img alt="" className={cm(styles, "button-icon-image")} src={button.iconSrc} /> : null}
-        </span>
-        {isTouchLayout ? null : <span className={cm(styles, "placement-button-label")}>{buttonLabel}</span>}
-        {!isTouchLayout && showShortcutHints && hotkey ? (
-          <span className={cm(styles, "placement-button-hotkey")}>
-            <KeyboardShortcutPrompt shortcut={hotkey} size="small" />
-          </span>
-        ) : null}
-      </button>
-    );
-  };
-
   return (
     <div className={cm(styles, "placement-panel")}>
-      {/* 触控布局的操作按钮组自身吸顶，搜索头部不再吸顶以免重叠。 */}
-      <div className={cm(styles, isTouchLayout ? "placement-panel-sticky-header is-static" : "placement-panel-sticky-header")}>
+      <div className={cm(styles, "placement-panel-sticky-header")}>
       <input
         aria-label={t("placement.search")}
         className={cm(styles, "placement-search-input")}
@@ -728,29 +680,6 @@ export const PlacementPanel = observer(function PlacementPanel({
         </nav>
       ) : null}
       </div>
-      <section
-        aria-label={isTouchLayout ? t("workbench.section.operation") : undefined}
-        aria-labelledby={isTouchLayout ? undefined : "placement-operation-section"}
-        className={cm(styles, isTouchLayout
-          ? "placement-panel-group placement-panel-group-operation is-mobile-layout"
-          : "placement-panel-group placement-panel-group-operation")}
-      >
-        {isTouchLayout ? null : (
-          <div className={cm(styles, "placement-panel-group-header")}>
-            <h3 id="placement-operation-section">{t("workbench.section.operation")}</h3>
-          </div>
-        )}
-        <div
-          className={cm(styles, isTouchLayout
-            ? "placement-operation-button-list is-mobile-icon-grid"
-            : "placement-button-list placement-operation-button-list")}
-        >
-          {visibleOperationButtons.map((button) => renderOperationButton(button))}
-        </div>
-      </section>
-
-      <div aria-hidden="true" className={cm(styles, "placement-panel-divider")} />
-
       {normalizedDeviceQuery.length === 0 ? (() => {
         const recentButtons = resolveRecentPlacementButtons(deviceSections, recentDeviceIds);
         if (recentButtons.length === 0) {
@@ -913,7 +842,7 @@ function isEditableEventTarget(target: EventTarget | null): boolean {
     || target.tagName === "SELECT";
 }
 
-// ─── 2026-11-13：最近放置的设备 ───
+// 最近放置的设备
 
 const RECENT_PLACEMENT_STORAGE_KEY = "industrial-planner-recent-placements";
 const MAX_RECENT_PLACEMENT_DEVICES = 8;

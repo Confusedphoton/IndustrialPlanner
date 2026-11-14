@@ -3574,21 +3574,23 @@
 
 .recipe-tile-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 6px;
 }
 
 .recipe-tile {
+  position: relative;
   display: grid;
-  grid-template-rows: auto auto auto;
-  justify-items: center;
-  gap: 2px;
-  min-height: 44px;
-  padding: 6px 4px 4px;
+  justify-items: start;
+  align-content: start;
+  gap: 3px;
+  min-height: 64px;
+  padding: 7px 8px 6px;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--surface-2);
   color: var(--text-0);
+  text-align: left;
   touch-action: manipulation;
 }
 
@@ -3603,14 +3605,29 @@
   box-shadow: inset 0 0 0 1px var(--accent);
 }
 
+.recipe-tile-formula {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.recipe-tile-inputs,
 .recipe-tile-outputs {
   display: inline-flex;
   gap: 2px;
 }
 
+.recipe-tile-input,
 .recipe-tile-output {
   position: relative;
   display: inline-flex;
+}
+
+.recipe-tile-input img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
 }
 
 .recipe-tile-output img {
@@ -3619,51 +3636,54 @@
   object-fit: contain;
 }
 
+.recipe-tile-input small,
 .recipe-tile-output small {
   position: absolute;
-  right: -2px;
-  bottom: -2px;
+  right: -3px;
+  bottom: -3px;
   padding: 0 3px;
   border-radius: 4px;
   background: var(--surface-4);
   color: var(--text-0);
-  font-size: 0.62rem;
+  font-size: 0.66rem;
+  font-variant-numeric: tabular-nums;
   line-height: 1.3;
+}
+
+.recipe-tile-arrow {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--text-2);
 }
 
 .recipe-tile-name {
   max-width: 100%;
   overflow: hidden;
-  font-size: 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 600;
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.recipe-tile-inputs {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 1px 4px;
-  color: var(--text-2);
-  font-size: 0.62rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.recipe-tile-input {
-  display: inline-flex;
-  align-items: center;
-}
-
-.recipe-tile-input img {
-  width: 14px;
-  height: 14px;
-  object-fit: contain;
+.recipe-tile-variant {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--accent-strong);
+  font-size: 0.74rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .recipe-tile-duration {
+  position: absolute;
+  top: 6px;
+  right: 7px;
   color: var(--text-2);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .recipe-tile-clear {

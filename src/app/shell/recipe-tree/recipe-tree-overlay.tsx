@@ -85,6 +85,7 @@ const RECIPE_TREE_SOURCE_CONFIG: ProductionPlanningSourceConfig = {
 const RECIPE_TREE_INFINITE_ITEM_IDS: ReadonlySet<string> = new Set(["item_liquid_sewage"]);
 const SEARCH_RESULT_LIMIT = 8;
 const VIEWPORT_MARGIN_PX = 8;
+const TOP_BAR_CLEARANCE_PX = 56;
 
 export const RecipeTreeOverlay = observer(function RecipeTreeOverlay({ appHost }: { appHost: AppHost }) {
   useEffect(() => hookRecipeTreeOverlayPersistence(), []);
@@ -184,7 +185,7 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
     const target = event.currentTarget;
     const pointerId = event.pointerId;
     const startX = event.clientX;
-    const startWidth = state.dockWidth;
+    const startWidth = state.dockLayoutWidth;
     target.setPointerCapture(pointerId);
     const handleMove = (moveEvent: PointerEvent) => {
       if (moveEvent.pointerId === pointerId) {
@@ -721,17 +722,15 @@ function clampRectToViewport(rect: RecipeTreeOverlayRect): RecipeTreeOverlayRect
   const viewportWidth = typeof window === "undefined" ? 1280 : window.innerWidth;
   const viewportHeight = typeof window === "undefined" ? 800 : window.innerHeight;
   const width = Math.min(Math.max(RECIPE_TREE_MIN_WIDTH, rect.width), viewportWidth - VIEWPORT_MARGIN_PX * 2);
-  const height = Math.min(Math.max(RECIPE_TREE_MIN_HEIGHT, rect.height), viewportHeight - VIEWPORT_MARGIN_PX * 2);
+  const height = Math.min(Math.max(RECIPE_TREE_MIN_HEIGHT, rect.height), viewportHeight - TOP_BAR_CLEARANCE_PX - VIEWPORT_MARGIN_PX);
   return {
     width,
     height,
     x: Math.max(VIEWPORT_MARGIN_PX, Math.min(rect.x, viewportWidth - width - VIEWPORT_MARGIN_PX)),
-    // 整个卡片保持在视口内；矮屏下高度已被收窄，再把顶边上移。
-    y: Math.max(VIEWPORT_MARGIN_PX, Math.min(rect.y, viewportHeight - height - VIEWPORT_MARGIN_PX)),
+    // 整个卡片保持在顶栏下方的视口内，不遮挡仿真控制；矮屏下高度先被收窄。
+    y: Math.max(TOP_BAR_CLEARANCE_PX, Math.min(rect.y, viewportHeight - height - VIEWPORT_MARGIN_PX)),
   };
 }
-
-// ─── 2026-11-13：流程图视图 ───
 
 /** 合并全部钉住目标求解，共用的中间产物在流程图中只出现一次；下方显示合计设备与原料。 */
 const RecipeTreeGraph = observer(function RecipeTreeGraph({
@@ -773,10 +772,10 @@ const RecipeTreeGraph = observer(function RecipeTreeGraph({
         <ProductionFlowGraph
           displayMode="item"
           fitToView
-          minFitScale={0.8}
           index={index}
           invertWheelZoom={appHost.internalState.settings.invertWheelZoom}
           key={pinsSignature}
+          nodeDrag="pan"
           onNodeActivate={(node, anchor) => openActionMenu({
             itemId: node.itemId ?? null,
             recipeId: node.recipeId ?? node.recipeNode?.recipeId ?? null,
@@ -790,8 +789,6 @@ const RecipeTreeGraph = observer(function RecipeTreeGraph({
     </div>
   );
 });
-
-// ─── 2026-11-13：节点快捷操作菜单 ───
 
 function RecipeActionMenu({
   appHost,

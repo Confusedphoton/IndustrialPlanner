@@ -22,8 +22,10 @@ import { createBlueprintDocument } from "@/domain/document/blueprint-document";
 import {
   DEFAULT_HELP_DIALOG_TAB_ID,
   DEFAULT_MODULE_BALANCING_CANVAS_ID,
+  DEFAULT_LEFT_DOCK_WIDTH,
   DEFAULT_MODULE_BALANCING_STAGE_ID,
   DEFAULT_RIGHT_DOCK_TAB_ID,
+  DEFAULT_RIGHT_DOCK_WIDTH,
   DEFAULT_TIMELINE_BOTTOM_DOCK_HEIGHT,
   DEFAULT_TOOLBOX_BOTTOM_DOCK_HEIGHT,
   DEFAULT_TOOLBOX_DIALOG_TAB_ID,
@@ -191,7 +193,7 @@ function createWorkbenchStorageSnapshot(options: {
     leftDockOpen: options.leftDockOpen ?? true,
     leftDockSuppressed: false,
     rightDockOpen: options.rightDockOpen ?? false,
-    leftDockWidth: options.leftDockWidth ?? 375,
+    leftDockWidth: options.leftDockWidth ?? DEFAULT_LEFT_DOCK_WIDTH,
     topBarCollapsed: options.topBarCollapsed ?? false,
     rightDockActiveTab: options.rightDockActiveTab ?? DEFAULT_RIGHT_DOCK_TAB_ID,
     selectedPlacementVariantByCraftGroup:
@@ -600,7 +602,7 @@ describe("createAppTestHost", () => {
     expect(workspace.app?.state.screenProfile.deviceClass).toBe("desktop");
     expect(appHost.state.workbench.leftDockOpen).toBe(true);
     expect(appHost.state.workbench.rightDockOpen).toBe(false);
-    expect(appHost.state.workbench.leftDockWidth).toBe(375);
+    expect(appHost.state.workbench.leftDockWidth).toBe(DEFAULT_LEFT_DOCK_WIDTH);
     expect(appHost.internalState.workbench.dialogState.toolbox.visible).toBe(false);
     expect(appHost.internalState.workbench.dialogState.toolbox.maximized).toBe(false);
     expect(appHost.internalState.workbench.dialogState.toolbox.activeTab).toBe(DEFAULT_TOOLBOX_DIALOG_TAB_ID);
@@ -1028,7 +1030,7 @@ describe("createAppTestHost", () => {
       JSON.stringify({
         leftDockOpen: true,
         rightDockOpen: true,
-        leftDockWidth: 375,
+        leftDockWidth: DEFAULT_LEFT_DOCK_WIDTH,
         topBarCollapsed: false,
         rightDockBaseExpanded: false,
         rightDockPowerExpanded: true,
@@ -1120,17 +1122,17 @@ describe("createAppTestHost", () => {
     appHost.internalActions.toggleLeftDock();
 
     expect(appHost.state.workbench.leftDockOpen).toBe(false);
-    expect(getTestView(editorHost.workspace).state.clientRect.left).toBe(85);
+    expect(getTestView(editorHost.workspace).state.clientRect.left).toBe(460 - DEFAULT_LEFT_DOCK_WIDTH);
     expect(getTestView(editorHost.workspace).state.clientRect.top).toBe(64);
-    expect(getTestView(editorHost.workspace).state.clientRect.width).toBe(1335);
+    expect(getTestView(editorHost.workspace).state.clientRect.width).toBe(960 + DEFAULT_LEFT_DOCK_WIDTH);
     expect(getTestView(editorHost.workspace).state.clientRect.height).toBe(720);
 
     appHost.internalActions.toggleRightDock();
 
     expect(appHost.state.workbench.rightDockOpen).toBe(false);
-    expect(getTestView(editorHost.workspace).state.clientRect.left).toBe(85);
+    expect(getTestView(editorHost.workspace).state.clientRect.left).toBe(460 - DEFAULT_LEFT_DOCK_WIDTH);
     expect(getTestView(editorHost.workspace).state.clientRect.top).toBe(64);
-    expect(getTestView(editorHost.workspace).state.clientRect.width).toBe(1715);
+    expect(getTestView(editorHost.workspace).state.clientRect.width).toBe(960 + DEFAULT_LEFT_DOCK_WIDTH + DEFAULT_RIGHT_DOCK_WIDTH);
     expect(getTestView(editorHost.workspace).state.clientRect.height).toBe(720);
   });
 
@@ -1182,8 +1184,8 @@ describe("createAppTestHost", () => {
     appHost.internalActions.toggleLeftDock();
 
     expect(appHost.state.workbench.leftDockOpen).toBe(false);
-    expect(getTestView(editorHost.workspace).state.clientRect.left).toBe(-290);
-    expect(getTestView(editorHost.workspace).state.clientRect.width).toBe(1710);
+    expect(getTestView(editorHost.workspace).state.clientRect.left).toBe(85 - DEFAULT_LEFT_DOCK_WIDTH);
+    expect(getTestView(editorHost.workspace).state.clientRect.width).toBe(1335 + DEFAULT_LEFT_DOCK_WIDTH);
 
     appHost.internalActions.setActivePanel("history");
 

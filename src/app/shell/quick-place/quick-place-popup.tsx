@@ -12,6 +12,8 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { observer } from "mobx-react-lite";
+import LucideStar from "~icons/lucide/star";
+import LucideStarOff from "~icons/lucide/star-off";
 import { runInAction } from "mobx";
 
 import { canPlaceEntityDefinitionInBase } from "@/app/placement-zone-availability";
@@ -184,102 +186,6 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
     return id !== null && id !== undefined && availableEntityIds.has(id) ? id : null;
   });
 
-  /*
-  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      event.stopPropagation();
-      closeQuickPlace(appHost);
-      return;
-    }
-
-    const slotIndex = resolveQuickPlaceSlotIndexFromKey({
-      code: event.code,
-      key: event.key,
-      modifiers: {
-        alt: event.altKey,
-        ctrl: event.ctrlKey,
-        meta: event.metaKey,
-        shift: event.shiftKey,
-      },
-    });
-    if (slotIndex !== null) {
-      const deviceId = favorites[slotIndex];
-      if (deviceId !== null && deviceId !== undefined) {
-        event.preventDefault();
-        event.stopPropagation();
-        selectDevice(deviceId, {
-          source: "mouse",
-          button: 0,
-          altKey: event.altKey,
-          ctrlKey: event.ctrlKey,
-          metaKey: event.metaKey,
-          shiftKey: event.shiftKey,
-          sourceEvent: event.nativeEvent,
-        });
-        return;
-      }
-    }
-
-    if (event.target !== searchInputRef.current || event.nativeEvent.isComposing) {
-      return;
-    }
-
-    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-      if (filteredEntries.length === 0) {
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-      moveActiveResult(event.key === "ArrowDown" ? 1 : -1);
-      return;
-    }
-
-    if (event.key !== "Enter") {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    const activeEntry = activeResultId === null
-      ? filteredEntries[0]
-      : filteredEntries.find((entry) => entry.id === activeResultId) ?? filteredEntries[0];
-    if (activeEntry === undefined) {
-      return;
-    }
-
-    selectDevice(activeEntry.id, {
-      source: "mouse",
-      button: 0,
-      altKey: event.altKey,
-      ctrlKey: event.ctrlKey,
-      metaKey: event.metaKey,
-      shiftKey: event.shiftKey,
-      sourceEvent: event.nativeEvent,
-    });
-  }
-
-  function moveActiveResult(delta: -1 | 1): void {
-    setActiveResultId((currentId) => {
-      if (filteredEntries.length === 0) {
-        return null;
-      }
-
-      const currentIndex = currentId === null
-        ? -1
-        : filteredEntries.findIndex((entry) => entry.id === currentId);
-      if (currentIndex < 0) {
-        return delta > 0
-          ? filteredEntries[0]?.id ?? null
-          : filteredEntries.at(-1)?.id ?? null;
-      }
-
-      const nextIndex = clamp(currentIndex + delta, 0, filteredEntries.length - 1);
-      return filteredEntries[nextIndex]?.id ?? null;
-    });
-  }
-  */
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (appHost.gestureAdapter.handleKeyDown(event.nativeEvent)) {
       event.preventDefault();
@@ -568,7 +474,12 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
           ) : filteredEntries.map((entry) => {
             const variant = variantById.get(entry.id);
             const label = `${entry.name}${variant === undefined ? "" : ` · ${t(variant.longNameKey)}`}`;
+            const favoriteIndex = favoriteSlots.indexOf(entry.id);
+            const isFavorite = favoriteIndex >= 0;
+            const canAddFavorite = isFavorite || favoriteSlots.includes(null);
+            const favoriteToggleLabel = t(isFavorite ? "workbench.quickPlace.removeFavorite" : "workbench.quickPlace.addFavorite");
             return (
+              <div className={cm(styles, "quick-place-device-row")} key={entry.id}>
               <button
                 aria-label={label}
                 aria-selected={activeResultId === entry.id}
@@ -580,7 +491,6 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
                 )}
                 draggable
                 id={`${deviceListId}-${entry.id}`}
-                key={entry.id}
                 onClick={(event) => selectDeviceFromKeyboardClick(entry.id, event)}
                 onDragEnd={handleMenuDragEnd}
                 onPointerDown={handleSelectablePointerDown}
@@ -620,6 +530,22 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
                   />
                 )}
               </button>
+              <button
+                aria-label={favoriteToggleLabel}
+                aria-pressed={isFavorite}
+                className={cm(styles, "quick-place-favorite-toggle", isFavorite && "is-favorite")}
+                disabled={!canAddFavorite}
+                onClick={() => {
+                  commitFavorites(isFavorite
+                    ? removeQuickPlaceFavoriteAtSlot(favorites, favoriteIndex)
+                    : placeQuickPlaceFavoriteAtSlot(favorites, entry.id, favoriteSlots.indexOf(null)));
+                }}
+                title={favoriteToggleLabel}
+                type="button"
+              >
+                {isFavorite ? <LucideStarOff aria-hidden="true" /> : <LucideStar aria-hidden="true" />}
+              </button>
+              </div>
             );
           })}
         </div>

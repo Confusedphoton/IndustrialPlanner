@@ -150,6 +150,48 @@
   scrollbar-width: thin;
 }
 
+.quick-place-device-row {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+}
+
+.quick-place-device-row > .quick-place-device-button {
+  flex: 1 1 auto;
+}
+
+.quick-place-favorite-toggle {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  touch-action: manipulation;
+}
+
+.quick-place-favorite-toggle:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.quick-place-favorite-toggle.is-favorite {
+  color: var(--accent-strong);
+}
+
+.quick-place-favorite-toggle:disabled {
+  opacity: 0.4;
+}
+
+.quick-place-favorite-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
 .quick-place-device-button {
   box-sizing: border-box;
   display: grid;

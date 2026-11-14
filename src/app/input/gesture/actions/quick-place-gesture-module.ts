@@ -151,15 +151,22 @@ function tryOpenQuickPlaceAt(
     return false;
   }
 
-  runInAction(() => {
-    context.canvas.state.runtime.quickPlace.visible = true;
-    context.canvas.state.runtime.quickPlace.anchor = position;
-    context.canvas.state.runtime.quickPlace.searchQuery = "";
-    context.canvas.state.runtime.quickPlace.openSource = openSource;
-    context.canvas.state.runtime.quickPlace.activeResultId = null;
-  });
-
+  openQuickPlace(context.canvas, position, openSource);
   return true;
+}
+
+export function openQuickPlace(
+  canvas: CanvasInteractionController,
+  anchor: GesturePosition,
+  openSource: "keyboard-shortcut" | "pointer",
+): void {
+  runInAction(() => {
+    canvas.state.runtime.quickPlace.visible = true;
+    canvas.state.runtime.quickPlace.anchor = anchor;
+    canvas.state.runtime.quickPlace.searchQuery = "";
+    canvas.state.runtime.quickPlace.openSource = openSource;
+    canvas.state.runtime.quickPlace.activeResultId = null;
+  });
 }
 
 function closeQuickPlace(canvas: CanvasInteractionController): void {

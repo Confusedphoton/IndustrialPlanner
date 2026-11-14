@@ -4,7 +4,7 @@ import { action, runInAction } from "mobx";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 import { BottomStatusBar } from "@/app/shell/layout/bottom-status-bar";
-import { CanvasBottomLeftToolbar } from "@/app/shell/canvas/canvas-bottom-left-toolbar";
+import { CanvasToolRail } from "@/app/shell/canvas/canvas-tool-rail";
 import { CanvasBottomLeftSecondaryToolbar } from "@/app/shell/canvas/canvas-bottom-left-secondary-toolbar";
 import { CanvasPanel } from "@/app/shell/canvas/canvas-panel";
 import { CanvasFloatingToolbar } from "@/app/shell/canvas/canvas-floating-toolbar";
@@ -76,6 +76,8 @@ import {
 } from "@/shared/dark-pipe-link";
 import { DEFAULT_RIGHT_DOCK_WIDTH } from "@/app/state/state-impl";
 import { resolveLeftDockWidthForScreenProfile } from "@/app/state/state-impl";
+import { resolveDockLayoutBudget } from "@/app/shell/layout/dock-layout-budget";
+import { RECIPE_TREE_DOCK_MIN_WIDTH } from "@/app/shell/recipe-tree/recipe-tree-state";
 import { isAppThemeId } from "@/app/theme";
 import {
   FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED,
@@ -733,9 +735,20 @@ export const WorkbenchApp = observer(function WorkbenchApp({
   const effectiveLeftDockWidth = resolveLeftDockWidthForScreenProfile(leftDockWidth, screenProfile);
   const showFloatingTopBarControls = isTouchLandscape && topBarCollapsed;
   const showBottomStatusBar = !showFloatingTopBarControls;
-  const showCanvasBottomLeftToolbar = !effectiveLeftDockOpen;
   const showMobilePortraitGate = isMobilePortraitScreenProfile(screenProfile);
   const showRightDock = useInspectorPanel && rightDockOpen;
+  const leftToolbarWidth = isCompactLeftToolbar ? 51 : 68;
+  const dockLayoutBudget = resolveDockLayoutBudget({
+    viewportWidth: screenProfile.viewportWidth,
+    leftToolbarWidth,
+    leftDockWidth: effectiveLeftDockOpen ? effectiveLeftDockWidth : 0,
+    rightDockWidth: showRightDock ? DEFAULT_RIGHT_DOCK_WIDTH : 0,
+    recipeDockWidth: recipeTreeOverlayState.dockLayoutWidth === 0 ? 0 : recipeTreeOverlayState.dockWidth,
+    recipeDockMinWidth: RECIPE_TREE_DOCK_MIN_WIDTH,
+  });
+  useEffect(() => {
+    recipeTreeOverlayState.setDockWidthLimit(dockLayoutBudget.recipeDockMaxWidth);
+  }, [dockLayoutBudget.recipeDockMaxWidth]);
   const canKeepInspectorDialogOpen = !useInspectorPanel
     && (activeTool === "select" || activeTool === "dark-pipe-link")
     && selectionCount === 1
@@ -1084,12 +1097,12 @@ export const WorkbenchApp = observer(function WorkbenchApp({
 
   const workbenchStyle = {
     ...resolveInCanvasThemeCssVariables(effectiveCanvasTheme),
-    "--left-toolbar-width": isCompactLeftToolbar ? "51px" : "68px",
-    "--left-toolbar-button-scale": isCompactLeftToolbar ? "0.75" : "1",
+    "--left-toolbar-width": `${leftToolbarWidth}px`,
     "--left-dock-width": effectiveLeftDockOpen ? `${effectiveLeftDockWidth}px` : "0px",
-    "--right-dock-width": showRightDock ? `${DEFAULT_RIGHT_DOCK_WIDTH}px` : "0px",
+    "--right-dock-width": `${dockLayoutBudget.rightDockWidth}px`,
     // 配方树停靠栏占用最右侧一列。
-    "--recipe-dock-width": `${recipeTreeOverlayState.dockLayoutWidth}px`,
+    "--recipe-dock-width": `${dockLayoutBudget.recipeDockWidth}px`,
+    "--canvas-tool-rail-width": "60px",
     "--top-bar-height": showFloatingTopBarControls ? "0px" : "48px",
     "--bottom-bar-height": showBottomStatusBar ? "28px" : "0px",
     "--toolbox-bottom-dock-height": `${bottomDockGridHeight}px`,
@@ -1111,7 +1124,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           isStandalone={pwaController.standalone}
           onFullscreenActionFailure={pwaController.openFullscreenNotice}
         />
-        <LeftToolbar appHost={appHost} />
+        <LeftToolbar appHost={appHost} compact={isCompactLeftToolbar} />
         <LeftDock appHost={appHost} hidden={!effectiveLeftDockOpen} />
         {effectiveLeftDockOpen
           && (appHost.internalState.runtime.activePanel ?? "placement") === "blueprint"
@@ -1187,14 +1200,10 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           </div>
         ) : null}
         <OverlapEntityMenu appHost={appHost} />
-        {/* 2026-11-13：选中单个设备时的就地操作卡。 */}
         <DevicePopup appHost={appHost} />
         <QuickPlacePopup appHost={appHost} />
-        <CanvasBottomLeftSecondaryToolbar
-          appHost={appHost}
-          offsetForFloatingTools={showCanvasBottomLeftToolbar}
-        />
-        {showCanvasBottomLeftToolbar ? <CanvasBottomLeftToolbar appHost={appHost} /> : null}
+        <CanvasBottomLeftSecondaryToolbar appHost={appHost} />
+        <CanvasToolRail appHost={appHost} />
         {canvasTopLeftCornerToolbar.visible && canvasTopLeftCornerToolbar.buttonIds.length > 0 ? (
           <CanvasTopLeftCornerToolbar
             canvas={appHost.mainCanvas}

@@ -57,7 +57,7 @@ type PendingPlacementEnter = {
 
 // 2026-05-19 订正：将进入参数从 state.runtime 中收回，改为手势模块私有闭包变量。
 // 触发点只写此变量 + setActiveTool，on-enter 执行业务（创建 draft / 同步 UI）。
-// ─── 2026-11-13：物流设备快捷插入 ───
+// 物流设备快捷插入
 
 const TRANSPORT_INSERT_SHORTCUTS: readonly { readonly shortcutId: ShortcutKeyId; readonly role: LogisticsRole }[] = [
   { shortcutId: SHORTCUT_KEY.INSERT_SPLITTER, role: "splitter" },

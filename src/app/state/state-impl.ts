@@ -48,9 +48,9 @@ import {
 } from "@/shared/browser/screen-profile";
 import { DEFAULT_APP_THEME_ID, resolveAppTheme } from "../theme";
 
-export const MIN_LEFT_DOCK_WIDTH = 375;
+export const MIN_LEFT_DOCK_WIDTH = 320;
 export const MAX_LEFT_DOCK_WIDTH = 600;
-export const DEFAULT_LEFT_DOCK_WIDTH = 375;
+export const DEFAULT_LEFT_DOCK_WIDTH = 320;
 export const DEFAULT_RIGHT_DOCK_WIDTH = 380;
 export const MOBILE_LEFT_DOCK_WIDTH = 180;
 

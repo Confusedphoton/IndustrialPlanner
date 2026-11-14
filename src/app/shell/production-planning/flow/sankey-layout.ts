@@ -51,6 +51,8 @@ export interface SankeyLayoutOptions<N extends SankeyInputNode> {
   readonly height: number;
   readonly nodeWidth?: number;
   readonly nodePadding?: number;
+  /** 节点在交叉轴上的最小厚度；应不小于渲染卡片的交叉轴尺寸，避免卡片相互重叠。 */
+  readonly minNodeBreadth?: number;
   readonly iterations?: number;
   readonly nodeAlign?: (node: SankeyNode<N>, columnCount: number) => number;
 }
@@ -63,8 +65,9 @@ export function createSankeyLayout<N extends SankeyInputNode, L extends SankeyIn
 ): SankeyGraph<N, L> {
   const nodeWidth = options.nodeWidth ?? 180;
   const nodePadding = options.nodePadding ?? 18;
+  const minNodeBreadth = options.minNodeBreadth ?? 28;
   const iterations = options.iterations ?? 6;
-  const nodeAlign = options.nodeAlign ?? sankeyJustify;
+  const nodeAlign = options.nodeAlign ?? sankeyAlignNearConsumers;
   const graph = createGraph(input);
 
   markFeedbackArcDirections(graph);
@@ -72,13 +75,15 @@ export function createSankeyLayout<N extends SankeyInputNode, L extends SankeyIn
   computeNodeDepths(graph.nodes);
   computeNodeHeights(graph.nodes);
   const columns = computeNodeLayers(graph.nodes, nodeAlign, options.width, nodeWidth);
-  initializeNodeBreadths(columns, options.height, nodePadding);
+  // 交叉轴至少容纳最拥挤一列的最小厚度，否则碰撞消解无法避免重叠。
+  const height = Math.max(options.height, ...columns.map((column) => column.length * (minNodeBreadth + nodePadding)));
+  initializeNodeBreadths(columns, height, nodePadding, minNodeBreadth);
 
   for (let iteration = 0; iteration < iterations; iteration += 1) {
     const alpha = Math.pow(0.99, iteration);
     const beta = Math.max(1 - alpha, (iteration + 1) / iterations);
-    relaxRightToLeft(columns, alpha, beta, options.height, nodePadding);
-    relaxLeftToRight(columns, alpha, beta, options.height, nodePadding);
+    relaxRightToLeft(columns, alpha, beta, height, nodePadding);
+    relaxLeftToRight(columns, alpha, beta, height, nodePadding);
   }
 
   computeLinkBreadths(graph.nodes);
@@ -226,19 +231,20 @@ function initializeNodeBreadths<N extends SankeyInputNode>(
   columns: SankeyNode<N>[][],
   height: number,
   nodePadding: number,
+  minNodeBreadth: number,
 ): void {
   const scaleCandidates = columns
     .filter((column) => column.length > 0)
     .map((column) => {
       const available = Math.max(1, height - (column.length - 1) * nodePadding);
-      return available / Math.max(MIN_VALUE, sum(column, (node) => node.value));
+      return resolveColumnScale(column, available, minNodeBreadth);
     });
   const scale = scaleCandidates.length === 0 ? 1 : Math.max(MIN_VALUE, Math.min(...scaleCandidates));
 
   for (const column of columns) {
     let y = 0;
     for (const node of column) {
-      const nodeHeight = Math.max(28, node.value * scale);
+      const nodeHeight = Math.max(minNodeBreadth, node.value * scale);
       node.y0 = y;
       node.y1 = y + nodeHeight;
       for (const link of node.sourceLinks) {
@@ -260,6 +266,29 @@ function initializeNodeBreadths<N extends SankeyInputNode>(
   }
 
   reorderLinks(columns.flat());
+}
+
+/** 求最大缩放，使该列节点按 max(最小厚度, 值×缩放) 排布后不超过可用长度。 */
+function resolveColumnScale<N extends SankeyInputNode>(
+  column: readonly SankeyNode<N>[],
+  available: number,
+  minNodeBreadth: number,
+): number {
+  const breadthAt = (scale: number) => sum(column, (node) => Math.max(minNodeBreadth, node.value * scale));
+  let upper = available / Math.max(MIN_VALUE, sum(column, (node) => node.value));
+  if (breadthAt(upper) <= available) {
+    return upper;
+  }
+  let lower = 0;
+  for (let step = 0; step < 32; step += 1) {
+    const middle = (lower + upper) / 2;
+    if (breadthAt(middle) <= available) {
+      lower = middle;
+    } else {
+      upper = middle;
+    }
+  }
+  return Math.max(MIN_VALUE, lower);
 }
 
 function relaxLeftToRight<N extends SankeyInputNode>(
@@ -466,8 +495,22 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-function sankeyJustify<N extends SankeyInputNode>(node: SankeyNode<N>, columnCount: number): number {
-  return node.sourceLinks.some((link) => link.direction === "forward") ? node.depth : columnCount - 1;
+/**
+ * 终产物排在最后一层；没有上游的原料排在其最早消费者的前一层，而不是全部挤在第一层，
+ * 这样首层不会过宽，原料连线也更短。
+ */
+function sankeyAlignNearConsumers<N extends SankeyInputNode>(node: SankeyNode<N>, columnCount: number): number {
+  const forwardOut = node.sourceLinks.filter((link) => link.direction === "forward");
+  if (forwardOut.length === 0) {
+    return columnCount - 1;
+  }
+  if (node.targetLinks.some((link) => link.direction === "forward")) {
+    return node.depth;
+  }
+  const consumerLayers = forwardOut.map((link) => (
+    link.target.sourceLinks.some((targetLink) => targetLink.direction === "forward") ? link.target.depth : columnCount - 1
+  ));
+  return Math.min(...consumerLayers) - 1;
 }
 
 function markFeedbackArcDirections<N extends SankeyInputNode, L extends SankeyInputLink>(

@@ -264,7 +264,7 @@ describe("production planning flow graph", () => {
 
     // 配方节点仍显示毛产出率（37.5/min = 1.25台 × 30/min每台）
     expect(recipeNode?.subtitle).toContain("1.25");
-    expect(recipeNode?.subtitle).toContain("37.5/min");
+    expect(recipeNode?.rate).toBe("37.5/min");
 
     // Sankey 布局不抛异常
     expect(() => createSankeyLayout(graph, {
@@ -518,5 +518,22 @@ describe("production planning flow graph", () => {
     if (edge !== undefined) {
       expect(edge.title.length).toBeGreaterThan(0);
     }
+  });
+
+  it("shows the target's production rate in item mode rather than its total input throughput", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const result = computeProductionPlan({
+      targets: [port("item_proc_battery_5", 30)],
+      supplies: [],
+      infiniteItemIds: makeInfiniteItemIds(index, DEFAULT_SOURCE_CONFIG),
+      recipeChoices: new Map(),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+
+    const graph = buildProductionFlowGraph(result, index, t, "item");
+    const targetNode = graph.nodes.find((node) => node.isTarget === true);
+
+    expect(targetNode?.itemId).toBe("item_proc_battery_5");
+    expect(targetNode?.rate).toBe("30/min");
   });
 });

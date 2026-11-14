@@ -374,10 +374,10 @@
   display: grid;
   grid-template-rows: 1fr auto;
   min-height: 0;
-  gap: calc(8px * var(--left-toolbar-button-scale, 1));
+  gap: 8px;
   padding:
-    calc(10px * var(--left-toolbar-button-scale, 1))
-    calc(6px * var(--left-toolbar-button-scale, 1));
+    10px
+    6px;
   border-right: 1px solid var(--line);
   overflow-x: hidden;
   overflow-y: auto;
@@ -394,11 +394,11 @@
 .toolbar-rail-group {
   display: grid;
   align-content: start;
-  gap: calc(4px * var(--left-toolbar-button-scale, 1));
+  gap: 4px;
 }
 
 .toolbar-rail-utility {
-  padding-top: calc(6px * var(--left-toolbar-button-scale, 1));
+  padding-top: 6px;
   border-top: 1px solid var(--line);
 }
 
@@ -407,16 +407,16 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: calc(5px * var(--left-toolbar-button-scale, 1));
-  min-height: calc(64px * var(--left-toolbar-button-scale, 1));
+  gap: 5px;
+  min-height: 64px;
   padding:
-    calc(8px * var(--left-toolbar-button-scale, 1))
-    calc(3px * var(--left-toolbar-button-scale, 1));
+    8px
+    3px;
   border: 1px solid var(--transparent);
   background: var(--transparent);
   color: var(--text-1);
   text-align: center;
-  border-radius: calc(8px * var(--left-toolbar-button-scale, 1));
+  border-radius: 8px;
 }
 
 .rail-button.is-active {
@@ -445,8 +445,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: calc(24px * var(--left-toolbar-button-scale, 1));
-  height: calc(24px * var(--left-toolbar-button-scale, 1));
+  width: 24px;
+  height: 24px;
 }
 
 .rail-button-short svg {
@@ -456,12 +456,26 @@
 }
 
 .rail-button-label {
-  font-size: calc(0.6875rem * var(--left-toolbar-button-scale, 1));
+  font-size: 0.6875rem;
   line-height: 1.15;
 }
 
 .rail-button-utility {
-  min-height: calc(54px * var(--left-toolbar-button-scale, 1));
+  min-height: 54px;
+}
+
+.left-toolbar.is-compact {
+  padding: 6px 4px;
+  gap: 6px;
+}
+
+.left-toolbar.is-compact .rail-button {
+  min-height: 44px;
+  padding: 0;
+}
+
+.left-toolbar.is-compact .rail-button-label {
+  display: none;
 }
 
 .toolbar-meta {

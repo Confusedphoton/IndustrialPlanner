@@ -256,8 +256,8 @@ function getFlowNode(canvas: ParentNode, title: string): HTMLDivElement {
 }
 
 function getEdgePathByLabel(canvas: ParentNode, label: string): SVGPathElement {
-  const edge = Array.from(canvas.querySelectorAll("g"))
-    .find((element) => element.textContent?.includes(label));
+  const edge = Array.from(canvas.querySelectorAll<SVGGElement>("g[data-flow-link-label]"))
+    .find((element) => element.dataset.flowLinkLabel?.includes(label));
   expect(edge).not.toBeUndefined();
 
   const path = edge!.querySelector("path[class*='production-flow-edge-path']") as SVGPathElement | null;
@@ -458,58 +458,61 @@ describe("ProductionFlowGraph touch regression", () => {
     expect(afterTop).toBeLessThan(0);
   });
 
-  it.each(["canvas", "node"])("pans the browse viewport from %s without moving nodes", (targetKind) => {
-    render({ interactionMode: "browse", initialViewport: { x: 22, y: 22, scale: 0.5 } });
+  it("pans from a card in pan mode without moving it, and a tap activates the card", () => {
+    const onNodeActivate = vi.fn();
+    render({ nodeDrag: "pan", onNodeActivate, initialViewport: { x: 22, y: 22, scale: 0.5 } });
     const canvas = getFlowCanvas(container);
     const node = getFlowNode(canvas, "熔炼");
     const surface = canvas.querySelector<HTMLDivElement>("[class*='production-flow-surface']")!;
     const nodePosition = { left: node.style.left, top: node.style.top };
 
     act(() => {
-      dispatchPointerEvent(targetKind === "node" ? node : canvas, "pointerdown", {
-        pointerId: 1, pointerType: "mouse", clientX: 200, clientY: 200, buttons: 1,
-      });
+      dispatchPointerEvent(node, "pointerdown", { pointerId: 1, pointerType: "pen", clientX: 200, clientY: 200, buttons: 1 });
     });
     act(() => {
-      dispatchPointerEvent(canvas, "pointermove", {
-        pointerId: 1, pointerType: "mouse", clientX: 320, clientY: 150, buttons: 1,
-      });
+      dispatchPointerEvent(canvas, "pointermove", { pointerId: 1, pointerType: "pen", clientX: 320, clientY: 150, buttons: 1 });
+    });
+    act(() => {
+      dispatchPointerEvent(canvas, "pointerup", { pointerId: 1, pointerType: "pen", clientX: 320, clientY: 150 });
     });
 
     expect(surface.style.transform).toBe("translate(142px, -28px) scale(0.5)");
     expect({ left: node.style.left, top: node.style.top }).toEqual(nodePosition);
-  });
+    expect(onNodeActivate).not.toHaveBeenCalled();
 
-  it.each([
-    { pointerType: "touch", button: 0 },
-    { pointerType: "pen", button: 0 },
-    { pointerType: "mouse", button: 2 },
-  ])("leaves browse gestures to the browser for $pointerType button $button", ({ pointerType, button }) => {
-    render({ interactionMode: "browse" });
-    const canvas = getFlowCanvas(container);
-    const surface = canvas.querySelector<HTMLDivElement>("[class*='production-flow-surface']")!;
-    const initialTransform = surface.style.transform;
-    const down = new Event("pointerdown", { bubbles: true, cancelable: true });
-    Object.defineProperties(down, {
-      pointerId: { value: 1 }, pointerType: { value: pointerType }, button: { value: button },
-      clientX: { value: 200 }, clientY: { value: 200 },
-    });
-    const capture = vi.spyOn(canvas, "setPointerCapture");
-
-    act(() => { getFlowNode(canvas, "熔炼").dispatchEvent(down); });
     act(() => {
-      dispatchPointerEvent(canvas, "pointermove", {
-        pointerId: 1, pointerType, button, clientX: 320, clientY: 150, buttons: 1,
-      });
+      dispatchPointerEvent(node, "pointerdown", { pointerId: 2, pointerType: "pen", clientX: 200, clientY: 200, buttons: 1 });
+    });
+    act(() => {
+      dispatchPointerEvent(canvas, "pointerup", { pointerId: 2, pointerType: "pen", clientX: 202, clientY: 201 });
     });
 
-    expect(down.defaultPrevented).toBe(false);
-    expect(capture).not.toHaveBeenCalled();
-    expect(surface.style.transform).toBe(initialTransform);
+    expect(onNodeActivate).toHaveBeenCalledTimes(1);
   });
 
-  it.each(["pointerup", "pointercancel", "lostpointercapture"])("ends browse panning on %s", (endEvent) => {
-    render({ interactionMode: "browse" });
+  it("treats pen jitter on a card as a tap instead of moving it", () => {
+    const onNodeActivate = vi.fn();
+    render({ onNodeActivate });
+    const canvas = getFlowCanvas(container);
+    const node = getFlowNode(canvas, "熔炼");
+    const nodePosition = { left: node.style.left, top: node.style.top };
+
+    act(() => {
+      dispatchPointerEvent(node, "pointerdown", { pointerId: 1, pointerType: "pen", clientX: 200, clientY: 200, buttons: 1 });
+    });
+    act(() => {
+      dispatchPointerEvent(canvas, "pointermove", { pointerId: 1, pointerType: "pen", clientX: 203, clientY: 202, buttons: 1 });
+    });
+    act(() => {
+      dispatchPointerEvent(canvas, "pointerup", { pointerId: 1, pointerType: "pen", clientX: 203, clientY: 202 });
+    });
+
+    expect({ left: node.style.left, top: node.style.top }).toEqual(nodePosition);
+    expect(onNodeActivate).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["pointerup", "pointercancel", "lostpointercapture"])("ends panning on %s", (endEvent) => {
+    render();
     const canvas = getFlowCanvas(container);
     const surface = canvas.querySelector<HTMLDivElement>("[class*='production-flow-surface']")!;
 
@@ -537,28 +540,6 @@ describe("ProductionFlowGraph touch regression", () => {
     });
 
     expect(surface.style.transform).toBe(pannedTransform);
-  });
-
-  it("keeps browse toolbar clicks and wheel events separate from panning", () => {
-    render({ interactionMode: "browse" });
-    const canvas = getFlowCanvas(container);
-    const surface = canvas.querySelector<HTMLDivElement>("[class*='production-flow-surface']")!;
-    const initialTransform = surface.style.transform;
-    act(() => {
-      dispatchPointerEvent(canvas.querySelector("button")!, "pointerdown", {
-        pointerId: 1, pointerType: "mouse", clientX: 200, clientY: 200, buttons: 1,
-      });
-      dispatchPointerEvent(canvas, "pointermove", {
-        pointerId: 1, pointerType: "mouse", clientX: 320, clientY: 150, buttons: 1,
-      });
-    });
-    const wheel = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: 120 });
-    act(() => { canvas.dispatchEvent(wheel); });
-
-    expect(wheel.defaultPrevented).toBe(false);
-    expect(surface.style.transform).toBe(initialTransform);
-    act(() => { Array.from(canvas.querySelectorAll("button")).find(button => button.textContent === "+")!.click(); });
-    expect(surface.style.transform).toBe("translate(22px, 22px) scale(1.15)");
   });
 
   it("resets dragged nodes to the initial flow layout", () => {
@@ -868,12 +849,11 @@ describe("ProductionFlowGraph touch regression", () => {
 
     const initialTransform = surface!.style.transform || "";
 
-    // 点击 "1:1" 按钮（属于 toolbar）
-    const resetBtn = canvas!.querySelector("button") as HTMLButtonElement | null;
-    expect(resetBtn).not.toBeNull();
+    const toolbarButton = canvas!.querySelector("button") as HTMLButtonElement | null;
+    expect(toolbarButton).not.toBeNull();
 
     act(() => {
-      dispatchPointerEvent(resetBtn!, "pointerdown", {
+      dispatchPointerEvent(toolbarButton!, "pointerdown", {
         pointerId: 1,
         pointerType: "mouse",
         clientX: 0,
@@ -881,11 +861,9 @@ describe("ProductionFlowGraph touch regression", () => {
         button: 0,
         buttons: 1,
       });
-      resetBtn!.click();
     });
 
-    // toolbar 点击不应改变视口（重置按钮本身就是 1:1，不影响已处于初始态的视口）
-    // 关键断言：toolbar 点击不会启动拖拽，因此后续 move 也不会平移
+    // 关键断言：按下工具栏按钮不会启动拖拽，因此后续 move 也不会平移
     act(() => {
       dispatchPointerEvent(canvas!, "pointermove", {
         pointerId: 1,

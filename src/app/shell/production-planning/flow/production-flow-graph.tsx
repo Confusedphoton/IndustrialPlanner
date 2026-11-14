@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import LucideArrowDownUp from "~icons/lucide/arrow-down-up";
+import LucideArrowRightLeft from "~icons/lucide/arrow-right-left";
 import LucideRotateCcw from "~icons/lucide/rotate-ccw";
+import LucideScan from "~icons/lucide/scan";
+import LucideZoomIn from "~icons/lucide/zoom-in";
+import LucideZoomOut from "~icons/lucide/zoom-out";
 import { resolveWheelZoomDirection } from "@/shared/browser/wheel-zoom";
 
 import type { ProductionPlanningDisplayMode, ProductionPlanningIndex, ProductionPlanningResult } from "../production-planning-model";
@@ -7,6 +12,9 @@ import { CompositeItemIcon } from "@/app/shell/shared";
 import { buildProductionFlowGraph, type ProductionFlowGraphInput, type ProductionFlowLink, type ProductionFlowNode } from "./flow-graph-builder";
 import { createSankeyLayout, updateSankeyLinkBreadths, type SankeyGraph, type SankeyLink, type SankeyNode } from "./sankey-layout";
 import styles from "../production-planning-panel.module.scss";
+
+export type ProductionFlowOrientation = "horizontal" | "vertical";
+type OrientationPreference = "auto" | ProductionFlowOrientation;
 
 interface ProductionFlowGraphProps {
   readonly displayMode: ProductionPlanningDisplayMode;
@@ -16,9 +24,11 @@ interface ProductionFlowGraphProps {
   readonly index?: ProductionPlanningIndex;
   readonly input?: ProductionFlowGraphInput;
   readonly fitToView?: boolean;
-  /** 适配视图时的最小缩放；小于该值时保持可读字号，改为平移查看。 */
-  readonly minFitScale?: number;
-  readonly interactionMode?: "edit" | "browse";
+  /**
+   * "move"：拖动卡片可重新摆放（超过阈值才开始移动）；
+   * "pan"：拖动任意位置都平移视图，卡片只响应点按，适合浏览参考图。
+   */
+  readonly nodeDrag?: "move" | "pan";
   readonly onViewportChange?: (viewport: ViewportState) => void;
   /** 节点被点按（未拖动）时回调，用于弹出节点快捷操作；锚点为节点卡片的屏幕矩形。 */
   readonly onNodeActivate?: (node: ProductionFlowNode, anchor: DOMRect) => void;
@@ -33,7 +43,7 @@ interface ViewportState {
 
 type ViewportUpdate = ViewportState | ((current: ViewportState) => ViewportState);
 
-interface NodeDragState {
+interface NodePressState {
   readonly pointerId: number;
   readonly nodeId: string;
   readonly startClientX: number;
@@ -42,14 +52,19 @@ interface NodeDragState {
   readonly startX1: number;
   readonly startY0: number;
   readonly startY1: number;
+  moving: boolean;
 }
 
 interface PanDragState {
   readonly pointerId: number;
   readonly viewportX: number;
   readonly viewportY: number;
+  readonly startClientX: number;
+  readonly startClientY: number;
   clientX: number;
   clientY: number;
+  /** 从卡片上开始的平移；抬笔时若未移动则视为点按该卡片。 */
+  readonly pressedNodeId: string | null;
 }
 
 interface PinchState {
@@ -57,19 +72,40 @@ interface PinchState {
   readonly startScale: number;
   readonly startViewportX: number;
   readonly startViewportY: number;
-  readonly midClientX: number;
-  readonly midClientY: number;
+  readonly startMidX: number;
+  readonly startMidY: number;
   secondPointerId: number;
   secondClientX: number;
   secondClientY: number;
 }
 
-const NODE_WIDTH = 190;
-const NODE_CARD_HEIGHT = 64;
-const NODE_PADDING = 22;
-const LAYOUT_HEIGHT = 620;
+/** 卡片尺寸：layer 为沿流向的厚度，cross 为垂直于流向的宽度。 */
+interface CardMetrics {
+  readonly layer: number;
+  readonly cross: number;
+  readonly layerGap: number;
+  readonly crossGap: number;
+}
+
+interface ScreenRect {
+  readonly left: number;
+  readonly top: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+const CARD_METRICS: Record<ProductionFlowOrientation, CardMetrics> = {
+  horizontal: { layer: 200, cross: 72, layerGap: 96, crossGap: 20 },
+  vertical: { layer: 72, cross: 176, layerGap: 76, crossGap: 16 },
+};
+const SURFACE_PADDING = 24;
 const MIN_SCALE = 0.15;
 const MAX_SCALE = 3.0;
+/** 低于该缩放时文字难以辨认；适配视图改为只适配交叉轴，沿流向平移查看。 */
+const MIN_READABLE_FIT_SCALE = 0.75;
+const TAP_SLOP_PX = 6;
+const ORIENTATION_HYSTERESIS = 1.15;
+const TOOLBAR_CLEARANCE = 52;
 
 export function ProductionFlowGraph({
   displayMode,
@@ -79,28 +115,23 @@ export function ProductionFlowGraph({
   index,
   input,
   fitToView = false,
-  minFitScale = MIN_SCALE,
-  interactionMode = "edit",
+  nodeDrag = "move",
   onViewportChange,
   onNodeActivate,
   t,
 }: ProductionFlowGraphProps) {
   const graphInput = useMemo(() => input ?? (plan && index ? buildProductionFlowGraph(plan, index, t, displayMode)
     : { nodes: [], links: [] }), [displayMode, index, input, plan, t]);
-  const initialLayout = useMemo(() => {
-    const width = resolveLayoutWidth(graphInput);
-    return createSankeyLayout(graphInput, {
-      width,
-      height: LAYOUT_HEIGHT,
-      nodeWidth: NODE_WIDTH,
-      nodePadding: NODE_PADDING,
-      iterations: 8,
-    });
-  }, [graphInput]);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const [orientationPreference, setOrientationPreference] = useState<OrientationPreference>("auto");
+  const [autoOrientation, setAutoOrientation] = useState<ProductionFlowOrientation>("horizontal");
+  const orientation = orientationPreference === "auto" ? autoOrientation : orientationPreference;
+  const metrics = CARD_METRICS[orientation];
+
+  const initialLayout = useMemo(() => createOrientedLayout(graphInput, metrics), [graphInput, metrics]);
   const [graph, setGraph] = useState(() => cloneSankeyGraph(initialLayout));
   const [viewport, setRawViewport] = useState<ViewportState>(() => normalizeViewportState(initialViewport));
   const viewportRef = useRef(viewport);
-  const canvasRef = useRef<HTMLDivElement>(null);
 
   const setViewport = useCallback((update: ViewportUpdate) => {
     setRawViewport((current) => {
@@ -114,29 +145,66 @@ export function ProductionFlowGraph({
 
   const fit = useCallback(() => {
     const element = canvasRef.current;
-    if (!fitToView || element === null) return;
-    if (initialLayout.nodes.length === 0) return;
-    const left = Math.min(...initialLayout.nodes.map(node => node.x0)) - 48;
-    const top = Math.min(...initialLayout.nodes.map(getNodeCardTop)) + 10;
-    const width = Math.max(...initialLayout.nodes.map(node => node.x1)) + 92 - left;
-    const height = Math.max(...initialLayout.nodes.map(node => getNodeCardTop(node) + NODE_CARD_HEIGHT)) + 122 - top;
-    const availableHeight = Math.max(1, element.clientHeight - 44);
-    const scale = Math.min(1, Math.max(minFitScale, Math.min(element.clientWidth / width, availableHeight / height)));
-    const overflows = width * scale > element.clientWidth || height * scale > availableHeight;
+    if (element === null || initialLayout.nodes.length === 0) return;
+    const rects = initialLayout.nodes.map((node) => resolveCardRect(node, orientation, metrics));
+    const sinkRects = initialLayout.nodes
+      .filter((node) => !node.sourceLinks.some((link) => link.direction === "forward"))
+      .map((node) => resolveCardRect(node, orientation, metrics));
+    const bounds = unionRects(rects);
+    const sinkBounds = unionRects(sinkRects.length > 0 ? sinkRects : rects);
+    const margin = 16;
+    const availableWidth = Math.max(1, element.clientWidth - margin * 2);
+    const availableHeight = Math.max(1, element.clientHeight - TOOLBAR_CLEARANCE - margin);
+    const fullScale = Math.min(availableWidth / bounds.width, availableHeight / bounds.height);
+    const crossScale = orientation === "vertical" ? availableWidth / bounds.width : availableHeight / bounds.height;
+    const scale = clamp(
+      Math.min(1, fullScale >= MIN_READABLE_FIT_SCALE ? fullScale : Math.max(MIN_READABLE_FIT_SCALE, crossScale)),
+      MIN_SCALE,
+      MAX_SCALE,
+    );
+    const centerX = (availableWidth - bounds.width * scale) / 2 + margin - bounds.left * scale;
+    const centerY = (availableHeight - bounds.height * scale) / 2 + TOOLBAR_CLEARANCE - bounds.top * scale;
+    const overflowsX = bounds.width * scale > availableWidth;
+    const overflowsY = bounds.height * scale > availableHeight;
+    // 溢出时让最终产物保持可见：沿流向贴住产物一端，交叉轴以产物为中心。
+    const sinkCenterX = margin + availableWidth / 2 - (sinkBounds.left + sinkBounds.width / 2) * scale;
+    const sinkCenterY = TOOLBAR_CLEARANCE + availableHeight / 2 - (sinkBounds.top + sinkBounds.height / 2) * scale;
+    const anchoredX = orientation === "horizontal"
+      ? margin + availableWidth - (sinkBounds.left + sinkBounds.width) * scale
+      : sinkCenterX;
+    const anchoredY = orientation === "vertical"
+      ? TOOLBAR_CLEARANCE + availableHeight - (sinkBounds.top + sinkBounds.height) * scale
+      : sinkCenterY;
     setViewport({
-      x: overflows ? 16 - left * scale : (element.clientWidth - width * scale) / 2 - left * scale,
-      y: overflows ? 44 - top * scale : 44 + (availableHeight - height * scale) / 2 - top * scale,
+      x: overflowsX ? clampPan(anchoredX, availableWidth, bounds.left, bounds.width, scale, margin) : centerX,
+      y: overflowsY ? clampPan(anchoredY, availableHeight, bounds.top, bounds.height, scale, TOOLBAR_CLEARANCE) : centerY,
       scale,
     });
-  }, [fitToView, initialLayout, minFitScale, setViewport]);
+  }, [initialLayout, metrics, orientation, setViewport]);
 
   useEffect(() => {
     const element = canvasRef.current;
-    if (!fitToView || element === null) return;
-    const observer = new ResizeObserver(fit);
+    if (element === null) return;
+    const resolveAutoOrientation = () => {
+      const { clientWidth: width, clientHeight: height } = element;
+      if (width === 0 || height === 0) return;
+      setAutoOrientation((current) => {
+        if (height > width * ORIENTATION_HYSTERESIS) return "vertical";
+        if (width > height * ORIENTATION_HYSTERESIS) return "horizontal";
+        return current;
+      });
+    };
+    const observer = new ResizeObserver(() => {
+      resolveAutoOrientation();
+      if (fitToView) fit();
+    });
     observer.observe(element);
-    fit();
+    resolveAutoOrientation();
     return () => observer.disconnect();
+  }, [fit, fitToView]);
+
+  useEffect(() => {
+    if (fitToView) fit();
   }, [fit, fitToView]);
 
   useEffect(() => {
@@ -144,7 +212,7 @@ export function ProductionFlowGraph({
   }, [viewport]);
 
   const interactionRef = useRef<{
-    node: NodeDragState | null;
+    node: NodePressState | null;
     pan: PanDragState | null;
     pinch: PinchState | null;
   }>({
@@ -159,11 +227,24 @@ export function ProductionFlowGraph({
 
   const resetNodeLayout = useCallback(() => {
     setGraph(cloneSankeyGraph(initialLayout));
-    // 内嵌浏览图不能拖动；重置同时恢复完整图的视野。独立编辑图仍保持原视野。
     fit();
   }, [fit, initialLayout]);
 
-  // --- wheel zoom (centered on cursor) ---
+  const zoomAroundCenter = useCallback((factor: number) => {
+    const element = canvasRef.current;
+    const centerX = (element?.clientWidth ?? 0) / 2;
+    const centerY = (element?.clientHeight ?? 0) / 2;
+    setViewport((current) => {
+      const nextScale = clamp(current.scale * factor, MIN_SCALE, MAX_SCALE);
+      const ratio = nextScale / current.scale;
+      return {
+        x: centerX - ratio * (centerX - current.x),
+        y: centerY - ratio * (centerY - current.y),
+        scale: nextScale,
+      };
+    });
+  }, [setViewport]);
+
   const handleWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
     event.preventDefault();
     const rect = event.currentTarget.getBoundingClientRect();
@@ -173,7 +254,6 @@ export function ProductionFlowGraph({
     setViewport((current) => {
       const direction = resolveWheelZoomDirection(event.deltaY, invertWheelZoom);
       if (direction === 0) return current;
-      // 原实现每个事件固定加减 0.1，小比例时跳变过大。
       const magnitude = Math.min(Math.abs(event.deltaMode === 0 ? event.deltaY : event.deltaY * 40), 120);
       const nextScale = clamp(current.scale * Math.exp(direction * magnitude * 0.0015), MIN_SCALE, MAX_SCALE);
       const ratio = nextScale / current.scale;
@@ -185,73 +265,67 @@ export function ProductionFlowGraph({
     });
   }, [invertWheelZoom, setViewport]);
 
-  // --- unified pointer down on canvas (not on a node / toolbar) ---
-  const handleCanvasPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    if (interactionMode === "browse" && event.pointerType !== "mouse") {
-      return;
-    }
-    if (event.button !== 0 && event.button !== 1) {
-      return;
-    }
-
-    const target = event.target as HTMLElement | null;
-    if (target?.closest(`.${styles["production-flow-toolbar"]}`) !== null) {
-      return;
-    }
-
-    if (interactionMode === "browse") {
-      event.preventDefault();
-    }
-
+  const startPanOrPinch = useCallback((event: React.PointerEvent<HTMLDivElement>, pressedNodeId: string | null) => {
     const interaction = interactionRef.current;
 
-    // 2026-05-19 订正：仅对首指设置 pointer capture，避免第二指抢夺 capture 导致第一指丢失事件
-    if (interaction.pan === null && interaction.pinch === null) {
-      event.currentTarget.setPointerCapture(event.pointerId);
-    }
-
-    // If we already have a pan going and a second pointer arrives, switch to pinch
     if (interaction.pan !== null && interaction.pan.pointerId !== event.pointerId) {
       const p0 = interaction.pan;
+      const rect = canvasRef.current?.getBoundingClientRect();
       const dx = event.clientX - p0.clientX;
       const dy = event.clientY - p0.clientY;
-      // 2026-05-19 订正：不设置为 null，保留 pan 以追踪第一指位置，在 move 中通过 pinch 状态抑制 pan
       interaction.pinch = {
-        startDistance: Math.sqrt(dx * dx + dy * dy),
+        startDistance: Math.hypot(dx, dy),
         startScale: viewportRef.current.scale,
         startViewportX: viewportRef.current.x,
         startViewportY: viewportRef.current.y,
-        midClientX: (event.clientX + p0.clientX) / 2,
-        midClientY: (event.clientY + p0.clientY) / 2,
+        startMidX: (event.clientX + p0.clientX) / 2 - (rect?.left ?? 0),
+        startMidY: (event.clientY + p0.clientY) / 2 - (rect?.top ?? 0),
         secondPointerId: event.pointerId,
         secondClientX: event.clientX,
         secondClientY: event.clientY,
       };
-
       return;
     }
 
-    // Start pan drag (any button — left, middle, or Alt+left)
+    canvasRef.current?.setPointerCapture(event.pointerId);
+    interaction.node = null;
+    interaction.pinch = null;
     interaction.pan = {
       pointerId: event.pointerId,
       viewportX: viewportRef.current.x,
       viewportY: viewportRef.current.y,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
       clientX: event.clientX,
       clientY: event.clientY,
+      pressedNodeId,
     };
-    interaction.pinch = null;
-  }, [interactionMode]);
+  }, []);
 
-  // --- node drag start ---
+  const handleCanvasPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0 && event.button !== 1) {
+      return;
+    }
+    const target = event.target as HTMLElement | null;
+    if (target?.closest(`.${styles["production-flow-toolbar"]}`) !== null) {
+      return;
+    }
+    startPanOrPinch(event, null);
+  }, [startPanOrPinch]);
+
   const handleNodePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>, node: SankeyNode<ProductionFlowNode>) => {
     if (event.button !== 0) {
       return;
     }
-
     event.stopPropagation();
-    event.currentTarget.setPointerCapture(event.pointerId);
 
     const interaction = interactionRef.current;
+    if (nodeDrag === "pan" || interaction.pan !== null) {
+      startPanOrPinch(event, node.id);
+      return;
+    }
+
+    event.currentTarget.setPointerCapture(event.pointerId);
     interaction.pan = null;
     interaction.pinch = null;
     interaction.node = {
@@ -263,234 +337,280 @@ export function ProductionFlowGraph({
       startX1: node.x1,
       startY0: node.y0,
       startY1: node.y1,
+      moving: false,
     };
-  }, []);
+  }, [nodeDrag, startPanOrPinch]);
 
-  // --- unified pointer move ---
   const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     const interaction = interactionRef.current;
 
-    // Pinch — must check before pan to suppress pan when two fingers are down
     if (interaction.pinch !== null && interaction.pan !== null) {
       const p0 = interaction.pan;
       const pinch = interaction.pinch;
-
-      // Update the moving finger's position
-      let finger1X = p0.clientX;
-      let finger1Y = p0.clientY;
-      let finger2X = pinch.secondClientX;
-      let finger2Y = pinch.secondClientY;
-
       if (event.pointerId === p0.pointerId) {
-        finger1X = event.clientX;
-        finger1Y = event.clientY;
         p0.clientX = event.clientX;
         p0.clientY = event.clientY;
       } else if (event.pointerId === pinch.secondPointerId) {
-        finger2X = event.clientX;
-        finger2Y = event.clientY;
         pinch.secondClientX = event.clientX;
         pinch.secondClientY = event.clientY;
       }
 
-      const dx = finger2X - finger1X;
-      const dy = finger2Y - finger1Y;
-      const currentDistance = Math.sqrt(dx * dx + dy * dy);
-
+      const currentDistance = Math.hypot(pinch.secondClientX - p0.clientX, pinch.secondClientY - p0.clientY);
       if (pinch.startDistance >= 1) {
-        const scaleRatio = currentDistance / pinch.startDistance;
-        const nextScale = clamp(pinch.startScale * scaleRatio, MIN_SCALE, MAX_SCALE);
-        const midX = (finger2X + finger1X) / 2;
-        const midY = (finger2Y + finger1Y) / 2;
+        const rect = canvasRef.current?.getBoundingClientRect();
+        const midX = (pinch.secondClientX + p0.clientX) / 2 - (rect?.left ?? 0);
+        const midY = (pinch.secondClientY + p0.clientY) / 2 - (rect?.top ?? 0);
+        const nextScale = clamp(pinch.startScale * currentDistance / pinch.startDistance, MIN_SCALE, MAX_SCALE);
         const ratio = nextScale / pinch.startScale;
         setViewport({
-          x: midX - ratio * (midX - pinch.startViewportX),
-          y: midY - ratio * (midY - pinch.startViewportY),
+          x: midX - ratio * (pinch.startMidX - pinch.startViewportX),
+          y: midY - ratio * (pinch.startMidY - pinch.startViewportY),
           scale: nextScale,
         });
       }
-
       return;
     }
 
-    // Pan
     if (interaction.pan !== null && interaction.pan.pointerId === event.pointerId) {
+      const pan = interaction.pan;
+      pan.clientX = event.clientX;
+      pan.clientY = event.clientY;
       setViewport({
-        x: interaction.pan.viewportX + event.clientX - interaction.pan.clientX,
-        y: interaction.pan.viewportY + event.clientY - interaction.pan.clientY,
+        x: pan.viewportX + event.clientX - pan.startClientX,
+        y: pan.viewportY + event.clientY - pan.startClientY,
         scale: viewportRef.current.scale,
       });
-
       return;
     }
 
-    // Node drag
-    if (interaction.node !== null && interaction.node.pointerId === event.pointerId) {
-      const nodeDrag = interaction.node;
-      const dx = (event.clientX - nodeDrag.startClientX) / viewportRef.current.scale;
-      const dy = (event.clientY - nodeDrag.startClientY) / viewportRef.current.scale;
+    const press = interaction.node;
+    if (press !== null && press.pointerId === event.pointerId) {
+      const screenDx = event.clientX - press.startClientX;
+      const screenDy = event.clientY - press.startClientY;
+      if (!press.moving && Math.hypot(screenDx, screenDy) < TAP_SLOP_PX) {
+        return;
+      }
+      press.moving = true;
+      const scale = viewportRef.current.scale;
+      const layerDelta = (orientation === "horizontal" ? screenDx : screenDy) / scale;
+      const crossDelta = (orientation === "horizontal" ? screenDy : screenDx) / scale;
       setGraph((current) => {
         const next: SankeyGraph<ProductionFlowNode, ProductionFlowLink> = {
           nodes: current.nodes.map((node) => {
-            if (node.id !== nodeDrag.nodeId) {
+            if (node.id !== press.nodeId) {
               return node;
             }
-            node.x0 = nodeDrag.startX0 + dx;
-            node.x1 = nodeDrag.startX1 + dx;
-            node.y0 = nodeDrag.startY0 + dy;
-            node.y1 = Math.max(node.y0 + 28, nodeDrag.startY1 + dy);
+            node.x0 = press.startX0 + layerDelta;
+            node.x1 = press.startX1 + layerDelta;
+            node.y0 = press.startY0 + crossDelta;
+            node.y1 = press.startY1 + crossDelta;
             return node;
           }),
           links: current.links,
         };
-
         return updateSankeyLinkBreadths(next);
       });
-
-      return;
     }
-  }, [setViewport]);
+  }, [orientation, setViewport]);
 
-  // --- unified pointer up ---
+  const activateNode = useCallback((nodeId: string) => {
+    if (onNodeActivate === undefined) return;
+    const element = Array.from(canvasRef.current?.querySelectorAll<HTMLElement>("[data-flow-node-id]") ?? [])
+      .find((candidate) => candidate.dataset.flowNodeId === nodeId);
+    const node = graph.nodes.find((candidate) => candidate.id === nodeId);
+    if (element !== null && element !== undefined && node !== undefined) {
+      onNodeActivate(node.source, element.getBoundingClientRect());
+    }
+  }, [graph.nodes, onNodeActivate]);
+
   const handlePointerUp = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     const interaction = interactionRef.current;
 
     if (interaction.pan?.pointerId === event.pointerId) {
-      if (interaction.pinch !== null) {
-        // 2026-05-19 订正：第一指抬起但 pinch 仍在进行，结束 pinch，清空 pan
-        interaction.pan = null;
-        interaction.pinch = null;
-      } else {
-        interaction.pan = null;
+      const pan = interaction.pan;
+      const wasPinching = interaction.pinch !== null;
+      interaction.pan = null;
+      interaction.pinch = null;
+      if (
+        !wasPinching
+        && event.type === "pointerup"
+        && pan.pressedNodeId !== null
+        && Math.hypot(event.clientX - pan.startClientX, event.clientY - pan.startClientY) < TAP_SLOP_PX
+      ) {
+        activateNode(pan.pressedNodeId);
       }
       return;
     }
 
     if (interaction.pinch?.secondPointerId === event.pointerId) {
-      // 2026-05-19 订正：第二指抬起，结束 pinch，保留 pan 继续单指拖动
       interaction.pinch = null;
       return;
     }
 
-    if (interaction.node?.pointerId === event.pointerId) {
-      const nodeDrag = interaction.node;
+    const press = interaction.node;
+    if (press?.pointerId === event.pointerId) {
       interaction.node = null;
-      // 位移小于 6px 视为点按，触发节点快捷操作。
-      if (
-        onNodeActivate !== undefined
-        && Math.hypot(event.clientX - nodeDrag.startClientX, event.clientY - nodeDrag.startClientY) < 6
-      ) {
-        const element = (event.target as HTMLElement | null)?.closest<HTMLElement>("[data-flow-node-id]");
-        const node = graph.nodes.find((candidate) => candidate.id === nodeDrag.nodeId);
-        if (element !== null && element !== undefined && node !== undefined) {
-          onNodeActivate(node.source, element.getBoundingClientRect());
-        }
+      if (!press.moving && event.type === "pointerup") {
+        activateNode(press.nodeId);
       }
     }
-  }, [graph.nodes, onNodeActivate]);
+  }, [activateNode]);
 
   if (graphInput.nodes.length === 0) {
     return <div className={styles["production-planning-empty"]}>{t("productionPlanning.noRecipes")}</div>;
   }
 
-  const bounds = getGraphBounds(graph);
-  const canvasWidth = Math.max(960, bounds.width + 44);
-  const canvasHeight = Math.max(520, bounds.height + 44);
+  const bounds = unionRects(graph.nodes.map((node) => resolveCardRect(node, orientation, metrics)));
+  const surfaceWidth = Math.max(960, bounds.left + bounds.width + SURFACE_PADDING * 2);
+  const surfaceHeight = Math.max(520, bounds.top + bounds.height + SURFACE_PADDING * 2);
+  const labelPositions = layoutEdgeLabels(graph.links, orientation, metrics);
+  const nextPreference: OrientationPreference = orientation === "vertical" ? "horizontal" : "vertical";
+  const orientationLabel = t(orientation === "vertical" ? "productionPlanning.flowLayoutHorizontal" : "productionPlanning.flowLayoutVertical");
 
   return (
     <div
       ref={canvasRef}
-      className={`${styles["production-flow-canvas"]} ${fitToView ? styles["production-flow-fit"] : ""} ${interactionMode === "browse" ? styles["production-flow-browse"] : ""}`}
-      onWheel={interactionMode === "edit" ? handleWheel : undefined}
+      className={[
+        styles["production-flow-canvas"],
+        fitToView ? styles["production-flow-fit"] : null,
+        nodeDrag === "pan" ? styles["production-flow-pan"] : null,
+        styles[`is-${orientation}`],
+      ].filter(Boolean).join(" ")}
+      data-flow-orientation={orientation}
+      onWheel={handleWheel}
       onPointerDown={handleCanvasPointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
       onLostPointerCapture={handlePointerUp}
     >
-      <div className={styles["production-flow-toolbar"]}>
-        <button type="button" onClick={() => setViewport({ x: 22, y: 22, scale: 1 })}>1:1</button>
-        <button
-          type="button"
-          aria-label={t("productionPlanning.resetLayout")}
-          title={t("productionPlanning.resetLayout")}
-          onClick={resetNodeLayout}
-        >
-          <LucideRotateCcw aria-hidden="true" />
-        </button>
-        <button type="button" onClick={() => setViewport((current) => ({ ...current, scale: clamp(current.scale / 1.15, MIN_SCALE, MAX_SCALE) }))}>-</button>
-        <button type="button" onClick={() => setViewport((current) => ({ ...current, scale: clamp(current.scale * 1.15, MIN_SCALE, MAX_SCALE) }))}>+</button>
+      <div className={styles["production-flow-toolbar"]} role="toolbar">
+        <FlowToolbarButton label={t("productionPlanning.flowFit")} onClick={fit}>
+          <LucideScan aria-hidden="true" />
+        </FlowToolbarButton>
+        <FlowToolbarButton label={t("productionPlanning.flowZoomOut")} onClick={() => zoomAroundCenter(1 / 1.2)}>
+          <LucideZoomOut aria-hidden="true" />
+        </FlowToolbarButton>
+        <FlowToolbarButton label={t("productionPlanning.flowZoomIn")} onClick={() => zoomAroundCenter(1.2)}>
+          <LucideZoomIn aria-hidden="true" />
+        </FlowToolbarButton>
+        <FlowToolbarButton label={orientationLabel} onClick={() => setOrientationPreference(nextPreference)}>
+          {orientation === "vertical" ? <LucideArrowRightLeft aria-hidden="true" /> : <LucideArrowDownUp aria-hidden="true" />}
+        </FlowToolbarButton>
+        {nodeDrag === "move" ? (
+          <FlowToolbarButton label={t("productionPlanning.resetLayout")} onClick={resetNodeLayout}>
+            <LucideRotateCcw aria-hidden="true" />
+          </FlowToolbarButton>
+        ) : null}
       </div>
       <div
         className={styles["production-flow-surface"]}
         style={{
-          width: canvasWidth,
-          height: canvasHeight,
+          width: surfaceWidth,
+          height: surfaceHeight,
           transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.scale})`,
         }}
       >
-        <svg className={styles["production-flow-edges"]} width={canvasWidth} height={canvasHeight}>
+        <svg className={styles["production-flow-edges"]} width={surfaceWidth} height={surfaceHeight}>
           {graph.links.map((link) => (
-            <FlowEdge key={link.id} link={link} t={t} />
+            <FlowEdgePath key={link.id} link={link} metrics={metrics} orientation={orientation} />
           ))}
         </svg>
         <div className={styles["production-flow-nodes"]}>
           {graph.nodes.map((node) => (
             <FlowNode
               key={node.id}
+              metrics={metrics}
               node={node}
-              displayMode={displayMode}
-              onPointerDown={interactionMode === "edit" ? handleNodePointerDown : undefined}
+              onPointerDown={handleNodePointerDown}
+              orientation={orientation}
             />
           ))}
+          {graph.links.map((link) => {
+            const position = labelPositions.get(link.id);
+            return position === undefined ? null : (
+              <FlowEdgeLabel key={link.id} link={link} orientation={orientation} position={position} t={t} />
+            );
+          })}
         </div>
       </div>
     </div>
   );
 }
 
+function FlowToolbarButton({
+  label,
+  onClick,
+  children,
+}: {
+  readonly label: string;
+  readonly onClick: () => void;
+  readonly children: React.ReactNode;
+}) {
+  return (
+    <button aria-label={label} onClick={onClick} title={label} type="button">
+      {children}
+    </button>
+  );
+}
+
 function FlowNode({
   node,
-  displayMode,
+  orientation,
+  metrics,
   onPointerDown,
 }: {
   readonly node: SankeyNode<ProductionFlowNode>;
-  readonly displayMode: ProductionPlanningDisplayMode;
-  readonly onPointerDown?: (event: React.PointerEvent<HTMLDivElement>, node: SankeyNode<ProductionFlowNode>) => void;
+  readonly orientation: ProductionFlowOrientation;
+  readonly metrics: CardMetrics;
+  readonly onPointerDown: (event: React.PointerEvent<HTMLDivElement>, node: SankeyNode<ProductionFlowNode>) => void;
 }) {
+  const source = node.source;
   const className = [
     styles["production-flow-node"],
-    styles[`is-${node.source.kind}`],
-    styles[`is-${node.source.tone}`],
-    node.source.isTransient === true ? styles["is-transient"] : null,
+    styles[`is-${source.kind}`],
+    styles[`is-${source.tone}`],
+    source.isTransient === true ? styles["is-transient"] : null,
+    source.isTarget === true ? styles["is-target"] : null,
   ].filter(Boolean).join(" ");
-  const metric = node.source.kind === "recipe" && displayMode === "device"
-    ? node.source.subtitle
-    : `${node.source.subtitle}`;
+  const rect = resolveCardRect(node, orientation, metrics);
+  const tooltip = [source.title, source.subtitle, source.rate].filter((part) => part !== undefined && part !== "").join("\n");
 
   return (
     <div
       className={className}
       style={{
-        left: node.x0 + 22,
-        top: getNodeCardTop(node) + 22,
-        width: node.x1 - node.x0,
-        height: NODE_CARD_HEIGHT,
+        left: rect.left + SURFACE_PADDING,
+        top: rect.top + SURFACE_PADDING,
+        width: rect.width,
+        height: rect.height,
       }}
-      onPointerDown={(event) => onPointerDown?.(event, node)}
+      onPointerDown={(event) => onPointerDown(event, node)}
       data-flow-node-id={node.id}
+      title={tooltip}
     >
-      <CompositeItemIcon iconSrcs={node.source.iconSrcs} size={32} />
-      <div>
-        <strong>{node.source.title}</strong>
-        <span>{metric}</span>
+      <CompositeItemIcon iconSrcs={source.iconSrcs} size={32} />
+      <div className={styles["production-flow-node-text"]}>
+        <strong>{source.title}</strong>
+        <span className={styles["production-flow-node-meta"]}>
+          {source.subtitle === "" ? null : <span className={styles["production-flow-node-subtitle"]}>{source.subtitle}</span>}
+          {source.rate === undefined ? null : <b className={styles["production-flow-node-rate"]}>{source.rate}</b>}
+        </span>
       </div>
     </div>
   );
 }
 
-function FlowEdge({ link, t }: { readonly link: SankeyLink<ProductionFlowNode, ProductionFlowLink>; readonly t: (key: string) => string }) {
-  const path = createLinkPath(link);
+function FlowEdgePath({
+  link,
+  orientation,
+  metrics,
+}: {
+  readonly link: SankeyLink<ProductionFlowNode, ProductionFlowLink>;
+  readonly orientation: ProductionFlowOrientation;
+  readonly metrics: CardMetrics;
+}) {
+  const route = createLinkRoute(link, metrics);
   const className = [
     styles["production-flow-edge"],
     styles[`is-${link.direction}`],
@@ -499,75 +619,231 @@ function FlowEdge({ link, t }: { readonly link: SankeyLink<ProductionFlowNode, P
   ].filter(Boolean).join(" ");
 
   return (
-    <g className={className}>
-      <path id={edgePathId(link.id)} d={path} className={styles["production-flow-edge-label-path"]} />
-      <path className={styles["production-flow-edge-path"]} d={path} strokeWidth={resolveVisibleLinkWidth(link)} />
-      <text>
-        <textPath href={`#${edgePathId(link.id)}`} startOffset="50%">
-          {link.original.isDeviceMinimumConsumption ? `${t("productionPlanning.minimumConsumption")} · ` : ""}{link.original.title} {link.original.label}
-        </textPath>
-      </text>
+    <g className={className} data-flow-link-label={link.original.title}>
+      <path
+        className={styles["production-flow-edge-path"]}
+        d={routeToPath(route, orientation)}
+        strokeWidth={resolveVisibleLinkWidth(link)}
+      />
     </g>
   );
 }
 
-function createLinkPath(link: SankeyLink<ProductionFlowNode, ProductionFlowLink>): string {
+function FlowEdgeLabel({
+  link,
+  orientation,
+  position,
+  t,
+}: {
+  readonly link: SankeyLink<ProductionFlowNode, ProductionFlowLink>;
+  readonly orientation: ProductionFlowOrientation;
+  readonly position: AxisPoint;
+  readonly t: (key: string) => string;
+}) {
+  const midpoint = toScreen(position, orientation);
+  const prefix = link.original.isDeviceMinimumConsumption ? `${t("productionPlanning.minimumConsumption")} · ` : "";
+
+  return (
+    <span
+      className={styles["production-flow-edge-label"]}
+      style={{ left: midpoint.x + SURFACE_PADDING, top: midpoint.y + SURFACE_PADDING }}
+      title={`${prefix}${link.original.title} ${link.original.label}`}
+    >
+      {link.original.iconSrc === undefined ? null : <img alt="" src={link.original.iconSrc} />}
+      {prefix}{link.original.label}
+    </span>
+  );
+}
+
+const EDGE_LABEL_CROSS_SPACING: Record<ProductionFlowOrientation, number> = { horizontal: 22, vertical: 74 };
+
+/**
+ * 前向连线的标签放在目标卡片前的层间空隙里，同一目标的多条入线沿交叉轴并排，互不重叠；
+ * 回流连线标签放在绕行段上。层间距不足以容纳标签的连线不显示标签。
+ */
+function layoutEdgeLabels(
+  links: readonly SankeyLink<ProductionFlowNode, ProductionFlowLink>[],
+  orientation: ProductionFlowOrientation,
+  metrics: CardMetrics,
+): Map<string, AxisPoint> {
+  const positions = new Map<string, AxisPoint>();
+  const forwardByTarget = new Map<string, { readonly link: SankeyLink<ProductionFlowNode, ProductionFlowLink>; readonly route: LinkRoute }[]>();
+  for (const link of links) {
+    const route = createLinkRoute(link, metrics);
+    if (route.kind === "loop") {
+      positions.set(link.id, route.midpoint);
+      continue;
+    }
+    if (route.end.layer - route.start.layer < metrics.layerGap * 0.6) {
+      continue;
+    }
+    const group = forwardByTarget.get(link.target.id) ?? [];
+    group.push({ link, route });
+    forwardByTarget.set(link.target.id, group);
+  }
+
+  const spacing = EDGE_LABEL_CROSS_SPACING[orientation];
+  for (const group of forwardByTarget.values()) {
+    group.sort((left, right) => left.route.end.cross - right.route.end.cross);
+    const center = group.reduce((total, entry) => total + entry.route.end.cross, 0) / group.length;
+    const layer = Math.max(...group.map((entry) => entry.route.midpoint.layer));
+    group.forEach((entry, index) => {
+      positions.set(entry.link.id, { layer, cross: center + (index - (group.length - 1) / 2) * spacing });
+    });
+  }
+  return positions;
+}
+
+interface AxisPoint {
+  readonly layer: number;
+  readonly cross: number;
+}
+
+interface LinkRoute {
+  readonly kind: "forward" | "loop";
+  readonly start: AxisPoint;
+  readonly end: AxisPoint;
+  /** 三次贝塞尔段（forward）或绕行折线的控制点（loop）。 */
+  readonly segments: readonly (readonly [AxisPoint, AxisPoint, AxisPoint])[];
+  readonly midpoint: AxisPoint;
+}
+
+/** 在流向轴（layer）/交叉轴（cross）坐标中构造连线，再统一映射到屏幕坐标。 */
+function createLinkRoute(link: SankeyLink<ProductionFlowNode, ProductionFlowLink>, metrics: CardMetrics): LinkRoute {
   const sourceSide = link.original.sourceSide ?? "right";
-  const sourceX = (sourceSide === "left" ? link.source.x0 : link.source.x1) + 22;
-  const sourceY = mapLinkYToNodeCard(link.source, link.y0) + 22;
   const targetSide = link.original.targetSide ?? "left";
-  const targetX = (targetSide === "right" ? link.target.x1 : link.target.x0) + 22;
-  const targetY = mapLinkYToNodeCard(link.target, link.y1) + 22;
-  const visibleWidth = resolveVisibleLinkWidth(link);
-  const sideOffset = 48 + Math.max(8, visibleWidth);
+  const start: AxisPoint = {
+    layer: sourceSide === "left" ? link.source.x0 : link.source.x1,
+    cross: mapLinkCrossToCard(link.source, link.y0, metrics),
+  };
+  const end: AxisPoint = {
+    layer: targetSide === "right" ? link.target.x1 : link.target.x0,
+    cross: mapLinkCrossToCard(link.target, link.y1, metrics),
+  };
+  const sideOffset = 48 + Math.max(8, resolveVisibleLinkWidth(link));
 
-  if (sourceSide === "left" && targetSide === "left") {
-    const controlX = Math.min(sourceX, targetX) - sideOffset;
-    return `M ${sourceX} ${sourceY} C ${controlX} ${sourceY}, ${controlX} ${targetY}, ${targetX} ${targetY}`;
+  if (sourceSide === targetSide) {
+    const controlLayer = sourceSide === "left"
+      ? Math.min(start.layer, end.layer) - sideOffset
+      : Math.max(start.layer, end.layer) + sideOffset;
+    const c1 = { layer: controlLayer, cross: start.cross };
+    const c2 = { layer: controlLayer, cross: end.cross };
+    return {
+      kind: "loop",
+      start,
+      end,
+      segments: [[c1, c2, end]],
+      midpoint: { layer: controlLayer - (sourceSide === "left" ? -0.25 : 0.25) * sideOffset, cross: (start.cross + end.cross) / 2 },
+    };
   }
 
-  if (sourceSide === "right" && targetSide === "right") {
-    const controlX = Math.max(sourceX, targetX) + sideOffset;
-    return `M ${sourceX} ${sourceY} C ${controlX} ${sourceY}, ${controlX} ${targetY}, ${targetX} ${targetY}`;
+  if (link.direction === "forward" && sourceSide === "right") {
+    const midLayer = (start.layer + end.layer) / 2;
+    return {
+      kind: "forward",
+      start,
+      end,
+      segments: [[{ layer: midLayer, cross: start.cross }, { layer: midLayer, cross: end.cross }, end]],
+      // 标签放在目标卡片前的层间空隙里：跨多层的长连线中点可能正好落在中间层的卡片上。
+      midpoint: { layer: end.layer - Math.min(metrics.layerGap / 2, (end.layer - start.layer) / 2), cross: end.cross },
+    };
   }
 
-  if (link.direction === "forward" && sourceSide === "right" && targetSide !== "right") {
-    const midX = (sourceX + targetX) / 2;
-    return `M ${sourceX} ${sourceY} C ${midX} ${sourceY}, ${midX} ${targetY}, ${targetX} ${targetY}`;
-  }
+  // 反向（回流）连线绕到交叉轴外侧，避免穿过中间卡片。
+  const outer = Math.max(cardCrossEnd(link.source, metrics), cardCrossEnd(link.target, metrics)) + 40 + Math.max(8, resolveVisibleLinkWidth(link));
+  const sourceControl = sourceSide === "left" ? start.layer - 44 : start.layer + 44;
+  const targetControl = targetSide === "right" ? end.layer + 44 : end.layer - 44;
+  const turnStart = { layer: start.layer, cross: outer };
+  const turnEnd = { layer: end.layer, cross: outer };
+  return {
+    kind: "loop",
+    start,
+    end,
+    segments: [
+      [{ layer: sourceControl, cross: start.cross }, { layer: sourceControl, cross: outer }, turnStart],
+      [turnStart, turnEnd, turnEnd],
+      [{ layer: targetControl, cross: outer }, { layer: targetControl, cross: end.cross }, end],
+    ],
+    midpoint: { layer: (start.layer + end.layer) / 2, cross: outer },
+  };
+}
 
-  const bottom = Math.max(
-    getNodeCardTop(link.source) + NODE_CARD_HEIGHT,
-    getNodeCardTop(link.target) + NODE_CARD_HEIGHT,
-  ) + 52 + Math.max(8, visibleWidth) + 22;
-  const sourceControl = sourceSide === "left" ? sourceX - 44 : sourceX + 44;
-  const targetControl = targetSide === "right" ? targetX + 44 : targetX - 44;
-  return `M ${sourceX} ${sourceY} C ${sourceControl} ${sourceY}, ${sourceControl} ${bottom}, ${sourceX} ${bottom} L ${targetX} ${bottom} C ${targetControl} ${bottom}, ${targetControl} ${targetY}, ${targetX} ${targetY}`;
+function routeToPath(route: LinkRoute, orientation: ProductionFlowOrientation): string {
+  const point = (axis: AxisPoint) => {
+    const screen = toScreen(axis, orientation);
+    return `${screen.x + SURFACE_PADDING} ${screen.y + SURFACE_PADDING}`;
+  };
+  const commands = route.segments.map(([c1, c2, end]) => `C ${point(c1)}, ${point(c2)}, ${point(end)}`);
+  return `M ${point(route.start)} ${commands.join(" ")}`;
+}
+
+function toScreen(point: AxisPoint, orientation: ProductionFlowOrientation): { readonly x: number; readonly y: number } {
+  return orientation === "horizontal" ? { x: point.layer, y: point.cross } : { x: point.cross, y: point.layer };
+}
+
+function createOrientedLayout(
+  graphInput: ProductionFlowGraphInput,
+  metrics: CardMetrics,
+): SankeyGraph<ProductionFlowNode, ProductionFlowLink> {
+  const layerCount = estimateLayerCount(graphInput);
+  return createSankeyLayout(graphInput, {
+    width: metrics.layer + (layerCount - 1) * (metrics.layer + metrics.layerGap),
+    height: 520,
+    nodeWidth: metrics.layer,
+    nodePadding: metrics.crossGap,
+    minNodeBreadth: metrics.cross,
+    iterations: 8,
+  });
+}
+
+function resolveCardRect(node: SankeyNode<ProductionFlowNode>, orientation: ProductionFlowOrientation, metrics: CardMetrics): ScreenRect {
+  const crossStart = cardCrossStart(node, metrics);
+  return orientation === "horizontal"
+    ? { left: node.x0, top: crossStart, width: node.x1 - node.x0, height: metrics.cross }
+    : { left: crossStart, top: node.x0, width: metrics.cross, height: node.x1 - node.x0 };
+}
+
+function cardCrossStart(node: SankeyNode<ProductionFlowNode>, metrics: CardMetrics): number {
+  return node.y0 + Math.max(0, (node.y1 - node.y0 - metrics.cross) / 2);
+}
+
+function cardCrossEnd(node: SankeyNode<ProductionFlowNode>, metrics: CardMetrics): number {
+  return cardCrossStart(node, metrics) + metrics.cross;
+}
+
+function mapLinkCrossToCard(node: SankeyNode<ProductionFlowNode>, linkCross: number, metrics: CardMetrics): number {
+  const cardStart = cardCrossStart(node, metrics);
+  const virtualBreadth = Math.max(1, node.y1 - node.y0);
+  const ratio = clamp((linkCross - node.y0) / virtualBreadth, 0, 1);
+  const inset = Math.min(16, metrics.cross / 4);
+  return cardStart + inset + ratio * (metrics.cross - inset * 2);
 }
 
 function resolveVisibleLinkWidth(link: SankeyLink<ProductionFlowNode, ProductionFlowLink>): number {
   return Math.max(2, Math.min(18, link.width));
 }
 
-function getNodeCardTop(node: SankeyNode<ProductionFlowNode>): number {
-  return node.y0 + Math.max(0, (node.y1 - node.y0 - NODE_CARD_HEIGHT) / 2);
+function unionRects(rects: readonly ScreenRect[]): ScreenRect {
+  if (rects.length === 0) {
+    return { left: 0, top: 0, width: 1, height: 1 };
+  }
+  const left = Math.min(...rects.map((rect) => rect.left));
+  const top = Math.min(...rects.map((rect) => rect.top));
+  const right = Math.max(...rects.map((rect) => rect.left + rect.width));
+  const bottom = Math.max(...rects.map((rect) => rect.top + rect.height));
+  return {
+    left: left + SURFACE_PADDING,
+    top: top + SURFACE_PADDING,
+    width: Math.max(1, right - left),
+    height: Math.max(1, bottom - top),
+  };
 }
 
-function mapLinkYToNodeCard(node: SankeyNode<ProductionFlowNode>, linkY: number): number {
-  const cardTop = getNodeCardTop(node);
-  const virtualHeight = Math.max(1, node.y1 - node.y0);
-  const ratio = clamp((linkY - node.y0) / virtualHeight, 0, 1);
-  return cardTop + 12 + ratio * (NODE_CARD_HEIGHT - 24);
-}
-
-function edgePathId(id: string): string {
-  return `production-flow-edge-${id.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
-}
-
-function getGraphBounds(graph: SankeyGraph<ProductionFlowNode, ProductionFlowLink>): { readonly width: number; readonly height: number } {
-  const width = Math.max(...graph.nodes.map((node) => node.x1), 1);
-  const height = Math.max(...graph.nodes.map((node) => node.y1), 1);
-  return { width, height };
+/** 限制平移，使溢出的图不会在一侧留出大片空白。 */
+function clampPan(offset: number, available: number, start: number, extent: number, scale: number, inset: number): number {
+  const max = inset - start * scale;
+  const min = inset + available - (start + extent) * scale;
+  return clamp(offset, min, max);
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -619,12 +895,8 @@ function cloneSankeyGraph(
   return { nodes, links };
 }
 
-function resolveLayoutWidth(graphInput: ReturnType<typeof buildProductionFlowGraph>): number {
-  const layerCount = estimateLayerCount(graphInput);
-  return Math.max(760, Math.min(2400, NODE_WIDTH + (layerCount - 1) * 270));
-}
-
-function estimateLayerCount(graphInput: ReturnType<typeof buildProductionFlowGraph>): number {
+/** 最长前向路径的层数（忽略环），用于确定流向轴长度。 */
+function estimateLayerCount(graphInput: ProductionFlowGraphInput): number {
   const outgoing = new Map<string, string[]>();
   for (const node of graphInput.nodes) {
     outgoing.set(node.id, []);

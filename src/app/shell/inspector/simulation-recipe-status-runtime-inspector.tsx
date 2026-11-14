@@ -433,7 +433,7 @@ function ManualRecipeSection({
           </div>
         );
       })}
-      {/* 2026-11-13：未填写的频道直接内嵌配方磁贴，单击即写入；配方较多时磁贴网格自带筛选框。 */}
+      {/* 未填写的频道直接内嵌配方磁贴，单击即写入；配方较多时磁贴网格自带筛选框。 */}
       {unfilledChannels.length > 0 && machineRecipes.length > 0 && (() => {
         const nextChannel = unfilledChannels[0]!;
         return (

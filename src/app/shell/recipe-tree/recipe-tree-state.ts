@@ -53,6 +53,8 @@ export class RecipeTreeOverlayState {
   /** 停靠为画布右侧独立栏（占用布局宽度、可拖动左缘调整宽度），否则为浮层。 */
   public docked = false;
   public dockWidth = RECIPE_TREE_DOCK_DEFAULT_WIDTH;
+  /** 由工作台布局按画布最小宽度给出的停靠栏上限，不持久化。 */
+  public dockWidthLimit = RECIPE_TREE_DOCK_MAX_WIDTH;
   /** x 为 -1 表示尚未定位，首次显示时贴靠画布右侧。 */
   public rect: RecipeTreeOverlayRect = DEFAULT_RECT;
   public pins: RecipeTreePin[] = [];
@@ -80,7 +82,11 @@ export class RecipeTreeOverlayState {
 
   /** 停靠栏实际占用的布局宽度（未显示或未停靠时为 0）。 */
   public get dockLayoutWidth(): number {
-    return this.visible && this.docked ? this.dockWidth : 0;
+    return this.visible && this.docked ? Math.min(this.dockWidth, this.dockWidthLimit) : 0;
+  }
+
+  public setDockWidthLimit(limit: number): void {
+    this.dockWidthLimit = Math.max(RECIPE_TREE_DOCK_MIN_WIDTH, Math.round(limit));
   }
 
   public toggleDocked(): void {
@@ -91,7 +97,8 @@ export class RecipeTreeOverlayState {
   }
 
   public setDockWidth(width: number): void {
-    this.dockWidth = Math.round(Math.min(RECIPE_TREE_DOCK_MAX_WIDTH, Math.max(RECIPE_TREE_DOCK_MIN_WIDTH, width)));
+    const maxWidth = Math.min(RECIPE_TREE_DOCK_MAX_WIDTH, this.dockWidthLimit);
+    this.dockWidth = Math.round(Math.min(maxWidth, Math.max(RECIPE_TREE_DOCK_MIN_WIDTH, width)));
   }
 
   public setViewMode(viewMode: RecipeTreeViewMode): void {

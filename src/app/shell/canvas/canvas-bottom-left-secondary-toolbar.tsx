@@ -15,16 +15,10 @@ const ROTATE_VIEW_BUTTON_ID = "canvas-bottom-left-secondary-toolbar-button-rotat
 
 interface CanvasBottomLeftSecondaryToolbarProps {
   appHost: AppHost;
-  offsetForFloatingTools: boolean;
-}
-
-function joinClassNames(values: Array<string | undefined | false>): string {
-  return values.filter(Boolean).join(" ");
 }
 
 export function CanvasBottomLeftSecondaryToolbar({
   appHost,
-  offsetForFloatingTools,
 }: CanvasBottomLeftSecondaryToolbarProps) {
   const t = appHost.actions.translate;
   const label = t("action.rotateView");
@@ -117,10 +111,7 @@ export function CanvasBottomLeftSecondaryToolbar({
   return (
     <div
       aria-label={t("toolbar.canvasBottomLeftSecondary")}
-      className={cm(styles, joinClassNames([
-        "canvas-bottom-left-secondary-toolbar",
-        offsetForFloatingTools ? "is-offset-for-floating-tools" : undefined,
-      ]))}
+      className={cm(styles, "canvas-bottom-left-secondary-toolbar")}
       onAuxClick={stopUiPropagationAndDefault}
       onClick={stopUiPropagation}
       onContextMenu={stopUiPropagationAndDefault}

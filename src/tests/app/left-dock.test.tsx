@@ -11,6 +11,7 @@ import type { GestureEvent } from "@/app/input/gesture/adapter";
 import { BlueprintFolderDialog } from "@/app/shell/dialogs/blueprint-folder-dialog";
 import { BlueprintPreviewDialog } from "@/app/shell/dialogs/blueprint-preview-dialog";
 import { SaveBlueprintDialog } from "@/app/shell/dialogs/save-blueprint-dialog";
+import { CanvasToolRail } from "@/app/shell/canvas/canvas-tool-rail";
 import { LeftDock } from "@/app/shell/layout/left-dock";
 import { LeftToolbar } from "@/app/shell/layout/left-toolbar";
 import { WorkbenchApp } from "@/app/shell/workbench-app";
@@ -265,15 +266,11 @@ describe("Left dock panel switching", () => {
     }
 
     expect(visiblePanel?.getAttribute("data-panel-id")).toBe("placement");
-    expect(visiblePanel?.textContent).toContain("批量选择");
     expect(visiblePanel.textContent).toContain("暗管出口");
     expect(visiblePanel.textContent).toContain("传送带物流设备");
     expect(visiblePanel.textContent).toContain("管道物流设备");
-    expect(visiblePanel.querySelectorAll(".placement-panel-group")).toHaveLength(8);
-    expect(visiblePanel.querySelectorAll(".placement-panel-divider")).toHaveLength(7);
-    expect(visiblePanel.querySelectorAll(".placement-action-button .button-icon-image")).toHaveLength(
-      visiblePanel.querySelectorAll(".placement-action-button").length,
-    );
+    expect(visiblePanel.querySelectorAll(".placement-panel-group")).toHaveLength(7);
+    expect(visiblePanel.querySelectorAll(".placement-panel-divider")).toHaveLength(6);
     expect(visiblePanel.querySelectorAll(".placement-device-button .button-icon-image")).toHaveLength(
       visiblePanel.querySelectorAll(".placement-device-button").length,
     );
@@ -316,15 +313,8 @@ describe("Left dock panel switching", () => {
         '[data-ui-button-id="placement-storager_1"] + .placement-entity-variant-trigger',
       ),
     ).toBeNull();
-    expect(visiblePanel.querySelectorAll(".placement-action-button .placement-button-hotkey")).toHaveLength(
-      visiblePanel.querySelectorAll(".placement-action-button").length,
-    );
     expect(visiblePanel.querySelectorAll(".placement-device-button .placement-button-hotkey")).toHaveLength(0);
     expect(visiblePanel.querySelectorAll(".placement-panel-group-shortcut")).toHaveLength(7);
-    expect(visiblePanel.querySelector('[data-ui-button-id="placement-tool-select"]')?.classList.contains("is-active")).toBe(true);
-    expect(visiblePanel.querySelector('[data-ui-button-id="placement-tool-marquee"]')?.classList.contains("is-active")).toBe(false);
-    expect(visiblePanel.querySelector('img[data-key-token="Esc"]')).not.toBeNull();
-    expect(visiblePanel.querySelector('img[data-key-token="X"]')).not.toBeNull();
     expect(visiblePanel.querySelector('img[data-key-token="G"]')).not.toBeNull();
     expect(visiblePanel.querySelector('img[data-key-token="U"]')).not.toBeNull();
     expect(appHost.internalState.runtime.activePanel).toBeNull();
@@ -620,28 +610,18 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel?.querySelectorAll(".placement-panel-group-shortcut")).toHaveLength(0);
   });
 
-  it("always shows the batch select button", () => {
+  it("keeps the editing tools in the canvas tool rail", () => {
     const workspace = createWorkspace();
     const appHost = createAppTestHost(workspace);
 
-    runInAction(() => {
-      appHost.internalState.settings.gameShowHotkeys = true;
-    });
-
-
     act(() => {
-      root.render(
-        <>
-          <LeftToolbar appHost={appHost} />
-          <LeftDock appHost={appHost} />
-        </>,
-      );
+      root.render(<CanvasToolRail appHost={appHost} />);
     });
 
-    const visiblePanel = queryVisibleLeftDockPanel(container);
-
-    expect(visiblePanel?.querySelector('[data-ui-button-id="placement-tool-select"]')).not.toBeNull();
-    expect(visiblePanel?.querySelector('[data-ui-button-id="placement-tool-marquee"]')).not.toBeNull();
+    expect(container.querySelector('[data-ui-button-id="placement-tool-select"]')).not.toBeNull();
+    expect(container.querySelector('[data-ui-button-id="placement-tool-marquee"]')).not.toBeNull();
+    expect(container.querySelector('[data-ui-button-id="canvas-tool-rail-undo"]')).not.toBeNull();
+    expect(container.querySelector('[data-ui-button-id="canvas-tool-rail-redo"]')).not.toBeNull();
   });
 
   it("marks the active single-placement device button", async () => {
@@ -676,7 +656,6 @@ describe("Left dock panel switching", () => {
     expect(activeDeviceButton?.getAttribute("aria-pressed")).toBe("true");
     expect(inactiveDeviceButton?.classList.contains("is-active")).toBe(false);
     expect(inactiveDeviceButton?.hasAttribute("aria-pressed")).toBe(false);
-    expect(visiblePanel?.querySelector('[data-ui-button-id="placement-tool-select"]')?.classList.contains("is-active")).toBe(false);
   });
 
   it("emits semantic ui-button events and toggles the active placement tool", () => {
@@ -686,19 +665,13 @@ describe("Left dock panel switching", () => {
     appHost.gestureAdapter.subscribe((event) => events.push(event));
 
     act(() => {
-      root.render(
-        <>
-          <LeftToolbar appHost={appHost} />
-          <LeftDock appHost={appHost} />
-        </>,
-      );
+      root.render(<CanvasToolRail appHost={appHost} />);
     });
 
-    const visiblePanel = queryVisibleLeftDockPanel(container);
-    const selectButton = visiblePanel?.querySelector(
+    const selectButton = container.querySelector(
       '[data-ui-button-id="placement-tool-select"]',
     ) as HTMLButtonElement | null;
-    const marqueeButton = visiblePanel?.querySelector(
+    const marqueeButton = container.querySelector(
       '[data-ui-button-id="placement-tool-marquee"]',
     ) as HTMLButtonElement | null;
 
@@ -1112,18 +1085,8 @@ describe("Left dock panel switching", () => {
     });
 
     const visiblePanel = queryVisibleLeftDockPanel(container);
-    const operationGroup = visiblePanel?.querySelector(".placement-panel-group-operation") as HTMLElement | null;
-    const operationButtonList = operationGroup?.querySelector(".placement-operation-button-list") as HTMLElement | null;
 
     expect(visiblePanel?.getAttribute("data-panel-id")).toBe("placement");
-    expect(operationGroup).not.toBeNull();
-    expect(operationGroup?.querySelector(".placement-panel-group-header")).toBeNull();
-    expect(operationButtonList?.classList.contains("is-mobile-icon-grid")).toBe(true);
-    expect(operationGroup?.querySelectorAll(".placement-action-button")).toHaveLength(4);
-    expect(operationGroup?.querySelectorAll(".placement-button-label")).toHaveLength(0);
-    expect(operationGroup?.querySelectorAll(".placement-button-hotkey")).toHaveLength(0);
-    expect(operationGroup?.querySelectorAll(".placement-action-button .button-icon-image")).toHaveLength(4);
-    expect(operationGroup?.querySelector('[data-ui-button-id="placement-tool-select"]')?.getAttribute("aria-label")).toBe("选择");
     expect(visiblePanel?.querySelector(".placement-button-list")?.classList.contains("is-tile-grid")).toBe(true);
     expect(visiblePanel?.querySelectorAll(".placement-button-hotkey")).toHaveLength(0);
     expect(visiblePanel?.querySelectorAll(".placement-panel-group-shortcut")).toHaveLength(0);
@@ -1153,15 +1116,10 @@ describe("Left dock panel switching", () => {
     });
 
     const visiblePanel = queryVisibleLeftDockPanel(container);
-    const operationGroup = visiblePanel?.querySelector(".placement-panel-group-operation") as HTMLElement | null;
-    const operationButtonList = operationGroup?.querySelector(".placement-operation-button-list") as HTMLElement | null;
 
     expect(appHost.state.screenProfile.deviceClass).toBe("tablet");
     expect(appHost.state.screenProfile.hasTouch).toBe(true);
     expect(visiblePanel?.querySelector(".section-header")).toBeNull();
-    expect(operationGroup?.querySelector(".placement-panel-group-header")).toBeNull();
-    expect(operationButtonList?.classList.contains("is-mobile-icon-grid")).toBe(true);
-    expect(operationGroup?.querySelectorAll(".placement-action-button")).toHaveLength(4);
     expect(visiblePanel?.querySelector(".placement-button-list")?.classList.contains("is-tile-grid")).toBe(true);
     expect(visiblePanel?.querySelectorAll(".placement-button-hotkey")).toHaveLength(0);
     expect(visiblePanel?.querySelectorAll(".placement-panel-group-shortcut")).toHaveLength(0);

@@ -3,7 +3,7 @@
   display: grid;
   grid-template-columns:
     var(--left-toolbar-width, 68px)
-    var(--left-dock-width, 375px)
+    var(--left-dock-width, 320px)
     minmax(0, 1fr)
     var(--right-dock-width, 340px)
     var(--recipe-dock-width, 0px);

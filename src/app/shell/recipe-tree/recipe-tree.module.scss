@@ -12,7 +12,7 @@
   background: var(--surface-1);
   color: var(--text-0);
   box-shadow: 0 10px 28px var(--shadow-floating-control);
-  font-size: 12px;
+  font-size: 13px;
   overflow: hidden;
 }
 
@@ -23,8 +23,8 @@
 .recipe-tree-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 6px 6px 10px;
+  gap: 4px;
+  padding: 4px 4px 4px 10px;
   border-bottom: 1px solid var(--line);
   background: var(--surface-2);
   cursor: grab;
@@ -68,12 +68,14 @@
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 24px;
-  height: 24px;
+  width: 36px;
+  height: 36px;
   padding: 0;
   border-color: transparent;
+  border-radius: 8px;
   background: transparent;
   color: var(--text-1);
+  touch-action: manipulation;
 }
 
 .recipe-tree-icon-button:hover:not(:disabled) {
@@ -83,8 +85,8 @@
 }
 
 .recipe-tree-icon-button svg {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
 }
 
 .recipe-tree-search {
@@ -95,7 +97,8 @@
 
 .recipe-tree-search-input {
   width: 100%;
-  padding: 5px 8px;
+  min-height: 36px;
+  padding: 6px 10px;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--surface-2);
@@ -127,7 +130,8 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 4px 6px;
+  min-height: 38px;
+  padding: 4px 8px;
   border-color: transparent;
   background: transparent;
   text-align: left;
@@ -180,8 +184,8 @@
 .recipe-tree-pin-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 6px 6px 4px;
+  gap: 4px;
+  padding: 4px 4px 4px 2px;
 }
 
 .recipe-tree-pin-name {
@@ -208,8 +212,9 @@
 }
 
 .recipe-tree-rate-input {
-  width: 56px;
-  padding: 2px 4px;
+  width: 64px;
+  min-height: 32px;
+  padding: 2px 6px;
   border: 1px solid var(--line);
   border-radius: 4px;
   background: var(--surface-2);
@@ -227,8 +232,8 @@
 .recipe-tree-node {
   display: flex;
   align-items: center;
-  gap: 5px;
-  min-height: 26px;
+  gap: 6px;
+  min-height: 36px;
   padding-right: 8px;
 }
 
@@ -242,11 +247,12 @@
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 18px;
-  height: 18px;
-  margin-left: 4px;
+  width: 30px;
+  height: 30px;
+  margin-left: 2px;
   padding: 0;
   border: 0;
+  border-radius: 6px;
   background: transparent;
   color: var(--text-2);
 }
@@ -257,8 +263,8 @@
 }
 
 .recipe-tree-node-toggle svg {
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
 }
 
 .recipe-tree-node-name {
@@ -335,12 +341,13 @@
 
 .recipe-tree-recipe-select {
   max-width: 100%;
-  padding: 1px 4px;
+  min-height: 32px;
+  padding: 2px 6px;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: 6px;
   background: var(--surface-2);
   color: var(--text-1);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .recipe-tree-byproduct {
@@ -380,8 +387,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 18px;
+  width: 32px;
+  height: 32px;
   color: var(--text-2);
   cursor: nwse-resize;
   touch-action: none;
@@ -445,7 +452,7 @@
   border-radius: 8px;
   background: var(--surface-2);
   box-shadow: 0 10px 28px var(--shadow-floating-control);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .recipe-action-menu-title {
@@ -509,14 +516,24 @@
   z-index: 2;
   top: 0;
   bottom: 0;
-  left: -4px;
-  width: 8px;
+  left: 0;
+  width: 14px;
   cursor: ew-resize;
   touch-action: none;
 }
 
-.recipe-tree-dock-resize:hover,
-.recipe-tree-dock-resize:active {
+.recipe-tree-dock-resize::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  border-radius: 0 2px 2px 0;
+}
+
+.recipe-tree-dock-resize:hover::after,
+.recipe-tree-dock-resize:active::after {
   background: var(--dock-resize-hover);
 }
 

@@ -88,8 +88,10 @@ const UTILITY_TOOLBAR_ITEMS = [
 
 export const LeftToolbar = observer(function LeftToolbar({
   appHost,
+  compact = false,
 }: {
   appHost: AppHost;
+  compact?: boolean;
 }) {
   const t = appHost.actions.translate;
   const leftDockOpen = appHost.state.workbench.leftDockOpen && !appHost.internalState.workbench.leftDockSuppressed;
@@ -109,7 +111,7 @@ export const LeftToolbar = observer(function LeftToolbar({
   });
 
   return (
-    <aside className={cm(styles, "left-toolbar panel-surface")}>
+    <aside className={cm(styles, compact ? "left-toolbar panel-surface is-compact" : "left-toolbar panel-surface")}>
       <div className={cm(styles, "toolbar-rail-group")}>
         {primaryToolbarItems.map((item) => {
           const label = t(item.labelKey);
@@ -142,7 +144,7 @@ export const LeftToolbar = observer(function LeftToolbar({
         })}
       </div>
       <div className={cm(styles, "toolbar-rail-group toolbar-rail-utility")}>
-        {/* 2026-11-13：配方树浮层开关；浮层常驻画布上方，不占用左侧面板。 */}
+        {/* 配方树浮层开关；浮层常驻画布上方，不占用左侧面板。 */}
         <button
           type="button"
           aria-label={t("workbench.utility.recipeTree")}

@@ -117,11 +117,6 @@
   gap: 6px;
 }
 
-/* 窄左栏下只有指定操作按钮会收缩成无文字四宫格，并在面板收起后以悬浮工具条继续存在。 */
-.placement-operation-button-list.is-mobile-icon-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
 .blueprint-operation-button-list.is-compact-import-actions {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -356,25 +351,10 @@
 }
 
 
-.placement-operation-button-list.is-mobile-icon-grid .placement-action-button {
-  grid-template-columns: minmax(0, 1fr);
-  place-items: center;
-  aspect-ratio: 1 / 1;
-  min-height: 0;
-  padding: 0;
-  text-align: center;
-}
-
 .blueprint-operation-button-list.is-compact-import-actions .placement-action-button {
   grid-template-columns: 18px minmax(0, 1fr);
   column-gap: 3px;
   padding: 3px 4px;
-}
-
-.placement-operation-button-list.is-mobile-icon-grid .button-icon,
-.placement-operation-button-list.is-mobile-icon-grid .button-icon-image {
-  width: 28px;
-  height: 28px;
 }
 
 .placement-button .button-icon {
@@ -2354,10 +2334,6 @@
   background: var(--surface-1);
 }
 
-.placement-panel-sticky-header.is-static {
-  position: static;
-}
-
 .placement-panel-sticky-header .placement-search-input {
   margin-bottom: 0;
 }
@@ -2483,7 +2459,7 @@
   left: 3px;
 }
 
-/* 操作按钮（选择/框选/传送带/管道）在桌面改为一行四个紧凑磁贴。 */
+/* 蓝图面板的操作按钮在桌面为一行紧凑磁贴。 */
 .placement-button-list.placement-operation-button-list {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
