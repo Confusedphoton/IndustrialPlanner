@@ -263,7 +263,7 @@ describe("production planning flow graph", () => {
     expect(graph.links.some((link) => link.source === link.target)).toBe(false);
 
     // 配方节点仍显示毛产出率（37.5/min = 1.25台 × 30/min每台）
-    expect(recipeNode?.subtitle).toContain("1.25");
+    expect(recipeNode?.machineCount).toBe("×1.25");
     expect(recipeNode?.rate).toBe("37.5/min");
 
     // Sankey 布局不抛异常

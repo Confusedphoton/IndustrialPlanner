@@ -591,7 +591,7 @@ describe("ProductionFlowGraph touch regression", () => {
     expect(node!.style.top).not.toBe(initialTop);
     expect(node!.style.left).not.toBe(initialLeft);
 
-    const resetLayoutButton = canvas!.querySelector("[title='productionPlanning.resetLayout']") as HTMLButtonElement | null;
+    const resetLayoutButton = container.querySelector("[title='productionPlanning.resetLayout']") as HTMLButtonElement | null;
     expect(resetLayoutButton).not.toBeNull();
 
     act(() => {
@@ -714,7 +714,7 @@ describe("ProductionFlowGraph touch regression", () => {
     expect(surface!.style.transform).toBe("translate(128px, -42px) scale(1.5)");
   });
 
-  it("notifies the parent when the viewport changes", () => {
+  it("notifies the parent once the viewport settles", () => {
     const onViewportChange = vi.fn();
     render({ onViewportChange });
 
@@ -735,12 +735,88 @@ describe("ProductionFlowGraph touch regression", () => {
       });
     });
 
+    expect(onViewportChange).not.toHaveBeenCalled();
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+
+    expect(onViewportChange).toHaveBeenCalledTimes(1);
     const reportedViewport = onViewportChange.mock.calls.at(-1)?.[0];
-    expect(reportedViewport).toBeDefined();
-    // 原期望 x 59.8 / y 49.8 / scale 0.9（固定 -0.1）。
     expect(reportedViewport.x).toBeCloseTo(400 - Math.exp(-0.18) * 378);
     expect(reportedViewport.y).toBeCloseTo(300 - Math.exp(-0.18) * 278);
     expect(reportedViewport.scale).toBeCloseTo(Math.exp(-0.18));
+  });
+
+  it.each(["second", "first"])("continues panning without a jump after the %s pinch finger lifts", (liftedFinger) => {
+    render();
+    const canvas = getFlowCanvas(container);
+    const surface = canvas.querySelector<HTMLDivElement>("[class*='production-flow-surface']")!;
+    vi.spyOn(canvas, "getBoundingClientRect").mockReturnValue({
+      x: 300, y: 100, width: 400, height: 600, left: 300, top: 100, right: 700, bottom: 700,
+    } as DOMRect);
+    const touch = (type: string, pointerId: number, clientX: number, clientY: number) => {
+      act(() => {
+        dispatchPointerEvent(canvas, type, { pointerId, pointerType: "touch", clientX, clientY, buttons: type === "pointerup" ? 0 : 1 });
+      });
+    };
+    const readTranslate = () => {
+      const match = /translate\(([-\d.]+)px, ([-\d.]+)px\)/.exec(surface.style.transform);
+      return { x: Number(match?.[1]), y: Number(match?.[2]) };
+    };
+
+    touch("pointerdown", 1, 400, 300);
+    touch("pointerdown", 2, 500, 300);
+    touch("pointermove", 2, 600, 300);
+    const remaining = liftedFinger === "second" ? { id: 1, x: 400, y: 300 } : { id: 2, x: 600, y: 300 };
+    touch("pointerup", liftedFinger === "second" ? 2 : 1, liftedFinger === "second" ? 600 : 400, 300);
+    const afterPinch = readTranslate();
+    touch("pointermove", remaining.id, remaining.x + 1, remaining.y + 1);
+    const afterMove = readTranslate();
+
+    expect(afterMove.x - afterPinch.x).toBeCloseTo(1);
+    expect(afterMove.y - afterPinch.y).toBeCloseTo(1);
+  });
+
+  it("keeps the planned target fully visible when fitting a graph that overflows a short container", () => {
+    const sourceIds = Array.from({ length: 8 }, (_, index) => `item:source-${index}`);
+    const node = (id: string, extra: Partial<ProductionFlowNode> = {}): ProductionFlowNode => ({
+      id, kind: "item", tone: "normal", title: id, subtitle: "", iconSrcs: [PLACEHOLDER_ICON], ...extra,
+    });
+    const link = (source: string, target: string): ProductionFlowLink => ({
+      id: `${source}->${target}`, source, target, value: 10, itemId: source, title: source, label: "10/min", isDeviceMinimumConsumption: false,
+    });
+    vi.mocked(buildProductionFlowGraph).mockReturnValue({
+      nodes: [
+        ...sourceIds.map((id) => node(id)),
+        node("item:middle"),
+        node("item:target", { isTarget: true }),
+        node("item:byproduct", { tone: "byproduct" }),
+      ],
+      links: [
+        ...sourceIds.map((id) => link(id, "item:middle")),
+        link("item:middle", "item:target"),
+        link("item:source-7", "item:byproduct"),
+      ],
+    });
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(378);
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(221);
+
+    render({ fitToView: true });
+    const canvas = getFlowCanvas(container);
+    const surface = canvas.querySelector<HTMLDivElement>("[class*='production-flow-surface']")!;
+    const match = /translate\(([-\d.]+)px, ([-\d.]+)px\) scale\(([\d.]+)\)/.exec(surface.style.transform);
+    const [x, y, scale] = [Number(match?.[1]), Number(match?.[2]), Number(match?.[3])];
+    const target = getFlowNode(canvas, "item:target");
+    const left = x + Number.parseFloat(target.style.left) * scale;
+    const top = y + Number.parseFloat(target.style.top) * scale;
+    const right = left + Number.parseFloat(target.style.width) * scale;
+    const bottom = top + Number.parseFloat(target.style.height) * scale;
+
+    expect(scale).toBeGreaterThanOrEqual(0.75);
+    expect(left).toBeGreaterThanOrEqual(0);
+    expect(top).toBeGreaterThanOrEqual(0);
+    expect(right).toBeLessThanOrEqual(378);
+    expect(bottom).toBeLessThanOrEqual(221);
   });
 
   // ==================== Test 4: 双指 pinch 进入 pinch 状态 ====================
@@ -849,7 +925,7 @@ describe("ProductionFlowGraph touch regression", () => {
 
     const initialTransform = surface!.style.transform || "";
 
-    const toolbarButton = canvas!.querySelector("button") as HTMLButtonElement | null;
+    const toolbarButton = container.querySelector("button") as HTMLButtonElement | null;
     expect(toolbarButton).not.toBeNull();
 
     act(() => {

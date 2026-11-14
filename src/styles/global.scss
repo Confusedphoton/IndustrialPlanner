@@ -1,4 +1,6 @@
 :root {
+  /* 笔与触控的最小命中尺寸，次要控件也不得小于此值。 */
+  --pen-target: 36px;
   font-family:
     "Segoe UI",
     "PingFang SC",

@@ -1,7 +1,7 @@
 import { ProductionPlanningTreeTableView } from "./production-planning-tree-table";
 import { RecipeChoiceControls } from "./recipe-choice-controls";
 import { formatPlannerCycleIssue } from "@/shared/planner-cycle";
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import { runInAction } from "mobx";
 import { observer, useLocalObservable } from "mobx-react-lite";
 import LucideBox from "~icons/lucide/box";
@@ -74,6 +74,7 @@ import {
   normalizeProductionPlanningCandidateChoiceId,
 } from "./production-planning-candidate";
 import { ProductionFlowGraph } from "@/app/shell/production-planning/flow";
+import { RecipeActionMenu, resolveFlowNodeActionTarget, type RecipeActionTarget } from "@/app/shell/recipe-tree/recipe-action-menu";
 import {
   buildProductionPlanningDeviceMinimumConsumptionRecipeId,
   isProductionPlanningDeviceMinimumConsumptionRecipeId,
@@ -759,6 +760,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
                 <div className={cm(styles, "production-planning-empty")}>{t("productionPlanning.noResult")}</div>
               ) : (
                 <PlanGraph
+                  appHost={appHost}
                   displayMode={displayMode}
                   invertWheelZoom={appHost.internalState.settings.invertWheelZoom}
                   flowViewport={session.flowViewport}
@@ -1281,6 +1283,7 @@ function SegmentedControl<T extends string>({
 }
 
 function PlanGraph({
+  appHost,
   displayMode,
   invertWheelZoom,
   flowViewport,
@@ -1304,6 +1307,7 @@ function PlanGraph({
   onProcessViewportChange,
   t,
 }: {
+  appHost: AppHost;
   displayMode: ProductionPlanningDisplayMode;
   invertWheelZoom: boolean;
   flowViewport: PlannerFlowViewportState;
@@ -1352,6 +1356,7 @@ function PlanGraph({
   if (viewMode === "flow") {
     return (
       <FlowGraph
+        appHost={appHost}
         displayMode={displayMode}
         invertWheelZoom={invertWheelZoom}
         flowViewport={flowViewport}
@@ -3176,6 +3181,7 @@ function resolveProductionPlanningTreeRowTitle(
 }
 
 function FlowGraph({
+  appHost,
   displayMode,
   invertWheelZoom,
   flowViewport,
@@ -3187,6 +3193,7 @@ function FlowGraph({
   onRequestRecipeSelection: _onRequestRecipeSelection,
   t,
 }: {
+  appHost: AppHost;
   displayMode: ProductionPlanningDisplayMode;
   invertWheelZoom: boolean;
   flowViewport: PlannerFlowViewportState;
@@ -3198,20 +3205,34 @@ function FlowGraph({
   onRequestRecipeSelection: (itemId: string, recipes: readonly RecipeDefinition[]) => void;
   t: (key: string) => string;
 }) {
+  const [actionTarget, setActionTarget] = useState<RecipeActionTarget | null>(null);
+  const closeActionMenu = useCallback(() => setActionTarget(null), []);
   if (plan.roots.length === 0) {
     return <div className={cm(styles, "production-planning-empty")}>{t("productionPlanning.noRecipes")}</div>;
   }
 
   return (
-    <ProductionFlowGraph
-      displayMode={displayMode}
-      invertWheelZoom={invertWheelZoom}
-      initialViewport={flowViewport}
-      plan={plan}
-      index={index}
-      onViewportChange={onFlowViewportChange}
-      t={t}
-    />
+    <>
+      <ProductionFlowGraph
+        displayMode={displayMode}
+        invertWheelZoom={invertWheelZoom}
+        initialViewport={flowViewport}
+        plan={plan}
+        index={index}
+        onNodeActivate={(node, anchor) => setActionTarget(resolveFlowNodeActionTarget(node, anchor))}
+        onViewportChange={onFlowViewportChange}
+        t={t}
+      />
+      {actionTarget === null ? null : (
+        <RecipeActionMenu
+          appHost={appHost}
+          index={index}
+          onClose={closeActionMenu}
+          t={t}
+          target={actionTarget}
+        />
+      )}
+    </>
   );
 }
 

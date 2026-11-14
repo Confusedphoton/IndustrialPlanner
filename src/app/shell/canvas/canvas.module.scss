@@ -597,7 +597,7 @@
     var(--top-bar-height, 48px)
     + (100% - var(--top-bar-height, 48px) - var(--canvas-bottom-obstruction-height, var(--bottom-bar-height, 28px))) / 2
   );
-  right: calc(var(--right-dock-width, 0px) + var(--recipe-dock-width, 0px) + 12px);
+  right: calc(var(--right-dock-width, 0px) + var(--recipe-dock-width, 0px) + var(--canvas-tool-rail-right-width, 0px) + 12px);
   z-index: 4;
   display: grid;
   justify-items: end;
@@ -768,7 +768,7 @@
 .canvas-tool-rail {
   position: absolute;
   grid-area: canvas;
-  top: 50%;
+  top: var(--canvas-tool-rail-center, 50%);
   left: 10px;
   z-index: 4;
   display: flex;
@@ -786,6 +786,48 @@
   pointer-events: auto;
   overflow-y: auto;
   scrollbar-width: none;
+}
+
+.canvas-tool-rail.is-right {
+  right: 10px;
+  left: auto;
+}
+
+.canvas-tool-rail.is-dragging {
+  box-shadow: 0 14px 34px var(--in-canvas-toolbar-shadow);
+  opacity: 0.92;
+}
+
+.canvas-tool-rail-grip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--canvas-tool-rail-button-size, 44px);
+  height: 22px;
+  margin-bottom: -2px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--in-canvas-toolbar-button-text);
+  cursor: grab;
+  opacity: 0.55;
+  touch-action: none;
+}
+
+.canvas-tool-rail-grip:hover,
+.canvas-tool-rail.is-dragging .canvas-tool-rail-grip {
+  opacity: 1;
+}
+
+.canvas-tool-rail.is-dragging .canvas-tool-rail-grip {
+  cursor: grabbing;
+}
+
+.canvas-tool-rail-grip svg {
+  width: 18px;
+  height: 18px;
 }
 
 .canvas-tool-rail-button {

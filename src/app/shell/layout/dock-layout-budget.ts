@@ -19,15 +19,34 @@ export interface DockLayoutBudget {
   readonly recipeDockWidth: number;
   /** The widest the recipe dock may be dragged before it would squeeze the canvas below its minimum. */
   readonly recipeDockMaxWidth: number;
+  /** Inspector and recipe tree share one right column, stacked top and bottom. */
+  readonly stackRightDocks: boolean;
 }
 
 /**
- * 侧栏同时打开时为画布保留最小可用宽度：先把配方树停靠栏收窄到下限，再收窄属性面板。
- * 左侧放置面板是用户主动打开的主要入口，不自动收起。
+ * 侧栏同时打开时为画布保留最小可用宽度：先把配方树停靠栏收窄到下限，再收窄属性面板；
+ * 两者的下限之和仍放不下时，二者上下叠放在同一右栏。左侧放置面板是用户主动打开的主要入口，不自动收起。
  */
 export function resolveDockLayoutBudget(input: DockLayoutBudgetInput): DockLayoutBudget {
   const minCanvasWidth = Math.max(MIN_CANVAS_WIDTH_PX, Math.round(input.viewportWidth * MIN_CANVAS_VIEWPORT_RATIO));
   const sideBudget = input.viewportWidth - input.leftToolbarWidth - input.leftDockWidth - minCanvasWidth;
+
+  if (
+    input.rightDockWidth > 0
+    && input.recipeDockWidth > 0
+    && sideBudget < MIN_RIGHT_DOCK_WIDTH_PX + input.recipeDockMinWidth
+  ) {
+    const columnWidth = Math.min(
+      Math.max(input.rightDockWidth, input.recipeDockWidth),
+      Math.max(MIN_RIGHT_DOCK_WIDTH_PX, sideBudget),
+    );
+    return {
+      rightDockWidth: columnWidth,
+      recipeDockWidth: 0,
+      recipeDockMaxWidth: Math.max(input.recipeDockMinWidth, sideBudget),
+      stackRightDocks: true,
+    };
+  }
 
   const recipeDockMaxWidth = Math.max(input.recipeDockMinWidth, sideBudget - input.rightDockWidth);
   const recipeDockWidth = input.recipeDockWidth === 0 ? 0 : Math.min(input.recipeDockWidth, recipeDockMaxWidth);
@@ -36,5 +55,5 @@ export function resolveDockLayoutBudget(input: DockLayoutBudgetInput): DockLayou
     ? 0
     : Math.min(input.rightDockWidth, Math.max(MIN_RIGHT_DOCK_WIDTH_PX, sideBudget - recipeDockWidth));
 
-  return { rightDockWidth, recipeDockWidth, recipeDockMaxWidth };
+  return { rightDockWidth, recipeDockWidth, recipeDockMaxWidth, stackRightDocks: false };
 }

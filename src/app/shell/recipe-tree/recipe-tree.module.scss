@@ -95,6 +95,18 @@
   border-bottom: 1px solid var(--line);
 }
 
+.recipe-tree-search.is-inline {
+  padding: 0 0 0 4px;
+  border-bottom: 0;
+}
+
+.recipe-tree-search.is-inline .recipe-tree-search-results {
+  top: calc(100% + 4px);
+  right: auto;
+  left: 4px;
+  width: min(320px, 100%);
+}
+
 .recipe-tree-search-input {
   width: 100%;
   min-height: 36px;
@@ -443,7 +455,7 @@
 
 .recipe-action-menu {
   position: fixed;
-  z-index: 12;
+  z-index: 20;
   display: grid;
   gap: 2px;
   width: 280px;
@@ -463,6 +475,16 @@
   border-bottom: 1px solid var(--line);
   color: var(--text-0);
   font-weight: 600;
+}
+
+.recipe-action-menu-details {
+  display: grid;
+  gap: 2px;
+  padding: 4px 6px 6px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text-1);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 .recipe-action-menu-title img {
@@ -539,4 +561,20 @@
 
 .recipe-tree-icon-button[aria-pressed="true"] {
   color: var(--accent-strong);
+}
+
+// 流程图视图中合计信息每类只占一行（可横向滑动），把高度留给流程图。
+.recipe-tree-graph-body .recipe-tree-totals-row {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  touch-action: pan-x;
+}
+
+.recipe-tree-graph-body .recipe-tree-totals-label {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  flex: none;
+  background: var(--surface-2);
 }

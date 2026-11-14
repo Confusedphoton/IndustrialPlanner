@@ -28,6 +28,26 @@
   -webkit-touch-callout: none;
 }
 
+// 属性面板与配方树停靠栏在窄屏上叠放于同一右栏，为画布让出宽度。
+.workbench.is-right-stacked {
+  grid-template-rows:
+    var(--top-bar-height, 48px)
+    minmax(0, 1fr)
+    minmax(0, 1fr)
+    var(--toolbox-bottom-dock-height, 0px)
+    var(--bottom-bar-height, 28px);
+  grid-template-areas:
+    "toolbar toolbar toolbar toolbar toolbar"
+    "tools left canvas right right"
+    "tools left canvas recipe recipe"
+    "tools left toolbox-bottom recipe recipe"
+    "bottom bottom bottom bottom bottom";
+}
+
+.workbench.is-right-stacked .recipe-tree-overlay.is-docked {
+  border-top-width: 1px;
+}
+
 .overlay-stack-root {
   position: absolute;
   inset: 0;

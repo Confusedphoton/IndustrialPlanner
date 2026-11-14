@@ -1557,15 +1557,24 @@
   display: none;
 }
 
-.production-flow-canvas {
-  position: relative;
+.production-flow-graph {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   min-height: 520px;
   height: 100%;
-  overflow: hidden;
-  touch-action: none;
   border: 1px solid var(--line);
   border-radius: 8px;
+  background: var(--surface-1);
+}
+
+.production-flow-canvas {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  touch-action: none;
   background:
     linear-gradient(var(--surface-2), var(--surface-2)) padding-box,
     repeating-linear-gradient(0deg, transparent 0 27px, var(--line) 28px),
@@ -1579,17 +1588,27 @@
 }
 
 .production-flow-toolbar {
-  position: absolute;
-  z-index: 4;
-  top: 6px;
-  right: 6px;
-  display: inline-flex;
-  gap: 2px;
-  padding: 3px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  border-bottom: 1px solid var(--line);
   background: var(--surface-1);
-  box-shadow: 0 8px 20px var(--shadow-floating-control);
+}
+
+.production-flow-toolbar-leading {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.production-flow-toolbar-buttons {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  margin-left: auto;
 }
 
 .production-flow-toolbar button {
@@ -1748,6 +1767,23 @@
   font-size: 0.74rem;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.production-flow-node-machine {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  color: var(--text-1);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.production-flow-node-machine img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
 }
 
 .production-flow-node-rate {
@@ -1922,7 +1958,7 @@
 }
 
 // EDA 等内嵌视图由父容器决定高度，不能继承独立编辑画布的 520px 下限。
-.production-flow-canvas.production-flow-fit { min-height: 0; }
+.production-flow-graph.production-flow-fit { min-height: 0; border: 0; border-radius: 0; }
 // 参考图从任意位置拖动都平移视图，卡片只响应点按。
 .production-flow-pan { cursor: grab; }
 .production-flow-pan:active { cursor: grabbing; }

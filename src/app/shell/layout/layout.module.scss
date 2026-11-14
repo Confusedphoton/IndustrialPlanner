@@ -99,7 +99,7 @@
   white-space: normal;
 }
 
-// AI-GENERATED 2026-05-20: CI build 写入的版本标签，紧跟标题显示。
+// CI build 写入的版本标签，紧跟标题显示。
 .top-bar-version {
   margin-left: 6px;
   font-size: 0.72rem;
@@ -145,7 +145,7 @@
 
 .top-bar-controls button,
 .top-bar-speed-controls button {
-  min-height: 30px;
+  min-height: var(--pen-target);
   padding: 0 10px;
   white-space: nowrap;
 }
@@ -155,15 +155,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 30px;
-  border-radius: 6px;
+  height: var(--pen-target);
+  border-radius: 8px;
   border: 1px solid var(--transparent);
   background: var(--transparent);
   color: var(--text-1);
 }
 
 .top-bar-icon-button {
-  width: 30px;
+  width: var(--pen-target);
   padding: 0;
   line-height: 0;
 }
@@ -183,7 +183,7 @@
   color: var(--text-0);
 }
 
-// AI-GENERATED 2026-06-19: 速度按钮平铺直选时的激活态高亮。
+// 速度按钮平铺直选时的激活态高亮。
 .top-bar-speed-active {
   background: var(--surface-3);
   border-color: var(--line);

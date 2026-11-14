@@ -35,6 +35,10 @@ export interface ProductionFlowNode extends SankeyInputNode {
   readonly subtitle: string;
   /** 节点自身产物（处置类为处置量）的速率，卡片上单独强调显示。 */
   readonly rate?: string;
+  /** 设备数（“×N”），卡片上常驻显示，不随副标题截断。 */
+  readonly machineCount?: string;
+  /** 物品模式下生产该物品的设备图标。 */
+  readonly machineIconSrc?: string;
   readonly iconSrcs: readonly string[];
   readonly itemId?: string;
   readonly recipeId?: string;
@@ -200,15 +204,7 @@ function addLedgerRowNode(row: ProductionPlanningLedgerRow, context: LedgerBuild
   const deviceCount = formatProductionDeviceCount(row.recipeNode.deviceCount);
   const kind: ProductionFlowNodeKind = context.displayMode === "item" ? "item" : "recipe";
   const title = context.displayMode === "item" ? targetName : machineName;
-  const subtitle = context.displayMode === "item"
-    ? isExternal
-      ? machineName
-      : context.translate("productionPlanning.flowMachineCount").replace("{machine}", machineName).replace("{count}", deviceCount)
-    : isExternal
-      ? targetName
-      : `${targetName} · ${deviceCount} ${context.translate(
-        row.recipeNode.module === null ? "productionPlanning.devices" : "productionPlanning.modules",
-      )}`;
+  const subtitle = context.displayMode === "item" ? machineName : targetName;
   const iconSrcs = context.displayMode === "item"
     ? [resolveProductionPlanningItemIconSrc(row.targetItemId, context.index)]
     : resolveLedgerRowMachineIconSrcs(row, context.index);
@@ -220,6 +216,10 @@ function addLedgerRowNode(row: ProductionPlanningLedgerRow, context: LedgerBuild
     title,
     subtitle,
     rate: `${formatProductionFlow(displayRate)}/min`,
+    machineCount: isExternal ? undefined : `×${deviceCount}`,
+    machineIconSrc: isExternal || context.displayMode !== "item"
+      ? undefined
+      : resolveLedgerRowMachineIconSrcs(row, context.index)[0],
     iconSrcs,
     value: Math.max(producedPerMinute, consumedPerMinute, 1),
     itemId: row.targetItemId,

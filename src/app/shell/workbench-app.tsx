@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 import { BottomStatusBar } from "@/app/shell/layout/bottom-status-bar";
 import { CanvasToolRail } from "@/app/shell/canvas/canvas-tool-rail";
+import { canvasToolRailState } from "@/app/shell/canvas/canvas-tool-rail-state";
 import { CanvasBottomLeftSecondaryToolbar } from "@/app/shell/canvas/canvas-bottom-left-secondary-toolbar";
 import { CanvasPanel } from "@/app/shell/canvas/canvas-panel";
 import { CanvasFloatingToolbar } from "@/app/shell/canvas/canvas-floating-toolbar";
@@ -1102,7 +1103,8 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     "--right-dock-width": `${dockLayoutBudget.rightDockWidth}px`,
     // 配方树停靠栏占用最右侧一列。
     "--recipe-dock-width": `${dockLayoutBudget.recipeDockWidth}px`,
-    "--canvas-tool-rail-width": "60px",
+    "--canvas-tool-rail-width": canvasToolRailState.side === "left" ? "60px" : "0px",
+    "--canvas-tool-rail-right-width": canvasToolRailState.side === "right" ? "60px" : "0px",
     "--top-bar-height": showFloatingTopBarControls ? "0px" : "48px",
     "--bottom-bar-height": showBottomStatusBar ? "28px" : "0px",
     "--toolbox-bottom-dock-height": `${bottomDockGridHeight}px`,
@@ -1111,7 +1113,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
 
   return (
     <div
-      className={cm(styles, "workbench")}
+      className={cm(styles, dockLayoutBudget.stackRightDocks ? "workbench is-right-stacked" : "workbench")}
       onAuxClick={preventNativeBrowserEvent}
       onContextMenu={preventNativeBrowserEvent}
       onDragStart={preventNativeBrowserEvent}

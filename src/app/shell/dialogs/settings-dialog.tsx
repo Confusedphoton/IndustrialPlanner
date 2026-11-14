@@ -856,6 +856,14 @@ export const SettingsDialog = observer(function SettingsDialog({
                           isText ? "is-text" : "",
                         ].filter(Boolean).join(" "))}
                         key={setting.id}
+                        onClick={setting.kind === "switch" && isEditable ? (event) => {
+                          // 开关项整张卡片都可点按，笔不必瞄准右侧的小开关。
+                          const target = event.target as HTMLElement;
+                          if (target.closest("button, a, label, input, select, textarea") !== null) {
+                            return;
+                          }
+                          event.currentTarget.querySelector<HTMLInputElement>(`#setting-${setting.id}`)?.click();
+                        } : undefined}
                       >
                         <div className={cm(styles, "settings-dialog-setting-copy")}>
                           <h4 className={cm(styles, "settings-dialog-setting-title")}>

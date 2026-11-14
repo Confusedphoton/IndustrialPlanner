@@ -1,10 +1,15 @@
 import { observer } from "mobx-react-lite";
-import type {
-  MouseEvent as ReactMouseEvent,
-  PointerEvent as ReactPointerEvent,
-  ReactNode,
-  WheelEvent as ReactWheelEvent,
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+  type WheelEvent as ReactWheelEvent,
 } from "react";
+import LucideGripHorizontal from "~icons/lucide/grip-horizontal";
 import LucideZap from "~icons/lucide/zap";
 import { selectDocumentBaseId } from "@/shared/snapshot/world-document-selection";
 import type { AppHost } from "@/app/host/app-host";
@@ -18,6 +23,9 @@ import {
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import { canvasToolRailState, hookCanvasToolRailPersistence, type CanvasToolRailSide } from "./canvas-tool-rail-state";
+
+const RAIL_EDGE_MARGIN_PX = 8;
 
 const stopUiPropagation = (
   event: ReactMouseEvent<HTMLElement> | ReactPointerEvent<HTMLElement> | ReactWheelEvent<HTMLElement>,
@@ -36,11 +44,16 @@ const stopTouchPointerDownPropagation = (event: ReactPointerEvent<HTMLElement>) 
 };
 
 /**
- * 画布左缘常驻的笔工具条：编辑工具、撤销/重做与快速放置，始终在落笔处附近，
- * 不随左侧面板切换或滚动而消失。
+ * 画布边缘常驻的笔工具条：编辑工具、撤销/重做与快速放置，不随左侧面板切换或滚动而消失。
+ * 拖动顶部手柄可沿边缘移动，松手时贴靠较近的左缘或右缘，让工具条留在笔正在工作的一侧。
  */
 export const CanvasToolRail = observer(function CanvasToolRail({ appHost }: { appHost: AppHost }) {
+  useEffect(() => hookCanvasToolRailPersistence(), []);
   const t = appHost.actions.translate;
+  const railRef = useRef<HTMLDivElement | null>(null);
+  const [dragPosition, setDragPosition] = useState<{ side: CanvasToolRailSide; center: number } | null>(null);
+  const side = dragPosition?.side ?? canvasToolRailState.side;
+  const center = dragPosition?.center ?? canvasToolRailState.center;
   const editor = appHost.workspace.editor;
   // 订阅 document 变化使管道按钮在切换基地后正确显示/隐藏
   useEditorDocumentSnapshot(editor, selectDocumentBaseId, Object.is);
@@ -49,6 +62,46 @@ export const CanvasToolRail = observer(function CanvasToolRail({ appHost }: { ap
   const canUndo = editor !== null && (history?.undoDepth ?? 0) > 0;
   const canRedo = editor !== null && (history?.redoDepth ?? 0) > 0;
   const quickPlaceEnabled = appHost.internalState.settings.quickPlaceEnabled;
+
+  const resolveDragPosition = (clientX: number, clientY: number) => {
+    const canvasRect = railRef.current?.parentElement?.querySelector(`.${cm(styles, "canvas-panel")}`)?.getBoundingClientRect();
+    const railHeight = railRef.current?.offsetHeight ?? 0;
+    if (canvasRect === undefined || canvasRect.height <= 0) {
+      return null;
+    }
+    const halfFraction = (railHeight / 2 + RAIL_EDGE_MARGIN_PX) / canvasRect.height;
+    const rawCenter = (clientY - canvasRect.top) / canvasRect.height;
+    return {
+      side: clientX < canvasRect.left + canvasRect.width / 2 ? "left" as const : "right" as const,
+      center: halfFraction >= 0.5 ? 0.5 : Math.min(1 - halfFraction, Math.max(halfFraction, rawCenter)),
+    };
+  };
+
+  const handleGripPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    event.preventDefault();
+    if (event.pointerType === "mouse" && event.button !== 0) {
+      return;
+    }
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDragPosition({ side: canvasToolRailState.side, center: canvasToolRailState.center });
+  };
+
+  const handleGripPointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    if (dragPosition === null) {
+      return;
+    }
+    setDragPosition(resolveDragPosition(event.clientX, event.clientY) ?? dragPosition);
+  };
+
+  const finishGripDrag = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    if (dragPosition !== null) {
+      canvasToolRailState.setPosition(dragPosition.side, dragPosition.center);
+    }
+    setDragPosition(null);
+  };
 
   const handleToolPointerUp = (
     event: ReactPointerEvent<HTMLButtonElement>,
@@ -73,10 +126,27 @@ export const CanvasToolRail = observer(function CanvasToolRail({ appHost }: { ap
     }
   };
 
+  const handleToolKeyboardActivate = (button: PlacementOperationButtonDefinition) => {
+    appHost.gestureAdapter.handleUiButtonMouseTap({
+      uiButtonId: button.uiButtonId,
+      button: 0,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+  };
+
   return (
     <div
       aria-label={t("toolbar.canvasTools")}
-      className={cm(styles, "canvas-tool-rail")}
+      className={cm(styles, [
+        "canvas-tool-rail",
+        side === "right" ? "is-right" : "",
+        dragPosition === null ? "" : "is-dragging",
+      ].filter(Boolean).join(" "))}
+      ref={railRef}
+      style={{ "--canvas-tool-rail-center": `${center * 100}%` } as CSSProperties}
       onAuxClick={stopUiPropagationAndDefault}
       onClick={stopUiPropagation}
       onContextMenu={stopUiPropagationAndDefault}
@@ -88,6 +158,25 @@ export const CanvasToolRail = observer(function CanvasToolRail({ appHost }: { ap
       role="toolbar"
       aria-orientation="vertical"
     >
+      <button
+        aria-label={t("toolbar.canvasToolsMove")}
+        className={cm(styles, "canvas-tool-rail-grip")}
+        onLostPointerCapture={finishGripDrag}
+        onPointerCancel={finishGripDrag}
+        onPointerDown={handleGripPointerDown}
+        onPointerMove={handleGripPointerMove}
+        onPointerUp={finishGripDrag}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+            event.preventDefault();
+            canvasToolRailState.setPosition(event.key === "ArrowLeft" ? "left" : "right", canvasToolRailState.center);
+          }
+        }}
+        title={t("toolbar.canvasToolsMove")}
+        type="button"
+      >
+        <LucideGripHorizontal aria-hidden="true" />
+      </button>
       {toolButtons.map((button) => {
         const isActive = button.activeWhen?.(appHost) ?? false;
         const hotkey = button.hotkey
@@ -98,6 +187,7 @@ export const CanvasToolRail = observer(function CanvasToolRail({ appHost }: { ap
             hint={hotkey}
             key={button.uiButtonId}
             label={t(button.labelKey)}
+            onKeyboardActivate={() => handleToolKeyboardActivate(button)}
             onPointerUp={(event) => handleToolPointerUp(event, button)}
             pressed={button.activeWhen ? isActive : undefined}
             uiButtonId={button.uiButtonId}
@@ -151,6 +241,7 @@ function RailButton({
   hint = null,
   label,
   onActivate,
+  onKeyboardActivate,
   onPointerUp,
   pressed,
   uiButtonId,
@@ -161,6 +252,8 @@ function RailButton({
   readonly hint?: string | null;
   readonly label: string;
   readonly onActivate?: (rect: DOMRect) => void;
+  /** 指针点按已由 onPointerUp 处理；键盘触发的 click（detail 为 0）走这里。 */
+  readonly onKeyboardActivate?: () => void;
   readonly onPointerUp?: (event: ReactPointerEvent<HTMLButtonElement>) => void;
   readonly pressed?: boolean;
   readonly uiButtonId: string;
@@ -174,6 +267,9 @@ function RailButton({
       disabled={disabled}
       onClick={(event) => {
         event.stopPropagation();
+        if (event.detail === 0) {
+          onKeyboardActivate?.();
+        }
         onActivate?.(event.currentTarget.getBoundingClientRect());
       }}
       onContextMenu={stopUiPropagationAndDefault}
