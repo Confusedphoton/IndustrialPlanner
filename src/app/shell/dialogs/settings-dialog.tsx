@@ -1200,6 +1200,7 @@ function SettingGuideButton({
     <button
       aria-label={buttonLabel}
       className={cm(styles, "settings-dialog-setting-help-button")}
+      data-pen-target="compact"
       onClick={onClick}
       title={buttonLabel}
       type="button"

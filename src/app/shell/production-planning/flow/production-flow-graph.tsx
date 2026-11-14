@@ -114,6 +114,8 @@ const MIN_READABLE_FIT_SCALE = 0.85;
 const TAP_SLOP_PX = 6;
 const ORIENTATION_HYSTERESIS = 1.15;
 const FIT_MARGIN = 16;
+/** 自动适配时，聚焦视图能完整看到的卡片少于该比例就改用总览。 */
+const AUTO_OVERVIEW_VISIBLE_FRACTION = 0.3;
 /** 视口变化在手势停顿后才通知外部，避免每次移动都写入持久化存储。 */
 const VIEWPORT_NOTIFY_DELAY_MS = 250;
 
@@ -173,7 +175,7 @@ export function ProductionFlowGraph({
    * "overview"：不设可读下限，整条产线一次显示；随后点按空白处可在该处放大到可读比例。
    */
   const fit = useCallback((
-    mode: "focus" | "overview" = "focus",
+    mode: "focus" | "overview" | "auto" = "auto",
     // 默认按当前（可能被手动移动过的）卡片位置适配；换布局时由调用方传入新布局。
     layoutNodes: readonly SankeyNode<ProductionFlowNode>[] = graphRef.current.nodes,
   ) => {
@@ -196,31 +198,38 @@ export function ProductionFlowGraph({
     const availableHeight = Math.max(1, element.clientHeight - margin * 2);
     const fullScale = Math.min(availableWidth / bounds.width, availableHeight / bounds.height);
     const crossScale = orientation === "vertical" ? availableWidth / bounds.width : availableHeight / bounds.height;
-    const scale = clamp(
-      Math.min(1, mode === "overview" || fullScale >= MIN_READABLE_FIT_SCALE
-        ? fullScale
-        : Math.max(MIN_READABLE_FIT_SCALE, crossScale)),
-      MIN_SCALE,
-      MAX_SCALE,
-    );
-    const centerX = (availableWidth - bounds.width * scale) / 2 + margin - bounds.left * scale;
-    const centerY = (availableHeight - bounds.height * scale) / 2 + margin - bounds.top * scale;
-    const overflowsX = bounds.width * scale > availableWidth;
-    const overflowsY = bounds.height * scale > availableHeight;
-    // 沿流向贴住产物一端，交叉轴以产物为中心。
-    const sinkCenterX = margin + availableWidth / 2 - (sinkBounds.left + sinkBounds.width / 2) * scale;
-    const sinkCenterY = margin + availableHeight / 2 - (sinkBounds.top + sinkBounds.height / 2) * scale;
-    const anchoredX = orientation === "horizontal"
-      ? margin + availableWidth - (sinkBounds.left + sinkBounds.width) * scale
-      : sinkCenterX;
-    const anchoredY = orientation === "vertical"
-      ? margin + availableHeight - (sinkBounds.top + sinkBounds.height) * scale
-      : sinkCenterY;
-    setViewport({
-      x: overflowsX ? clampPan(anchoredX, availableWidth, bounds.left, bounds.width, scale, margin) : centerX,
-      y: overflowsY ? clampPan(anchoredY, availableHeight, bounds.top, bounds.height, scale, margin) : centerY,
-      scale,
-    });
+    const place = (overview: boolean): ViewportState => {
+      const scale = clamp(
+        Math.min(1, overview || fullScale >= MIN_READABLE_FIT_SCALE
+          ? fullScale
+          : Math.max(MIN_READABLE_FIT_SCALE, crossScale)),
+        MIN_SCALE,
+        MAX_SCALE,
+      );
+      const centerX = (availableWidth - bounds.width * scale) / 2 + margin - bounds.left * scale;
+      const centerY = (availableHeight - bounds.height * scale) / 2 + margin - bounds.top * scale;
+      const overflowsX = bounds.width * scale > availableWidth;
+      const overflowsY = bounds.height * scale > availableHeight;
+      // 沿流向贴住产物一端，交叉轴以产物为中心。
+      const sinkCenterX = margin + availableWidth / 2 - (sinkBounds.left + sinkBounds.width / 2) * scale;
+      const sinkCenterY = margin + availableHeight / 2 - (sinkBounds.top + sinkBounds.height / 2) * scale;
+      const anchoredX = orientation === "horizontal"
+        ? margin + availableWidth - (sinkBounds.left + sinkBounds.width) * scale
+        : sinkCenterX;
+      const anchoredY = orientation === "vertical"
+        ? margin + availableHeight - (sinkBounds.top + sinkBounds.height) * scale
+        : sinkCenterY;
+      return {
+        x: overflowsX ? clampPan(anchoredX, availableWidth, bounds.left, bounds.width, scale, margin) : centerX,
+        y: overflowsY ? clampPan(anchoredY, availableHeight, bounds.top, bounds.height, scale, margin) : centerY,
+        scale,
+      };
+    };
+    // 自动适配（打开、尺寸变化）时，若聚焦视图只能看到很小一部分产线，就先给总览；点按任意处即可放大。
+    const focus = place(mode === "overview");
+    const useOverview = mode === "auto"
+      && countVisibleCards(rects, focus, element.clientWidth, element.clientHeight) < rects.length * AUTO_OVERVIEW_VISIBLE_FRACTION;
+    setViewport(useOverview ? place(true) : focus);
   }, [metrics, orientation, setViewport]);
 
   const fitRef = useRef(fit);
@@ -241,13 +250,18 @@ export function ProductionFlowGraph({
       });
     };
     // 图被暂时隐藏（尺寸为 0，例如展开合计时）不适配，重新显示时也保留原视口；只有真实的尺寸变化才重新适配。
-    let hidden = element.clientWidth === 0 || element.clientHeight === 0;
+    // 只有重新显示时尺寸与隐藏前一致才保留视口；隐藏期间尺寸变了（窗口缩放、叠放切换）就按新尺寸重新定向并适配。
+    let lastVisibleSize = { width: element.clientWidth, height: element.clientHeight };
+    let hidden = lastVisibleSize.width === 0 || lastVisibleSize.height === 0;
     const observer = new ResizeObserver(() => {
-      const nowHidden = element.clientWidth === 0 || element.clientHeight === 0;
-      const revealed = hidden && !nowHidden;
+      const size = { width: element.clientWidth, height: element.clientHeight };
+      const nowHidden = size.width === 0 || size.height === 0;
+      const revealedUnchanged = hidden && !nowHidden && hasVisibleFitRef.current
+        && size.width === lastVisibleSize.width && size.height === lastVisibleSize.height;
       hidden = nowHidden;
       if (nowHidden) return;
-      if (revealed && hasVisibleFitRef.current) return;
+      lastVisibleSize = size;
+      if (revealedUnchanged) return;
       resolveAutoOrientation();
       if (fitToView) fitRef.current();
     });
@@ -257,11 +271,16 @@ export function ProductionFlowGraph({
   }, [fitToView]);
 
   // 换向后旧视口对新布局没有意义：适配视图的图每次换布局都重新适配，其余图只在方向改变时适配。
+  // 何时自动适配：适配视图的图每次换布局；其余图在换向、换了一张新图（新的规划结果）、
+  // 或首次显示时没有保存的视口时。保存过视口的图首次显示沿用旧视口。
   const fittedOrientationRef = useRef(orientation);
+  const fittedLayoutRef = useRef<typeof initialLayout | null>(initialViewport === undefined ? null : initialLayout);
   useEffect(() => {
     const orientationChanged = fittedOrientationRef.current !== orientation;
+    const layoutChanged = fittedLayoutRef.current !== initialLayout;
     fittedOrientationRef.current = orientation;
-    if (fitToView || orientationChanged) fit("focus", initialLayout.nodes);
+    fittedLayoutRef.current = initialLayout;
+    if (fitToView || orientationChanged || layoutChanged) fit("auto", initialLayout.nodes);
   }, [fit, fitToView, initialLayout, orientation]);
 
   const interactionRef = useRef<{
@@ -280,7 +299,7 @@ export function ProductionFlowGraph({
 
   const resetNodeLayout = useCallback(() => {
     setGraph(cloneSankeyGraph(initialLayout));
-    fit("focus", initialLayout.nodes);
+    fit("auto", initialLayout.nodes);
   }, [fit, initialLayout]);
 
   /** 以容器内一点为锚缩放到指定比例。 */
@@ -301,9 +320,9 @@ export function ProductionFlowGraph({
     zoomAt((element?.clientWidth ?? 0) / 2, (element?.clientHeight ?? 0) / 2, viewportRef.current.scale * factor);
   }, [zoomAt]);
 
-  const handleWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
+  const handleWheel = useCallback((event: WheelEvent) => {
     event.preventDefault();
-    const rect = event.currentTarget.getBoundingClientRect();
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
     const cursorX = event.clientX - rect.left;
     const cursorY = event.clientY - rect.top;
 
@@ -320,6 +339,16 @@ export function ProductionFlowGraph({
       };
     });
   }, [invertWheelZoom, setViewport]);
+
+  const hasNodes = graphInput.nodes.length > 0;
+  // React 的 onWheel 是被动监听，无法阻止页面缩放/滚动；改为原生非被动监听。
+  useEffect(() => {
+    const element = canvasRef.current;
+    if (element === null) return;
+    element.addEventListener("wheel", handleWheel, { passive: false });
+    return () => element.removeEventListener("wheel", handleWheel);
+    // 图从空到有节点时画布元素才挂载，需要重新绑定。
+  }, [handleWheel, hasNodes]);
 
   const startPanOrPinch = useCallback((event: React.PointerEvent<HTMLDivElement>, pressedNodeId: string | null) => {
     const interaction = interactionRef.current;
@@ -612,7 +641,6 @@ export function ProductionFlowGraph({
           styles[`is-${orientation}`],
         ].filter(Boolean).join(" ")}
         data-flow-orientation={orientation}
-        onWheel={handleWheel}
         onPointerDown={handleCanvasPointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -628,6 +656,7 @@ export function ProductionFlowGraph({
           }}
         >
           <FlowSurfaceContent
+            compact={viewport.scale < MIN_READABLE_FIT_SCALE}
             graph={graph}
             metrics={metrics}
             onNodePointerDown={handleNodePointerDown}
@@ -643,6 +672,7 @@ export function ProductionFlowGraph({
 
 /** 节点、连线与标签只随布局变化重绘；平移缩放只改变外层 transform。 */
 const FlowSurfaceContent = memo(function FlowSurfaceContent({
+  compact,
   graph,
   orientation,
   metrics,
@@ -650,6 +680,8 @@ const FlowSurfaceContent = memo(function FlowSurfaceContent({
   onNodePointerDown,
   t,
 }: {
+  /** 低于可读比例（总览）时卡片只显示放大的图标与速率，连线标签隐藏；只在越过阈值时重绘。 */
+  readonly compact: boolean;
   readonly graph: SankeyGraph<ProductionFlowNode, ProductionFlowLink>;
   readonly orientation: ProductionFlowOrientation;
   readonly metrics: CardMetrics;
@@ -665,9 +697,10 @@ const FlowSurfaceContent = memo(function FlowSurfaceContent({
           <FlowEdgePath key={link.id} link={link} metrics={metrics} orientation={orientation} />
         ))}
       </svg>
-      <div className={styles["production-flow-nodes"]}>
+      <div className={[styles["production-flow-nodes"], compact ? styles["is-compact"] : null].filter(Boolean).join(" ")}>
         {graph.nodes.map((node) => (
           <FlowNode
+            compact={compact}
             key={node.id}
             metrics={metrics}
             node={node}
@@ -675,7 +708,7 @@ const FlowSurfaceContent = memo(function FlowSurfaceContent({
             orientation={orientation}
           />
         ))}
-        {graph.links.map((link) => {
+        {compact ? null : graph.links.map((link) => {
           const position = labelPositions.get(link.id);
           return position === undefined ? null : (
             <FlowEdgeLabel key={link.id} link={link} orientation={orientation} position={position} t={t} />
@@ -713,11 +746,13 @@ function FlowToolbarButton({
 }
 
 function FlowNode({
+  compact,
   node,
   orientation,
   metrics,
   onPointerDown,
 }: {
+  readonly compact: boolean;
   readonly node: SankeyNode<ProductionFlowNode>;
   readonly orientation: ProductionFlowOrientation;
   readonly metrics: CardMetrics;
@@ -751,7 +786,7 @@ function FlowNode({
       data-flow-node-id={node.id}
       title={tooltip}
     >
-      <CompositeItemIcon iconSrcs={source.iconSrcs} size={32} />
+      <CompositeItemIcon iconSrcs={source.iconSrcs} size={compact ? 52 : 32} />
       <div className={styles["production-flow-node-text"]}>
         <strong>{source.title}</strong>
         <span className={styles["production-flow-node-meta"]}>
@@ -1052,6 +1087,23 @@ function unionRects(rects: readonly ScreenRect[]): ScreenRect {
     width: Math.max(1, right - left),
     height: Math.max(1, bottom - top),
   };
+}
+
+function countVisibleCards(rects: readonly ScreenRect[], viewport: ViewportState, width: number, height: number): number {
+  let visible = 0;
+  for (const rect of rects) {
+    const left = viewport.x + (rect.left + SURFACE_PADDING) * viewport.scale;
+    const top = viewport.y + (rect.top + SURFACE_PADDING) * viewport.scale;
+    if (
+      left >= 0
+      && top >= 0
+      && left + rect.width * viewport.scale <= width
+      && top + rect.height * viewport.scale <= height
+    ) {
+      visible += 1;
+    }
+  }
+  return visible;
 }
 
 function createPanFromCurrent(pointerId: number, clientX: number, clientY: number, viewport: ViewportState): PanDragState {

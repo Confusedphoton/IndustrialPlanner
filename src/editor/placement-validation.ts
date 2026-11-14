@@ -25,6 +25,7 @@ import { resolveBaseAreas } from "@/shared/geometry/base-areas";
 import { intersectsSceneBounds, isRectInSceneBounds, resolveSceneBoundarySegments } from "@/shared/geometry/scene-space";
 import { rotateGridEdge } from "@/shared/geometry/port";
 import { runInAction } from "mobx";
+import type { UiKey } from "@/shared/i18n";
 
 import type { EditorStateReadWrite } from "./state-impl";
 import { isDraftEntity } from "./draft-entity";
@@ -35,7 +36,7 @@ import {
 
 const WAREHOUSE_BUS_SEGMENT_DEFINITION_ID = "log_hongs_bus";
 const WAREHOUSE_BUS_SOURCE_DEFINITION_ID = "log_hongs_bus_source";
-const OUTER_RING_EDGE_SNAP_REASON_MESSAGE = "必须靠近地图边缘放置";
+const OUTER_RING_EDGE_SNAP_REASON_MESSAGE: UiKey = "placementReason.edgeSnap";
 const WAREHOUSE_BUS_SEED_CONFIG_KEY = "warehouseBusSeed";
 
 const VALID_PLACEMENT_RESULT: EntityPlacementValidationResult = {
@@ -43,11 +44,12 @@ const VALID_PLACEMENT_RESULT: EntityPlacementValidationResult = {
   reasons: [],
 };
 
-const PLACEMENT_REASON_MESSAGES: Record<EntityPlacementValidationReasonCode, string> = {
-  "outside-base": "必须放置在基地内",
-  overlap: "不能与其他设备重叠",
-  "warehouse-bus-disconnected": "未有效连接到源桩",
-  "near-same-entity": "附近有同类设备",
+/** 原因文案以 i18n 键保存，由界面与画布按当前语言解析。 */
+const PLACEMENT_REASON_MESSAGES: Record<EntityPlacementValidationReasonCode, UiKey> = {
+  "outside-base": "placementReason.outsideBase",
+  overlap: "placementReason.overlap",
+  "warehouse-bus-disconnected": "placementReason.busDisconnected",
+  "near-same-entity": "placementReason.nearSameEntity",
 };
 
 interface PlacementValidationEntry {
@@ -625,7 +627,7 @@ function appendReason(
   reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>,
   entityId: string,
   code: EntityPlacementValidationReasonCode,
-  message = PLACEMENT_REASON_MESSAGES[code],
+  message: UiKey = PLACEMENT_REASON_MESSAGES[code],
 ): void {
   const reasons = reasonsByEntityId.get(entityId);
   if (reasons === undefined || reasons.some((reason) => reason.code === code)) {

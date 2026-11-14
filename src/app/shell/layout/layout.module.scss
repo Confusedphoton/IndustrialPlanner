@@ -816,3 +816,9 @@
 .dock-left .section-body > .cluster:first-child {
   display: none;
 }
+
+// 28px 状态栏里的次要入口（备案号、非官方网站说明）不撑大状态栏，不受全局笔触尺寸约束。
+.status-bar button {
+  min-width: 0;
+  min-height: 0;
+}

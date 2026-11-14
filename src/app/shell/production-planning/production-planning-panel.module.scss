@@ -1672,6 +1672,8 @@
   .production-flow-toolbar button.has-text {
     width: 36px;
     padding: 0;
+    border-color: transparent;
+    background: transparent;
   }
 }
 
@@ -1834,6 +1836,29 @@
   font-size: 0.82rem;
   font-variant-numeric: tabular-nums;
   font-weight: 800;
+}
+
+// 总览缩放下的简化卡片：去掉小字，只留放大的物品图标与速率，缩小后仍能辨认。
+.production-flow-nodes.is-compact .production-flow-node {
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.production-flow-nodes.is-compact .production-flow-node > :first-child img {
+  width: 52px;
+  height: 52px;
+}
+
+.production-flow-nodes.is-compact .production-flow-node strong,
+.production-flow-nodes.is-compact .production-flow-node-machine,
+.production-flow-nodes.is-compact .production-flow-node-subtitle {
+  display: none;
+}
+
+.production-flow-nodes.is-compact .production-flow-node-rate {
+  margin-left: 0;
+  font-size: 2rem;
+  line-height: 1;
 }
 
 .production-flow-node.is-target {

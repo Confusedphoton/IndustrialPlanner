@@ -402,7 +402,7 @@ function SelectionInspectorDeviceHeader({
         <div className={cm(styles, "selection-inspector-device-title-row")}>
           <h3>{resolveSelectedDeviceLabel(selectedDefinition, translate)}</h3>
         </div>
-        <p>{selectedEntity.id}</p>
+        {appHost.state.settings.debugMode ? <p>{selectedEntity.id}</p> : null}
       </div>
       <SelectionInspectorActionStrip appHost={appHost} variant="inline" />
     </section>

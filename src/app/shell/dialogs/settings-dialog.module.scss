@@ -849,7 +849,7 @@
   width: 42px;
   height: 24px;
   padding: 2px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: 999px;
   background: var(--surface-4);
   transition:
@@ -857,11 +857,12 @@
     border-color 120ms ease;
 }
 
+// 关闭态的拨钮用次要文字色，在深色主题下也和轨道明显区分。
 .settings-dialog-switch-thumb {
   width: 18px;
   height: 18px;
   border-radius: 999px;
-  background: var(--surface-1);
+  background: var(--text-2);
   box-shadow: 0 2px 6px var(--shadow-floating-control);
   transition: transform 120ms ease;
 }
@@ -872,6 +873,7 @@
 }
 
 .settings-dialog-switch-shell input:checked + .settings-dialog-switch-track .settings-dialog-switch-thumb {
+  background: var(--accent-strong);
   transform: translateX(18px);
 }
 

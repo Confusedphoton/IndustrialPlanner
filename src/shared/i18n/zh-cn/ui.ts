@@ -26,6 +26,12 @@ const UI: Record<string, string> = {
 
     "canvas.regionalDarkPipe": "跨",
     "canvas.regionalDarkPipeSaveFailed": "暗管链接未保存。请重新选择端点。",
+    "canvas.modeLabel.marquee": "//批量选择模式",
+    "canvas.modeLabel.reverseMarquee": "//批量反选模式",
+    "canvas.modeLabel.blueprintPlacement": "//蓝图放置",
+    "canvas.modeLabel.devicePlacement": "//放置设备",
+    "action.fitBaseInView": "显示整个基地",
+    "action.cancelLogisticsRoute": "取消当前路线",
 
     "action.applyValue": "应用",
     "action.cancel": "取消",
@@ -1006,7 +1012,6 @@ const UI: Record<string, string> = {
     "tool.select": "选择",
     "toolbar.canvasTools": "画布工具",
     "toolbar.canvasToolsMove": "移动工具条（可拖到任一侧）",
-    "toolbar.canvasBottomLeftSecondary": "画布左下角辅助工具栏",
     "toolbar.canvasRightDock": "画布右侧工具栏",
     "toolbar.canvasTopLeftCorner": "画布左上角工具栏",
     "toolbar.tools": "工具",
@@ -1443,6 +1448,7 @@ const UI: Record<string, string> = {
     "rightDock.expandPane": "展开设备属性",
     "recipeTree.empty": "在上方搜索物品，将其完整生产链钉在这里。",
     "recipeTree.searchPlaceholder": "钉住物品…",
+    "recipeTree.pickItem": "选择要钉住的物品",
     "recipeTree.pinLimitReached": "已达到钉住上限",
     "recipeTree.targetRate": "目标产量（每分钟）",
     "recipeTree.perMinute": "/分",

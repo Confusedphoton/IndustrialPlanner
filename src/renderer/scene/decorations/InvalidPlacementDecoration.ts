@@ -10,6 +10,8 @@ import {
 } from "@/domain/editor/types/editor-types";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { GridRect } from "@/domain/shared/grid";
+import type { AppLocale } from "@/domain/app/types/app-types";
+import { lookupText } from "@/shared/i18n";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 
 import type { DecorationLayer } from "./DecorationLayer";
@@ -58,6 +60,7 @@ export function createInvalidPlacementDecoration(): DecorationLayer {
       }
 
       ctx.profiler?.count("invalidPlacement.entityIds", invalidEntityIds.length);
+      const locale = ctx.renderHost.input.presentation.getSnapshot().settings.locale;
       const activeTextEntityIds = new Set<string>();
       const entityDefinitionMap = measureDecorationStep(
         ctx,
@@ -113,6 +116,7 @@ export function createInvalidPlacementDecoration(): DecorationLayer {
 
           const reasonText = resolveInvalidPlacementToastReasonText({
             gridRect,
+            locale,
             validation: source.queries.getEntityPlacementValidation(entityId),
           });
           if (reasonText === null || reasonText.length === 0) {
@@ -153,6 +157,7 @@ export function createInvalidPlacementDecoration(): DecorationLayer {
 export function resolveInvalidPlacementToastReasonText(options: {
   validation: EntityPlacementValidationResult;
   gridRect: GridRect;
+  locale: AppLocale;
 }): string | null {
   const primaryReason = options.validation.reasons[0];
   if (primaryReason === undefined) {
@@ -163,7 +168,7 @@ export function resolveInvalidPlacementToastReasonText(options: {
     return null;
   }
 
-  return primaryReason.message;
+  return lookupText(options.locale, primaryReason.message) ?? primaryReason.message;
 }
 
 function drawInvalidPlacementStroke(options: {

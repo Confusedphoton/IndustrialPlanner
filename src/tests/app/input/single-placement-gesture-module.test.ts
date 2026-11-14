@@ -563,6 +563,35 @@ const missResult = module.handle(touchDragStartEvent({ position: { x: 32, y: 32 
     expect(context.canvas.state.runtime.singlePlacementDeviceId).toBe("log_splitter");
   });
 
+  it("keeps placing on canvas pen taps while the continuous placement toggle is on", () => {
+    const { context, editor } = createContext({
+      activeTool: "single-placement",
+      initialPreview: true,
+      placementAnchor: { x: 5, y: 5 },
+      singlePlacementContinuous: true,
+      singlePlacementDeviceId: "log_splitter",
+      singlePlacementPointerMode: "touch",
+    });
+    const module = createHypergryphSinglePlacementGestureModule();
+
+    for (let tap = 0; tap < 2; tap += 1) {
+      expect(
+        module.handle(mouseTapEvent({ button: 0, longPress: false }), context),
+      ).toEqual({ status: "handled" });
+    }
+
+    expect(editor.actions.applyPlacementDraft).toHaveBeenCalledTimes(2);
+    expect(context.canvas.actions.setActiveTool).not.toHaveBeenCalled();
+    expect(context.canvas.state.activeTool).toBe("single-placement");
+    expect(context.canvas.state.runtime.singlePlacementContinuous).toBe(true);
+    expect(context.canvas.state.runtime.singlePlacementDeviceId).toBe("log_splitter");
+    expect(editor.actions.moveCollectionCenterPointTo).toHaveBeenCalledWith(
+      EntityCollectionType.preview,
+      { x: 6, y: 4 },
+      context.canvas.view.state,
+    );
+  });
+
   it("keeps touch placement active and preserves rotation when continuous placement is enabled", () => {
     const { context, editor } = createContext({
       activeTool: "single-placement",

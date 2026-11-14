@@ -23,7 +23,7 @@ import LucideWorkflow from "~icons/lucide/workflow";
 import LucideGitBranch from "~icons/lucide/git-branch";
 
 import type { AppHost } from "@/app/host/app-host";
-import type { PlannerFlowViewportState } from "@/shared/storage/planner-storage";
+import { DEFAULT_PLANNER_FLOW_VIEWPORT_STATE, type PlannerFlowViewportState } from "@/shared/storage/planner-storage";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import type {
   ModuleBalancingCustomModule,
@@ -3216,7 +3216,7 @@ function FlowGraph({
       <ProductionFlowGraph
         displayMode={displayMode}
         invertWheelZoom={invertWheelZoom}
-        initialViewport={flowViewport}
+        initialViewport={isDefaultPlannerViewport(flowViewport) ? undefined : flowViewport}
         plan={plan}
         index={index}
         onNodeActivate={(node, anchor) => setActionTarget(resolveFlowNodeActionTarget(node, anchor))}
@@ -3426,3 +3426,9 @@ function shouldIgnoreProductionPlanningSwipeStart(target: EventTarget | null): b
   return target.closest("button, input, select, textarea, [role='button'], [role='tab']") !== null;
 }
 
+/** 从未平移缩放过的规划流程图首次打开时适配到目标产物，而不是停在左上角原点。 */
+function isDefaultPlannerViewport(viewport: PlannerFlowViewportState): boolean {
+  return viewport.x === DEFAULT_PLANNER_FLOW_VIEWPORT_STATE.x
+    && viewport.y === DEFAULT_PLANNER_FLOW_VIEWPORT_STATE.y
+    && viewport.scale === DEFAULT_PLANNER_FLOW_VIEWPORT_STATE.scale;
+}

@@ -11,7 +11,7 @@ import type {
   KeyboardGestureEvent,
 } from "../types";
 
-const ROTATE_VIEW_BUTTON_ID = "canvas-bottom-left-secondary-toolbar-button-rotate-view";
+export const ROTATE_VIEW_BUTTON_ID = "canvas-tool-rail-rotate-view";
 const ROTATE_VIEW_HOLD_DURATION_MS = 2_000;
 
 interface KeyboardHoldSource {

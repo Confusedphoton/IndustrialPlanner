@@ -448,6 +448,7 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
           aria-haspopup="menu"
           aria-label={variantLongName ?? buttonLabel}
           className={cm(styles, "placement-entity-variant-trigger")}
+          data-pen-target="compact"
           data-entity-variant-name={entityVariant.variantName}
           data-ui-button-id={`${button.uiButtonId}-variant-trigger`}
           onKeyDown={(event) => {

@@ -33,6 +33,7 @@ import {
 import type { AppHost } from "@/app/host/app-host";
 import { useEditorDocumentSnapshot } from "../hooks";
 import { cm } from "@/app/shell/shared/css-module-class";
+import { avoidCanvasToolRail } from "@/app/shell/canvas/canvas-tool-rail-bounds";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import styles from "@/app/shell/app-shell.module.scss";
 
@@ -635,8 +636,15 @@ function resolvePopupStyle(anchorX: number, anchorY: number): CSSProperties {
   const minWidth = popupPaddingInline + favoriteColumnWidth + contentGap + menuMinWidth;
   const maxWidth = popupPaddingInline + favoriteColumnWidth + contentGap + menuMaxWidth;
   const width = Math.min(maxWidth, Math.max(minWidth, window.innerWidth - viewportMargin * 2));
-  const left = clamp(anchorX - favoriteColumnWidth - 10, 8, window.innerWidth - width - 8);
   const top = clamp(anchorY - 20, viewportMargin, window.innerHeight - height - viewportMargin);
+  const left = avoidCanvasToolRail({
+    left: anchorX - favoriteColumnWidth - 10,
+    width,
+    top,
+    height,
+    minLeft: viewportMargin,
+    maxRight: window.innerWidth - viewportMargin,
+  });
 
   return {
     "--quick-place-favorite-column-width": `${favoriteColumnWidth}px`,

@@ -13,7 +13,6 @@ import {
   resolveCachedRecipeStatusIndex,
 } from "@/app/shell/inspector/selection-inspector-slot";
 import { resolveMachineRecipes } from "@/app/shell/inspector/simulation-recipe-status-runtime-inspector";
-import { translateKnownText } from "@/app/shell/shared/known-text-translation";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
 import { createEntityIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
@@ -21,8 +20,11 @@ import { readAdmissionRule } from "@/shared/registry/admission-rule";
 import { resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport-transform";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import { avoidCanvasToolRail } from "./canvas-tool-rail-bounds";
 
-const POPUP_WIDTH = 320;
+const POPUP_WIDTH = 340;
+/** 展开配方磁贴时加宽，配方以多列显示。 */
+const POPUP_EXPANDED_WIDTH = 540;
 const POPUP_GAP = 10;
 const POPUP_MARGIN = 8;
 
@@ -80,14 +82,20 @@ export const DevicePopup = observer(function DevicePopup({ appHost }: { appHost:
   // 水平居中并限制在画布视口内，高度不超过可用空间（内容滚动）。
   const viewport = view.clientRect;
   const centerX = deviceRect.left + deviceRect.width / 2;
-  const left = Math.min(
-    Math.max(viewport.left + POPUP_MARGIN, centerX - POPUP_WIDTH / 2),
-    viewport.left + viewport.width - POPUP_WIDTH - POPUP_MARGIN,
-  );
+  const popupWidth = Math.min(recipesExpanded ? POPUP_EXPANDED_WIDTH : POPUP_WIDTH, viewport.width - POPUP_MARGIN * 2);
   const spaceAbove = deviceRect.top - viewport.top - POPUP_GAP - POPUP_MARGIN;
   const spaceBelow = viewport.top + viewport.height - (deviceRect.top + deviceRect.height) - POPUP_GAP - POPUP_MARGIN;
   const toolbarAbove = canvas.state.runtime.canvasFloatingToolbar.visible;
   const placeAbove = !toolbarAbove && (spaceAbove >= 260 || spaceAbove >= spaceBelow);
+  // 水平居中于设备，并避开画布工具条；纵向范围按弹出层可能占用的最大高度估算。
+  const left = avoidCanvasToolRail({
+    left: centerX - popupWidth / 2,
+    width: popupWidth,
+    top: placeAbove ? viewport.top : deviceRect.top + deviceRect.height,
+    height: placeAbove ? deviceRect.top - viewport.top : viewport.top + viewport.height - deviceRect.top - deviceRect.height,
+    minLeft: viewport.left + POPUP_MARGIN,
+    maxRight: viewport.left + viewport.width - POPUP_MARGIN,
+  });
   const positionStyle = placeAbove
     ? { top: deviceRect.top - POPUP_GAP, transform: "translateY(-100%)", maxHeight: Math.max(120, spaceAbove) }
     : { top: deviceRect.top + deviceRect.height + POPUP_GAP, maxHeight: Math.max(120, spaceBelow) };
@@ -102,7 +110,7 @@ export const DevicePopup = observer(function DevicePopup({ appHost }: { appHost:
   const admissionItemId = hasAdmission ? resolveAdmissionItemId(entity.config) : null;
   const admissionItem = admissionItemId === null ? null : registry.queries.findItemDefinition(admissionItemId);
   const placement = editor.queries.getEntityPlacementValidation(entity.id);
-  const problems = placement.canPlace ? [] : placement.reasons.map((reason) => translateKnownText(reason.message, t));
+  const problems = placement.canPlace ? [] : placement.reasons.map((reason) => t(reason.message));
 
   const pickAdmissionItem = async () => {
     const itemId = await appHost.encyclopediaPicker.pickItem({ title: t("encyclopediaPicker.title.item") });
@@ -117,7 +125,7 @@ export const DevicePopup = observer(function DevicePopup({ appHost }: { appHost:
       className={cm(styles, "device-popup")}
       data-device-popup={entity.id}
       onPointerDown={(event) => event.stopPropagation()}
-      style={{ left, width: POPUP_WIDTH, ...positionStyle }}
+      style={{ left, width: popupWidth, ...positionStyle }}
     >
       <div className={cm(styles, "device-popup-header")}>
         <img alt="" src={createEntityIconAssetUrl(definition.iconPath)} />

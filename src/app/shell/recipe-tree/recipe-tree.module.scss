@@ -91,8 +91,21 @@
 
 .recipe-tree-search {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   padding: 8px;
   border-bottom: 1px solid var(--line);
+}
+
+.recipe-tree-search .recipe-tree-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.recipe-tree-pick-button {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
 }
 
 .recipe-tree-search.is-inline {
@@ -567,7 +580,20 @@
   color: var(--accent-strong);
 }
 
-// 流程图视图中合计信息每类只占一行（可横向滑动），把高度留给流程图。
+// 流程图视图中合计信息（设备与原料）合并为一行，可横向滑动，把高度留给流程图。
+.recipe-tree-graph-body .recipe-tree-totals:not(.is-expanded) {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  touch-action: pan-x;
+}
+
+.recipe-tree-graph-body .recipe-tree-totals:not(.is-expanded) .recipe-tree-totals-row {
+  flex: none;
+  overflow: visible;
+}
+
 .recipe-tree-graph-body .recipe-tree-totals-row {
   flex-wrap: nowrap;
   overflow-x: auto;

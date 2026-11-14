@@ -784,7 +784,7 @@ describe("ProductionFlowGraph touch regression", () => {
     expect(afterMove.y - afterPinch.y).toBeCloseTo(1);
   });
 
-  it("keeps the planned target fully visible when fitting a graph that overflows a short container", () => {
+  it("opens an overview in a short container, and Focus keeps the planned target fully visible at readable scale", () => {
     const sourceIds = Array.from({ length: 8 }, (_, index) => `item:source-${index}`);
     const node = (id: string, extra: Partial<ProductionFlowNode> = {}): ProductionFlowNode => ({
       id, kind: "item", tone: "normal", title: id, subtitle: "", iconSrcs: [PLACEHOLDER_ICON], ...extra,
@@ -811,8 +811,19 @@ describe("ProductionFlowGraph touch regression", () => {
     render({ fitToView: true });
     const canvas = getFlowCanvas(container);
     const surface = canvas.querySelector<HTMLDivElement>("[class*='production-flow-surface']")!;
-    const match = /translate\(([-\d.]+)px, ([-\d.]+)px\) scale\(([\d.]+)\)/.exec(surface.style.transform);
-    const [x, y, scale] = [Number(match?.[1]), Number(match?.[2]), Number(match?.[3])];
+    const readCamera = () => {
+      const match = /translate\(([-\d.]+)px, ([-\d.]+)px\) scale\(([\d.]+)\)/.exec(surface.style.transform);
+      return [Number(match?.[1]), Number(match?.[2]), Number(match?.[3])] as const;
+    };
+
+    // 自动适配时聚焦视图只能看到少量卡片，先给出能看到全部卡片的总览。
+    const [, , overviewScale] = readCamera();
+    expect(overviewScale).toBeLessThan(0.75);
+
+    act(() => {
+      container.querySelector<HTMLButtonElement>("[aria-label='productionPlanning.flowFocusTarget']")!.click();
+    });
+    const [x, y, scale] = readCamera();
     const target = getFlowNode(canvas, "item:target");
     const left = x + Number.parseFloat(target.style.left) * scale;
     const top = y + Number.parseFloat(target.style.top) * scale;

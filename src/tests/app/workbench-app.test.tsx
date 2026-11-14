@@ -1546,9 +1546,8 @@ describe("WorkbenchApp", () => {
     });
 
     const workbench = container.querySelector(".workbench") as HTMLDivElement | null;
-    const canvasBottomLeftSecondaryToolbar = container.querySelector(".canvas-bottom-left-secondary-toolbar") as HTMLDivElement | null;
     const rotateViewButton = container.querySelector(
-      '[data-ui-button-id="canvas-bottom-left-secondary-toolbar-button-rotate-view"]',
+      '[data-ui-button-id="canvas-tool-rail-rotate-view"]',
     ) as HTMLButtonElement | null;
 
     expect(appHost.state.screenProfile.deviceClass).toBe("tablet");
@@ -1558,7 +1557,6 @@ describe("WorkbenchApp", () => {
     expect(workbench?.style.getPropertyValue("--left-toolbar-width")).toBe("51px");
     expect(container.querySelector(".dock-resize-handle")).toBeNull();
     expect(container.querySelector('[data-ui-button-id="placement-tool-select"]')).not.toBeNull();
-    expect(canvasBottomLeftSecondaryToolbar).not.toBeNull();
     expect(rotateViewButton?.getAttribute("aria-label")).toBe("旋转视角");
     expect(
       rotateViewButton?.querySelector("svg")?.getAttribute("data-workbench-icon"),
@@ -1655,7 +1653,7 @@ describe("WorkbenchApp", () => {
     expect(leftMouseEvent.defaultPrevented).toBe(false);
   });
 
-  it("renders the bottom-left rotate view toolbar and emits rotate view button gestures", () => {
+  it("renders the rotate view hold button in the canvas tool rail and emits rotate view button gestures", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
     const appHost = createAppTestHost(workspace);
@@ -1666,16 +1664,16 @@ describe("WorkbenchApp", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    const toolbar = container.querySelector(".canvas-bottom-left-secondary-toolbar") as HTMLDivElement | null;
     const rotateViewButton = container.querySelector(
-      '[data-ui-button-id="canvas-bottom-left-secondary-toolbar-button-rotate-view"]',
+      '[data-ui-button-id="canvas-tool-rail-rotate-view"]',
     ) as HTMLButtonElement | null;
+    const toolbar = rotateViewButton?.closest<HTMLElement>('[role="toolbar"]') ?? null;
 
     expect(toolbar).not.toBeNull();
     expect(rotateViewButton).not.toBeNull();
 
     if (!toolbar || !rotateViewButton) {
-      throw new Error("Canvas bottom-left secondary toolbar did not render expected button.");
+      throw new Error("Canvas tool rail did not render the rotate view button.");
     }
 
     act(() => {
@@ -1702,9 +1700,7 @@ describe("WorkbenchApp", () => {
       });
     });
 
-    expect(container.querySelector(
-      ".canvas-bottom-left-secondary-toolbar-hold-progress",
-    )).not.toBeNull();
+    expect(rotateViewButton.querySelector('[style*="animation-duration"]')).not.toBeNull();
     expect(getTestView(editorHost.workspace).state.displayRotation).toBe(0);
 
     act(() => {
@@ -1721,19 +1717,17 @@ describe("WorkbenchApp", () => {
     expect(gestures).toMatchObject([
       {
         type: "ui-button-press-start",
-        uiButtonId: "canvas-bottom-left-secondary-toolbar-button-rotate-view",
+        uiButtonId: "canvas-tool-rail-rotate-view",
         pointerKind: "touch",
       },
       {
         type: "ui-button-press-end",
-        uiButtonId: "canvas-bottom-left-secondary-toolbar-button-rotate-view",
+        uiButtonId: "canvas-tool-rail-rotate-view",
         pointerKind: "touch",
         reason: "release",
       },
     ]);
-    expect(container.querySelector(
-      ".canvas-bottom-left-secondary-toolbar-hold-progress",
-    )).toBeNull();
+    expect(rotateViewButton.querySelector('[style*="animation-duration"]')).toBeNull();
     expect(getTestView(editorHost.workspace).state.displayRotation).toBe(90);
   });
 

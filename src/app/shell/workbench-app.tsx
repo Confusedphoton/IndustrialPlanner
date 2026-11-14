@@ -6,7 +6,6 @@ import { observer } from "mobx-react-lite";
 import { BottomStatusBar } from "@/app/shell/layout/bottom-status-bar";
 import { CanvasToolRail } from "@/app/shell/canvas/canvas-tool-rail";
 import { canvasToolRailState } from "@/app/shell/canvas/canvas-tool-rail-state";
-import { CanvasBottomLeftSecondaryToolbar } from "@/app/shell/canvas/canvas-bottom-left-secondary-toolbar";
 import { CanvasPanel } from "@/app/shell/canvas/canvas-panel";
 import { CanvasFloatingToolbar } from "@/app/shell/canvas/canvas-floating-toolbar";
 import { CanvasTopLeftCornerToolbar } from "@/app/shell/canvas/canvas-top-left-corner-toolbar";
@@ -1134,8 +1133,8 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     "--recipe-dock-width": `${dockLayoutBudget.recipeDockWidth}px`,
     "--right-stack-top": `${1 - (stackedRightColumn?.mode === "split" ? stackedRightColumn.recipeRatio : 0.5)}fr`,
     "--right-stack-bottom": `${stackedRightColumn?.mode === "split" ? stackedRightColumn.recipeRatio : 0.5}fr`,
-    "--canvas-tool-rail-width": canvasToolRailState.side === "left" ? "60px" : "0px",
-    "--canvas-tool-rail-right-width": canvasToolRailState.side === "right" ? "60px" : "0px",
+    "--canvas-tool-rail-width": canvasToolRailState.side === "left" ? `${canvasToolRailState.width}px` : "0px",
+    "--canvas-tool-rail-right-width": canvasToolRailState.side === "right" ? `${canvasToolRailState.width}px` : "0px",
     "--top-bar-height": showFloatingTopBarControls ? "0px" : `${TOP_BAR_HEIGHT_PX}px`,
     "--bottom-bar-height": showBottomStatusBar ? `${BOTTOM_BAR_HEIGHT_PX}px` : "0px",
     "--toolbox-bottom-dock-height": `${bottomDockGridHeight}px`,
@@ -1239,7 +1238,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
         <OverlapEntityMenu appHost={appHost} />
         <DevicePopup appHost={appHost} />
         <QuickPlacePopup appHost={appHost} />
-        <CanvasBottomLeftSecondaryToolbar appHost={appHost} />
         <CanvasToolRail appHost={appHost} />
         {canvasTopLeftCornerToolbar.visible && canvasTopLeftCornerToolbar.buttonIds.length > 0 ? (
           <CanvasTopLeftCornerToolbar

@@ -26,6 +26,12 @@ const UI: Record<string, string> = {
 
     "canvas.regionalDarkPipe": "Cross-base",
     "canvas.regionalDarkPipeSaveFailed": "The conduit link was not saved. Select the endpoint again.",
+    "canvas.modeLabel.marquee": "//Batch Select",
+    "canvas.modeLabel.reverseMarquee": "//Batch Deselect",
+    "canvas.modeLabel.blueprintPlacement": "//Place Blueprint",
+    "canvas.modeLabel.devicePlacement": "//Place Device",
+    "action.fitBaseInView": "Show Whole Base",
+    "action.cancelLogisticsRoute": "Cancel Route",
 
     "action.applyValue": "Apply",
     "action.cancel": "Cancel",
@@ -1013,7 +1019,6 @@ const UI: Record<string, string> = {
     "tool.select": "Select",
     "toolbar.canvasTools": "Canvas Tools",
     "toolbar.canvasToolsMove": "Move toolbar (drag to either edge)",
-    "toolbar.canvasBottomLeftSecondary": "Canvas Bottom Left Secondary Toolbar",
     "toolbar.canvasRightDock": "Canvas Right Dock Toolbar",
     "toolbar.canvasTopLeftCorner": "Canvas Top Left Corner Toolbar",
     "toolbar.tools": "Tools",
@@ -1449,6 +1454,7 @@ const UI: Record<string, string> = {
     "rightDock.expandPane": "Show device properties",
     "recipeTree.empty": "Search for an item above to pin its full production tree here.",
     "recipeTree.searchPlaceholder": "Pin an item…",
+    "recipeTree.pickItem": "Choose an item to pin",
     "recipeTree.pinLimitReached": "Pin limit reached",
     "recipeTree.targetRate": "Target rate per minute",
     "recipeTree.perMinute": "/min",

@@ -290,8 +290,8 @@
 }
 
 .dialog-shell.has-tabs .dialog-shell-header {
-  --dialog-shell-header-row-height: 42px;
-  --dialog-shell-tab-track-height: 34px;
+  --dialog-shell-header-row-height: 44px;
+  --dialog-shell-tab-track-height: var(--pen-target);
   --dialog-shell-tab-divider: var(--line-strong);
   @supports (background: color-mix(in srgb, red 50%, blue)) {
     --dialog-shell-tab-divider: color-mix(in srgb, var(--line-strong) 64%, var(--line));
@@ -715,8 +715,8 @@
 }
 
 .dialog-shell.is-mobile-compact .dialog-shell-header {
-  --dialog-shell-header-row-height: 40px;
-  --dialog-shell-tab-track-height: 30px;
+  --dialog-shell-header-row-height: 44px;
+  --dialog-shell-tab-track-height: var(--pen-target);
   min-height: var(--dialog-shell-header-row-height);
   padding: 5px 10px;
 }

@@ -159,7 +159,7 @@ export function BlueprintDirectoryBrowser({
       };
   const navigationButtonStyle = {
     minWidth: isTouchLayout ? "30px" : "32px",
-    minHeight: isTouchLayout ? "30px" : "32px",
+    minHeight: "var(--pen-target)",
     padding: 0,
     borderWidth: 0,
     borderRadius: "10px",
@@ -168,7 +168,7 @@ export function BlueprintDirectoryBrowser({
   };
   const createButtonStyle = {
     minWidth: isTouchLayout ? "30px" : undefined,
-    minHeight: isTouchLayout ? "30px" : "32px",
+    minHeight: "var(--pen-target)",
     width: isTouchLayout ? "30px" : undefined,
     padding: isTouchLayout ? 0 : "0 10px",
     borderWidth: 0,

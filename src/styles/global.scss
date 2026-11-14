@@ -92,6 +92,21 @@ button {
     transform 120ms ease;
 }
 
+/*
+  笔优先：所有按钮、下拉框与标签页至少有 --pen-target 的命中尺寸。组件里写的 height/width 小于该值时由
+  min-height/min-width 撑开；已通过 ::before 扩展命中区域、或位于 28px 状态栏等确需更小的控件，
+  标注 data-pen-target="compact" 豁免。
+*/
+button:not([data-pen-target="compact"]),
+select:not([data-pen-target="compact"]),
+[role="tab"]:not([data-pen-target="compact"]) {
+  min-height: var(--pen-target);
+}
+
+button:not([data-pen-target="compact"]) {
+  min-width: var(--pen-target);
+}
+
 button:hover {
   border-color: var(--line-strong);
   background: var(--surface-4);

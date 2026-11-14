@@ -2,6 +2,7 @@ import type { TextStyleOptions } from "pixi.js";
 import { Text } from "pixi.js";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
+import { lookupText } from "@/shared/i18n";
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
 
 const LOGISTICS_PLACEMENT_GLOW_COLOR = 0xFFD54A;
@@ -25,43 +26,10 @@ const MODE_LABEL_TEXT_STYLE = {
   },
 } satisfies TextStyleOptions;
 
-const LOGISTICS_PLACEMENT_LABELS = {
-  belt: "//布设传送带",
-  pipe: "//布设管道",
-} as const;
-
-const LOGISTICS_PLACEMENT_LABELS_EN: Record<keyof typeof LOGISTICS_PLACEMENT_LABELS, string> = {
-  belt: "//Draw belt",
-  pipe: "//Draw pipe",
-};
-
-interface AppWithLogisticsPlacementRuntime {
-  internalState: {
-    runtime: {
-      logisticsPlacement: {
-        kind: keyof typeof LOGISTICS_PLACEMENT_LABELS | null;
-      };
-    };
-  };
-}
-
-function resolveLogisticsPlacementKind(
-  ctx: DecorationSyncContext,
-): keyof typeof LOGISTICS_PLACEMENT_LABELS | null {
-  const app = ctx.renderHost.input.presentation.getSnapshot();
-
-  if (app === null || !("internalState" in app)) {
-    return null;
-  }
-
-  return (app as AppWithLogisticsPlacementRuntime)
-    .internalState.runtime.logisticsPlacement.kind;
-}
-
-// AI-MODIFIED 2026-05-21:
-// 移除所有 BlurFilter 和 glow 绘制代码（nearGlow/farGlow/coreEdge/glowMask），
-// 改为仅保留 modeLabel。发光效果迁移至 DOM overlay（CSS box-shadow + animation），
-// 以消除 BlurFilter 引起的全视口离屏渲染开销。
+/**
+ * 放置设备时在视口左上角渲染模式标签。
+ * 场景呈现快照不携带物流布设种类，物流布设的提示由 DOM 画布提示负责。
+ */
 export function createLogisticsPlacementCanvasDecoration(): DecorationLayer {
   const modeLabel = new Text({ text: "", style: MODE_LABEL_TEXT_STYLE as TextStyleOptions });
 
@@ -69,28 +37,16 @@ export function createLogisticsPlacementCanvasDecoration(): DecorationLayer {
     container: modeLabel,
 
     sync(ctx: DecorationSyncContext): void {
-      const appState = ctx.renderHost.input.presentation.getSnapshot();
-      const logisticsKind = resolveLogisticsPlacementKind(ctx);
-      const isLogisticsPlacement = appState.activeTool === "logistics-placement" && logisticsKind !== null;
-      const isSinglePlacement = appState.activeTool === "single-placement";
+      const presentation = ctx.renderHost.input.presentation.getSnapshot();
 
-      if (!isLogisticsPlacement && !isSinglePlacement) {
+      if (presentation.activeTool !== "single-placement") {
         modeLabel.visible = false;
         return;
       }
 
       modeLabel.visible = true;
-      ctx.profiler?.count("logisticsPlacement.activeFrames");
-      ctx.profiler?.count(isSinglePlacement
-        ? "logisticsPlacement.singlePlacementFrames"
-        : "logisticsPlacement.logisticsPlacementFrames");
-
-      const english = ctx.renderHost.input.presentation.getSnapshot()?.settings?.locale === "en-US";
-      modeLabel.text = isSinglePlacement
-        ? (english ? "//Place device" : "放置设备")
-        : logisticsKind === null
-          ? ""
-          : (english ? LOGISTICS_PLACEMENT_LABELS_EN : LOGISTICS_PLACEMENT_LABELS)[logisticsKind];
+      ctx.profiler?.count("logisticsPlacement.singlePlacementFrames");
+      modeLabel.text = lookupText(presentation.settings.locale, "canvas.modeLabel.devicePlacement") ?? "";
       modeLabel.x = 14;
       modeLabel.y = 8;
 

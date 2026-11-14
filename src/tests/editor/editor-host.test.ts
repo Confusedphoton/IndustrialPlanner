@@ -1245,7 +1245,7 @@ describe("createEditorTestHost", () => {
     expect(editorHost.queries.getEntityPlacementValidation(draftId ?? "").reasons).toEqual([
       {
         code: "outside-base",
-        message: "必须靠近地图边缘放置",
+        message: "placementReason.edgeSnap",
       },
     ]);
     expect(editorHost.actions.applyPlacementDraft()).toBe(false);

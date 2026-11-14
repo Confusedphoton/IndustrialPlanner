@@ -1625,7 +1625,7 @@ describe("createAppTestHost", () => {
 
     for (const expected of expectedRotations) {
       appHost.gestureAdapter.handleUiButtonMouseTap({
-        uiButtonId: "canvas-bottom-left-secondary-toolbar-button-rotate-view",
+        uiButtonId: "canvas-tool-rail-rotate-view",
         button: 0,
         altKey: false,
         ctrlKey: false,
@@ -3797,7 +3797,7 @@ describe("createAppTestHost", () => {
     expect(setViewportDisplayRotationSpy).not.toHaveBeenCalled();
     expect(appHost.gestureAdapter.getUiButtonHoldState()).toMatchObject({
       visible: true,
-      uiButtonId: "canvas-bottom-left-secondary-toolbar-button-rotate-view",
+      uiButtonId: "canvas-tool-rail-rotate-view",
       durationMs: 2_000,
     });
 
@@ -3836,7 +3836,7 @@ describe("createAppTestHost", () => {
     setViewportDisplayRotationSpy.mockClear();
 
     appHost.gestureAdapter.handleUiButtonMouseTap({
-      uiButtonId: "canvas-bottom-left-secondary-toolbar-button-rotate-view",
+      uiButtonId: "canvas-tool-rail-rotate-view",
       button: 0,
       altKey: false,
       ctrlKey: false,
@@ -3912,7 +3912,7 @@ describe("createAppTestHost", () => {
     getTestView(editorHost.workspace).actions.setViewportDisplayRotation(180);
     setViewportDisplayRotationSpy.mockClear();
     appHost.gestureAdapter.handleUiButtonPressStart({
-      uiButtonId: "canvas-bottom-left-secondary-toolbar-button-rotate-view",
+      uiButtonId: "canvas-tool-rail-rotate-view",
       pointerId: 77,
       pointerType: "mouse",
       button: 0,
@@ -3928,7 +3928,7 @@ describe("createAppTestHost", () => {
     expect(getTestView(editorHost.workspace).state.displayRotation).toBe(0);
 
     appHost.gestureAdapter.handleUiButtonPressEnd({
-      uiButtonId: "canvas-bottom-left-secondary-toolbar-button-rotate-view",
+      uiButtonId: "canvas-tool-rail-rotate-view",
       pointerId: 77,
       pointerType: "mouse",
       button: 0,
@@ -3940,7 +3940,7 @@ describe("createAppTestHost", () => {
     expect(setViewportDisplayRotationSpy).toHaveBeenCalledTimes(1);
 
     appHost.gestureAdapter.handleUiButtonPressStart({
-      uiButtonId: "canvas-bottom-left-secondary-toolbar-button-rotate-view",
+      uiButtonId: "canvas-tool-rail-rotate-view",
       pointerId: 78,
       pointerType: "touch",
       button: 0,
@@ -3951,7 +3951,7 @@ describe("createAppTestHost", () => {
     });
     vi.advanceTimersByTime(500);
     appHost.gestureAdapter.handleUiButtonPressEnd({
-      uiButtonId: "canvas-bottom-left-secondary-toolbar-button-rotate-view",
+      uiButtonId: "canvas-tool-rail-rotate-view",
       pointerId: 78,
       pointerType: "touch",
       button: 0,

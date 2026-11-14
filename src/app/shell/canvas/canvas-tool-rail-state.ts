@@ -8,11 +8,14 @@ export type CanvasToolRailSide = "left" | "right";
 
 const STORAGE_KEY = "industrial-planner-canvas-tool-rail";
 const DEFAULT_CENTER = 0.5;
+const DEFAULT_WIDTH = 66;
 
 export class CanvasToolRailState {
   public side: CanvasToolRailSide = "left";
   /** 工具条中心在画布高度中的比例（0–1）。 */
   public center = DEFAULT_CENTER;
+  /** 工具条占据的画布边缘带宽（px，含与画布边缘的间距）；矮窗口下分列后变宽，供画布内其他浮层避让。 */
+  public width = DEFAULT_WIDTH;
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
@@ -21,6 +24,12 @@ export class CanvasToolRailState {
   public setPosition(side: CanvasToolRailSide, center: number): void {
     this.side = side;
     this.center = Math.min(1, Math.max(0, center));
+  }
+
+  public setWidth(width: number): void {
+    if (Number.isFinite(width) && width > 0) {
+      this.width = Math.round(width);
+    }
   }
 
   public hydrate(raw: unknown): void {

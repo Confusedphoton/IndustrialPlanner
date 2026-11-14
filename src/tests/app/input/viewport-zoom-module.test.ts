@@ -5,7 +5,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 
 
-import { createHypergryphViewportZoomModule } from "@/app/input/gesture/actions";
+import {
+  createHypergryphViewportZoomModule,
+  fitCanvasViewportToBase,
+  zoomCanvasViewportByButton,
+} from "@/app/input/gesture/actions";
+import { createWorldDocument } from "@/domain/document/world-document";
+import { resolveBaseOuterBounds } from "@/shared/geometry/base-areas";
 
 
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
@@ -44,6 +50,43 @@ describe("createHypergryphViewportZoomModule", () => {
     });
     expect(previewRectRef.current).toEqual({ x: 3, y: 0, width: 2, height: 2 });
     expect(context.canvas.state.runtime.placementAnchor).toEqual({ x: 3, y: 0 });
+  });
+});
+
+describe("canvas viewport zoom buttons", () => {
+  it("zooms in and out through the same zoom steps as the wheel", () => {
+    const test = createCanvasTestSession({ document: createWorldDocument({ baseId: "wuling_protocol_core" }) });
+    cleanups.push(test.dispose);
+    test.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
+    const initial = test.view.state.gridSize;
+
+    zoomCanvasViewportByButton(test.canvas, 1);
+    expect(test.view.state.gridSize).toBeGreaterThan(initial);
+    zoomCanvasViewportByButton(test.canvas, -1);
+    expect(test.view.state.gridSize).toBeCloseTo(initial);
+  });
+
+  it("centers the base and picks the largest zoom step that still shows the whole base", () => {
+    const test = createCanvasTestSession({
+      document: createWorldDocument({ baseId: "wuling_protocol_core" }),
+      viewport: { center: { x: -40, y: 90 }, gridSize: 4, displayRotation: 0 },
+    });
+    cleanups.push(test.dispose);
+    test.view.actions.setViewportClientRect({ left: 0, top: 0, width: 2400, height: 1800 });
+    const base = test.workspace.registry.baseDefinitions.find((candidate) => candidate.id === "wuling_protocol_core")!;
+    const bounds = resolveBaseOuterBounds(base)!;
+    const width = bounds.maxX! - bounds.minX!;
+    const height = bounds.maxY! - bounds.minY!;
+    const fits = () => width * test.view.state.gridCellPixelSize <= 2400 && height * test.view.state.gridCellPixelSize <= 1800;
+
+    fitCanvasViewportToBase(test.canvas);
+
+    expect(test.view.state.center.x).toBeCloseTo(bounds.minX! + width / 2);
+    expect(test.view.state.center.y).toBeCloseTo(bounds.minY! + height / 2);
+    expect(fits()).toBe(true);
+    test.view.actions.zoom(1);
+    test.view.actions.zoom(1);
+    expect(fits()).toBe(false);
   });
 });
 

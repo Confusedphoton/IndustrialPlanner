@@ -1,6 +1,12 @@
+import type { CanvasInteractionController } from "@/app/canvas";
 import type { AppHost } from "@/app/host/app-host";
+import type { EditorContract } from "@/domain/editor/editor-contract";
+import type { GridRect } from "@/domain/shared/grid";
+import { resolveBaseDefinitionById } from "@/domain/registry/types/base-definition";
 import type { GestureMappingModule } from "../types";
 import { resolveWheelZoomDirection } from "@/shared/browser/wheel-zoom";
+import { resolveBaseOuterBounds } from "@/shared/geometry/base-areas";
+import { sceneBoundsToFiniteRect } from "@/shared/geometry/scene-space";
 import {
   nudgeMobilePreviewIntoSafeViewport,
 } from "./mobile-preview-bounds";
@@ -8,6 +14,11 @@ import {
 const PINCH_ZOOM_STEPS_PER_DOUBLING = 4;
 const MIN_WHEEL_ZOOM_STEP = 1;
 const MAX_WHEEL_ZOOM_STEP = 2;
+const BUTTON_ZOOM_STEP = MAX_WHEEL_ZOOM_STEP;
+/** 显示整个基地时基地外框占画布的最大比例，给边缘工具条留出余量。 */
+const FIT_BASE_VIEWPORT_FRACTION = 0.92;
+/** 逐档缩放的次数上限；缩放档位有限，正常在到达上下限前就会停止。 */
+const MAX_FIT_ZOOM_STEPS = 64;
 
 export function createHypergryphViewportZoomModule(): GestureMappingModule<AppHost> {
   return {
@@ -28,11 +39,7 @@ export function createHypergryphViewportZoomModule(): GestureMappingModule<AppHo
           }
 
           context.canvas.view.actions.zoom(step);
-          nudgeMobilePreviewIntoSafeViewport({
-            canvas: context.canvas,
-            editor,
-          });
-          context.canvas.actions.alignCanvasFloatingToolbar();
+          syncViewportDependents(context.canvas, editor);
           return { status: "handled" };
         }
 
@@ -45,11 +52,7 @@ export function createHypergryphViewportZoomModule(): GestureMappingModule<AppHo
           }
 
           context.canvas.view.actions.zoom(step);
-          nudgeMobilePreviewIntoSafeViewport({
-            canvas: context.canvas,
-            editor,
-          });
-          context.canvas.actions.alignCanvasFloatingToolbar();
+          syncViewportDependents(context.canvas, editor);
           return { status: "handled" };
         }
 
@@ -58,6 +61,72 @@ export function createHypergryphViewportZoomModule(): GestureMappingModule<AppHo
       }
     },
   };
+}
+
+/** 画布缩放按钮：与滚轮共用缩放档位与后续对齐。 */
+export function zoomCanvasViewportByButton(canvas: CanvasInteractionController, direction: 1 | -1): void {
+  const editor = canvas.editor;
+  if (editor === null) {
+    return;
+  }
+
+  canvas.view.actions.zoom(direction * BUTTON_ZOOM_STEP);
+  syncViewportDependents(canvas, editor);
+}
+
+/**
+ * 把当前基地外框居中，并沿缩放档位调整到能完整显示基地的最大档位（受缩放上下限约束）。
+ * 结果停在档位上，之后的滚轮与按钮缩放保持连续。
+ */
+export function fitCanvasViewportToBase(canvas: CanvasInteractionController): void {
+  const editor = canvas.editor;
+  const view = canvas.view;
+  if (editor === null || view.state.clientRect.width <= 0 || view.state.clientRect.height <= 0) {
+    return;
+  }
+
+  const base = resolveBaseDefinitionById({
+    baseDefinitions: canvas.registry.baseDefinitions,
+    baseId: editor.document.getSnapshot().baseId,
+  });
+  const outerBounds = base === null ? null : resolveBaseOuterBounds(base);
+  const baseRect = outerBounds === null ? null : sceneBoundsToFiniteRect(outerBounds);
+  if (baseRect === null) {
+    return;
+  }
+
+  view.actions.focusOnBounds(baseRect, { durationMs: 0, gridSize: view.state.gridSize });
+  const zoomOneStep = (step: 1 | -1): boolean => {
+    const before = view.state.gridSize;
+    view.actions.zoom(step);
+    return view.state.gridSize !== before;
+  };
+
+  for (let index = 0; index < MAX_FIT_ZOOM_STEPS && !doesRectFitViewport(canvas, baseRect); index += 1) {
+    if (!zoomOneStep(-1)) break;
+  }
+  for (let index = 0; index < MAX_FIT_ZOOM_STEPS && doesRectFitViewport(canvas, baseRect); index += 1) {
+    if (!zoomOneStep(1)) break;
+    if (!doesRectFitViewport(canvas, baseRect)) {
+      zoomOneStep(-1);
+      break;
+    }
+  }
+  syncViewportDependents(canvas, editor);
+}
+
+function doesRectFitViewport(canvas: CanvasInteractionController, rect: GridRect): boolean {
+  const { clientRect, displayRotation, gridCellPixelSize } = canvas.view.state;
+  const rotated = displayRotation === 90 || displayRotation === 270;
+  const pixelWidth = (rotated ? rect.height : rect.width) * gridCellPixelSize;
+  const pixelHeight = (rotated ? rect.width : rect.height) * gridCellPixelSize;
+  return pixelWidth <= clientRect.width * FIT_BASE_VIEWPORT_FRACTION
+    && pixelHeight <= clientRect.height * FIT_BASE_VIEWPORT_FRACTION;
+}
+
+function syncViewportDependents(canvas: CanvasInteractionController, editor: EditorContract): void {
+  nudgeMobilePreviewIntoSafeViewport({ canvas, editor });
+  canvas.actions.alignCanvasFloatingToolbar();
 }
 
 function resolveWheelZoomStep(normalizedDelta: number, inverted: boolean): number | null {

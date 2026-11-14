@@ -72,6 +72,10 @@ const PIPE_END_RIGHT_DOCK_TOOLBAR_ITEMS = [
 ] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
 
 
+/** 画布工具条在物流布设模式下的上下文按钮：切换优先方向、取消正在绘制的路线。 */
+export const LOGISTICS_ROUTE_ORDER_BUTTON_ID = "canvas-tool-rail-logistics-route-order";
+export const LOGISTICS_CANCEL_ROUTE_BUTTON_ID = "canvas-tool-rail-logistics-cancel-route";
+
 const BELT_DRAW_BUTTON_ID = "placement-action-belt-draw";
 const PIPE_DRAW_BUTTON_ID = "placement-action-pipe-draw";
 
@@ -110,9 +114,14 @@ function showEmptyLogisticsStartToast(canvas: CanvasInteractionController): void
 
 export function createHypergryphLogisticsPlacementGestureModule(): GestureMappingModule<AppHost> {
   let activeTouchLogisticsDragGestureId: string | null = null;
+  let activeMouseLogisticsDragGestureId: string | null = null;
 
   return {
     id: "hypergryph-logistics-placement-gesture",
+    cancel() {
+      activeTouchLogisticsDragGestureId = null;
+      activeMouseLogisticsDragGestureId = null;
+    },
     shortcutRoutes: [
       ...([
         [SHORTCUT_KEY.PLACE_CONVEYOR, LOGISTICS_KIND.belt],
@@ -175,6 +184,7 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
         }
 
         activeTouchLogisticsDragGestureId = null;
+        activeMouseLogisticsDragGestureId = null;
         cleanupLogisticsPlacement(context.canvas);
         context.canvas.actions.hideCanvasTopLeftCornerToolbar();
         if (event.to === "select") {
@@ -198,40 +208,6 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
       if (event.type === "mouse move") {
         context.canvas.state.runtime.logisticsPlacement.lastMousePosition = event.position;
       }
-
-      /*
-      if (event.type === "key down") {
-        // 2026-08-02 订正：物流放置模式下允许修饰键组合（Ctrl 连续放置时按 E/Q 切换种类仍生效）；
-        // select 模式进入物流放置的入口保持拒绝修饰键，避免影响全局快捷键（如 Ctrl+E 浏览器地址栏）。
-        const group = resolvePlacementGroupByShortcut({
-          appHost: context.appHost,
-          code: event.code,
-          key: event.key,
-          modifiers: event.modifiers,
-          allowModifierKeys: context.appHost.internalState.activeTool === "logistics-placement",
-        });
-
-        if (group === "beltLogistics" || group === "pipeLogistics") {
-          if (group === "pipeLogistics" && !hasPlaceableEntityDefinitionInCurrentBase(context.appHost, "pipeLogistics")) {
-            return { status: "ignored" };
-          }
-
-          if (editor === null) {
-            return { status: "ignored" };
-          }
-
-          enterLogisticsPlacementMode({
-            appHost: context.appHost,
-            editor,
-            kind: group === "beltLogistics"
-              ? LOGISTICS_KIND.belt
-              : LOGISTICS_KIND.pipe,
-            pointerMode: "mouse",
-          });
-          return { status: "handled" };
-        }
-      }
-      */
 
       if (editor === null) {
         if (
@@ -295,31 +271,11 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
 
       if (context.canvas.state.activeTool !== "logistics-placement") {
         activeTouchLogisticsDragGestureId = null;
+        activeMouseLogisticsDragGestureId = null;
         return { status: "ignored" };
       }
 
       switch (event.type) {
-        /*
-        case "key down":
-          if (handleRouteOrderShortcut({
-            appHost: context.appHost,
-            editor,
-            code: event.code,
-            key: event.key,
-            modifiers: event.modifiers,
-          })) {
-            return { status: "handled" };
-          }
-
-          return handleLogisticsDeviceShortcut({
-            appHost: context.appHost,
-            editor,
-            code: event.code,
-            key: event.key,
-            modifiers: event.modifiers,
-          });
-        */
-
         case "touch tap":
           return handleTouchTap({
             canvas: context.canvas,
@@ -329,22 +285,11 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
           });
 
         case "touch dragstart": {
-          console.warn("[LOGISTICS-DEBUG]","touch-dragstart", {
-            gestureId: event.gestureId,
-            kind: context.canvas.state.runtime.logisticsPlacement.kind,
-            allowEmptySource: resolveLogisticsPlacementBehaviorOptions(context.canvas).allowEmptySource,
-            startPosition: event.startPosition,
-            position: event.position,
-          });
           const result = handleTouchDragStart({
             canvas: context.canvas,
             editor,
             position: event.position,
             startPosition: event.startPosition,
-          });
-          console.warn("[LOGISTICS-DEBUG]","touch-dragstart-result", {
-            gestureId: event.gestureId,
-            status: result.status,
           });
           activeTouchLogisticsDragGestureId = result.status === "claimed" ? event.gestureId : null;
           return result;
@@ -371,6 +316,38 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
             ? { status: "ignored" }
             : { status: "handled" };
         }
+
+        case "mouse dragstart": {
+          if (event.originButton !== 0) {
+            return { status: "ignored" };
+          }
+
+          const claimed = startMouseLogisticsDrag({
+            canvas: context.canvas,
+            editor,
+            position: event.position,
+            startPosition: event.startPosition,
+          });
+          activeMouseLogisticsDragGestureId = claimed ? event.gestureId : null;
+          return claimed ? { status: "claimed" } : { status: "ignored" };
+        }
+
+        case "mouse dragmove":
+          if (activeMouseLogisticsDragGestureId !== event.gestureId) {
+            return { status: "ignored" };
+          }
+
+          moveMouseLogisticsDragEnd(context.canvas, editor, event.position);
+          return { status: "handled" };
+
+        case "mouse dragend":
+          if (activeMouseLogisticsDragGestureId !== event.gestureId) {
+            return { status: "ignored" };
+          }
+
+          activeMouseLogisticsDragGestureId = null;
+          finishMouseLogisticsDrag(context.canvas, editor, event.reason === "release");
+          return { status: "handled" };
 
         case "mouse move": {
           const runtime = context.canvas.state.runtime.logisticsPlacement;
@@ -440,6 +417,16 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
 
           if (event.uiButtonId === "canvas-right-dock-toolbar-button-exit") {
             exitLogisticsPlacementToSelect(context.canvas, editor);
+            return { status: "handled" };
+          }
+
+          if (event.uiButtonId === LOGISTICS_ROUTE_ORDER_BUTTON_ID) {
+            handleRouteOrderChange(context.canvas, editor);
+            return { status: "handled" };
+          }
+
+          if (event.uiButtonId === LOGISTICS_CANCEL_ROUTE_BUTTON_ID) {
+            cancelLogisticsPlacement(context.canvas, editor);
             return { status: "handled" };
           }
 
@@ -565,18 +552,12 @@ function handleTouchDragStart(options: {
   const kind = options.canvas.state.runtime.logisticsPlacement.kind;
   const startGridPoint = resolveGridPointFromGesturePosition(options.canvas.view, options.startPosition);
   const pointerGridPoint = resolveGridPointFromGesturePosition(options.canvas.view, options.position);
-  console.warn("[LOGISTICS-DEBUG]","handleTouchDragStart-enter", {
-    kind, startGridPoint, pointerGridPoint,
-    draftState: options.editor.queries.resolveLogisticsDraftState() !== null ? "present" : "null",
-  });
   if (kind === null || startGridPoint === null || pointerGridPoint === null) {
-    console.warn("[LOGISTICS-DEBUG]","handleTouchDragStart-null-early-return", { kind, startGridPoint, pointerGridPoint });
     return { status: "ignored" };
   }
 
   if (options.editor.queries.resolveLogisticsDraftState() !== null) {
     const onHead = isTouchDragStartOnLogisticsHead(options.editor, options.canvas.view, options.startPosition);
-    console.warn("[LOGISTICS-DEBUG]","handleTouchDragStart-existing-draft", { onHead });
     if (!onHead) {
       return { status: "ignored" };
     }
@@ -594,10 +575,6 @@ function handleTouchDragStart(options: {
     startGridPoint,
     kind,
   );
-  console.warn("[LOGISTICS-DEBUG]","handleTouchDragStart-endpoint", {
-    type: endpoint?.type ?? "null",
-    portDirection: endpoint?.type === "device-port" ? endpoint.portDirection : "N/A",
-  });
   if (endpoint?.type === "device-port" && endpoint.portDirection === "output") {
     const runtime = options.canvas.state.runtime.logisticsPlacement;
     runtime.pointerMode = "touch";
@@ -657,14 +634,9 @@ function handleTouchDragStart(options: {
   }
 
   const startEntity = options.editor.queries.findEntityAtClientPixelPoint(options.startPosition, options.canvas.view.state);
-  console.warn("[LOGISTICS-DEBUG]","handleTouchDragStart-startEntity", {
-    hasEntity: startEntity !== null,
-    allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.canvas).allowEmptySource,
-  });
   if (startEntity === null) {
     if (!resolveLogisticsPlacementBehaviorOptions(options.canvas).allowEmptySource) {
       showEmptyLogisticsStartToast(options.canvas);
-      console.warn("[LOGISTICS-DEBUG]","handleTouchDragStart-empty-rejected");
       return { status: "ignored" };
     }
 
@@ -1074,6 +1046,108 @@ function createMouseLogisticsStart(options: {
   return { status: "handled" };
 }
 
+/**
+ * 鼠标左键或笔尖从可起笔处（设备输出口、物流线）拖动时直接绘制路线，抬起即提交；
+ * 从其他位置拖动不认领，交给视口平移。点按起笔后的路线仍按点按流程处理。
+ */
+function startMouseLogisticsDrag(options: {
+  canvas: CanvasInteractionController;
+  editor: NonNullable<AppHost["workspace"]["editor"]>;
+  position: GesturePosition;
+  startPosition: GesturePosition;
+}): boolean {
+  const runtime = options.canvas.state.runtime.logisticsPlacement;
+  const kind = runtime.kind;
+  const startGridPoint = resolveGridPointFromGesturePosition(options.canvas.view, options.startPosition);
+  if (kind === null || startGridPoint === null) {
+    return false;
+  }
+
+  const hasDraft = options.editor.queries.resolveLogisticsDraftState() !== null;
+  if (hasDraft && !runtime.isHoverPreview) {
+    return false;
+  }
+
+  const endpoint = options.editor.queries.findLogisticsDraftEndpointAtGridPoint(startGridPoint, kind);
+  const source: CreateLogisticsDraftStartOptions["source"] | null =
+    endpoint?.type === "device-port" && endpoint.portDirection === "output"
+      ? resolveDevicePortStartSource(endpoint, startGridPoint)
+      : endpoint?.type === "logistics-entity"
+        ? { type: "logistics-entity", entityId: endpoint.entityId, gridPoint: endpoint.gridPoint }
+        : null;
+  if (source === null) {
+    return false;
+  }
+
+  if (hasDraft) {
+    options.editor.actions.cancelLogisticsDraft();
+  }
+  const result = options.editor.actions.createLogisticsDraftStart({
+    kind,
+    allowEmptySource: resolveLogisticsPlacementBehaviorOptions(options.canvas).allowEmptySource,
+    source,
+    routeOrder: runtime.routeOrder,
+  });
+  if (result.status === "ignored") {
+    safelyCancelLogisticsDraft(options.editor);
+    softResetLogisticsRuntime(options.canvas);
+    return false;
+  }
+
+  runtime.isHoverPreview = false;
+  options.editor.actions.clearHoverPoint();
+  updateRuntimeFromResult({
+    canvas: options.canvas,
+    pointerMode: "mouse",
+    phase: "drawing",
+    result,
+  });
+  runtime.lastPreviewGridPoint = null;
+  moveMouseLogisticsDragEnd(options.canvas, options.editor, options.position);
+  return true;
+}
+
+function moveMouseLogisticsDragEnd(
+  canvas: CanvasInteractionController,
+  editor: NonNullable<AppHost["workspace"]["editor"]>,
+  position: GesturePosition,
+): void {
+  const runtime = canvas.state.runtime.logisticsPlacement;
+  const gridPoint = resolveGridPointFromGesturePosition(canvas.view, position);
+  if (
+    gridPoint === null
+    || (runtime.lastPreviewGridPoint !== null && areGridPointsEqual(runtime.lastPreviewGridPoint, gridPoint))
+  ) {
+    return;
+  }
+
+  const result = editor.actions.moveLogisticEnd({
+    pointerGridPoint: gridPoint,
+    ...resolveMoveLogisticsDraftBehaviorOptions(canvas),
+    routeMode: { type: "freehand" },
+  });
+  updateRuntimeFromResult({
+    canvas,
+    pointerMode: "mouse",
+    phase: result.targetEntityId === null ? "drawing" : "snapped-target",
+    result,
+  });
+  runtime.lastPreviewGridPoint = gridPoint;
+}
+
+function finishMouseLogisticsDrag(
+  canvas: CanvasInteractionController,
+  editor: NonNullable<AppHost["workspace"]["editor"]>,
+  commit: boolean,
+): void {
+  const draftState = editor.queries.resolveLogisticsDraftState();
+  const applied = commit && draftState?.canApply === true && editor.actions.applyLogisticDraft();
+  if (!applied) {
+    safelyCancelLogisticsDraft(editor);
+  }
+  softResetLogisticsRuntime(canvas);
+}
+
 function logMouseLogisticsPlacementFailure(
   stage: "start" | "apply",
   reason: string,
@@ -1203,15 +1277,6 @@ function exitLogisticsPlacementToSelect(
   canvas.actions.setActiveTool("select");
 }
 
-/*
-function handleRouteOrderShortcut(options: {
-  appHost: AppHost;
-  editor: NonNullable<AppHost["workspace"]["editor"]>;
-  code: string | null;
-  key: string | null;
-  modifiers: { alt: boolean; ctrl: boolean; meta: boolean };
-}): boolean {
-  */
 function handleRouteOrderChange(
   canvas: CanvasInteractionController,
   editor: NonNullable<AppHost["workspace"]["editor"]>,
@@ -1282,11 +1347,9 @@ function handleLogisticsDeviceShortcutIndex(options: {
     return { status: "ignored" };
   }
 
-  // 2026-05-19 订正：不再手动创建 draft / 清理 logistics，改为写桥接变量 + setActiveTool。
   // logistics-placement 的 on-exit 自动清理 logistics draft，
-  // single-placement 的 on-enter 读取桥接变量创建 placement draft。
-  // 2026-06-23 订正：传入 logistics 追踪的鼠标位置作为 initialMousePosition，
-  // 使 single-placement 的 on-enter 能正确判断鼠标是否在 viewport 内并立即创建 draft。
+  // single-placement 的 on-enter 读取桥接变量创建 placement draft；
+  // 传入 logistics 追踪的鼠标位置，使 on-enter 能判断鼠标是否在 viewport 内并立即创建 draft。
   setPendingSinglePlacementEnter(options.canvas, {
     deviceId,
     anchor,

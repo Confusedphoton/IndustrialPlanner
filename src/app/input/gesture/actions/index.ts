@@ -10,6 +10,8 @@ export {
 export {
   cleanupLogisticsPlacement,
   createHypergryphLogisticsPlacementGestureModule,
+  LOGISTICS_CANCEL_ROUTE_BUTTON_ID,
+  LOGISTICS_ROUTE_ORDER_BUTTON_ID,
 } from "./hypergryph/hypergryph-logistics-placement-gesture-module";
 export { createHypergryphDeleteSelectionGestureModule } from "./hypergryph/hypergryph-delete-selection-gesture-module";
 export { createHypergryphEntityVariantSwitchGestureModule } from "./hypergryph/hypergryph-entity-variant-switch-gesture-module";
@@ -35,8 +37,12 @@ export { createHypergryphKeyboardViewportPanModule } from "./hypergryph/hypergry
 export {
   createHypergryphSelectGestureModule,
 } from "./hypergryph/hypergryph-select-gesture-module";
-export { createHypergryphViewportZoomModule } from "./hypergryph/hypergryph-viewport-zoom-module";
-export { createHypergryphViewportRotationModule } from "./hypergryph/hypergryph-viewport-rotation-module";
+export {
+  createHypergryphViewportZoomModule,
+  fitCanvasViewportToBase,
+  zoomCanvasViewportByButton,
+} from "./hypergryph/hypergryph-viewport-zoom-module";
+export { createHypergryphViewportRotationModule, ROTATE_VIEW_BUTTON_ID } from "./hypergryph/hypergryph-viewport-rotation-module";
 export { createHypergryphHistoryGestureModule } from "./hypergryph/hypergryph-history-gesture-module";
 export { createPanelToggleGestureModule } from "./panel-toggle-gesture-module";
 export { createQuickPlaceGestureModule, openQuickPlace } from "./quick-place-gesture-module";

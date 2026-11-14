@@ -558,33 +558,6 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
         case "tap-long-press-ready":
           return { status: "handled" };
 
-        /*
-        case "key down":
-          if (isSwitchDeviceModeShortcut({
-            appHost: context.appHost,
-            code: event.code,
-            key: event.key,
-            modifiers: event.modifiers,
-          })) {
-            return switchPlacementPreviewVariant(context.appHost, editor, lastMousePosition);
-          }
-
-          if (!isRotatePlacementShortcut({
-            appHost: context.appHost,
-            code: event.code,
-            key: event.key,
-            modifiers: event.modifiers,
-          })) {
-            return { status: "ignored" };
-          }
-
-          rotatePlacementPreview(context.appHost, editor, {
-            pointerMode: context.appHost.internalState.runtime.singlePlacementPointerMode,
-            currentMousePosition: lastMousePosition,
-          });
-          return { status: "handled" };
-        */
-
         case "mouse dragstart":
           if (!ensurePlacementDraftForMouse(context.canvas, editor, event.position)) {
             return { status: "handled" };
@@ -656,7 +629,8 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
 
           if (event.button === 0 && !event.longPress) {
             applyPlacementOperation(context.canvas, editor, {
-              keepPlacement: event.modifiers.ctrl || event.modifiers.shift,
+              keepPlacement: event.modifiers.ctrl || event.modifiers.shift
+                || context.canvas.state.runtime.singlePlacementContinuous,
               currentMousePosition: event.position,
             });
             return { status: "handled" };
@@ -1555,9 +1529,9 @@ function continuePlacementOperation(
   }
 
   // 连续放置复用刚提交的实际位置；鼠标移动后 placementAnchor 仍是首次创建 draft 的锚点。
+  // 触控模式下由笔尖在画布上点按提交时同样跟随指针，下一台设备不会停在刚放下的位置上。
   if (
-    continuation.pointerMode === "mouse"
-    && currentMousePosition !== null
+    currentMousePosition !== null
     && isClientPointInsideViewport(canvas.view, currentMousePosition)
   ) {
     editor.actions.moveCollectionCenterPointTo(

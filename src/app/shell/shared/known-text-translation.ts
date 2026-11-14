@@ -26,12 +26,6 @@ const KNOWN_TEXT_KEYS: Readonly<Record<string, string>> = {
   "移除仓库物品链接": "historyLabel.removeDepotLink",
   "铺设物流": "historyLabel.layLogistics",
   "清理已重新配置的暗管链接": "historyLabel.cleanConduitLinks",
-  // 放置校验原因（src/editor/placement-validation.ts）
-  "必须靠近地图边缘放置": "placementReason.edgeSnap",
-  "必须放置在基地内": "placementReason.outsideBase",
-  "不能与其他设备重叠": "placementReason.overlap",
-  "未有效连接到源桩": "placementReason.busDisconnected",
-  "附近有同类设备": "placementReason.nearSameEntity",
 };
 
 /** 基地 ID → 名称键；与 src/registry/base-definition.ts 保持一致。 */

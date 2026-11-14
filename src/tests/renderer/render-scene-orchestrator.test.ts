@@ -366,6 +366,7 @@ describe("resolveWorldEntitySpriteLayout", () => {
 describe("resolveInvalidPlacementToastReasonText", () => {
   it("hides the overlap toast for 1x1 invalid placements", () => {
     expect(resolveInvalidPlacementToastReasonText({
+      locale: "en-US",
       gridRect: {
         x: 0,
         y: 0,
@@ -376,12 +377,13 @@ describe("resolveInvalidPlacementToastReasonText", () => {
         canPlace: false,
         reasons: [{
           code: "overlap",
-          message: "不能与其他设备重叠",
+          message: "placementReason.overlap",
         }],
       },
     })).toBeNull()
 
     expect(resolveInvalidPlacementToastReasonText({
+      locale: "en-US",
       gridRect: {
         x: 0,
         y: 0,
@@ -392,12 +394,13 @@ describe("resolveInvalidPlacementToastReasonText", () => {
         canPlace: false,
         reasons: [{
           code: "overlap",
-          message: "不能与其他设备重叠",
+          message: "placementReason.overlap",
         }],
       },
-    })).toBe("不能与其他设备重叠")
+    })).toBe("Overlaps another device")
 
     expect(resolveInvalidPlacementToastReasonText({
+      locale: "en-US",
       gridRect: {
         x: 0,
         y: 0,
@@ -409,15 +412,15 @@ describe("resolveInvalidPlacementToastReasonText", () => {
         reasons: [
           {
             code: "outside-base",
-            message: "必须放置在基地内",
+            message: "placementReason.outsideBase",
           },
           {
             code: "overlap",
-            message: "不能与其他设备重叠",
+            message: "placementReason.overlap",
           },
         ],
       },
-    })).toBe("必须放置在基地内")
+    })).toBe("Must be inside the base")
   })
 })
 

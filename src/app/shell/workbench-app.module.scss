@@ -62,13 +62,25 @@
   display: none;
 }
 
+// 配方树收起为标题条时放到右栏顶部，属性面板一直延伸到底（包括底部停靠栏那一行），不留空白。
 .workbench.is-stack-inspector-only {
   grid-template-rows:
     var(--top-bar-height, 48px)
-    minmax(0, 1fr)
     auto
+    minmax(0, 1fr)
     var(--toolbox-bottom-dock-height, 0px)
     var(--bottom-bar-height, 28px);
+  grid-template-areas:
+    "toolbar toolbar toolbar toolbar toolbar"
+    "tools left canvas recipe recipe"
+    "tools left canvas right right"
+    "tools left toolbox-bottom right right"
+    "bottom bottom bottom bottom bottom";
+}
+
+.workbench.is-stack-inspector-only .recipe-tree-overlay.is-docked {
+  border-top-width: 0;
+  border-bottom-width: 1px;
 }
 
 .workbench.is-stack-inspector-only .recipe-tree-overlay.is-docked > :not(.recipe-tree-header) {
@@ -138,4 +150,8 @@
 .workbench.is-stack-recipe-only .dock-right .stack-pane-expand-button,
 .workbench.is-stack-inspector-only .recipe-tree-overlay.is-docked .stack-pane-expand-button {
   display: inline-flex;
+}
+
+.workbench.is-stack-inspector-only .recipe-tree-overlay.is-docked .recipe-tree-header {
+  padding-top: 4px;
 }

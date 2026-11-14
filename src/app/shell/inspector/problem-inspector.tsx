@@ -1,5 +1,4 @@
 import { observer } from "mobx-react-lite";
-import { translateKnownText } from "@/app/shell/shared/known-text-translation";
 import type { AppHost } from "@/app/host/app-host";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
@@ -37,7 +36,7 @@ function collectPlacementProblems(
   if (validation.canPlace) return [];
 
   return validation.reasons.map((reason) => ({
-    message: translateKnownText(reason.message, appHost.actions.translate),
+    message: appHost.actions.translate(reason.message),
     severity: "error" as const,
   }));
 }

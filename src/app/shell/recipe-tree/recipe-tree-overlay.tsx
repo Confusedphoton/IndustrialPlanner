@@ -16,6 +16,7 @@ import LucideChevronUp from "~icons/lucide/chevron-up";
 import LucideGripHorizontal from "~icons/lucide/grip-horizontal";
 import LucideListTree from "~icons/lucide/list-tree";
 import LucideMinus from "~icons/lucide/minus";
+import LucideLibrary from "~icons/lucide/library-big";
 import LucidePin from "~icons/lucide/pin";
 import LucidePinOff from "~icons/lucide/pin-off";
 import LucideX from "~icons/lucide/x";
@@ -26,6 +27,7 @@ import { ProductionFlowGraph } from "@/app/shell/production-planning/flow";
 
 import type { AppHost } from "@/app/host/app-host";
 import { NumberInput } from "@/app/shell/shared/number-input";
+import { DEFAULT_RIGHT_DOCK_WIDTH } from "@/app/state/state-impl";
 import {
   buildProductionPlanningIndex,
   computeProductionPlan,
@@ -99,9 +101,11 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
   );
 
   // 读取可观察的屏幕尺寸：窗口缩放时重新渲染并把浮层夹回视口内。
+  const inspectorDocked = appHost.state.settings.gameUseInspectorPanel && appHost.state.workbench.rightDockOpen;
   const viewport = {
     width: appHost.state.screenProfile.viewportWidth,
     height: appHost.state.screenProfile.viewportHeight,
+    rightInset: inspectorDocked ? DEFAULT_RIGHT_DOCK_WIDTH : 0,
   };
   const rect = resolveOnScreenRect(state.rect, viewport);
   const dragCleanupRef = useRef<(() => void) | null>(null);
@@ -214,7 +218,7 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
     const bottomDockHeight = Number.parseFloat(getComputedStyle(workbench).getPropertyValue("--toolbox-bottom-dock-height")) || 0;
     const columnHeight = dockRect.height + overlayRect.height - bottomDockHeight;
     // 保留按下时笔尖与分隔线的偏移，分隔线跟随笔尖移动而不是跳到笔尖处。
-    const grabOffset = event.clientY - overlayRect.top;
+    let grabOffset = event.clientY - overlayRect.top;
     target.setPointerCapture(pointerId);
     const handleMove = (moveEvent: PointerEvent) => {
       if (moveEvent.pointerId === pointerId) {
@@ -231,6 +235,9 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
         });
         if (column.mode === "split") {
           state.setStackRatio(column.recipeRatio);
+          // 碰到高度下限时重设偏移，让分隔线停在极限处而笔继续走；往回拖时立即跟随。
+          const boundaryY = dockRect.top + (1 - column.recipeRatio) * columnHeight;
+          grabOffset = moveEvent.clientY - boundaryY;
         }
       }
     };
@@ -300,7 +307,7 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
             title={t("recipeTree.expandPane")}
             type="button"
           >
-            <LucideChevronUp />
+            <LucideChevronDown />
           </button>
         ) : null}
         <div aria-label={t("recipeTree.view")} className={cm(styles, "recipe-tree-view-toggle")} role="group">
@@ -363,7 +370,7 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
       {minimized ? null : (
         <>
           {/* 流程图视图把搜索框并入图的工具栏行，给图留出高度。 */}
-          {state.viewMode === "graph" && state.pins.length > 0 ? null : <RecipeTreeSearch index={index} t={t} />}
+          {state.viewMode === "graph" && state.pins.length > 0 ? null : <RecipeTreeSearch appHost={appHost} index={index} t={t} />}
           <RecipeActionMenuContext.Provider value={setActionTarget}>
             {state.pins.length === 0 ? (
               <div className={cm(styles, "recipe-tree-body")}>
@@ -373,7 +380,7 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
               <RecipeTreeGraph
                 appHost={appHost}
                 index={index}
-                search={<RecipeTreeSearch inline index={index} t={t} />}
+                search={<RecipeTreeSearch appHost={appHost} inline index={index} t={t} />}
                 t={t}
               />
             ) : (
@@ -415,10 +422,12 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
 });
 
 const RecipeTreeSearch = observer(function RecipeTreeSearch({
+  appHost,
   index,
   inline = false,
   t,
 }: {
+  appHost: AppHost;
   index: ProductionPlanningIndex;
   inline?: boolean;
   t: Translate;
@@ -447,8 +456,29 @@ const RecipeTreeSearch = observer(function RecipeTreeSearch({
     setQuery("");
   };
 
+  // 笔用户不必打字：从物品图鉴中点选要钉住的物品。
+  const pickItemToPin = async () => {
+    const itemId = await appHost.encyclopediaPicker.pickItem({
+      title: t("recipeTree.pickItem"),
+      filterItem: (item) => (index.candidatesByOutputItem.get(item.id)?.length ?? 0) > 0,
+    });
+    if (itemId !== null) {
+      pinItem(itemId);
+    }
+  };
+
   return (
     <div className={cm(styles, inline ? "recipe-tree-search is-inline" : "recipe-tree-search")}>
+      <button
+        aria-label={t("recipeTree.pickItem")}
+        className={cm(styles, "recipe-tree-icon-button recipe-tree-pick-button")}
+        disabled={!state.canAddPin}
+        onClick={() => void pickItemToPin()}
+        title={t("recipeTree.pickItem")}
+        type="button"
+      >
+        <LucideLibrary aria-hidden />
+      </button>
       <input
         aria-label={t("recipeTree.searchPlaceholder")}
         className={cm(styles, "recipe-tree-search-input")}
@@ -730,16 +760,24 @@ function RecipeTreeTotals({
   onExpandedChange?: (expanded: boolean) => void;
   t: Translate;
 }) {
+  // 按显示名称合并：同名设备（例如固体/液体模式的种植机）在合计里只出现一次。
   const machineTotals = useMemo(() => {
-    const totals = new Map<string, number>();
+    const totals = new Map<string, { machineId: string; count: number }>();
     for (const recipeTotal of plan.recipeTotals) {
       const recipe = recipeTotal.recipeId === null ? undefined : index.recipeById.get(recipeTotal.recipeId);
       if (recipe === undefined || recipeTotal.deviceCount <= 0) {
         continue;
       }
-      totals.set(recipe.machineId, (totals.get(recipe.machineId) ?? 0) + recipeTotal.deviceCount);
+      const nameKey = index.entityById.get(recipe.machineId)?.nameKey ?? recipe.machineId;
+      const existing = totals.get(nameKey);
+      totals.set(nameKey, {
+        machineId: existing?.machineId ?? recipe.machineId,
+        count: (existing?.count ?? 0) + recipeTotal.deviceCount,
+      });
     }
-    return [...totals.entries()].sort((left, right) => right[1] - left[1]);
+    return [...totals.values()]
+      .map(({ machineId, count }) => [machineId, count] as const)
+      .sort((left, right) => right[1] - left[1]);
   }, [index, plan]);
   const rawTotals = useMemo(() => {
     const totals = new Map<string, number>();
@@ -845,6 +883,8 @@ function RecipeTreeTotals({
 interface ViewportSize {
   readonly width: number;
   readonly height: number;
+  /** 右侧已停靠的属性面板宽度；浮层首次出现时贴靠画布右缘而不是盖住面板。 */
+  readonly rightInset: number;
 }
 
 function resolveOnScreenRect(rect: RecipeTreeOverlayRect, viewport: ViewportSize): RecipeTreeOverlayRect {
@@ -853,7 +893,7 @@ function resolveOnScreenRect(rect: RecipeTreeOverlayRect, viewport: ViewportSize
   }
 
   // 首次显示：贴靠视口右侧，避开左侧工具栏与面板。
-  return clampRectToViewport({ ...rect, x: viewport.width - rect.width - 24 }, viewport);
+  return clampRectToViewport({ ...rect, x: viewport.width - viewport.rightInset - rect.width - 24 }, viewport);
 }
 
 function clampRectToViewport(rect: RecipeTreeOverlayRect, viewport: ViewportSize): RecipeTreeOverlayRect {

@@ -68,19 +68,22 @@ export function RecipeActionMenu({
       }
       onClose();
     };
+    // 捕获阶段处理并吞掉 Escape：只关闭菜单，不连带关闭菜单所在的工具箱对话框。
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
         onClose();
       }
     };
     // 视口变化后锚点卡片已移动，旧位置不再可信，直接收起菜单。
     const handleResize = () => onClose();
     document.addEventListener("pointerdown", handlePointerDown, true);
-    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, true);
     window.addEventListener("resize", handleResize);
     return () => {
       document.removeEventListener("pointerdown", handlePointerDown, true);
-      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown, true);
       window.removeEventListener("resize", handleResize);
     };
   }, [onClose]);
@@ -149,30 +152,33 @@ export function RecipeActionMenu({
             <LucideMousePointerClick aria-hidden />
             <span>{t("recipeTree.action.selectFacilities").replace("{machine}", machineName)}</span>
           </button>
-          <button
-            className={cm(styles, "recipe-action-menu-item")}
-            disabled={selectedMachines === 0}
-            onClick={() => run(() => applyRecipeToSelection(appHost, recipe))}
-            role="menuitem"
-            type="button"
-          >
-            <LucideWand aria-hidden />
-            <span>{t("recipeTree.action.applyRecipe").replace("{count}", String(selectedMachines))}</span>
-          </button>
+          {/* 只在有可应用的选中设备时出现，不显示“对 0 个选中设备……”这类无效项。 */}
+          {selectedMachines === 0 ? null : (
+            <button
+              className={cm(styles, "recipe-action-menu-item")}
+              onClick={() => run(() => applyRecipeToSelection(appHost, recipe))}
+              role="menuitem"
+              type="button"
+            >
+              <LucideWand aria-hidden />
+              <span>{t("recipeTree.action.applyRecipe").replace("{count}", String(selectedMachines))}</span>
+            </button>
+          )}
         </>
       ) : null}
       {itemId !== null ? (
         <>
-          <button
-            className={cm(styles, "recipe-action-menu-item")}
-            disabled={selectedAdmissions === 0}
-            onClick={() => run(() => applyItemToSelectedAdmissions(appHost, itemId))}
-            role="menuitem"
-            type="button"
-          >
-            <LucideFilter aria-hidden />
-            <span>{t("recipeTree.action.applyFilter").replace("{count}", String(selectedAdmissions))}</span>
-          </button>
+          {selectedAdmissions === 0 ? null : (
+            <button
+              className={cm(styles, "recipe-action-menu-item")}
+              onClick={() => run(() => applyItemToSelectedAdmissions(appHost, itemId))}
+              role="menuitem"
+              type="button"
+            >
+              <LucideFilter aria-hidden />
+              <span>{t("recipeTree.action.applyFilter").replace("{count}", String(selectedAdmissions))}</span>
+            </button>
+          )}
           <button
             className={cm(styles, "recipe-action-menu-item")}
             onClick={() => run(() => selectAdmissionsForItem(appHost, itemId))}

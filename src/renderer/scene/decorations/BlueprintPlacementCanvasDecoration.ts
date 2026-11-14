@@ -2,6 +2,7 @@ import type { TextStyleOptions } from "pixi.js";
 import { Text } from "pixi.js";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
+import { lookupText } from "@/shared/i18n";
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
 
 /** 蓝图放置模式标签蓝色 */
@@ -30,7 +31,7 @@ const MODE_LABEL_TEXT_STYLE = {
  * BlueprintPlacementCanvasDecoration
  *
  * 当 activeTool 为 "blueprint-placement" 时，
- * 在视口左上角渲染蓝色模式标签 "//蓝图放置"。
+ * 在视口左上角渲染蓝色模式标签。
  */
 export function createBlueprintPlacementCanvasDecoration(): DecorationLayer {
   const modeLabel = new Text({ text: "", style: MODE_LABEL_TEXT_STYLE as TextStyleOptions });
@@ -39,15 +40,15 @@ export function createBlueprintPlacementCanvasDecoration(): DecorationLayer {
     container: modeLabel,
 
     sync(ctx: DecorationSyncContext): void {
-      const activeTool = ctx.renderHost.input.presentation.getSnapshot().activeTool;
+      const presentation = ctx.renderHost.input.presentation.getSnapshot();
 
-      if (activeTool !== "blueprint-placement") {
+      if (presentation.activeTool !== "blueprint-placement") {
         modeLabel.visible = false;
         return;
       }
 
       modeLabel.visible = true;
-      modeLabel.text = "//蓝图放置";
+      modeLabel.text = lookupText(presentation.settings.locale, "canvas.modeLabel.blueprintPlacement") ?? "";
       modeLabel.x = 14;
       modeLabel.y = 8;
 

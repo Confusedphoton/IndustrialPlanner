@@ -210,7 +210,6 @@ export const BottomStatusBar = observer(function BottomStatusBar({ appHost }: { 
     <footer className={cm(styles, "status-bar")}>
       <div className={cm(styles, "status-bar-group status-bar-group-left")}>
         <span className={cm(styles, "status-chip status-chip-primary")}>{`${t("statusBar.tool")}: ${t(getActiveToolLabelKey(activeTool))}`}</span>
-        {}
         <span className={cm(styles, "status-chip")}>{`${t("topBar.zoom")}: ${zoomPercent}%`}</span>
       </div>
       <div ref={centerRef} className={cm(styles, "status-bar-group status-bar-group-center")}>

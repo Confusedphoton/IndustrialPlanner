@@ -3,6 +3,7 @@ import { Text } from "pixi.js";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import { lookupText } from "@/shared/i18n";
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
 
 /** 框选模式标签固定蓝色 */
@@ -29,13 +30,8 @@ const MODE_LABEL_TEXT_STYLE = {
 /**
  * MarqueeCanvasDecoration
  *
- * 当 editor 当前 activeTool 为 "marquee" 时，
- * 在整个 viewport 边缘渲染一个向内发光特效，
- * 提示用户当前处于框选模式。
+ * 当 activeTool 为 "marquee" 时在视口左上角渲染模式标签；边缘发光由 renderer DOM overlay 绘制。
  */
-// AI-MODIFIED 2026-05-21:
-// 原 Pixi BlurFilter 全视口发光层已迁移到 renderer DOM overlay。
-// 本 decoration 只保留左上角模式标签，避免 BlurFilter 触发离屏 render texture。
 export function createMarqueeCanvasDecoration(): DecorationLayer {
   const modeLabel = new Text({ text: "", style: MODE_LABEL_TEXT_STYLE });
 
@@ -52,9 +48,12 @@ export function createMarqueeCanvasDecoration(): DecorationLayer {
 
       modeLabel.visible = true;
 
-      const isReverse =
-        ctx.renderHost.input.presentation.getSnapshot().toolInfo.marqueeType === EntityCollectionType.reverseMarquee;
-      modeLabel.text = isReverse ? "//批量反选模式" : "//批量选择模式";
+      const presentation = ctx.renderHost.input.presentation.getSnapshot();
+      const isReverse = presentation.toolInfo.marqueeType === EntityCollectionType.reverseMarquee;
+      modeLabel.text = lookupText(
+        presentation.settings.locale,
+        isReverse ? "canvas.modeLabel.reverseMarquee" : "canvas.modeLabel.marquee",
+      ) ?? "";
       modeLabel.x = 14;
       modeLabel.y = 8;
 

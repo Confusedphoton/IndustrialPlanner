@@ -261,6 +261,35 @@ export class CanvasInteractionController {
     this.view.actions.focusOnBounds(resolveEntityGridRect({ entity, definition }), { durationMs: options?.duration });
   }
 
+  /**
+   * 视口变窄（例如打开右侧面板）后，若设备落到可见区域之外，按最小距离平移让它重新完整可见；
+   * 本来就可见时不动视图。
+   */
+  public keepEntityInView(entityId: string): void {
+    const entity = this.editor?.queries.getEntityById(entityId);
+    if (entity == null) return;
+    const definition = this.options.registry.queries.findEntityDefinition(entity.definitionId);
+    if (definition == null) return;
+    const bounds = resolveEntityGridRect({ entity, definition });
+    const topLeft = this.view.queries.findClientRectForGridCell({ x: bounds.x, y: bounds.y });
+    const bottomRight = this.view.queries.findClientRectForGridCell({ x: bounds.x + bounds.width - 1, y: bounds.y + bounds.height - 1 });
+    if (topLeft === null || bottomRight === null) return;
+    const viewport = this.view.state.clientRect;
+    const margin = 24;
+    const left = Math.min(topLeft.left, bottomRight.left);
+    const right = Math.max(topLeft.left + topLeft.width, bottomRight.left + bottomRight.width);
+    const top = Math.min(topLeft.top, bottomRight.top);
+    const bottom = Math.max(topLeft.top + topLeft.height, bottomRight.top + bottomRight.height);
+    const shift = (start: number, end: number, min: number, max: number) => (
+      start < min ? min - start : end > max ? Math.max(min - start, max - end) : 0
+    );
+    const dx = shift(left, right, viewport.left + margin, viewport.left + viewport.width - margin);
+    const dy = shift(top, bottom, viewport.top + margin, viewport.top + viewport.height - margin);
+    if (dx === 0 && dy === 0) return;
+    const start = { x: viewport.left + viewport.width / 2, y: viewport.top + viewport.height / 2 };
+    this.view.actions.moveViewportByClientPixelVector({ startClientPixel: start, endClientPixel: { x: start.x + dx, y: start.y + dy } });
+  }
+
   public focusOnRegion(regionId: string): void {
     const region = this.editor?.document.getSnapshot().regions.find((region) => region.id === regionId);
     const bounds = region === undefined ? null : resolveRegionGridBounds(region.rects);
