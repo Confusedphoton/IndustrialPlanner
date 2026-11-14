@@ -64,7 +64,7 @@ describe("快照选择订阅", () => {
     createSnapshotSelector(source, selectDocumentSimulation, shallowSnapshotEqual).subscribe(simulation);
     createSnapshotSelector(source, (document) => document, sameDocumentRemoteContent).subscribe(remote);
     source.update((document) => ({ ...document, documentSettings: {
-      ...document.documentSettings, viewport: { ...document.documentSettings.viewport, center: { x: 5, y: 8 } },
+      ...document.documentSettings, viewport: { gridSize: 1, displayRotation: 0, center: { x: 5, y: 8 } },
     } }));
     expect(simulation).toHaveBeenCalledTimes(1);
     expect(remote).toHaveBeenCalledTimes(1);

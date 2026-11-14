@@ -21,6 +21,7 @@ import type { EntityDefinition } from "@/domain/registry/types/entity-definition
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { placeBlueprintFromMoveAndContinue } from "./hypergryph-blueprint-placement-gesture-module";
+import { isPlacementCancelButtonId, isPlacementRotateButtonId } from "./hypergryph-single-placement-gesture-module";
 import {
   didPreviewRectChange,
   isPreviewBoundingBoxAtClientPoint,
@@ -316,12 +317,12 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
               });
             }
 
-            if (event.uiButtonId === "canvas-floating-toolbar-button-rotate") {
+            if (isPlacementRotateButtonId(event.uiButtonId)) {
               rotateMovePreview(context.canvas, editor, null);
               return { status: "handled" };
             }
 
-            if (event.uiButtonId === "canvas-floating-toolbar-button-cancel") {
+            if (isPlacementCancelButtonId(event.uiButtonId)) {
               cancelMoveOperation(context.canvas, editor, "touch");
               return { status: "handled" };
             }
@@ -351,12 +352,12 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
               });
             }
 
-            if (event.uiButtonId === "canvas-floating-toolbar-button-rotate") {
+            if (isPlacementRotateButtonId(event.uiButtonId)) {
               rotateMovePreview(context.canvas, editor, lastMousePosition);
               return { status: "handled" };
             }
 
-            if (event.uiButtonId === "canvas-floating-toolbar-button-cancel") {
+            if (isPlacementCancelButtonId(event.uiButtonId)) {
               cancelMoveOperation(context.canvas, editor, "mouse");
               return { status: "handled" };
             }

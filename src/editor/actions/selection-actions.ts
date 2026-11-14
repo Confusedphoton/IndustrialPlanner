@@ -1,8 +1,8 @@
 import type { EditorViewState } from "@/domain/editor/editor-view-state";
 import { resolveEditorPlacementGeometry, resolveEditorSceneSpace } from "../placement-space";
-import type { EditorAction } from "@/domain/editor/editor-action";
+import type { CollectionRotationResult, EditorAction } from "@/domain/editor/editor-action";
 import { action } from "mobx";
-import type { WorldEntity } from "@/domain/document/world-document";
+import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { ClientPixelPoint } from "@/domain/shared/client-pixel";
 import type { GridPoint, GridRect, GridRotation } from "@/domain/shared/grid";
@@ -385,11 +385,70 @@ export function createEditorSelectionActions({
     moveCollectionByGridVector(collectionType, gridVector);
   });
 
+  /** 正式文档实体旋转后越出基地，或与其他设备新产生重叠时，返回拒绝原因。 */
+  const resolveDocumentRotationBlockReason = (options: {
+    readonly currentDocument: WorldDocument;
+    readonly nextDocument: WorldDocument;
+    readonly entityIds: readonly string[];
+  }): "outside-base" | "overlap" | null => {
+    const after = resolvePlacementValidations({ document: options.nextDocument, state, workspace });
+    const hasReason = (
+      validations: typeof after,
+      entityId: string,
+      code: "outside-base" | "overlap",
+    ) => validations[entityId]?.reasons.some((reason) => reason.code === code) ?? false;
+    if (options.entityIds.some((entityId) => hasReason(after, entityId, "outside-base"))) {
+      return "outside-base";
+    }
+    if (!options.entityIds.some((entityId) => hasReason(after, entityId, "overlap"))) {
+      return null;
+    }
+    const before = resolvePlacementValidations({ document: options.currentDocument, state, workspace });
+    return options.entityIds.some((entityId) => hasReason(after, entityId, "overlap") && !hasReason(before, entityId, "overlap"))
+      ? "overlap"
+      : null;
+  };
+
+  const commitDocumentRotation = (options: {
+    readonly currentDocument: WorldDocument;
+    readonly nextEntities: WorldDocument["entities"];
+    readonly rotatedEntities: readonly WorldEntity[];
+  }): CollectionRotationResult => {
+    const entityIds = options.rotatedEntities.map((entity) => entity.id);
+    const blockReason = resolveDocumentRotationBlockReason({
+      currentDocument: options.currentDocument,
+      nextDocument: { ...options.currentDocument, entities: options.nextEntities },
+      entityIds,
+    });
+    if (blockReason !== null) {
+      syncPlacementValidationState({ document: options.currentDocument, state, workspace });
+      return { status: "blocked", reason: blockReason };
+    }
+
+    const committed = documentWriter.commit({
+      action: {
+        type: "entity.rotate",
+        label: "旋转设备",
+        entityIds,
+        definitionIds: resolveUniqueStrings(options.rotatedEntities.map((entity) => entity.definitionId)),
+        count: options.rotatedEntities.length,
+      },
+      update: (documentSnapshot) => ({
+        ...documentSnapshot,
+        entities: {
+          ...documentSnapshot.entities,
+          ...Object.fromEntries(entityIds.map((entityId) => [entityId, options.nextEntities[entityId]!])),
+        },
+      }),
+    });
+    return committed === null ? { status: "unchanged" } : { status: "rotated" };
+  };
+
   const applyRotatedEntityMap = (options: {
     collectionType: EntityCollectionType;
     currentDocument: ReturnType<EditorActionsContext["document"]["getSnapshot"]>;
     rotatedEntityMap: ReadonlyMap<string, WorldEntity>;
-  }): void => {
+  }): CollectionRotationResult => {
     const collection = resolveCollection(options.collectionType);
     const nextEntities = { ...options.currentDocument.entities };
     let didUpdateDocument = false;
@@ -408,46 +467,18 @@ export function createEditorSelectionActions({
       didUpdateDocument = true;
     }
 
+    let result: CollectionRotationResult = { status: "unchanged" };
     if (didUpdateDocument) {
-      const rotatedEntities = collection
-        .map((entityId) => options.currentDocument.entities[entityId])
-        .filter((entity): entity is WorldEntity => entity !== undefined);
-
-      const nextDocumentSnapshot = {
-        ...options.currentDocument,
-        entities: nextEntities,
-      };
-
-      if (hasOutsideBasePlacementReason({
-        document: nextDocumentSnapshot,
-        entityIds: rotatedEntities.map((entity) => entity.id),
-        state,
-        workspace,
-      })) {
-        syncPlacementValidationState({
-          document: options.currentDocument,
-          state,
-          workspace,
-        });
-        return;
-      }
-
-      documentWriter.commit({
-        action: {
-          type: "entity.rotate",
-          label: "旋转设备",
-          entityIds: rotatedEntities.map((entity) => entity.id),
-          definitionIds: resolveUniqueStrings(
-            rotatedEntities.map((entity) => entity.definitionId),
-          ),
-          count: rotatedEntities.length,
-        },
-        update: (documentSnapshot) => ({
-          ...documentSnapshot,
-          entities: nextEntities,
-        }),
+      result = commitDocumentRotation({
+        currentDocument: options.currentDocument,
+        nextEntities,
+        rotatedEntities: collection
+          .map((entityId) => options.currentDocument.entities[entityId])
+          .filter((entity): entity is WorldEntity => entity !== undefined && options.rotatedEntityMap.has(entity.id)),
       });
-
+      if (result.status === "blocked") {
+        return result;
+      }
     }
 
     let didUpdateDrafts = false;
@@ -477,6 +508,7 @@ export function createEditorSelectionActions({
       });
       state.drafts = nextDrafts;
       syncRegionMovePreview(options.currentDocument);
+      result = { status: "rotated" };
     }
 
     syncPlacementValidationState({
@@ -484,21 +516,23 @@ export function createEditorSelectionActions({
       state,
       workspace,
     });
+    return result;
   };
 
+  /** 仅对单个贴外圈边缘的设备生效；不适用时返回 null，交由普通旋转处理。 */
   const tryRotateOuterRingEdgeSnapCollection = (options: {
     readonly collectionType: EntityCollectionType;
     readonly angle: GridRotation;
     readonly currentDocument: ReturnType<EditorActionsContext["document"]["getSnapshot"]>;
-  }): boolean => {
+  }): CollectionRotationResult | null => {
     const collection = resolveCollection(options.collectionType);
     if (collection.length !== 1) {
-      return false;
+      return null;
     }
 
     const entityId = collection[0];
     if (entityId === undefined) {
-      return false;
+      return null;
     }
 
     const entity = resolveEntityById({
@@ -507,12 +541,12 @@ export function createEditorSelectionActions({
       drafts: state.drafts,
     });
     if (entity === null) {
-      return false;
+      return null;
     }
 
     const definition = entityDefinitionMap.get(entity.definitionId);
     if (definition === undefined || !hasOuterRingEdgeSnapBehavior(definition)) {
-      return false;
+      return null;
     }
 
     const rotatedPlacement = rotateOuterRingEdgeSnappedPlacement({
@@ -529,7 +563,7 @@ export function createEditorSelectionActions({
         state,
         workspace,
       });
-      return true;
+      return { status: "blocked", reason: "outside-base" };
     }
 
     if (
@@ -537,37 +571,26 @@ export function createEditorSelectionActions({
       && entity.position.y === rotatedPlacement.position.y
       && entity.rotation === rotatedPlacement.rotation
     ) {
-      return true;
+      return { status: "unchanged" };
     }
 
-    if (options.currentDocument.entities[entity.id] !== undefined) {
-      documentWriter.commit({
-        action: {
-          type: "entity.rotate",
-          label: "旋转设备",
-          entityIds: [entity.id],
-          definitionIds: [entity.definitionId],
-          count: 1,
+    const documentEntity = options.currentDocument.entities[entity.id];
+    if (documentEntity !== undefined) {
+      const result = commitDocumentRotation({
+        currentDocument: options.currentDocument,
+        nextEntities: {
+          ...options.currentDocument.entities,
+          [entity.id]: {
+            ...documentEntity,
+            position: rotatedPlacement.position,
+            rotation: rotatedPlacement.rotation,
+          },
         },
-        update: (documentSnapshot) => {
-          const currentEntity = documentSnapshot.entities[entity.id];
-          if (currentEntity === undefined) {
-            return documentSnapshot;
-          }
-
-          return {
-            ...documentSnapshot,
-            entities: {
-              ...documentSnapshot.entities,
-              [entity.id]: {
-                ...currentEntity,
-                position: rotatedPlacement.position,
-                rotation: rotatedPlacement.rotation,
-              },
-            },
-          };
-        },
+        rotatedEntities: [documentEntity],
       });
+      if (result.status === "blocked") {
+        return result;
+      }
     } else {
       const nextDrafts = state.drafts.map((draft) =>
         draft.id === entity.id
@@ -593,7 +616,7 @@ export function createEditorSelectionActions({
       state,
       workspace,
     });
-    return true;
+    return { status: "rotated" };
   };
 
   const resolveRotatedEntityMap = (options: {
@@ -791,24 +814,25 @@ export function createEditorSelectionActions({
     collectionType: EntityCollectionType,
     angle: number,
     pivotMode: "center" | "pivot-cell",
-  ): void => {
+  ): CollectionRotationResult => {
     const rotationAngle = normalizeRotationAngle(angle);
 
     if (rotationAngle === null || rotationAngle === 0) {
-      return;
+      return { status: "unchanged" };
     }
     const collection = resolveCollection(collectionType);
 
     if (collection.length === 0) {
-      return;
+      return { status: "unchanged" };
     }
     const currentDocument = document.getSnapshot();
-    if (tryRotateOuterRingEdgeSnapCollection({
+    const edgeSnapResult = tryRotateOuterRingEdgeSnapCollection({
       collectionType,
       angle: rotationAngle,
       currentDocument,
-    })) {
-      return;
+    });
+    if (edgeSnapResult !== null) {
+      return edgeSnapResult;
     }
 
     const geometry = resolveEntityCollectionGeometry({
@@ -819,7 +843,7 @@ export function createEditorSelectionActions({
     });
 
     if (geometry === null) {
-      return;
+      return { status: "unchanged" };
     }
     const rotatedEntityMap = resolveRotatedEntityMap({
       geometry,
@@ -827,7 +851,7 @@ export function createEditorSelectionActions({
       pivotMode,
     });
 
-    applyRotatedEntityMap({
+    return applyRotatedEntityMap({
       collectionType,
       currentDocument,
       rotatedEntityMap,
@@ -1368,9 +1392,7 @@ export function createEditorSelectionActions({
     }),
     moveCollectionTo,
     moveCollectionCenterPointTo,
-    rotateCollection: (collectionType) => {
-      rotateCollectionAroundPivotCell(collectionType, 90);
-    },
+    rotateCollection: action((collectionType) => rotateCollectionByAngle(collectionType, 90, "pivot-cell")),
     rotateCollectionAroundCenterPoint,
     rotateCollectionAroundPivotCell,
     rotateCollectionToSnapOnBuilding,

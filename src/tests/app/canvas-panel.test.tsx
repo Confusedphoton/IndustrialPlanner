@@ -469,6 +469,7 @@ describe("CanvasPanel", () => {
       ".canvas-viewport-surface",
     ) as HTMLDivElement | null;
 
+    const initialCenter = { ...getTestView(editorHost.workspace).state.center };
     expect(viewportSurface).not.toBeNull();
 
     if (!viewportSurface) {
@@ -513,8 +514,8 @@ describe("CanvasPanel", () => {
         y: 64,
       },
     });
-    expect(getTestView(editorHost.workspace).state.center.x).toBeCloseTo(-1);
-    expect(getTestView(editorHost.workspace).state.center.y).toBeCloseTo(1);
+    expect(getTestView(editorHost.workspace).state.center.x).toBeCloseTo(initialCenter.x - 1);
+    expect(getTestView(editorHost.workspace).state.center.y).toBeCloseTo(initialCenter.y + 1);
     expect(container.querySelector(".canvas-gesture-diagnostics")?.textContent).toContain(
       "mouse dragend",
     );

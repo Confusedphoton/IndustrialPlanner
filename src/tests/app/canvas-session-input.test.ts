@@ -116,26 +116,6 @@ describe("canvas input ownership", () => {
     expect(session.editor.document.getSnapshot().entityOrder).toHaveLength(1);
   });
 
-  it.each(["mobile", "tablet", "desktop"] as const)("%s 放置面板只由所属画布收起，取消后恢复且不污染主工作台", deviceClass => {
-    const { app, createCanvas, session } = setup();
-    runInAction(() => { app.internalState.screenProfile = { ...app.state.screenProfile, deviceClass }; });
-    const canvas = createCanvas("manual-panel");
-    app.mainCanvas.setPlacementPanelSuppressed(true);
-    const tap = (uiButtonId: string) => canvas.gestureAdapter.handleUiButtonTouchTap({
-      uiButtonId, altKey: false, ctrlKey: false, metaKey: false, shiftKey: false,
-    });
-    tap("ui-left-dock-placement-mode-storager_1-touch-tap");
-    expect(session.editor.state.collections.preview.length).toBe(1);
-    expect(canvas.state.placementPanelSuppressed).toBe(deviceClass !== "desktop");
-    expect(app.internalState.workbench.leftDockSuppressed).toBe(true);
-    tap("canvas-floating-toolbar-button-cancel");
-    expect(canvas.state.placementPanelSuppressed).toBe(false);
-    expect(session.editor.state.collections.preview.length).toBe(0);
-    expect(app.internalState.workbench.leftDockSuppressed).toBe(true);
-    app.mainCanvas.setPlacementPanelSuppressed(false);
-    expect(app.internalState.workbench.leftDockSuppressed).toBe(false);
-  });
-
   it.each(["mouse", "touch", "keyboard"] as const)("keeps focused Inspector %s commands while its background is suspended", (source) => {
     const { app, session } = setup();
     app.workspace.editor = session.editor;

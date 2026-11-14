@@ -101,11 +101,6 @@ export class CanvasInteractionController {
   public get registry(): RegistryContract { return this.options.registry; }
   public get workbench(): AppHost { return this.options.readWorkbench(); }
   public get canUseWorkbenchActions(): boolean { return this.options.workbenchActions === true; }
-  /** 收起当前画布所属的放置面板；只有主工作台同步其布局与视口。 */
-  public setPlacementPanelSuppressed(suppressed: boolean): void {
-    this.state.setPlacementPanelSuppressed(suppressed);
-    if (this.canUseWorkbenchActions) this.workbench.internalActions.setLeftDockSuppressed(suppressed);
-  }
   public get gestureActionRouter(): GestureActionRouter<AppHost> {
     if (this.inputRouter === null) throw new Error("Canvas router has not been attached.");
     return this.inputRouter;

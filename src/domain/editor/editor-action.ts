@@ -21,6 +21,12 @@ import type { RegionRectOperation } from "./types/region-annotation-types";
 
 import type { SinglePlacementRequest } from "./types/editor-session-types";
 
+/** 集合旋转的结果：正式文档实体旋转后越出基地或与其他设备新产生重叠时整体不落地。 */
+export type CollectionRotationResult =
+	| { readonly status: "rotated" }
+	| { readonly status: "unchanged" }
+	| { readonly status: "blocked"; readonly reason: "outside-base" | "overlap" };
+
 export interface EditorAction {
 	/**
 	 * 平滑聚焦到指定实体：在约 0.75s 内将视口中心平移到实体中心、缩放到 gridSize=1。
@@ -78,7 +84,8 @@ export interface EditorAction {
 	cancelMarquee(): void;
 	
 	moveCollectionTo(options: MoveCollectionToOptions): void;
-	rotateCollection(collectionType: EntityCollectionType): void;
+	/** 以枢轴格为中心顺时针旋转 90°；正式文档实体经历史记录提交，可撤销。 */
+	rotateCollection(collectionType: EntityCollectionType): CollectionRotationResult;
 	moveCollectionCenterPointTo(
 		collectionType: EntityCollectionType,
 		clientPixelPoint: ClientPixelPoint,

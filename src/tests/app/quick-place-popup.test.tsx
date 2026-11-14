@@ -9,6 +9,7 @@ import { type AppHost } from "@/app/host/app-host";
 import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
 import { canPlaceEntityDefinitionInBase } from "@/app/placement-zone-availability";
 import { buildQuickPlaceDeviceEntries } from "@/app/quick-place";
+import { recentPlacementDevices } from "@/app/recent-placement-devices";
 import { QuickPlacePopup } from "@/app/shell/quick-place/quick-place-popup";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
@@ -153,7 +154,7 @@ describe("QuickPlacePopup", () => {
     });
 
     const searchInput = container.querySelector(".quick-place-search-input") as HTMLInputElement | null;
-    const deviceButton = container.querySelector(".quick-place-device-button");
+    const deviceButton = container.querySelector('[role="option"]');
     const emptyFavoriteSlot = container.querySelector(".quick-place-favorite-slot.is-empty");
 
     expect(searchInput).not.toBeNull();
@@ -167,7 +168,7 @@ describe("QuickPlacePopup", () => {
     });
     expect(document.activeElement).toBe(searchInput);
 
-    const filteredDeviceButton = container.querySelector(".quick-place-device-button");
+    const filteredDeviceButton = container.querySelector('[role="option"]');
     expect(filteredDeviceButton).not.toBeNull();
 
     act(() => {
@@ -207,7 +208,7 @@ describe("QuickPlacePopup", () => {
       root.render(<QuickPlacePopup appHost={appHost} />);
     });
 
-    const results = Array.from(container.querySelectorAll<HTMLButtonElement>(".quick-place-device-button"));
+    const results = Array.from(container.querySelectorAll<HTMLButtonElement>('[role="option"]'));
     const normalResult = results.find((button) => button.id.endsWith("-furnance_1"));
     const liquidResult = results.find((button) => button.id.endsWith("-furnance_1_liquid"));
     const favorites = Array.from(container.querySelectorAll<HTMLButtonElement>(".quick-place-favorite-slot"));
@@ -241,7 +242,7 @@ describe("QuickPlacePopup", () => {
 
     const searchInput = container.querySelector(".quick-place-search-input") as HTMLInputElement | null;
     const resultButtons = Array.from(
-      container.querySelectorAll(".quick-place-device-button"),
+      container.querySelectorAll('[role="option"]'),
     ) as HTMLButtonElement[];
     expect(searchInput).not.toBeNull();
     expect(resultButtons.length).toBeGreaterThan(1);
@@ -276,7 +277,7 @@ describe("QuickPlacePopup", () => {
 
     const searchInput = container.querySelector(".quick-place-search-input") as HTMLInputElement | null;
     let resultButtons = Array.from(
-      container.querySelectorAll(".quick-place-device-button"),
+      container.querySelectorAll('[role="option"]'),
     ) as HTMLButtonElement[];
     const lastResult = resultButtons.at(-1);
     expect(searchInput).not.toBeNull();
@@ -298,7 +299,7 @@ describe("QuickPlacePopup", () => {
       dispatchKeyDown(searchInput!, { code: "ArrowUp", key: "ArrowUp" });
     });
     resultButtons = Array.from(
-      container.querySelectorAll(".quick-place-device-button"),
+      container.querySelectorAll('[role="option"]'),
     ) as HTMLButtonElement[];
     expect(resultButtons[0]?.getAttribute("aria-selected")).toBe("true");
 
@@ -415,7 +416,7 @@ describe("QuickPlacePopup", () => {
       root.render(<QuickPlacePopup appHost={appHost} />);
     });
 
-    const deviceButton = container.querySelector(".quick-place-device-button") as HTMLButtonElement | null;
+    const deviceButton = container.querySelector('[role="option"]') as HTMLButtonElement | null;
     const emptyFavoriteSlot = container.querySelector(".quick-place-favorite-slot.is-empty") as HTMLButtonElement | null;
     const dataTransfer = createDataTransfer();
 
@@ -436,7 +437,7 @@ describe("QuickPlacePopup", () => {
       root.render(<QuickPlacePopup appHost={appHost} />);
     });
 
-    const deviceButton = container.querySelector(".quick-place-device-button") as HTMLButtonElement | null;
+    const deviceButton = container.querySelector('[role="option"]') as HTMLButtonElement | null;
     const emptyFavoriteSlot = container.querySelector(".quick-place-favorite-slot.is-empty") as HTMLButtonElement | null;
     const sourceDataTransfer = createDataTransfer();
     const emptyDropDataTransfer = createDataTransfer();
@@ -452,5 +453,46 @@ describe("QuickPlacePopup", () => {
     });
 
     expect(emptyFavoriteSlot?.getAttribute("aria-label")).toBe(`1 ${deviceButton?.title}`);
+  });
+
+  it("lists recently placed devices above the results while the search is empty", () => {
+    const [first, second] = Array.from(
+      buildQuickPlaceDeviceEntries({
+        definitions: appHost.workspace.registry.entityDefinitions,
+        translate: appHost.actions.translate,
+        canUseDefinition: (definition) => canPlaceEntityDefinitionInBase(appHost, definition, "wuling_protocol_core"),
+      }),
+    );
+    act(() => {
+      recentPlacementDevices.record(first!.id);
+      recentPlacementDevices.record(second!.id);
+      root.render(<QuickPlacePopup appHost={appHost} />);
+    });
+
+    const recent = container.querySelector(".quick-place-recent");
+    const recentTitles = Array.from(recent?.querySelectorAll<HTMLButtonElement>(".quick-place-device-button") ?? [])
+      .map((button) => button.title);
+    expect(recentTitles.slice(0, 2)).toEqual([second!.name, first!.name]);
+    expect(recent?.querySelector('[role="option"]')).toBeNull();
+
+    const handleTouchTap = vi.spyOn(appHost.gestureAdapter, "handleUiButtonTouchTap");
+    act(() => {
+      const button = recent!.querySelector<HTMLButtonElement>(".quick-place-device-button")!;
+      const event = new Event("pointerup", { bubbles: true, cancelable: true });
+      Object.defineProperties(event, { pointerType: { value: "pen" }, button: { value: 0 } });
+      button.dispatchEvent(event);
+    });
+    expect(handleTouchTap).toHaveBeenCalledWith(expect.objectContaining({
+      uiButtonId: `ui-left-dock-placement-mode-${second!.id}-touch-tap`,
+    }));
+
+    act(() => {
+      runInAction(() => {
+        appHost.mainCanvas.state.runtime.quickPlace.visible = true;
+        appHost.mainCanvas.state.runtime.quickPlace.anchor = { x: 120, y: 80 };
+        appHost.mainCanvas.state.runtime.quickPlace.searchQuery = first!.name;
+      });
+    });
+    expect(container.querySelector(".quick-place-recent")).toBeNull();
   });
 });

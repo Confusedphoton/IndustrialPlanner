@@ -239,7 +239,8 @@ export const CanvasToolRail = observer(function CanvasToolRail({ appHost }: { ap
   const activeTool = canvas.state.activeTool;
   const logistics = canvas.state.runtime.logisticsPlacement;
   const inLogisticsPlacement = activeTool === "logistics-placement" && logistics.kind !== null;
-  const inPlacement = activeTool === "single-placement" || activeTool === "blueprint-placement";
+  // 移动与放置是同一种拿起再落下的流程，共用旋转与取消按钮。
+  const inPlacement = activeTool === "single-placement" || activeTool === "blueprint-placement" || activeTool === "move";
   const isDrawingRoute = inLogisticsPlacement && logistics.phase !== "idle" && !logistics.isHoverPreview;
 
   const resolveDragPosition = (clientX: number, clientY: number) => {
@@ -535,7 +536,7 @@ export const CanvasToolRail = observer(function CanvasToolRail({ appHost }: { ap
       }),
       gestureButton({
         uiButtonId: PLACEMENT_RAIL_CANCEL_BUTTON_ID,
-        label: t("action.cancelPlacement"),
+        label: t(activeTool === "move" ? "action.cancelMove" : "action.cancelPlacement"),
         icon: <LucideX aria-hidden className={iconClassName} />,
       }),
     ],
@@ -707,7 +708,7 @@ const RotateViewRailButton = observer(function RotateViewRailButton({ appHost }:
       type="button"
     >
       <span aria-hidden="true" className={cm(styles, "canvas-tool-rail-button-icon")}>
-        <WorkbenchIcon className={cm(styles, "canvas-tool-rail-icon")} kind="rotate" />
+        <WorkbenchIcon className={cm(styles, "canvas-tool-rail-icon")} kind="rotate-view" />
       </span>
       {showHoldProgress ? (
         <span

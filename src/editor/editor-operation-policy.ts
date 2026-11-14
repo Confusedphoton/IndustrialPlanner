@@ -1,4 +1,4 @@
-import type { EditorAction } from "@/domain/editor/editor-action";
+import type { CollectionRotationResult, EditorAction } from "@/domain/editor/editor-action";
 import type { EditorHistoryActionType } from "@/domain/editor/editor-history";
 import type { CanvasOperationAvailability, CanvasOperationId } from "@/domain/shared/canvas-operation";
 import type { LogisticsDraftActionResult } from "@/domain/shared/logistics";
@@ -81,5 +81,6 @@ function resolveRejectedActionResult(name: keyof EditorAction): unknown {
     return { status: "ignored", canApply: false, invalidReason: null, headGridPoint: null,
       headDraftEntityId: null, sourceEntityId: null, targetEntityId: null } satisfies LogisticsDraftActionResult;
   }
+  if (name === "rotateCollection") return { status: "unchanged" } satisfies CollectionRotationResult;
   return false;
 }

@@ -29,8 +29,10 @@ import {
   placeQuickPlaceFavoriteAtSlot,
   removeQuickPlaceFavoriteAtSlot,
   triggerQuickPlaceDeviceSelection,
+  type QuickPlaceDeviceEntry,
 } from "@/app/quick-place";
 import type { AppHost } from "@/app/host/app-host";
+import { recentPlacementDevices } from "@/app/recent-placement-devices";
 import { useEditorDocumentSnapshot } from "../hooks";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { avoidCanvasToolRail, type CanvasRect } from "@/app/shell/canvas/canvas-tool-rail-bounds";
@@ -38,6 +40,7 @@ import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/
 import styles from "@/app/shell/app-shell.module.scss";
 
 const QUICK_PLACE_DRAG_FORMAT = "application/x-industrial-planner-quick-place";
+const QUICK_PLACE_RECENT_LIMIT = 4;
 
 type QuickPlaceDragPayload =
   | {
@@ -115,6 +118,12 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
     () => filterQuickPlaceDeviceEntries(entries, runtime.searchQuery),
     [entries, runtime.searchQuery],
   );
+  // 搜索为空时在设备列表顶部列出最近放置的设备，用笔在画布旁直接切换设备。
+  const recentEntries = runtime.searchQuery.trim() === ""
+    ? recentPlacementDevices.deviceIds
+      .flatMap((deviceId) => entryById.get(deviceId) ?? [])
+      .slice(0, QUICK_PLACE_RECENT_LIMIT)
+    : [];
 
   useEffect(() => {
     if (!visible) {
@@ -342,6 +351,86 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
     commitFavorites(removeQuickPlaceFavoriteAtSlot(favorites, slotIndex));
   }
 
+  /** 设备行；isListOption 为 false 时是「最近」分组的快捷行，不参与列表框的键盘导航。 */
+  function renderDeviceRow(entry: QuickPlaceDeviceEntry, isListOption: boolean) {
+    const variant = variantById.get(entry.id);
+    const label = `${entry.name}${variant === undefined ? "" : ` · ${t(variant.longNameKey)}`}`;
+    const favoriteIndex = favoriteSlots.indexOf(entry.id);
+    const isFavorite = favoriteIndex >= 0;
+    const canAddFavorite = isFavorite || favoriteSlots.includes(null);
+    const favoriteToggleLabel = t(isFavorite ? "workbench.quickPlace.removeFavorite" : "workbench.quickPlace.addFavorite");
+    const isActive = isListOption && activeResultId === entry.id;
+    return (
+      <div className={cm(styles, "quick-place-device-row")} key={entry.id}>
+        <button
+          aria-label={label}
+          aria-selected={isListOption ? isActive : undefined}
+          className={cm(
+            styles,
+            "quick-place-device-button",
+            isActive && "is-active",
+            variant !== undefined && "has-variant",
+          )}
+          draggable
+          id={isListOption ? `${deviceListId}-${entry.id}` : undefined}
+          onClick={(event) => selectDeviceFromKeyboardClick(entry.id, event)}
+          onDragEnd={handleMenuDragEnd}
+          onPointerDown={handleSelectablePointerDown}
+          onPointerUp={(event) => selectDeviceFromPointer(entry.id, event)}
+          ref={isListOption ? (element) => {
+            if (element === null) {
+              deviceButtonRefs.current.delete(entry.id);
+            } else {
+              deviceButtonRefs.current.set(entry.id, element);
+            }
+          } : undefined}
+          role={isListOption ? "option" : undefined}
+          onDragStart={(event) => {
+            favoriteDropHandledRef.current = false;
+            setDraggingFavoriteIndex(null);
+            writeDragPayload(event, {
+              source: "menu",
+              deviceId: entry.id,
+            });
+          }}
+          title={label}
+          type="button"
+        >
+          <img
+            alt=""
+            className={cm(styles, "quick-place-device-icon")}
+            draggable={false}
+            src={entry.iconSrc}
+          />
+          <span className={cm(styles, "quick-place-device-name")}>{entry.name}</span>
+          {variant === undefined ? null : (
+            <span
+              aria-hidden="true"
+              className={cm(styles, "quick-place-variant-badge")}
+              data-entity-variant-name={variant.variantName}
+              style={resolveQuickPlaceVariantIconStyle(variant.iconPath)}
+            />
+          )}
+        </button>
+        <button
+          aria-label={favoriteToggleLabel}
+          aria-pressed={isFavorite}
+          className={cm(styles, "quick-place-favorite-toggle", isFavorite && "is-favorite")}
+          disabled={!canAddFavorite}
+          onClick={() => {
+            commitFavorites(isFavorite
+              ? removeQuickPlaceFavoriteAtSlot(favorites, favoriteIndex)
+              : placeQuickPlaceFavoriteAtSlot(favorites, entry.id, favoriteSlots.indexOf(null)));
+          }}
+          title={favoriteToggleLabel}
+          type="button"
+        >
+          {isFavorite ? <LucideStarOff aria-hidden="true" /> : <LucideStar aria-hidden="true" />}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div
       aria-label={t("workbench.quickPlace.title")}
@@ -467,88 +556,20 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
             value={runtime.searchQuery}
           />
         </header>
+        <div className={cm(styles, "quick-place-device-scroll")}>
+        {recentEntries.length === 0 ? null : (
+          <section aria-labelledby={`${deviceListId}-recent`} className={cm(styles, "quick-place-recent")}>
+            <h3 className={cm(styles, "quick-place-group-title")} id={`${deviceListId}-recent`}>{t("placement.recent")}</h3>
+            {recentEntries.map((entry) => renderDeviceRow(entry, false))}
+          </section>
+        )}
         <div className={cm(styles, "quick-place-device-list")} id={deviceListId} role="listbox">
           {filteredEntries.length === 0 ? (
             <div className={cm(styles, "quick-place-empty-results")}>
               {t("workbench.quickPlace.emptyResults")}
             </div>
-          ) : filteredEntries.map((entry) => {
-            const variant = variantById.get(entry.id);
-            const label = `${entry.name}${variant === undefined ? "" : ` · ${t(variant.longNameKey)}`}`;
-            const favoriteIndex = favoriteSlots.indexOf(entry.id);
-            const isFavorite = favoriteIndex >= 0;
-            const canAddFavorite = isFavorite || favoriteSlots.includes(null);
-            const favoriteToggleLabel = t(isFavorite ? "workbench.quickPlace.removeFavorite" : "workbench.quickPlace.addFavorite");
-            return (
-              <div className={cm(styles, "quick-place-device-row")} key={entry.id}>
-              <button
-                aria-label={label}
-                aria-selected={activeResultId === entry.id}
-                className={cm(
-                  styles,
-                  "quick-place-device-button",
-                  activeResultId === entry.id && "is-active",
-                  variant !== undefined && "has-variant",
-                )}
-                draggable
-                id={`${deviceListId}-${entry.id}`}
-                onClick={(event) => selectDeviceFromKeyboardClick(entry.id, event)}
-                onDragEnd={handleMenuDragEnd}
-                onPointerDown={handleSelectablePointerDown}
-                onPointerUp={(event) => selectDeviceFromPointer(entry.id, event)}
-                ref={(element) => {
-                  if (element === null) {
-                    deviceButtonRefs.current.delete(entry.id);
-                  } else {
-                    deviceButtonRefs.current.set(entry.id, element);
-                  }
-                }}
-                role="option"
-                onDragStart={(event) => {
-                  favoriteDropHandledRef.current = false;
-                  setDraggingFavoriteIndex(null);
-                  writeDragPayload(event, {
-                    source: "menu",
-                    deviceId: entry.id,
-                  });
-                }}
-                title={label}
-                type="button"
-              >
-                <img
-                  alt=""
-                  className={cm(styles, "quick-place-device-icon")}
-                  draggable={false}
-                  src={entry.iconSrc}
-                />
-                <span className={cm(styles, "quick-place-device-name")}>{entry.name}</span>
-                {variant === undefined ? null : (
-                  <span
-                    aria-hidden="true"
-                    className={cm(styles, "quick-place-variant-badge")}
-                    data-entity-variant-name={variant.variantName}
-                    style={resolveQuickPlaceVariantIconStyle(variant.iconPath)}
-                  />
-                )}
-              </button>
-              <button
-                aria-label={favoriteToggleLabel}
-                aria-pressed={isFavorite}
-                className={cm(styles, "quick-place-favorite-toggle", isFavorite && "is-favorite")}
-                disabled={!canAddFavorite}
-                onClick={() => {
-                  commitFavorites(isFavorite
-                    ? removeQuickPlaceFavoriteAtSlot(favorites, favoriteIndex)
-                    : placeQuickPlaceFavoriteAtSlot(favorites, entry.id, favoriteSlots.indexOf(null)));
-                }}
-                title={favoriteToggleLabel}
-                type="button"
-              >
-                {isFavorite ? <LucideStarOff aria-hidden="true" /> : <LucideStar aria-hidden="true" />}
-              </button>
-              </div>
-            );
-          })}
+          ) : filteredEntries.map((entry) => renderDeviceRow(entry, true))}
+        </div>
         </div>
       </section>
     </div>

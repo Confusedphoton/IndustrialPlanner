@@ -33,6 +33,7 @@ import LucideRectangleVertical from "~icons/lucide/rectangle-vertical";
 import LucideRabbit from "~icons/lucide/rabbit";
 import LucideRedo2 from "~icons/lucide/redo-2";
 import LucideRepeat2 from "~icons/lucide/repeat-2";
+import LucideRotate3d from "~icons/lucide/rotate-3d";
 import LucideRotateCcw from "~icons/lucide/rotate-ccw";
 import LucideLoaderCircle from "~icons/lucide/loader-circle";
 import LucideSave from "~icons/lucide/save";
@@ -60,11 +61,7 @@ import MaterialSymbolsResumeRounded from "~icons/material-symbols/resume-rounded
 import MdiSelection from "~icons/mdi/selection";
 import GisArrowO from "~icons/gis/arrow-o";
 import AntDesignStopOutlined from "~icons/ant-design/stop-outlined";
-// 订正 2026-10-07：上面这两个导入原为 "/svg/icons/*.svg?raw"（从 public 目录导入）。
-// Vite 明确不支持从 public 导入资源：dev 下靠静态服务侥幸可用，但 Vitest 的 SSR 变换管线
-// 会把该 id 解析成 file:///svg/... 交给 fs，Windows 上直接以
-// "The argument 'filename' must be a file URL object, file URL string, or absolute path string" 失败
-// （22 个 app 测试文件因此无法收集）。生成脚本已改为把产物写入本目录，这里随之改成相对导入。
+// 自绘图标必须从本目录相对导入：Vite 不支持从 public 导入资源，Vitest 会把该路径解析成 file:///svg/... 而失败。
 import RemoveBackwardSvgRaw from "./icons/remove-backward.svg?raw";
 import RemoveForwardSvgRaw from "./icons/remove-forward.svg?raw";
 // Cloudflare 图形来源：Simple Icons（CC0），https://github.com/simple-icons/simple-icons/blob/develop/icons/cloudflare.svg
@@ -120,6 +117,7 @@ type WorkbenchIconKind =
   | "undo"
   | "redo"
   | "rotate"
+  | "rotate-view"
   | "switch-mode"
   | "device-mobile"
   | "device-tablet"
@@ -197,6 +195,7 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   undo: LucideUndo2,
   redo: LucideRedo2,
   rotate: LucideRotateCcw,
+  "rotate-view": LucideRotate3d,
   "switch-mode": LucideRepeat2,
   "device-mobile": LucideSmartphone,
   "device-tablet": LucideTablet,
@@ -224,8 +223,7 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   "chevron-right": LucideChevronRight,
 };
 
-// 从 public/svg/icons/ 导入的 SVG 原始内容，提取 <path> 内部以复用外层 SVG 属性。
-// 订正 2026-10-07：来源已改为同目录 ./icons/（生成脚本同步改址），不再从 public 导入，原因见上方导入处说明。
+// 从 ./icons/ 导入的 SVG 原始内容，提取 <path> 内部以复用外层 SVG 属性。
 const REMOVE_BACKWARD_INNER = RemoveBackwardSvgRaw.replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
 const REMOVE_FORWARD_INNER = RemoveForwardSvgRaw.replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
 const HOSTING_CLOUDFLARE_INNER = HostingCloudflareSvgRaw.replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");

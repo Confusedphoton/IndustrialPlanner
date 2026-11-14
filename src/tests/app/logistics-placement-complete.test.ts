@@ -697,7 +697,7 @@ function resetCanvasFromUserBlueprint(
       ...emptyDocument.documentSettings,
       viewport: {
         center: { ...blueprint.initialGridPoint },
-        gridSize: emptyDocument.documentSettings.viewport.gridSize,
+        gridSize: emptyDocument.documentSettings.viewport?.gridSize ?? 1,
         displayRotation: 0,
       },
     },

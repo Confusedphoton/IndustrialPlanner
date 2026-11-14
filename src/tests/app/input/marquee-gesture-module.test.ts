@@ -241,27 +241,6 @@ describe("createHypergryphMarqueeGestureModule", () => {
     expect(editor.actions.removeFromCollection).not.toHaveBeenCalled();
   });
 
-  it("closes the left dock on marquee enter for mobile and tablet", () => {
-    for (const deviceClass of ["mobile", "tablet"] as const) {
-      const { context, appHost } = createContext({
-        deviceClass,
-        leftDockOpen: true,
-      });
-      const module = createHypergryphMarqueeGestureModule();
-
-      expect(handleKeyboardShortcutThroughRouter({
-        module,
-        context,
-        event: keyDownEvent("KeyX"),
-      })).toEqual({ status: "handled" });
-
-      expect(appHost.internalActions.setLeftDockSuppressed).toHaveBeenCalledTimes(1);
-      expect(appHost.internalActions.setLeftDockSuppressed).toHaveBeenCalledWith(true);
-      expect(appHost.state.workbench.leftDockOpen).toBe(true);
-      expect(appHost.internalState.workbench.leftDockSuppressed).toBe(true);
-    }
-  });
-
   it("starts immediate mouse marquee from empty select drag start", () => {
     const { context, editor } = createContext({
       hypergryphImmediateMarquee: true,
@@ -535,7 +514,7 @@ function createContext(options: { activeTool?: "select" | "move" | "marquee" | "
   for (const entityId of options.selectedEntityIds ?? []) test.editor.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId });
   for (const key of ["setMarqueeRange", "applyMarquee", "cancelMarquee", "clearCollection", "addToCollection", "removeFromCollection", "setLogisticsSuppression", "setHoverPoint", "clearHoverPoint"] as const) vi.spyOn(test.editor.actions, key);
   for (const key of ["setActiveTool", "showCanvasRightDockToolbar", "hideCanvasRightDockToolbar", "showCanvasTopLeftCornerToolbar", "hideCanvasTopLeftCornerToolbar"] as const) vi.spyOn(test.canvas.actions, key);
-  for (const key of ["setLeftDockSuppressed", "toggleRightDock", "isShortcutFor"] as const) vi.spyOn(test.app.internalActions, key);
+  for (const key of ["toggleRightDock", "isShortcutFor"] as const) vi.spyOn(test.app.internalActions, key);
   return { context: test.context, editor: test.editor, appHost: test.app };
 }
 

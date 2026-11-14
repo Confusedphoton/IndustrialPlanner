@@ -50,16 +50,10 @@
   }
 }
 
-// 横向触控布局沿用已有 Screen Profile，给左侧模式标题和底部工具按钮留位。
+// 横向触控布局：提示条居中放在画布顶部模式标签之下，底部提醒贴近画布底边。
 .compact {
-  .toast,
-  .alert {
-    left: calc(50% + 104px);
-    max-width: calc(100% - 224px);
-  }
-
   .toast {
-    top: 12px;
+    top: 36px;
   }
 
   .alert {

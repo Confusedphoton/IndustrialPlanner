@@ -4,6 +4,7 @@ import LucideFilter from "~icons/lucide/filter";
 import LucideHammer from "~icons/lucide/hammer";
 import LucideMousePointerClick from "~icons/lucide/mouse-pointer-click";
 import LucidePin from "~icons/lucide/pin";
+import LucidePinOff from "~icons/lucide/pin-off";
 import LucideWand from "~icons/lucide/wand";
 
 import type { AppHost } from "@/app/host/app-host";
@@ -99,6 +100,7 @@ export function RecipeActionMenu({
   const selectedMachines = recipe === undefined ? 0 : countSelectedMachines(appHost, recipe.machineId);
   const selectedAdmissions = itemId === null ? 0 : countSelectedAdmissions(appHost);
   const itemName = itemId === null ? null : resolveProductionPlanningItemName(itemId, index, t);
+  const existingPin = itemId === null ? undefined : recipeTreeOverlayState.pins.find((pin) => pin.itemId === itemId);
   const run = (action: () => void) => {
     action();
     onClose();
@@ -192,15 +194,27 @@ export function RecipeActionMenu({
             <LucideMousePointerClick aria-hidden />
             <span>{t("recipeTree.action.selectAdmissions")}</span>
           </button>
-          <button
-            className={cm(styles, "recipe-action-menu-item")}
-            onClick={() => run(() => recipeTreeOverlayState.addPin(itemId))}
-            role="menuitem"
-            type="button"
-          >
-            <LucidePin aria-hidden />
-            <span>{t("recipeTree.action.pin")}</span>
-          </button>
+          {existingPin === undefined ? (
+            <button
+              className={cm(styles, "recipe-action-menu-item")}
+              onClick={() => run(() => recipeTreeOverlayState.addPin(itemId))}
+              role="menuitem"
+              type="button"
+            >
+              <LucidePin aria-hidden />
+              <span>{t("recipeTree.action.pin")}</span>
+            </button>
+          ) : (
+            <button
+              className={cm(styles, "recipe-action-menu-item")}
+              onClick={() => run(() => recipeTreeOverlayState.removePin(existingPin.id))}
+              role="menuitem"
+              type="button"
+            >
+              <LucidePinOff aria-hidden />
+              <span>{t("recipeTree.unpin")}</span>
+            </button>
+          )}
         </>
       ) : null}
     </div>

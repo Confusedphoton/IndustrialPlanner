@@ -502,7 +502,7 @@
 
 .canvas-top-left-corner-toolbar {
   position: absolute;
-  top: calc(var(--top-bar-height, 48px) + 78px);
+  top: calc(var(--top-bar-height, 48px) + 12px);
   left: calc(var(--left-toolbar-width, 68px) + var(--left-dock-width, 0px) + var(--canvas-tool-rail-width, 0px) + 14px);
   z-index: 4;
   display: grid;
@@ -510,29 +510,6 @@
   gap: 6px;
   max-width: calc(100% - var(--left-toolbar-width, 68px) - var(--left-dock-width, 0px) - var(--right-dock-width, 0px) - var(--recipe-dock-width, 0px) - 28px);
   pointer-events: auto;
-}
-
-.canvas-top-left-corner-toolbar::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: -18px;
-  width: 142px;
-  height: 0;
-  border-top: 4px dashed var(--in-canvas-toolbar-button-text);
-  opacity: 0.8;
-  pointer-events: none;
-}
-
-.canvas-top-left-corner-toolbar::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: -18px;
-  width: 54px;
-  height: 4px;
-  background: var(--in-canvas-toolbar-active-border);
-  pointer-events: none;
 }
 
 .canvas-top-left-corner-toolbar-button {

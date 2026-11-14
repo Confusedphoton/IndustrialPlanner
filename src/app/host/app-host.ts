@@ -187,7 +187,6 @@ export function createAppHost(
     showCanvasToast: actionImpl.showCanvasToast,
     setCanvasAlert: actionImpl.setCanvasAlert,
     toggleLeftDock: actionImpl.toggleLeftDock,
-    setLeftDockSuppressed: actionImpl.setLeftDockSuppressed,
     toggleRightDock: actionImpl.toggleRightDock,
     setRightDockOpen: actionImpl.setRightDockOpen,
     toggleTopBarCollapsed: actionImpl.toggleTopBarCollapsed,

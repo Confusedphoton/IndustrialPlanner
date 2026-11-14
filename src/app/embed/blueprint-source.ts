@@ -150,7 +150,7 @@ export function createEmbedWorldDocument(
     documentSettings: {
       ...document.documentSettings,
       viewport: {
-        ...document.documentSettings.viewport,
+        displayRotation: document.documentSettings.viewport?.displayRotation ?? 0,
         gridSize: viewport ? Math.min(1,
           viewport.width / ((bounds.width + 2) * viewport.gridCellPixelSize),
           viewport.height / ((bounds.height + 2) * viewport.gridCellPixelSize),

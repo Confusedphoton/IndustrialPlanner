@@ -17,6 +17,7 @@ import type { EntityVariantDefinition } from "@/domain/registry/types/entity-var
 import { useEditorDocumentSnapshot } from "../hooks";
 import { SHORTCUT_KEY, type ShortcutKeyId } from "@/app/actions/keyboard-shortcut-manager";
 import { canPlaceEntityDefinitionInCurrentBase } from "@/app/placement-zone-availability";
+import { recentPlacementDevices } from "@/app/recent-placement-devices";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import type { PlacementGroup } from "@/app/state/state-impl";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
@@ -556,8 +557,7 @@ export const PlacementPanel = observer(function PlacementPanel({
   // 设备搜索。输入即过滤，Enter 放置首个匹配，Esc 清空；画布上按 “/” 聚焦。
   const [deviceQuery, setDeviceQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement | null>(null);
-  // 最近放置的设备（本机 localStorage），以及分类跳转用的分组节点。
-  const [recentDeviceIds, setRecentDeviceIds] = useState<readonly string[]>(() => readRecentPlacementDevices());
+  // 分类跳转用的分组节点。
   const sectionElementsRef = useRef(new Map<string, HTMLElement>());
   useEffect(() => {
     if (!active) {
@@ -597,7 +597,6 @@ export const PlacementPanel = observer(function PlacementPanel({
   ) => {
     const deviceId = button.uiButtonId.replace("placement-", "");
     if (event.pointerType !== "mouse" || event.button === 0) {
-      setRecentDeviceIds(recordRecentPlacementDevice(deviceId));
       // 从面板选择设备时清除配方树带入的放置配置，避免旧配方带到新放置。
       runInAction(() => {
         appHost.mainCanvas.state.runtime.singlePlacementConfig = null;
@@ -645,7 +644,6 @@ export const PlacementPanel = observer(function PlacementPanel({
             return;
           }
           if (event.key === "Enter" && firstMatchedDeviceId !== null) {
-            setRecentDeviceIds(recordRecentPlacementDevice(firstMatchedDeviceId));
             appHost.gestureAdapter.handleUiButtonMouseTap({
               uiButtonId: `ui-left-dock-placement-mode-${firstMatchedDeviceId}-mouse-tap`,
               button: 0,
@@ -682,7 +680,7 @@ export const PlacementPanel = observer(function PlacementPanel({
       ) : null}
       </div>
       {normalizedDeviceQuery.length === 0 ? (() => {
-        const recentButtons = resolveRecentPlacementButtons(deviceSections, recentDeviceIds);
+        const recentButtons = resolveRecentPlacementButtons(deviceSections, recentPlacementDevices.deviceIds);
         if (recentButtons.length === 0) {
           return null;
         }
@@ -841,34 +839,6 @@ function isEditableEventTarget(target: EventTarget | null): boolean {
     || target.tagName === "INPUT"
     || target.tagName === "TEXTAREA"
     || target.tagName === "SELECT";
-}
-
-// 最近放置的设备
-
-const RECENT_PLACEMENT_STORAGE_KEY = "industrial-planner-recent-placements";
-const MAX_RECENT_PLACEMENT_DEVICES = 8;
-
-function readRecentPlacementDevices(): readonly string[] {
-  try {
-    const raw = window.localStorage.getItem(RECENT_PLACEMENT_STORAGE_KEY);
-    const parsed: unknown = raw === null ? [] : JSON.parse(raw);
-    return Array.isArray(parsed)
-      ? parsed.filter((entry): entry is string => typeof entry === "string").slice(0, MAX_RECENT_PLACEMENT_DEVICES)
-      : [];
-  } catch {
-    return [];
-  }
-}
-
-function recordRecentPlacementDevice(deviceId: string): readonly string[] {
-  const next = [deviceId, ...readRecentPlacementDevices().filter((entry) => entry !== deviceId)]
-    .slice(0, MAX_RECENT_PLACEMENT_DEVICES);
-  try {
-    window.localStorage.setItem(RECENT_PLACEMENT_STORAGE_KEY, JSON.stringify(next));
-  } catch {
-    // localStorage may be unavailable in private contexts.
-  }
-  return next;
 }
 
 /** 将最近设备 ID 映射回当前基地可用的放置按钮；折叠模式下变体归并到同一按钮。 */

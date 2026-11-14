@@ -278,7 +278,8 @@ export function createWorldDocumentFromMigratedBlueprint(
     documentSettings: {
       ...baseDocument.documentSettings,
       viewport: {
-        ...baseDocument.documentSettings.viewport,
+        gridSize: baseDocument.documentSettings.viewport?.gridSize ?? 1,
+        displayRotation: baseDocument.documentSettings.viewport?.displayRotation ?? 0,
         center: {
           x: blueprint.initialGridPoint.x,
           y: blueprint.initialGridPoint.y,

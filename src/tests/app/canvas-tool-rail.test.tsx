@@ -11,10 +11,12 @@ import {
   PLACEMENT_RAIL_ROTATE_BUTTON_ID,
 } from "@/app/input/gesture/actions";
 import type { AppHost } from "@/app/host/app-host";
+import { recentPlacementDevices } from "@/app/recent-placement-devices";
 import { CanvasToolRail } from "@/app/shell/canvas/canvas-tool-rail";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createWorldDocument } from "@/domain/document/world-document";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { createRegistryContract } from "@/registry";
 import { createAppTestHost, createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createFakeIndexedDbFactory } from "../shared/fake-indexed-db";
@@ -74,6 +76,7 @@ describe("canvas tool rail", () => {
       });
     });
     expect(appHost.mainCanvas.state.activeTool).toBe("single-placement");
+    expect(recentPlacementDevices.deviceIds[0]).toBe("storager_1");
     expect(mainRailButtonIds()).toEqual(before);
     expect(contextualButtonIds()).toEqual([PLACEMENT_RAIL_ROTATE_BUTTON_ID, PLACEMENT_RAIL_CANCEL_BUTTON_ID]);
 
@@ -83,6 +86,37 @@ describe("canvas tool rail", () => {
 
     penTap(button(PLACEMENT_RAIL_CANCEL_BUTTON_ID));
     expect(appHost.mainCanvas.state.activeTool).toBe("select");
+    expect(contextualButtonIds()).toEqual([]);
+  });
+
+  it("rotates and cancels a move from the rail like a placement", async () => {
+    const appHost = await createAppHost();
+    renderRail(appHost);
+    const touchTap = (uiButtonId: string) => act(() => {
+      appHost.gestureAdapter.handleUiButtonTouchTap({ uiButtonId, altKey: false, ctrlKey: false, metaKey: false, shiftKey: false });
+    });
+    act(() => appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 1000, height: 700 }));
+    touchTap("ui-left-dock-placement-mode-storager_1-touch-tap");
+    touchTap("canvas-floating-toolbar-button-ok");
+    const editor = appHost.workspace.editor!;
+    const [placedId] = editor.document.getSnapshot().entityOrder;
+    expect(placedId).toBeDefined();
+    act(() => {
+      appHost.mainCanvas.actions.setActiveTool("select");
+      editor.actions.clearCollection(EntityCollectionType.selection);
+      editor.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId: placedId! });
+    });
+    touchTap("canvas-floating-toolbar-button-move");
+    expect(appHost.mainCanvas.state.activeTool).toBe("move");
+    expect(contextualButtonIds()).toEqual([PLACEMENT_RAIL_ROTATE_BUTTON_ID, PLACEMENT_RAIL_CANCEL_BUTTON_ID]);
+
+    const rotationBefore = previewRotation(appHost);
+    penTap(button(PLACEMENT_RAIL_ROTATE_BUTTON_ID));
+    expect(previewRotation(appHost)).not.toBe(rotationBefore);
+
+    penTap(button(PLACEMENT_RAIL_CANCEL_BUTTON_ID));
+    expect(appHost.mainCanvas.state.activeTool).toBe("select");
+    expect(editor.document.getSnapshot().entities[placedId!]?.rotation).toBe(0);
     expect(contextualButtonIds()).toEqual([]);
   });
 

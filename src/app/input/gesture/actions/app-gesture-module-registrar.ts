@@ -38,6 +38,7 @@ import {
 import {
   createHypergryphSinglePlacementGestureModule,
 } from "./hypergryph/hypergryph-single-placement-gesture-module";
+import { createHypergryphRotateSelectionGestureModule } from "./hypergryph/hypergryph-rotate-selection-gesture-module";
 import { createHypergryphPenEraserGestureModule } from "./hypergryph/hypergryph-pen-eraser-gesture-module";
 import { createHypergryphPortDragLogisticsGestureModule } from "./hypergryph/hypergryph-port-drag-logistics-gesture-module";
 import { createHypergryphSaveBlueprintGestureModule } from "./hypergryph/hypergryph-save-blueprint-gesture-module";
@@ -95,6 +96,7 @@ export class AppGestureModuleRegistrar {
     register("save-blueprint", createHypergryphSaveBlueprintGestureModule());
     register("switch-device-variant", createHypergryphEntityVariantSwitchGestureModule());
     register("delete", createHypergryphDeleteSelectionGestureModule());
+    register("rotate-placement", createHypergryphRotateSelectionGestureModule());
     register("delete", createHypergryphPenEraserGestureModule());
     register("pan-viewport", createHypergryphMouseViewportPanModule());
     register("pan-viewport", createHypergryphKeyboardViewportPanModule());

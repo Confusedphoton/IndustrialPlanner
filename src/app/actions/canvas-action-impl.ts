@@ -60,7 +60,6 @@ public readonly dispose = action(() => {
   });
 
 public readonly setActiveTool: CanvasInternalAction["setActiveTool"] = action((activeTool) => {
-    if (activeTool === "select") this.canvas.setPlacementPanelSuppressed(false);
     const previousActiveTool = this.state.activeTool;
     if (previousActiveTool === activeTool) {
       return;

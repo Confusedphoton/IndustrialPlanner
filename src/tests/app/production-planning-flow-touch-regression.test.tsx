@@ -955,6 +955,33 @@ describe("ProductionFlowGraph touch regression", () => {
     expect(surface.style.transform).toBe(userCamera);
   });
 
+  it("keeps the camera when a plan edit changes rates but not the set of nodes", () => {
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(800);
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(600);
+    render({ fitToView: true });
+    const canvas = getFlowCanvas(container);
+    const surface = canvas.querySelector<HTMLDivElement>("[class*='production-flow-surface']")!;
+    act(() => {
+      dispatchPointerEvent(canvas, "pointerdown", { pointerId: 1, pointerType: "pen", clientX: 300, clientY: 300, buttons: 1 });
+    });
+    act(() => {
+      dispatchPointerEvent(canvas, "pointermove", { pointerId: 1, pointerType: "pen", clientX: 380, clientY: 340, buttons: 1 });
+    });
+    act(() => {
+      dispatchPointerEvent(canvas, "pointerup", { pointerId: 1, pointerType: "pen", clientX: 380, clientY: 340 });
+    });
+    const userCamera = surface.style.transform;
+
+    const doubled = createMockGraphInput();
+    vi.mocked(buildProductionFlowGraph).mockReturnValue({
+      nodes: doubled.nodes,
+      links: doubled.links.map((link) => ({ ...link, value: link.value * 2, label: "120/min" })),
+    });
+    render({ fitToView: true, plan: createMockPlan() });
+
+    expect(surface.style.transform).toBe(userCamera);
+  });
+
   // ==================== Test 4: 双指 pinch 进入 pinch 状态 ====================
   it("switches from pan to pinch when a second pointer arrives", () => {
     render();

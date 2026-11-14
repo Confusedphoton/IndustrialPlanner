@@ -23,9 +23,11 @@ import { cm } from "@/app/shell/shared/css-module-class";
 import { avoidCanvasToolRail } from "./canvas-tool-rail-bounds";
 import { canvasToolRailState } from "./canvas-tool-rail-state";
 
-const POPUP_WIDTH = 340;
+const POPUP_WIDTH = 384;
 /** 展开配方磁贴时加宽，配方以多列显示。 */
 const POPUP_EXPANDED_WIDTH = 540;
+/** 最窄画布（预算保证的 360px 减去工具条占用带）里仍能放下操作按钮的宽度。 */
+const POPUP_MIN_WIDTH = 240;
 const POPUP_GAP = 10;
 const POPUP_MARGIN = 8;
 
@@ -85,7 +87,7 @@ export const DevicePopup = observer(function DevicePopup({ appHost }: { appHost:
   const centerX = deviceRect.left + deviceRect.width / 2;
   // 宽度以画布去掉工具条占用带后的空间为上限，展开配方时也不会盖住工具条。
   const railFreeWidth = viewport.width - canvasToolRailState.width - POPUP_MARGIN * 2;
-  const popupWidth = Math.max(POPUP_WIDTH, Math.min(recipesExpanded ? POPUP_EXPANDED_WIDTH : POPUP_WIDTH, railFreeWidth));
+  const popupWidth = Math.max(POPUP_MIN_WIDTH, Math.min(recipesExpanded ? POPUP_EXPANDED_WIDTH : POPUP_WIDTH, railFreeWidth));
   const spaceAbove = deviceRect.top - viewport.top - POPUP_GAP - POPUP_MARGIN;
   const spaceBelow = viewport.top + viewport.height - (deviceRect.top + deviceRect.height) - POPUP_GAP - POPUP_MARGIN;
   const toolbarAbove = canvas.state.runtime.canvasFloatingToolbar.visible;

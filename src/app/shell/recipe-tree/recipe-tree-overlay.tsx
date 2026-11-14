@@ -24,10 +24,11 @@ import LucideX from "~icons/lucide/x";
 import LucideWorkflow from "~icons/lucide/workflow";
 import LucidePanelRight from "~icons/lucide/panel-right";
 import LucidePictureInPicture from "~icons/lucide/picture-in-picture-2";
-import { ProductionFlowGraph } from "@/app/shell/production-planning/flow";
+import { buildProductionFlowGraph, ProductionFlowGraph } from "@/app/shell/production-planning/flow";
 
 import type { AppHost } from "@/app/host/app-host";
 import { NumberInput } from "@/app/shell/shared/number-input";
+import { RecipeTileGrid } from "@/app/shell/inspector/recipe-tile-grid";
 import { DEFAULT_RIGHT_DOCK_WIDTH } from "@/app/state/state-impl";
 import {
   buildProductionPlanningIndex,
@@ -259,6 +260,7 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
 
   const title = t("recipeTree.title");
   const [actionTarget, setActionTarget] = useState<RecipeActionTarget | null>(null);
+  const combinedPlan = useCombinedRecipeTreePlan(index);
   const closeActionMenu = useCallback(() => setActionTarget(null), []);
   const docked = state.docked;
   const minimized = state.minimized && !docked;
@@ -407,7 +409,7 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
               index={index}
               onClose={closeActionMenu}
               t={t}
-              target={actionTarget}
+              target={resolveLiveActionTarget(actionTarget, combinedPlan, index, t)}
             />
           )}
           {docked ? null : (
@@ -918,22 +920,11 @@ function clampRectToViewport(rect: RecipeTreeOverlayRect, viewport: ViewportSize
 }
 
 /** 合并全部钉住目标求解，共用的中间产物在流程图中只出现一次；下方显示合计设备与原料。 */
-const RecipeTreeGraph = observer(function RecipeTreeGraph({
-  appHost,
-  index,
-  search,
-  t,
-}: {
-  appHost: AppHost;
-  index: ProductionPlanningIndex;
-  search: ReactNode;
-  t: Translate;
-}) {
+/** 合并全部钉住目标的产线求解结果；流程图与节点菜单共用，保证菜单显示与操作始终对应当前方案。 */
+function useCombinedRecipeTreePlan(index: ProductionPlanningIndex): ProductionPlanningResult {
   const state = recipeTreeOverlayState;
-  const openActionMenu = useContext(RecipeActionMenuContext);
-  const [totalsExpanded, setTotalsExpanded] = useState(false);
   const pinsSignature = JSON.stringify(state.pins.map((pin) => [pin.itemId, pin.perMinute, pin.recipeChoices]));
-  const plan = useMemo<ProductionPlanningResult>(() => {
+  return useMemo<ProductionPlanningResult>(() => {
     const recipeChoices = new Map<string, string>();
     for (const pin of state.pins) {
       for (const [itemId, candidateId] of Object.entries(pin.recipeChoices)) {
@@ -953,6 +944,40 @@ const RecipeTreeGraph = observer(function RecipeTreeGraph({
     // pinsSignature 覆盖 pins 的全部求解输入。
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, pinsSignature]);
+}
+
+/**
+ * 菜单打开后目标的配方、产量可能被就地编辑；每次渲染都按当前方案重新解析该物品的节点，
+ * 使明细与“按此配方放置”等操作始终对应编辑后的状态。
+ */
+function resolveLiveActionTarget(
+  target: RecipeActionTarget,
+  plan: ProductionPlanningResult,
+  index: ProductionPlanningIndex,
+  t: Translate,
+): RecipeActionTarget {
+  if (target.itemId === null) {
+    return target;
+  }
+  const node = buildProductionFlowGraph(plan, index, t, "item").nodes
+    .find((candidate) => candidate.itemId === target.itemId && candidate.recipeNode !== undefined && candidate.tone !== "source");
+  return node === undefined ? target : resolveFlowNodeActionTarget(node, target.anchor);
+}
+
+const RecipeTreeGraph = observer(function RecipeTreeGraph({
+  appHost,
+  index,
+  search,
+  t,
+}: {
+  appHost: AppHost;
+  index: ProductionPlanningIndex;
+  search: ReactNode;
+  t: Translate;
+}) {
+  const openActionMenu = useContext(RecipeActionMenuContext);
+  const [totalsExpanded, setTotalsExpanded] = useState(false);
+  const plan = useCombinedRecipeTreePlan(index);
 
   return (
     <div className={cm(styles, totalsExpanded ? "recipe-tree-graph-body is-totals-expanded" : "recipe-tree-graph-body")}>
@@ -962,7 +987,6 @@ const RecipeTreeGraph = observer(function RecipeTreeGraph({
           fitToView
           index={index}
           invertWheelZoom={appHost.internalState.settings.invertWheelZoom}
-          key={pinsSignature}
           nodeDrag="pan"
           toolbarLeading={search}
           onNodeActivate={(node, anchor) => openActionMenu(resolveFlowNodeActionTarget(node, anchor))}
@@ -1005,6 +1029,10 @@ const RecipeTreeNodeEditor = observer(function RecipeTreeNodeEditor({
   if (pin === undefined && candidates.length < 2) {
     return null;
   }
+  const candidateRecipes = candidates.flatMap((candidate) => {
+    const recipe = candidate.recipeId === null ? undefined : index.recipeById.get(candidate.recipeId);
+    return recipe === undefined ? [] : [recipe];
+  });
   const chooseRecipe = (candidateId: string | null) => {
     for (const candidate of state.pins) {
       state.setRecipeChoice(candidate.id, itemId, candidateId);
@@ -1049,6 +1077,7 @@ const RecipeTreeNodeEditor = observer(function RecipeTreeNodeEditor({
         </div>
       )}
       {candidates.length < 2 ? null : (
+        // 与属性面板相同的配方磁贴：原料 → 产物，同产物多配方时显示“由 X 制取”，一眼能区分。
         <div aria-label={t("recipeTree.recipe")} className={cm(styles, "recipe-action-menu-recipes")} role="group">
           <button
             aria-pressed={selectedCandidateId === null}
@@ -1058,17 +1087,15 @@ const RecipeTreeNodeEditor = observer(function RecipeTreeNodeEditor({
           >
             {t("productionPlanning.autoRecipe")}
           </button>
-          {candidates.map((candidate) => (
-            <button
-              aria-pressed={selectedCandidateId === candidate.id}
-              className={cm(styles, "recipe-action-menu-recipe")}
-              key={candidate.id}
-              onClick={() => chooseRecipe(candidate.id)}
-              type="button"
-            >
-              {resolveProductionPlanningCandidateName(candidate, index, t)}
-            </button>
-          ))}
+          <RecipeTileGrid
+            index={index}
+            onSelect={(recipeId) => chooseRecipe(
+              recipeId === null ? null : candidates.find((candidate) => candidate.recipeId === recipeId)?.id ?? null,
+            )}
+            recipes={candidateRecipes}
+            selectedRecipeId={candidates.find((candidate) => candidate.id === selectedCandidateId)?.recipeId ?? null}
+            t={t}
+          />
         </div>
       )}
     </div>

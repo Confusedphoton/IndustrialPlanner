@@ -19,7 +19,6 @@ import { ALL_SHORTCUT_ACTIVE_TOOLS } from "../shortcut-route-matching";
 import { enterMarqueeMode } from "./hypergryph-marquee-gesture-module";
 import { TOUCH_PREVIEW_HIT_SLOP_PX } from "./mobile-preview-bounds";
 import {
-  closeCompactLeftDockOnPlacementEnter,
   driveMousePlacementPreview,
   drivePlacementPreview,
   isPlacementCancelButtonId,
@@ -239,9 +238,6 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
           context.canvas.editor?.actions.clearCollection(EntityCollectionType.selection);
         }
         cleanupBlueprintPlacement(context.canvas, context.canvas.editor);
-        if (event.to === "select") {
-          context.canvas.setPlacementPanelSuppressed(false);
-        }
         return { status: "handled" };
       }
 
@@ -250,7 +246,6 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
           return { status: "ignored" };
         }
 
-        closeCompactLeftDockOnPlacementEnter(context.canvas);
         syncPlacementEntryUi(
           context.canvas,
           context.canvas.state.runtime.blueprintPlacementPointerMode,

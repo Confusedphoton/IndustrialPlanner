@@ -77,8 +77,9 @@ describe("editor document writer origin", () => {
       documentSettings: {
         ...initialDocument.documentSettings,
         viewport: {
-          ...initialDocument.documentSettings.viewport,
-          gridSize: initialDocument.documentSettings.viewport.gridSize + 1,
+          center: { x: 0, y: 0 },
+          displayRotation: 0,
+          gridSize: (initialDocument.documentSettings.viewport?.gridSize ?? 1) + 1,
         },
       },
     }, { mode: "remote-sync" });

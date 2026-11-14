@@ -1,5 +1,5 @@
 import { createSceneSessionFactories } from "./editor/scene-session";
-import { bindEditorViewToDocument, createDefaultWorldDocumentViewportSettings } from "./editor/document-viewport";
+import { bindEditorViewToDocument, createDefaultWorldDocumentViewportSettings, resolveWorldDocumentContentBounds } from "./editor/document-viewport";
 import { resolveEditorSceneSpace, resolveEditorPlacementGeometry } from "./editor/placement-space";
 import { isDataMigrationComplete } from "@/shared/storage/data-migration-state";
 import { BLUEPRINT_SCHEMA_VERSION } from "@/domain/document/blueprint-document";
@@ -167,6 +167,7 @@ async function startWorkbench(): Promise<void> {
   viewPersistence = bindEditorViewToDocument({ document: editorHost.document,
     documentWriter: editorHost.internalDocumentWriter, view: mainView,
     readSpace: () => resolveEditorSceneSpace(editorHost.services, editorHost.document.getSnapshot()),
+    readContentBounds: document => resolveWorldDocumentContentBounds(document, workspace.registry),
   });
   retainMainScene(() => viewPersistence?.dispose());
   const renderHost = createRenderHost();

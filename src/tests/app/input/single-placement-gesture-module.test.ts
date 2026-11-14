@@ -140,7 +140,7 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     expect(context.canvas.state.runtime.singlePlacementContinuous).toBe(false);
   });
 
-  it("closes the left dock when entering single-placement on mobile and tablet", () => {
+  it("keeps the left dock open when entering single-placement on mobile and tablet", () => {
     for (const deviceClass of ["mobile", "tablet"] as const) {
       const { context, appHost } = createContext({
         deviceClass,
@@ -151,15 +151,10 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       const result = module.handle(placementMouseTapEvent("log_splitter"), context);
 
       expect(result).toEqual({ status: "handled" });
-      expect(appHost.internalActions.setLeftDockSuppressed).not.toHaveBeenCalled();
-
       expect(
         module.handle(onEnterActiveToolEvent("select", "single-placement"), context),
       ).toEqual({ status: "handled" });
-      expect(appHost.internalActions.setLeftDockSuppressed).toHaveBeenCalledTimes(1);
-      expect(appHost.internalActions.setLeftDockSuppressed).toHaveBeenCalledWith(true);
       expect(appHost.state.workbench.leftDockOpen).toBe(true);
-      expect(appHost.internalState.workbench.leftDockSuppressed).toBe(true);
     }
   });
 
@@ -763,7 +758,6 @@ function createContext(options: {
   for (const action of ["setActiveTool", "showCanvasFloatingToolbarForCollection", "hideCanvasFloatingToolbar",
     "showCanvasTopLeftCornerToolbar", "hideCanvasTopLeftCornerToolbar", "showCanvasRightDockToolbar",
     "hideCanvasRightDockToolbar", "alignCanvasFloatingToolbar"] as const) vi.spyOn(test.canvas.actions, action);
-  vi.spyOn(test.app.internalActions, "setLeftDockSuppressed");
   vi.spyOn(test.app.internalActions, "isShortcutFor");
   return { context: test.context, editor: test.editor, appHost: test.app,
     preview: test.editor.state.collections.preview };

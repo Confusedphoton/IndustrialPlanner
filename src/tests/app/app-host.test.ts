@@ -25,11 +25,9 @@ import {
   DEFAULT_LEFT_DOCK_WIDTH,
   DEFAULT_MODULE_BALANCING_STAGE_ID,
   DEFAULT_RIGHT_DOCK_TAB_ID,
-  DEFAULT_RIGHT_DOCK_WIDTH,
   DEFAULT_TIMELINE_BOTTOM_DOCK_HEIGHT,
   DEFAULT_TOOLBOX_BOTTOM_DOCK_HEIGHT,
   DEFAULT_TOOLBOX_DIALOG_TAB_ID,
-  MOBILE_LEFT_DOCK_WIDTH,
 } from "@/app/state/state-impl";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
@@ -191,7 +189,6 @@ function createWorkbenchStorageSnapshot(options: {
 } = {}) {
   return {
     leftDockOpen: options.leftDockOpen ?? true,
-    leftDockSuppressed: false,
     rightDockOpen: options.rightDockOpen ?? false,
     leftDockWidth: options.leftDockWidth ?? DEFAULT_LEFT_DOCK_WIDTH,
     topBarCollapsed: options.topBarCollapsed ?? false,
@@ -1105,37 +1102,6 @@ describe("createAppTestHost", () => {
     expect(nextAppHost.internalState.runtime.activePanel).toBeNull();
   });
 
-  it("predicts viewport rect immediately when dock toggles run", () => {
-    const workspace = createWorkspace();
-    const editorHost = createEditorTestHost(workspace);
-    const appHost = createAppTestHost(workspace);
-    // 右侧栏初始收起；本用例验证关闭行为，先显式展开。
-    appHost.internalActions.setRightDockOpen(true, { preserveSingleSelection: true });
-
-    getTestView(editorHost.workspace).actions.setViewportClientRect({
-      left: 460,
-      top: 64,
-      width: 960,
-      height: 720,
-    });
-
-    appHost.internalActions.toggleLeftDock();
-
-    expect(appHost.state.workbench.leftDockOpen).toBe(false);
-    expect(getTestView(editorHost.workspace).state.clientRect.left).toBe(460 - DEFAULT_LEFT_DOCK_WIDTH);
-    expect(getTestView(editorHost.workspace).state.clientRect.top).toBe(64);
-    expect(getTestView(editorHost.workspace).state.clientRect.width).toBe(960 + DEFAULT_LEFT_DOCK_WIDTH);
-    expect(getTestView(editorHost.workspace).state.clientRect.height).toBe(720);
-
-    appHost.internalActions.toggleRightDock();
-
-    expect(appHost.state.workbench.rightDockOpen).toBe(false);
-    expect(getTestView(editorHost.workspace).state.clientRect.left).toBe(460 - DEFAULT_LEFT_DOCK_WIDTH);
-    expect(getTestView(editorHost.workspace).state.clientRect.top).toBe(64);
-    expect(getTestView(editorHost.workspace).state.clientRect.width).toBe(960 + DEFAULT_LEFT_DOCK_WIDTH + DEFAULT_RIGHT_DOCK_WIDTH);
-    expect(getTestView(editorHost.workspace).state.clientRect.height).toBe(720);
-  });
-
   it("clears a single selection when closing the right dock in select mode", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
@@ -1169,102 +1135,18 @@ describe("createAppTestHost", () => {
     expect(editorHost.state.collections.selection).toEqual([]);
   });
 
-  it("reopens the left dock and predicts viewport rect when activating a panel while dock is closed", () => {
+  it("reopens the left dock when activating a panel while the dock is closed", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorTestHost(workspace);
+    createEditorTestHost(workspace);
     const appHost = createAppTestHost(workspace);
 
-    getTestView(editorHost.workspace).actions.setViewportClientRect({
-      left: 85,
-      top: 64,
-      width: 1335,
-      height: 720,
-    });
-
     appHost.internalActions.toggleLeftDock();
-
     expect(appHost.state.workbench.leftDockOpen).toBe(false);
-    expect(getTestView(editorHost.workspace).state.clientRect.left).toBe(85 - DEFAULT_LEFT_DOCK_WIDTH);
-    expect(getTestView(editorHost.workspace).state.clientRect.width).toBe(1335 + DEFAULT_LEFT_DOCK_WIDTH);
 
     appHost.internalActions.setActivePanel("history");
 
     expect(appHost.internalState.runtime.activePanel).toBe("history");
     expect(appHost.state.workbench.leftDockOpen).toBe(true);
-    expect(getTestView(editorHost.workspace).state.clientRect.left).toBe(85);
-    expect(getTestView(editorHost.workspace).state.clientRect.top).toBe(64);
-    expect(getTestView(editorHost.workspace).state.clientRect.width).toBe(1335);
-    expect(getTestView(editorHost.workspace).state.clientRect.height).toBe(720);
-  });
-
-  it("uses the fixed mobile left dock width when predicting viewport rect", () => {
-    Object.defineProperty(window, "innerWidth", {
-      configurable: true,
-      writable: true,
-      value: 390,
-    });
-    Object.defineProperty(window, "innerHeight", {
-      configurable: true,
-      writable: true,
-      value: 844,
-    });
-    Object.defineProperty(window, "devicePixelRatio", {
-      configurable: true,
-      writable: true,
-      value: 1,
-    });
-    Object.defineProperty(window.navigator, "userAgent", {
-      configurable: true,
-      value: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
-    });
-    Object.defineProperty(window.navigator, "maxTouchPoints", {
-      configurable: true,
-      value: 5,
-    });
-    Object.defineProperty(window.navigator, "userAgentData", {
-      configurable: true,
-      value: undefined,
-    });
-    Object.defineProperty(window, "matchMedia", {
-      configurable: true,
-      value: (query: string) => ({
-        matches: query === "(pointer: coarse)" || query === "(hover: none)",
-        media: query,
-        onchange: null,
-        addEventListener: () => {},
-        removeEventListener: () => {},
-        addListener: () => {},
-        removeListener: () => {},
-        dispatchEvent: () => false,
-      }),
-    });
-
-    const workspace = createWorkspace();
-    const editorHost = createEditorTestHost(workspace);
-    const appHost = createAppTestHost(workspace);
-
-    getTestView(editorHost.workspace).actions.setViewportClientRect({
-      left: 320,
-      top: 64,
-      width: 900,
-      height: 720,
-    });
-
-    runInAction(() => {
-      appHost.internalState.workbench.leftDockWidth = 512;
-    });
-
-    appHost.internalActions.toggleLeftDock();
-
-    expect(appHost.state.workbench.leftDockOpen).toBe(false);
-    expect(getTestView(editorHost.workspace).state.clientRect.left).toBe(320 - MOBILE_LEFT_DOCK_WIDTH);
-    expect(getTestView(editorHost.workspace).state.clientRect.width).toBe(900 + MOBILE_LEFT_DOCK_WIDTH);
-
-    appHost.internalActions.setActivePanel("history");
-
-    expect(appHost.state.workbench.leftDockOpen).toBe(true);
-    expect(getTestView(editorHost.workspace).state.clientRect.left).toBe(320);
-    expect(getTestView(editorHost.workspace).state.clientRect.width).toBe(900);
   });
 
   it("zooms the editor viewport on wheel up and wheel down gestures", () => {
@@ -3708,7 +3590,9 @@ describe("createAppTestHost", () => {
     const expectedDeviceId = workspace.registry.entityDefinitions
       .filter((definition) => definition.uiGroup === "beltLogistics")
       .sort((left, right) => left.displayOrder - right.displayOrder || left.id.localeCompare(right.id))[0]?.id;
-    const anchorPoint = resolveClientPixelPointForGridCell(editorHost, { x: 3, y: 2 });
+    const center = getTestView(editorHost.workspace).state.center;
+    const anchorCell = { x: Math.floor(center.x) + 3, y: Math.floor(center.y) + 2 };
+    const anchorPoint = resolveClientPixelPointForGridCell(editorHost, anchorCell);
 
     appHost.gestureAdapter.handlePointerMove(pointerEvent({
       pointerId: 61,
@@ -3731,7 +3615,7 @@ describe("createAppTestHost", () => {
     expect(appHost.mainCanvas.state.activeTool).toBe("single-placement");
     expect(appHost.mainCanvas.state.runtime.logisticsPlacement.kind).toBeNull();
     expect(appHost.mainCanvas.state.runtime.singlePlacementDeviceId).toBe(expectedDeviceId);
-    expect(appHost.mainCanvas.state.runtime.placementAnchor).toEqual({ x: 3, y: 2 });
+    expect(appHost.mainCanvas.state.runtime.placementAnchor).toEqual(anchorCell);
     expect(editorHost.state.collections.preview).toHaveLength(1);
   });
 

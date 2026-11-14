@@ -34,6 +34,7 @@ import {
   swapLogisticsDeviceRole,
 } from "@/app/logistics-role-swap";
 import { runInAction } from "mobx";
+import { recentPlacementDevices } from "@/app/recent-placement-devices";
 
 import type { GestureHandleResult, GestureMappingModule, ShortcutActionRoute } from "../types";
 import {
@@ -90,7 +91,7 @@ export const PLACEMENT_TOOLBAR_BUTTON_IDS = [
   "canvas-floating-toolbar-button-ok",
 ] as const;
 
-/** 画布工具条在单设备与蓝图放置模式下的上下文按钮：旋转预览、退出放置；与浮动工具条的同名按钮行为一致。 */
+/** 画布工具条在单设备、蓝图放置与移动模式下的上下文按钮：旋转预览、退出放置或移动；与浮动工具条的同名按钮行为一致。 */
 export const PLACEMENT_RAIL_ROTATE_BUTTON_ID = "canvas-tool-rail-placement-rotate";
 export const PLACEMENT_RAIL_CANCEL_BUTTON_ID = "canvas-tool-rail-placement-cancel";
 
@@ -268,9 +269,6 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
 
         context.canvas.pendingPlacementEnter = null;
         cleanupPlacementDraft(context.canvas);
-        if (event.to === "select") {
-          context.canvas.setPlacementPanelSuppressed(false);
-        }
         return { status: "handled" };
       }
 
@@ -283,8 +281,6 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
         if (context.canvas.pendingPlacementEnter !== null) {
           const { deviceId, anchor, pointerMode, initialMousePosition } = context.canvas.pendingPlacementEnter;
           context.canvas.pendingPlacementEnter = null;
-
-          closeCompactLeftDockOnPlacementEnter(context.canvas);
 
           const editor = context.canvas.editor;
 
@@ -349,7 +345,6 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
         }
 
         // 兜底：无桥接变量时保持原有逻辑
-        closeCompactLeftDockOnPlacementEnter(context.canvas);
         syncPlacementEntryUi(context.canvas);
         return { status: "handled" };
       }
@@ -732,6 +727,9 @@ function finalizePlacementEnter(options: {
 
   if (placementAnchor === null) {
     return { status: "ignored" };
+  }
+  if (options.canvas.canUseWorkbenchActions) {
+    recentPlacementDevices.record(options.deviceId);
   }
 
   // shouldSetActiveTool 路径只写桥接变量 + setActiveTool，
@@ -1132,15 +1130,6 @@ function clearPlacementUi(canvas: CanvasInteractionController): void {
   canvas.actions.hideCanvasFloatingToolbar();
   canvas.actions.hideCanvasTopLeftCornerToolbar();
   canvas.actions.hideCanvasRightDockToolbar();
-}
-
-export function closeCompactLeftDockOnPlacementEnter(canvas: CanvasInteractionController): void {
-  const deviceClass = canvas.workbench.state.screenProfile.deviceClass;
-  if (deviceClass !== "mobile" && deviceClass !== "tablet") {
-    return;
-  }
-
-  canvas.setPlacementPanelSuppressed(true);
 }
 
 function restoreFailedPlacementEnter(canvas: CanvasInteractionController, editor: EditorContract): void {

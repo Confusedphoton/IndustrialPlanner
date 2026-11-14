@@ -987,7 +987,7 @@ describe("Left dock panel switching", () => {
     expect(queryVisibleLeftDockPanel(container)?.getAttribute("data-panel-id")).toBe("placement");
   });
 
-  it("preserves placement panel scroll position while tablet placement suppresses the left dock", async () => {
+  it("keeps the placement panel open with its scroll position while tablet placement runs", async () => {
     coarsePointer = true;
     hoverNone = true;
     setViewport({
@@ -1009,13 +1009,13 @@ describe("Left dock panel switching", () => {
 
     // jsdom 没有布局，显式装配 View 测量后验证侧栏状态。
     appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 711, height: 500 });
-    const dockBeforeSuppression = container.querySelector(".dock-left") as HTMLElement | null;
+    const dockBeforePlacement = container.querySelector(".dock-left") as HTMLElement | null;
     const dockShell = container.querySelector(".dock-shell-left") as HTMLElement | null;
 
     expect(appHost.state.screenProfile.deviceClass).toBe("tablet");
-    expect(dockBeforeSuppression).not.toBeNull();
-    if (dockBeforeSuppression !== null) {
-      dockBeforeSuppression.scrollTop = 480;
+    expect(dockBeforePlacement).not.toBeNull();
+    if (dockBeforePlacement !== null) {
+      dockBeforePlacement.scrollTop = 480;
     }
 
     const waterPumpButton = container.querySelector(
@@ -1046,19 +1046,17 @@ describe("Left dock panel switching", () => {
     });
 
     expect(appHost.mainCanvas.state.activeTool).toBe("single-placement");
-    expect(appHost.internalState.workbench.leftDockSuppressed).toBe(true);
-    expect(dockShell?.hidden).toBe(true);
-    expect(container.querySelector(".dock-left")).toBe(dockBeforeSuppression);
-    expect(dockBeforeSuppression?.scrollTop).toBe(480);
+    expect(dockShell?.hidden).toBe(false);
+    expect(container.querySelector(".dock-left")).toBe(dockBeforePlacement);
+    expect(dockBeforePlacement?.scrollTop).toBe(480);
 
     act(() => {
       appHost.internalActions.setActiveTool("select");
     });
 
-    expect(appHost.internalState.workbench.leftDockSuppressed).toBe(false);
     expect(dockShell?.hidden).toBe(false);
-    expect(container.querySelector(".dock-left")).toBe(dockBeforeSuppression);
-    expect(dockBeforeSuppression?.scrollTop).toBe(480);
+    expect(container.querySelector(".dock-left")).toBe(dockBeforePlacement);
+    expect(dockBeforePlacement?.scrollTop).toBe(480);
   });
 
   it("hides placement shortcut hints in mobile mode", async () => {

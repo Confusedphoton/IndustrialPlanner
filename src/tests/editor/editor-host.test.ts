@@ -312,6 +312,7 @@ describe("createEditorTestHost", () => {
   it("updates viewport rect through editor actions", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
+    centerTestViewAtOrigin(workspace);
 
     expect(editorHost.internalState.internalPersistState.lastDocumentId).toBeNull();
     expect("drafts" in editorHost.state).toBe(false);
@@ -343,6 +344,7 @@ describe("createEditorTestHost", () => {
   it("moves viewport center by client pixel vector through editor actions", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
+    centerTestViewAtOrigin(workspace);
 
     getTestView(editorHost.workspace).actions.moveViewportByClientPixelVector({
       startClientPixel: {
@@ -485,13 +487,13 @@ describe("createEditorTestHost", () => {
       await vi.advanceTimersByTimeAsync(100);
       expect(listener).toHaveBeenCalledTimes(3);
       expect(editor.document.getSnapshot().documentSettings.powerConsumptionOverride).toBe(123);
-      expect(editor.document.getSnapshot().documentSettings.viewport.center).toEqual({
+      expect(editor.document.getSnapshot().documentSettings.viewport?.center).toEqual({
         x: getTestView(editor.workspace).state.center.x, y: getTestView(editor.workspace).state.center.y,
       });
       expect(editor.state.history.undoDepth).toBe(0);
       await vi.advanceTimersByTimeAsync(3000);
       expect(listener).toHaveBeenCalledTimes(3);
-      expect(Object.isFrozen(editor.document.getSnapshot().documentSettings.viewport.center)).toBe(true);
+      expect(Object.isFrozen(editor.document.getSnapshot().documentSettings.viewport?.center)).toBe(true);
       expect("setSnapshot" in editor.document).toBe(false);
     } finally {
       unsubscribe();
@@ -509,12 +511,12 @@ describe("createEditorTestHost", () => {
     const next = { ...editor.document.getSnapshot(), documentKey: `${oldKey}:next` };
     editor.internalDocument.setSnapshot(next);
     await flushMicrotasks(100);
-    expect((await readStoredWorldDocument(oldKey))?.documentSettings.viewport.displayRotation).toBe(90);
+    expect((await readStoredWorldDocument(oldKey))?.documentSettings.viewport?.displayRotation).toBe(90);
     expect(getTestView(editor.workspace).state.displayRotation).toBe(0);
     getTestView(editor.workspace).actions.setViewportDisplayRotation(270);
     editor.dispose();
     await flushMicrotasks(100);
-    expect((await readStoredWorldDocument(next.documentKey))?.documentSettings.viewport.displayRotation).toBe(270);
+    expect((await readStoredWorldDocument(next.documentKey))?.documentSettings.viewport?.displayRotation).toBe(270);
     await vi.advanceTimersByTimeAsync(0);
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -527,6 +529,7 @@ describe("createEditorTestHost", () => {
     await flushMicrotasks();
 
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    centerTestViewAtOrigin(workspace);
     const documentKey = editorHost.document.getSnapshot().documentKey;
 
     getTestView(editorHost.workspace).actions.moveViewportByClientPixelVector({
@@ -568,6 +571,7 @@ describe("createEditorTestHost", () => {
     await flushMicrotasks();
 
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    centerTestViewAtOrigin(workspace);
     const documentKey = editorHost.document.getSnapshot().documentKey;
     const initialViewportCenter = {
       ...getTestView(editorHost.workspace).state.center,
@@ -2295,6 +2299,7 @@ describe("createEditorTestHost", () => {
   it("computes the client rect for a world grid cell", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
+    centerTestViewAtOrigin(workspace);
 
     getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
@@ -2334,6 +2339,7 @@ describe("createEditorTestHost", () => {
   it("round-trips grid cell queries through display rotation", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
+    centerTestViewAtOrigin(workspace);
 
     getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
@@ -2363,6 +2369,7 @@ describe("createEditorTestHost", () => {
   it("pans the viewport through the inverse display rotation", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
+    centerTestViewAtOrigin(workspace);
 
     getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 0,
@@ -2844,6 +2851,11 @@ async function flushMicrotasks(iterations = 20): Promise<void> {
   for (let index = 0; index < iterations; index += 1) {
     await Promise.resolve();
   }
+}
+
+/** 新文档首次打开会对准基地中心；视口换算用例从坐标原点出发，便于直接核对数值。 */
+function centerTestViewAtOrigin(workspace: WorkspaceContract): void {
+  getTestView(workspace).actions.focusOnBounds({ x: -0.5, y: -0.5, width: 1, height: 1 }, { durationMs: 0, gridSize: 1 });
 }
 
 function readStoredWorldDocument(

@@ -108,7 +108,6 @@ export const GRAPHITE_DARK_THEME: AppTheme = {
     "renderer-grid-line": "#c2b8a8",
     "renderer-selection-stroke": "#f2cf7a",
     "renderer-marquee-stroke": "#d6c8b2",
-    "renderer-mode-label-shadow": "#000000",
     "sprite-preview-border-box": "#d6c8b2",
     "renderer-belt-tile-fill": "#2d2822",
     "renderer-belt-tile-stroke": "#8f6d48",

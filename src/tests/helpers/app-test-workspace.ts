@@ -1,3 +1,4 @@
+import { createDefaultWorldDocumentViewportSettings } from "@/editor/document-viewport";
 import { createAppHost } from "@/app/host/app-host";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
@@ -68,7 +69,7 @@ export function getTestView(workspace: WorkspaceContract): EditorViewContract {
   const document = workspace.editor?.document.getSnapshot() ?? createWorldDocument();
   const space = { areas: workspace.registry.baseDefinitions.find(base => base.id === document.baseId)?.areas ?? [] };
   const view = createSceneSessionFactories(workspace.registry).createView({ id: "test-workbench",
-    initialViewport: document.documentSettings.viewport,
+    initialViewport: document.documentSettings.viewport ?? createDefaultWorldDocumentViewportSettings(),
     bounds: { kind: "space", bounds: resolveBaseOuterBounds(space)
       ?? { minX: null, maxX: null, minY: null, maxY: null }, padding: 2 },
     getOperationAvailability: operation => workspace.editor?.queries.getOperationAvailability(operation)

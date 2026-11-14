@@ -97,7 +97,7 @@ function resolveSelectionActionButtonIds(options: {
   const buttonIds: CanvasFloatingToolbarButtonId[] = [];
 
   if (!options.isDedicatedLogistics) {
-    buttonIds.push("canvas-floating-toolbar-button-move");
+    buttonIds.push("canvas-floating-toolbar-button-move", "canvas-floating-toolbar-button-rotate");
   }
 
   if (options.canSwitchVariant) {

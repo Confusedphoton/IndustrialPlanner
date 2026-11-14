@@ -103,7 +103,6 @@ export const AYU_LIGHT_THEME: AppTheme = {
     "renderer-grid-line": "#5c6773",
     "renderer-selection-stroke": "#ffa500",
     "renderer-marquee-stroke": "#000000",
-    "renderer-mode-label-shadow": "#000000",
     "sprite-preview-border-box": "#ffffff",
     "renderer-belt-tile-fill": "#e6ecf3",
     "renderer-belt-tile-stroke": "#d9822b",

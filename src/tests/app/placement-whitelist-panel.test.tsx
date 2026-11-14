@@ -6,7 +6,6 @@ import { runInAction } from "mobx";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PlacementPanel } from "@/app/shell/panels/placement-panel";
 import { QuickPlacePopup } from "@/app/shell/quick-place/quick-place-popup";
-import { LeftToolbar } from "@/app/shell/layout/left-toolbar";
 import { createWorldDocument } from "@/domain/document/world-document";
 import { type EditorHost } from "@/editor/editor-host";
 import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
@@ -97,17 +96,6 @@ describe("白名单设备与变体面板", () => {
     expect(container.querySelector(".placement-entity-variant-trigger")).toBeNull();
     changeBase(BASE_ID);
     expect(container.querySelector("[aria-expanded='true']")).toBeNull();
-  });
-  it("显式切换面板恢复临时隐藏的左栏，按钮选中状态反映实际可见性", () => {
-    session.app.internalActions.setActivePanel("placement");
-    session.app.internalActions.setLeftDockSuppressed(true);
-    act(() => { root.render(<LeftToolbar appHost={session.app} />); });
-    const placement = container.querySelector("[aria-label='放置模式']")!;
-    expect(placement.getAttribute("aria-pressed")).toBe("false");
-    act(() => { placement.dispatchEvent(new MouseEvent("click", { bubbles: true })); });
-    expect(session.app.internalState.workbench.leftDockSuppressed).toBe(false);
-    expect(session.app.state.workbench.leftDockOpen).toBe(true);
-    expect(placement.getAttribute("aria-pressed")).toBe("true");
   });
   it("当前不可用收藏隐藏但保留槽位，切回恢复；唯一变体不显示徽标", () => {
     runInAction(() => {

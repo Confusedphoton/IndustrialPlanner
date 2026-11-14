@@ -33,11 +33,8 @@ export interface WorldDocumentViewportSettings {
 }
 
 export interface WorldDocumentSettings {
-  // 需要添加zoom
-  // 订正（2026-05-10）：缩放已以 `viewport.gridSize` 的形式进入文档设置。
-  // 需要添加viewportRect
-  // 订正（2026-05-10）：本轮只持久化 viewport center 与 gridSize；clientRect 仍归属 DOM runtime。
-  readonly viewport: WorldDocumentViewportSettings;
+  /** 保存的视口中心、缩放与旋转；新建文档没有保存过视口，首次打开时对准基地中心。 */
+  readonly viewport?: WorldDocumentViewportSettings;
   /** 电力模式：real（真实电力）或 infinite（无限电力），默认 infinite。 */
   readonly powerMode: "real" | "infinite";
   /** 手动覆盖总耗电（kW）。undefined = 按真实计算值。仅 powerMode === "real" 时生效。 */
@@ -83,14 +80,6 @@ export const createWorldDocument = (options: {
     slotLinks: [],
     regions: [],
     documentSettings: {
-      viewport: {
-        center: {
-          x: 0,
-          y: 0,
-        },
-        gridSize: 1,
-        displayRotation: 0,
-      },
       powerMode: "infinite",
     },
   };

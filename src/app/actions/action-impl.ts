@@ -7,10 +7,7 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { ScreenProfile } from "@/domain/app/types/screen-profile";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { RightDockTabId } from "@/domain/app/types/app-types";
-import type {
-  ClientPixelPoint,
-  ClientPixelRect,
-} from "@/domain/shared/client-pixel";
+import type { ClientPixelPoint } from "@/domain/shared/client-pixel";
 import type { AppLocale } from "@/domain/app";
 import { lookupText } from "@/shared/i18n";
 import type { KeyboardShortcutManager, ShortcutEventModifiers } from "./keyboard-shortcut-manager";
@@ -25,12 +22,10 @@ import {
   clampTimelineBottomDockHeight,
   clampToolboxBottomDockHeight,
   createDefaultDialogStateForKey,
-  DEFAULT_RIGHT_DOCK_WIDTH,
   DIALOG_KEYS,
   type DialogKey,
   HELP_DIALOG_TAB_IDS,
   resolveDefaultDialogTabId,
-  resolveLeftDockWidthForScreenProfile,
   TOOLBOX_DIALOG_TAB_IDS,
   type ActivePanel,
   type TimelineDockPreference,
@@ -83,7 +78,6 @@ export interface AppInternalAction {
   showCanvasToast: (messageKey: UiKey) => void;
   setCanvasAlert: (messageKey: UiKey | null) => void;
   toggleLeftDock: () => void;
-  setLeftDockSuppressed: (suppressed: boolean) => void;
   toggleRightDock: () => void;
   setRightDockOpen: (open: boolean, options?: { preserveSingleSelection?: boolean }) => void;
   toggleTopBarCollapsed: () => void;
@@ -170,27 +164,6 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     this.setLeftDockOpen(!this.internalState.workbench.leftDockOpen);
   });
 
-  public readonly setLeftDockSuppressed: AppInternalAction["setLeftDockSuppressed"] = action((suppressed) => {
-    if (this.internalState.workbench.leftDockSuppressed === suppressed) {
-      return;
-    }
-
-    const wasEffectiveOpen = this.internalState.workbench.leftDockOpen
-      && !this.internalState.workbench.leftDockSuppressed;
-
-    this.internalState.workbench.leftDockSuppressed = suppressed;
-
-    const isEffectiveOpen = this.internalState.workbench.leftDockOpen
-      && !this.internalState.workbench.leftDockSuppressed;
-
-    if (wasEffectiveOpen !== isEffectiveOpen) {
-      this.applyPredictedViewportRectForDockToggle({
-        dock: "left",
-        willOpen: isEffectiveOpen,
-      });
-    }
-  });
-
   public readonly toggleRightDock: AppInternalAction["toggleRightDock"] = action(() => {
     this.setRightDockOpen(!this.internalState.workbench.rightDockOpen);
   });
@@ -199,11 +172,6 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     if (this.internalState.workbench.rightDockOpen === open) {
       return;
     }
-
-    this.applyPredictedViewportRectForDockToggle({
-      dock: "right",
-      willOpen: open,
-    });
 
     if (!open && !options.preserveSingleSelection) {
       this.clearSingleSelectionForRightDockClose();
@@ -496,7 +464,6 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     this.internalState.runtime.activePanel = panel;
 
     if (panel !== null) {
-      this.setLeftDockSuppressed(false);
       this.setLeftDockOpen(true);
     }
   });
@@ -577,44 +544,7 @@ export class AppActionImpl implements AppAction, AppInternalAction {
       return;
     }
 
-    this.applyPredictedViewportRectForDockToggle({
-      dock: "left",
-      willOpen: nextOpen,
-    });
     this.internalState.workbench.leftDockOpen = nextOpen;
-  }
-
-  private applyPredictedViewportRectForDockToggle(options: {
-    dock: "left" | "right";
-    willOpen: boolean;
-  }): void {
-    const editor = this.workspace.editor;
-    if (editor === null) {
-      return;
-    }
-
-    const currentRect = this.canvas.view.state.clientRect;
-    const predictedRect = resolvePredictedViewportRectForDockToggle({
-      currentRect,
-      leftDockWidth: resolveLeftDockWidthForScreenProfile(
-        this.internalState.workbench.leftDockWidth,
-        this.internalState.screenProfile,
-      ),
-      rightDockWidth: DEFAULT_RIGHT_DOCK_WIDTH,
-      dock: options.dock,
-      willOpen: options.willOpen,
-    });
-
-    if (
-      predictedRect.left === currentRect.left
-      && predictedRect.top === currentRect.top
-      && predictedRect.width === currentRect.width
-      && predictedRect.height === currentRect.height
-    ) {
-      return;
-    }
-
-    this.canvas.view.actions.setViewportClientRect(predictedRect);
   }
 
   private ensureDialogState(dialogKey: DialogKey) {
@@ -660,40 +590,6 @@ function normalizeDialogTab(dialogKey: DialogKey, tabId: string): string | null 
   }
 
   return null;
-}
-
-function resolvePredictedViewportRectForDockToggle(options: {
-  currentRect: ClientPixelRect;
-  leftDockWidth: number;
-  rightDockWidth: number;
-  dock: "left" | "right";
-  willOpen: boolean;
-}): ClientPixelRect {
-  const delta = options.dock === "left"
-    ? options.leftDockWidth
-    : options.rightDockWidth;
-
-  if (options.dock === "left") {
-    return {
-      left: options.willOpen
-        ? options.currentRect.left + delta
-        : options.currentRect.left - delta,
-      top: options.currentRect.top,
-      width: options.willOpen
-        ? Math.max(0, options.currentRect.width - delta)
-        : options.currentRect.width + delta,
-      height: options.currentRect.height,
-    };
-  }
-
-  return {
-    left: options.currentRect.left,
-    top: options.currentRect.top,
-    width: options.willOpen
-      ? Math.max(0, options.currentRect.width - delta)
-      : options.currentRect.width + delta,
-    height: options.currentRect.height,
-  };
 }
 
 function areScreenProfilesEqual(left: ScreenProfile, right: ScreenProfile): boolean {

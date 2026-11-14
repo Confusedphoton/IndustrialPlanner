@@ -99,7 +99,6 @@ export const APP_THEME_COLOR_KEYS = [
   "renderer-grid-line",
   "renderer-selection-stroke",
   "renderer-marquee-stroke",
-  "renderer-mode-label-shadow",
   "sprite-preview-border-box",
   "renderer-belt-tile-fill",
   "renderer-belt-tile-stroke",

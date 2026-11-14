@@ -708,8 +708,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     },
   }));
   const leftDockOpen = appHost.state.workbench.leftDockOpen;
-  const leftDockSuppressed = appHost.internalState.workbench.leftDockSuppressed;
-  const effectiveLeftDockOpen = leftDockOpen && !leftDockSuppressed;
   const rightDockOpen = appHost.state.workbench.rightDockOpen;
   const useInspectorPanel = appHost.state.settings.gameUseInspectorPanel;
   const leftDockWidth = appHost.state.workbench.leftDockWidth;
@@ -744,7 +742,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
   const dockLayoutBudget = resolveDockLayoutBudget({
     viewportWidth: screenProfile.viewportWidth,
     leftToolbarWidth,
-    leftDockWidth: effectiveLeftDockOpen ? effectiveLeftDockWidth : 0,
+    leftDockWidth: leftDockOpen ? effectiveLeftDockWidth : 0,
     rightDockWidth: showRightDock ? DEFAULT_RIGHT_DOCK_WIDTH : 0,
     recipeDockWidth: recipeTreeOverlayState.dockLayoutWidth === 0 ? 0 : recipeTreeOverlayState.dockWidth,
     recipeDockMinWidth: RECIPE_TREE_DOCK_MIN_WIDTH,
@@ -1148,7 +1146,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
   const workbenchStyle = {
     ...resolveInCanvasThemeCssVariables(effectiveCanvasTheme),
     "--left-toolbar-width": `${leftToolbarWidth}px`,
-    "--left-dock-width": effectiveLeftDockOpen ? `${effectiveLeftDockWidth}px` : "0px",
+    "--left-dock-width": leftDockOpen ? `${effectiveLeftDockWidth}px` : "0px",
     "--right-dock-width": `${dockLayoutBudget.rightDockWidth}px`,
     // 配方树停靠栏占用最右侧一列。
     "--recipe-dock-width": `${dockLayoutBudget.recipeDockWidth}px`,
@@ -1182,8 +1180,8 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           onFullscreenActionFailure={pwaController.openFullscreenNotice}
         />
         <LeftToolbar appHost={appHost} compact={isCompactLeftToolbar} />
-        <LeftDock appHost={appHost} hidden={!effectiveLeftDockOpen} />
-        {effectiveLeftDockOpen
+        <LeftDock appHost={appHost} hidden={!leftDockOpen} />
+        {leftDockOpen
           && (appHost.internalState.runtime.activePanel ?? "placement") === "blueprint"
           && appHost.workspace.sync !== null ? (
             <SyncInitialSyncFeatureGate

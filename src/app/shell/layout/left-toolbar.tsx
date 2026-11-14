@@ -94,7 +94,7 @@ export const LeftToolbar = observer(function LeftToolbar({
   compact?: boolean;
 }) {
   const t = appHost.actions.translate;
-  const leftDockOpen = appHost.state.workbench.leftDockOpen && !appHost.internalState.workbench.leftDockSuppressed;
+  const leftDockOpen = appHost.state.workbench.leftDockOpen;
   const activePanel = appHost.internalState.runtime.activePanel ?? "placement";
   const toolboxDialogVisible = appHost.internalState.workbench.dialogState.toolbox.visible;
   const helpDialogVisible = appHost.internalState.workbench.dialogState.help.visible;

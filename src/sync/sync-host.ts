@@ -1166,10 +1166,10 @@ export function preserveLocalWorldDocumentIdentity(
   return {
     ...remoteDocument,
     documentKey: localDocument?.documentKey ?? createUuid(),
+    // 远端视口只是占位值（视口属于本机浏览状态）；本机没有保存过视口时不采用它，首次打开对准基地中心。
     documentSettings: {
       ...remoteDocument.documentSettings,
-      viewport: localDocument?.documentSettings.viewport
-        ?? remoteDocument.documentSettings.viewport,
+      viewport: localDocument?.documentSettings.viewport,
     },
   };
 }

@@ -97,7 +97,6 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
             return { status: "ignored" };
           }
 
-          closeCompactLeftDockOnMarqueeEnter(context.canvas);
           return { status: "handled" };
 
         case "on-exit-active-tool":
@@ -110,9 +109,6 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
               && context.canvas.state.runtime.blueprintPlacementFromCopy));
           if (event.to !== "logistics-placement") {
             context.canvas.actions.hideCanvasTopLeftCornerToolbar();
-          }
-          if (event.to === "select") {
-            context.canvas.setPlacementPanelSuppressed(false);
           }
           return { status: "handled" };
 
@@ -440,15 +436,6 @@ function resolveMarqueeTopLeftButtonIds(canvas: CanvasInteractionController) {
     }
     return true;
   });
-}
-
-function closeCompactLeftDockOnMarqueeEnter(canvas: CanvasInteractionController): void {
-  const deviceClass = canvas.workbench.state.screenProfile.deviceClass;
-  if (deviceClass !== "mobile" && deviceClass !== "tablet") {
-    return;
-  }
-
-  canvas.setPlacementPanelSuppressed(true);
 }
 
 function startMouseMarqueeDrag(options: {

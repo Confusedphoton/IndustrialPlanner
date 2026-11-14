@@ -112,7 +112,6 @@ export interface AppSettingsReadWrite extends Omit<AppSettings, "regionalMultiBa
 
 export interface WorkbenchStateReadWrite extends WorkbenchState {
   leftDockOpen: boolean;
-  leftDockSuppressed: boolean;
   rightDockOpen: boolean;
   leftDockWidth: number;
   topBarCollapsed: boolean;
@@ -592,7 +591,6 @@ export function isTimelineBottomDockActive(
 
 class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
   leftDockOpen = true;
-  leftDockSuppressed = false;
   rightDockOpen = false;
   leftDockWidth = DEFAULT_LEFT_DOCK_WIDTH;
   topBarCollapsed = false;
@@ -837,11 +835,9 @@ export function createUiStateReadWrite(): UiStateReadWrite {
 /** 每个 CanvasInteractionController 创建自己的工具、拖动与提示状态。 */
 export class CanvasInteractionStateReadWriteImpl {
   activeTool: ActiveTool = "select";
-  placementPanelSuppressed = false;
   toolInfo: ToolInfoReadWrite = new ToolInfoReadWriteImpl();
   runtime: CanvasRuntimeStateReadWrite = new CanvasRuntimeStateReadWriteImpl();
   constructor() { makeAutoObservable(this, {}, { autoBind: true }); }
-  setPlacementPanelSuppressed(suppressed: boolean): void { this.placementPanelSuppressed = suppressed; }
   public get moveKind(): "ordinary" | "batch" | null {
     if (this.activeTool !== "move") {
       return null;

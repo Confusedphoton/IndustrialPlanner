@@ -271,17 +271,20 @@ export function ProductionFlowGraph({
   }, [fitToView]);
 
   // 换向后旧视口对新布局没有意义：适配视图的图每次换布局都重新适配，其余图只在方向改变时适配。
-  // 何时自动适配：适配视图的图每次换布局；其余图在换向、换了一张新图（新的规划结果）、
-  // 或首次显示时没有保存的视口时。保存过视口的图首次显示沿用旧视口。
+  // 何时自动适配：换向、换了一张节点不同的新图、或首次显示时没有保存的视口。
+  // 只改变速率/设备数而节点不变（例如在节点菜单里调整产量或换配方）时保留当前视口，用户不会被甩回总览。
+  const nodeSetKey = useMemo(() => initialLayout.nodes.map((node) => node.id).sort().join("|"), [initialLayout]);
   const fittedOrientationRef = useRef(orientation);
-  const fittedLayoutRef = useRef<typeof initialLayout | null>(initialViewport === undefined ? null : initialLayout);
+  const fittedNodeSetRef = useRef<string | null>(initialViewport === undefined ? null : nodeSetKey);
   useEffect(() => {
     const orientationChanged = fittedOrientationRef.current !== orientation;
-    const layoutChanged = fittedLayoutRef.current !== initialLayout;
+    const nodeSetChanged = fittedNodeSetRef.current !== nodeSetKey;
     fittedOrientationRef.current = orientation;
-    fittedLayoutRef.current = initialLayout;
-    if (fitToView || orientationChanged || layoutChanged) fit("auto", initialLayout.nodes);
-  }, [fit, fitToView, initialLayout, orientation]);
+    fittedNodeSetRef.current = nodeSetKey;
+    if (orientationChanged || nodeSetChanged) fit("auto", initialLayout.nodes);
+    // initialLayout 随 nodeSetKey 一起变化；只因数值变化而重建的布局不触发适配。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fit, nodeSetKey, orientation]);
 
   const interactionRef = useRef<{
     node: NodePressState | null;

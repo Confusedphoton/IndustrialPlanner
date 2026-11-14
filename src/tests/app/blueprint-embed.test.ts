@@ -219,7 +219,7 @@ describe("真实 Host 的嵌入会话", () => {
 
   it("无边界浏览保留蓝图中心，允许查看超出基地边界的内容", async () => {
     const { editor, initialDocument } = await session("unbounded");
-    expect({ ...getTestView(editor.workspace).state.center }).toEqual(initialDocument.documentSettings.viewport.center);
+    expect({ ...getTestView(editor.workspace).state.center }).toEqual(initialDocument.documentSettings.viewport?.center);
     const center = { ...getTestView(editor.workspace).state.center };
     const cellSize = getTestView(editor.workspace).state.gridCellPixelSize;
     getTestView(editor.workspace).actions.moveViewportByClientPixelVector({ startClientPixel: { x: 0, y: 0 }, endClientPixel: { x: 2000, y: 2000 } });

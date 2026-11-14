@@ -269,7 +269,6 @@ function createWorkbenchStorageSnapshot(options: {
 } = {}) {
   return {
     leftDockOpen: options.leftDockOpen ?? true,
-    leftDockSuppressed: false,
     rightDockOpen: options.rightDockOpen ?? false,
     leftDockWidth: options.leftDockWidth ?? DEFAULT_LEFT_DOCK_WIDTH,
     topBarCollapsed: options.topBarCollapsed ?? false,
@@ -1560,7 +1559,7 @@ describe("WorkbenchApp", () => {
     expect(rotateViewButton?.getAttribute("aria-label")).toBe("旋转视角");
     expect(
       rotateViewButton?.querySelector("svg")?.getAttribute("data-workbench-icon"),
-    ).toBe("rotate");
+    ).toBe("rotate-view");
 
     act(() => {
       appHost.internalActions.toggleLeftDock();

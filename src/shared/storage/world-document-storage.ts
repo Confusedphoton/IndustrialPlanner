@@ -213,7 +213,8 @@ function isWorldDocumentSettingsLike(
 ): value is WorldDocument["documentSettings"] {
   return (
     isRecord(value)
-    && isWorldDocumentViewportSettingsLike(value.viewport)
+    // 新建文档在首次移动视图前没有保存视口。
+    && (value.viewport === undefined || isWorldDocumentViewportSettingsLike(value.viewport))
   );
 }
 

@@ -1850,7 +1850,22 @@
   height: 44px;
 }
 
-.production-flow-nodes.is-compact .production-flow-node strong,
+// 名称保留一行放在速率下方，总览里也能认出是哪种物品。
+.production-flow-nodes.is-compact .production-flow-node-text {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+}
+
+.production-flow-nodes.is-compact .production-flow-node strong {
+  display: block;
+  overflow: hidden;
+  font-size: 1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  -webkit-line-clamp: unset;
+}
+
 .production-flow-nodes.is-compact .production-flow-node-machine,
 .production-flow-nodes.is-compact .production-flow-node-subtitle {
   display: none;

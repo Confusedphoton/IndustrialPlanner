@@ -28,7 +28,6 @@ import { createLogger } from "@/shared/logging/logger";
 
 import type { GestureHandleResult, GestureMappingModule, ShortcutActionRoute } from "../types";
 import {
-  closeCompactLeftDockOnPlacementEnter,
   PLACEMENT_DEVICE_SHORTCUT_KEYS,
   resolveDeviceIdForPlacementGroupShortcut,
   setPendingSinglePlacementEnter,
@@ -187,9 +186,6 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
         activeMouseLogisticsDragGestureId = null;
         cleanupLogisticsPlacement(context.canvas);
         context.canvas.actions.hideCanvasTopLeftCornerToolbar();
-        if (event.to === "select") {
-          context.canvas.setPlacementPanelSuppressed(false);
-        }
         return { status: "handled" };
       }
 
@@ -198,7 +194,6 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
           return { status: "ignored" };
         }
 
-        closeCompactLeftDockOnPlacementEnter(context.canvas);
         syncLogisticsPlacementEntryUi(context.canvas);
         return { status: "handled" };
       }
