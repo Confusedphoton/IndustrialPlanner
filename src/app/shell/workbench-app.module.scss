@@ -32,8 +32,8 @@
 .workbench.is-right-stacked {
   grid-template-rows:
     var(--top-bar-height, 48px)
-    minmax(0, 1fr)
-    minmax(0, 1fr)
+    minmax(0, var(--right-stack-top, 1fr))
+    minmax(0, var(--right-stack-bottom, 1fr))
     var(--toolbox-bottom-dock-height, 0px)
     var(--bottom-bar-height, 28px);
   grid-template-areas:
@@ -46,6 +46,20 @@
 
 .workbench.is-right-stacked .recipe-tree-overlay.is-docked {
   border-top-width: 1px;
+}
+
+// 叠放时没有选中设备：属性面板只保留标题栏，高度全部让给配方树。
+.workbench.is-stacked-inspector-empty {
+  grid-template-rows:
+    var(--top-bar-height, 48px)
+    auto
+    minmax(0, 1fr)
+    var(--toolbox-bottom-dock-height, 0px)
+    var(--bottom-bar-height, 28px);
+}
+
+.workbench.is-stacked-inspector-empty .dock-right .section-body {
+  display: none;
 }
 
 .overlay-stack-root {
@@ -88,4 +102,8 @@
 
 .workbench-floating-top-bar-button:hover {
   background: var(--floating-control-bg-hover);
+}
+
+.workbench.is-right-stacked .recipe-tree-overlay.is-docked .recipe-tree-header {
+  padding-top: 12px;
 }

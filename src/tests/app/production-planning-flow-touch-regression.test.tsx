@@ -819,6 +819,33 @@ describe("ProductionFlowGraph touch regression", () => {
     expect(bottom).toBeLessThanOrEqual(221);
   });
 
+  it.each([
+    { nodeDrag: "move" as const, secondOn: "node" },
+    { nodeDrag: "move" as const, secondOn: "canvas" },
+    { nodeDrag: "pan" as const, secondOn: "node" },
+  ])("zooms when a pinch starts on a card ($nodeDrag mode, second finger on $secondOn)", ({ nodeDrag, secondOn }) => {
+    render({ nodeDrag });
+    const canvas = getFlowCanvas(container);
+    const surface = canvas.querySelector<HTMLDivElement>("[class*='production-flow-surface']")!;
+    const node = getFlowNode(canvas, "熔炼");
+    const nodePosition = { left: node.style.left, top: node.style.top };
+    vi.spyOn(canvas, "getBoundingClientRect").mockReturnValue({
+      x: 0, y: 0, width: 800, height: 600, left: 0, top: 0, right: 800, bottom: 600,
+    } as DOMRect);
+    const touch = (target: Element, type: string, pointerId: number, clientX: number) => {
+      act(() => {
+        dispatchPointerEvent(target, type, { pointerId, pointerType: "touch", clientX, clientY: 300, buttons: type === "pointerup" ? 0 : 1 });
+      });
+    };
+
+    touch(node, "pointerdown", 1, 300);
+    touch(secondOn === "node" ? node : canvas, "pointerdown", 2, 400);
+    touch(canvas, "pointermove", 2, 500);
+
+    expect(surface.style.transform).toContain("scale(2)");
+    expect({ left: node.style.left, top: node.style.top }).toEqual(nodePosition);
+  });
+
   // ==================== Test 4: 双指 pinch 进入 pinch 状态 ====================
   it("switches from pan to pinch when a second pointer arrives", () => {
     render();

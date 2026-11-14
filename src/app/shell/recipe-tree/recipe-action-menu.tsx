@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import LucideFilter from "~icons/lucide/filter";
 import LucideHammer from "~icons/lucide/hammer";
@@ -94,10 +94,15 @@ export function RecipeActionMenu({
     onClose();
   };
 
-  const viewportWidth = typeof window === "undefined" ? 1280 : window.innerWidth;
-  const viewportHeight = typeof window === "undefined" ? 800 : window.innerHeight;
-  const left = Math.min(Math.max(8, target.anchor.left), viewportWidth - 288);
-  const openAbove = target.anchor.bottom + 260 > viewportHeight;
+  // 先以隐藏状态渲染并测量真实尺寸，再选择有空间的一侧并夹紧在视口内；仍放不下时菜单内部滚动。
+  const [placement, setPlacement] = useState<{ left: number; top: number; maxHeight: number } | null>(null);
+  useLayoutEffect(() => {
+    const menu = menuRef.current;
+    if (menu === null) {
+      return;
+    }
+    setPlacement(resolveMenuPlacement(target.anchor, menu.offsetWidth, menu.scrollHeight));
+  }, [target.anchor]);
 
   // 挂到 body：菜单也会从工具箱对话框内的流程图打开，不能被对话框层级或变换裁剪。
   return createPortal((
@@ -105,11 +110,9 @@ export function RecipeActionMenu({
       className={cm(styles, "recipe-action-menu")}
       ref={menuRef}
       role="menu"
-      style={{
-        left,
-        top: openAbove ? undefined : target.anchor.bottom + 4,
-        bottom: openAbove ? viewportHeight - target.anchor.top + 4 : undefined,
-      }}
+      style={placement === null
+        ? { left: 0, top: 0, visibility: "hidden" }
+        : { left: placement.left, top: placement.top, maxHeight: placement.maxHeight }}
     >
       {itemName !== null ? (
         <div className={cm(styles, "recipe-action-menu-title")}>
@@ -188,4 +191,22 @@ export function RecipeActionMenu({
       ) : null}
     </div>
   ), document.body);
+}
+
+const MENU_VIEWPORT_MARGIN_PX = 8;
+const MENU_ANCHOR_GAP_PX = 4;
+
+export function resolveMenuPlacement(anchor: DOMRect, width: number, height: number): { left: number; top: number; maxHeight: number } {
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const maxHeight = viewportHeight - MENU_VIEWPORT_MARGIN_PX * 2;
+  const left = Math.min(Math.max(MENU_VIEWPORT_MARGIN_PX, anchor.left), viewportWidth - width - MENU_VIEWPORT_MARGIN_PX);
+  const below = anchor.bottom + MENU_ANCHOR_GAP_PX;
+  const above = anchor.top - MENU_ANCHOR_GAP_PX - height;
+  const top = below + height <= viewportHeight - MENU_VIEWPORT_MARGIN_PX
+    ? below
+    : above >= MENU_VIEWPORT_MARGIN_PX
+      ? above
+      : Math.max(MENU_VIEWPORT_MARGIN_PX, viewportHeight - MENU_VIEWPORT_MARGIN_PX - Math.min(height, maxHeight));
+  return { left: Math.max(MENU_VIEWPORT_MARGIN_PX, left), top, maxHeight };
 }

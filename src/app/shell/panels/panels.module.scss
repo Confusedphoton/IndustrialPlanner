@@ -2392,7 +2392,8 @@
   height: 100%;
   min-height: 84px;
   padding: 8px 4px 6px;
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
+  border-radius: 10px;
   background: var(--surface-2);
   text-align: center;
   touch-action: manipulation;
@@ -2423,6 +2424,7 @@
   display: -webkit-box;
   min-height: 2.4em;
   overflow: hidden;
+  color: var(--text-0);
   font-size: 0.74rem;
   line-height: 1.2;
   white-space: normal;

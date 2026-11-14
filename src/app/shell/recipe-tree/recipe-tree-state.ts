@@ -30,6 +30,9 @@ export const RECIPE_TREE_MIN_HEIGHT = 160;
 export const RECIPE_TREE_DOCK_MIN_WIDTH = 300;
 export const RECIPE_TREE_DOCK_MAX_WIDTH = 960;
 const RECIPE_TREE_DOCK_DEFAULT_WIDTH = 440;
+const RECIPE_TREE_STACK_DEFAULT_RATIO = 0.6;
+const RECIPE_TREE_STACK_MIN_RATIO = 0.25;
+const RECIPE_TREE_STACK_MAX_RATIO = 0.85;
 const DEFAULT_RECT: RecipeTreeOverlayRect = { x: -1, y: 72, width: 380, height: 520 };
 
 export type RecipeTreeViewMode = "tree" | "graph";
@@ -37,6 +40,7 @@ export type RecipeTreeViewMode = "tree" | "graph";
 interface PersistedRecipeTreeState {
   readonly docked?: unknown;
   readonly dockWidth?: unknown;
+  readonly stackRatio?: unknown;
   readonly viewMode?: unknown;
   readonly visible?: unknown;
   readonly minimized?: unknown;
@@ -55,6 +59,10 @@ export class RecipeTreeOverlayState {
   public dockWidth = RECIPE_TREE_DOCK_DEFAULT_WIDTH;
   /** 由工作台布局按画布最小宽度给出的停靠栏上限，不持久化。 */
   public dockWidthLimit = RECIPE_TREE_DOCK_MAX_WIDTH;
+  /** 与属性面板叠放于同一右栏时（由工作台布局决定，不持久化）。 */
+  public stacked = false;
+  /** 叠放时配方树占右栏高度的比例。 */
+  public stackRatio = RECIPE_TREE_STACK_DEFAULT_RATIO;
   /** x 为 -1 表示尚未定位，首次显示时贴靠画布右侧。 */
   public rect: RecipeTreeOverlayRect = DEFAULT_RECT;
   public pins: RecipeTreePin[] = [];
@@ -83,6 +91,14 @@ export class RecipeTreeOverlayState {
   /** 停靠栏实际占用的布局宽度（未显示或未停靠时为 0）。 */
   public get dockLayoutWidth(): number {
     return this.visible && this.docked ? Math.min(this.dockWidth, this.dockWidthLimit) : 0;
+  }
+
+  public setStacked(stacked: boolean): void {
+    this.stacked = stacked;
+  }
+
+  public setStackRatio(ratio: number): void {
+    this.stackRatio = Math.min(RECIPE_TREE_STACK_MAX_RATIO, Math.max(RECIPE_TREE_STACK_MIN_RATIO, ratio));
   }
 
   public setDockWidthLimit(limit: number): void {
@@ -193,6 +209,9 @@ export class RecipeTreeOverlayState {
     if (typeof raw.dockWidth === "number" && Number.isFinite(raw.dockWidth)) {
       this.setDockWidth(raw.dockWidth);
     }
+    if (typeof raw.stackRatio === "number" && Number.isFinite(raw.stackRatio)) {
+      this.setStackRatio(raw.stackRatio);
+    }
     this.minimized = raw.minimized === true;
     this.rect = normalizeRect(raw.rect) ?? DEFAULT_RECT;
     this.pins = Array.isArray(raw.pins)
@@ -208,6 +227,7 @@ export class RecipeTreeOverlayState {
       viewMode: this.viewMode,
       docked: this.docked,
       dockWidth: this.dockWidth,
+      stackRatio: this.stackRatio,
       visible: this.visible,
       minimized: this.minimized,
       rect: this.rect,

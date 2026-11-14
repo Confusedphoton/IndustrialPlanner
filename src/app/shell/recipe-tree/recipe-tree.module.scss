@@ -456,6 +456,8 @@
 .recipe-action-menu {
   position: fixed;
   z-index: 20;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   display: grid;
   gap: 2px;
   width: 280px;
@@ -577,4 +579,29 @@
   z-index: 1;
   flex: none;
   background: var(--surface-2);
+}
+
+.recipe-tree-stack-resize {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  right: 0;
+  left: 14px;
+  height: 12px;
+  cursor: ns-resize;
+  touch-action: none;
+}
+
+.recipe-tree-stack-resize::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 4px;
+}
+
+.recipe-tree-stack-resize:hover::after,
+.recipe-tree-stack-resize:active::after {
+  background: var(--dock-resize-hover);
 }

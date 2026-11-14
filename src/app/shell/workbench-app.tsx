@@ -750,6 +750,9 @@ export const WorkbenchApp = observer(function WorkbenchApp({
   useEffect(() => {
     recipeTreeOverlayState.setDockWidthLimit(dockLayoutBudget.recipeDockMaxWidth);
   }, [dockLayoutBudget.recipeDockMaxWidth]);
+  useEffect(() => {
+    recipeTreeOverlayState.setStacked(dockLayoutBudget.stackRightDocks);
+  }, [dockLayoutBudget.stackRightDocks]);
   const canKeepInspectorDialogOpen = !useInspectorPanel
     && (activeTool === "select" || activeTool === "dark-pipe-link")
     && selectionCount === 1
@@ -1103,6 +1106,8 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     "--right-dock-width": `${dockLayoutBudget.rightDockWidth}px`,
     // 配方树停靠栏占用最右侧一列。
     "--recipe-dock-width": `${dockLayoutBudget.recipeDockWidth}px`,
+    "--right-stack-top": `${1 - recipeTreeOverlayState.stackRatio}fr`,
+    "--right-stack-bottom": `${recipeTreeOverlayState.stackRatio}fr`,
     "--canvas-tool-rail-width": canvasToolRailState.side === "left" ? "60px" : "0px",
     "--canvas-tool-rail-right-width": canvasToolRailState.side === "right" ? "60px" : "0px",
     "--top-bar-height": showFloatingTopBarControls ? "0px" : "48px",
@@ -1113,7 +1118,11 @@ export const WorkbenchApp = observer(function WorkbenchApp({
 
   return (
     <div
-      className={cm(styles, dockLayoutBudget.stackRightDocks ? "workbench is-right-stacked" : "workbench")}
+      className={cm(styles, [
+        "workbench",
+        dockLayoutBudget.stackRightDocks ? "is-right-stacked" : "",
+        dockLayoutBudget.stackRightDocks && selectionCount === 0 ? "is-stacked-inspector-empty" : "",
+      ].filter(Boolean).join(" "))}
       onAuxClick={preventNativeBrowserEvent}
       onContextMenu={preventNativeBrowserEvent}
       onDragStart={preventNativeBrowserEvent}

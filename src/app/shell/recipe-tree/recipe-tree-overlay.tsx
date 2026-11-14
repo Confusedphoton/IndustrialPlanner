@@ -190,6 +190,37 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
     target.addEventListener("pointercancel", stop);
   };
 
+  // 与属性面板叠放时，拖动顶边调整两者的高度分配。
+  const handleStackResizePointerDown = (event: ReactPointerEvent<HTMLElement>) => {
+    if (event.button !== 0) {
+      return;
+    }
+    event.preventDefault();
+    const target = event.currentTarget;
+    const overlay = target.parentElement;
+    const pointerId = event.pointerId;
+    const startY = event.clientY;
+    const startRatio = state.stackRatio;
+    const columnHeight = (overlay?.getBoundingClientRect().height ?? 1) / startRatio;
+    target.setPointerCapture(pointerId);
+    const handleMove = (moveEvent: PointerEvent) => {
+      if (moveEvent.pointerId === pointerId) {
+        state.setStackRatio(startRatio + (startY - moveEvent.clientY) / columnHeight);
+      }
+    };
+    const stop = (endEvent: PointerEvent) => {
+      if (endEvent.pointerId !== pointerId) {
+        return;
+      }
+      target.removeEventListener("pointermove", handleMove);
+      target.removeEventListener("pointerup", stop);
+      target.removeEventListener("pointercancel", stop);
+    };
+    target.addEventListener("pointermove", handleMove);
+    target.addEventListener("pointerup", stop);
+    target.addEventListener("pointercancel", stop);
+  };
+
   const title = t("recipeTree.title");
   const [actionTarget, setActionTarget] = useState<RecipeActionTarget | null>(null);
   const closeActionMenu = useCallback(() => setActionTarget(null), []);
@@ -212,6 +243,13 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
           aria-hidden
           className={cm(styles, "recipe-tree-dock-resize")}
           onPointerDown={handleDockResizePointerDown}
+        />
+      ) : null}
+      {docked && state.stacked ? (
+        <div
+          aria-hidden
+          className={cm(styles, "recipe-tree-stack-resize")}
+          onPointerDown={handleStackResizePointerDown}
         />
       ) : null}
       <header className={cm(styles, "recipe-tree-header")} onPointerDown={handleHeaderPointerDown}>

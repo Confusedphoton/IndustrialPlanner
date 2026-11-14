@@ -435,7 +435,8 @@
   overflow: hidden;
 }
 
-.production-planning-graph.is-process-view {
+.production-planning-graph.is-process-view,
+.production-planning-graph.is-flow-view {
   overflow: hidden;
 }
 
@@ -1557,11 +1558,12 @@
   display: none;
 }
 
+// 流程图高度只取父容器给出的可用高度，不设下限，否则矮窗口里内容区会延伸到可见范围之外。
 .production-flow-graph {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 520px;
+  min-height: 0;
   height: 100%;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -1957,8 +1959,8 @@
   }
 }
 
-// EDA 等内嵌视图由父容器决定高度，不能继承独立编辑画布的 520px 下限。
-.production-flow-graph.production-flow-fit { min-height: 0; border: 0; border-radius: 0; }
+// 配方树内嵌的适配视图图由父容器提供边框。
+.production-flow-graph.production-flow-fit { border: 0; border-radius: 0; }
 // 参考图从任意位置拖动都平移视图，卡片只响应点按。
 .production-flow-pan { cursor: grab; }
 .production-flow-pan:active { cursor: grabbing; }

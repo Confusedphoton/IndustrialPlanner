@@ -54,6 +54,8 @@ interface NodePressState {
   readonly startX1: number;
   readonly startY0: number;
   readonly startY1: number;
+  clientX: number;
+  clientY: number;
   moving: boolean;
 }
 
@@ -290,6 +292,13 @@ export function ProductionFlowGraph({
   const startPanOrPinch = useCallback((event: React.PointerEvent<HTMLDivElement>, pressedNodeId: string | null) => {
     const interaction = interactionRef.current;
 
+    // 卡片按压中第二指落下（无论落在卡片还是空白处）：按压转为平移基准，随后进入双指缩放。
+    if (interaction.node !== null && interaction.node.pointerId !== event.pointerId) {
+      const press = interaction.node;
+      interaction.node = null;
+      interaction.pan = createPanFromCurrent(press.pointerId, press.clientX, press.clientY, viewportRef.current);
+    }
+
     if (interaction.pan !== null && interaction.pan.pointerId !== event.pointerId) {
       const p0 = interaction.pan;
       const rect = canvasRef.current?.getBoundingClientRect();
@@ -338,7 +347,7 @@ export function ProductionFlowGraph({
     event.stopPropagation();
 
     const interaction = interactionRef.current;
-    if (nodeDrag === "pan" || interaction.pan !== null) {
+    if (nodeDrag === "pan" || interaction.pan !== null || interaction.node !== null) {
       startPanOrPinch(event, node.id);
       return;
     }
@@ -355,6 +364,8 @@ export function ProductionFlowGraph({
       startX1: node.x1,
       startY0: node.y0,
       startY1: node.y1,
+      clientX: event.clientX,
+      clientY: event.clientY,
       moving: false,
     };
   }, [nodeDrag, startPanOrPinch]);
@@ -403,6 +414,8 @@ export function ProductionFlowGraph({
 
     const press = interaction.node;
     if (press !== null && press.pointerId === event.pointerId) {
+      press.clientX = event.clientX;
+      press.clientY = event.clientY;
       const screenDx = event.clientX - press.startClientX;
       const screenDy = event.clientY - press.startClientY;
       if (!press.moving && Math.hypot(screenDx, screenDy) < TAP_SLOP_PX) {

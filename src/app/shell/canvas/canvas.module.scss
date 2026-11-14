@@ -389,9 +389,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  min-width: 30px;
-  height: 30px;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
   padding: 0;
   border-color: var(--in-canvas-toolbar-button-border);
   border-radius: 999px;
@@ -542,7 +542,7 @@
   justify-self: stretch;
   gap: 7px;
   min-width: 104px;
-  min-height: 29px;
+  min-height: var(--pen-target);
   box-sizing: border-box;
   padding: 0 9px;
   border-color: var(--in-canvas-toolbar-button-border);
@@ -612,7 +612,7 @@
   justify-content: flex-start;
   gap: 8px;
   min-width: unset;
-  min-height: unset;
+  min-height: var(--pen-target);
   padding: 0;
   border-color: transparent;
   border-radius: 0;
@@ -768,7 +768,12 @@
 .canvas-tool-rail {
   position: absolute;
   grid-area: canvas;
-  top: var(--canvas-tool-rail-center, 50%);
+  // 保存的位置按当前画布高度夹紧，窗口变矮后工具条仍完整可见。
+  top: clamp(
+    calc(var(--canvas-tool-rail-half, 0px) + 8px),
+    var(--canvas-tool-rail-center, 50%),
+    calc(100% - var(--canvas-tool-rail-half, 0px) - 8px)
+  );
   left: 10px;
   z-index: 4;
   display: flex;
@@ -804,8 +809,8 @@
   align-items: center;
   justify-content: center;
   width: var(--canvas-tool-rail-button-size, 44px);
-  height: 22px;
-  margin-bottom: -2px;
+  height: var(--pen-target);
+  margin: -5px 0 -2px;
   padding: 0;
   border: 0;
   border-radius: 8px;

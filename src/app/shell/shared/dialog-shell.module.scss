@@ -122,8 +122,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: var(--pen-target);
+  height: var(--pen-target);
   padding: 0;
   border-radius: 999px;
   cursor: pointer;
@@ -741,8 +741,8 @@
 }
 
 .dialog-shell.is-mobile-compact .dialog-shell-header-button {
-  width: 26px;
-  height: 26px;
+  width: var(--pen-target);
+  height: var(--pen-target);
 }
 
 .dialog-shell.is-mobile-compact .dialog-shell-tab-strip {

@@ -52,6 +52,20 @@ export const CanvasToolRail = observer(function CanvasToolRail({ appHost }: { ap
   const t = appHost.actions.translate;
   const railRef = useRef<HTMLDivElement | null>(null);
   const [dragPosition, setDragPosition] = useState<{ side: CanvasToolRailSide; center: number } | null>(null);
+  const [railHeight, setRailHeight] = useState(0);
+  useEffect(() => {
+    const element = railRef.current;
+    if (element === null) {
+      return;
+    }
+    setRailHeight(element.offsetHeight);
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+    const observer = new ResizeObserver(() => setRailHeight(element.offsetHeight));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
   const side = dragPosition?.side ?? canvasToolRailState.side;
   const center = dragPosition?.center ?? canvasToolRailState.center;
   const editor = appHost.workspace.editor;
@@ -146,7 +160,10 @@ export const CanvasToolRail = observer(function CanvasToolRail({ appHost }: { ap
         dragPosition === null ? "" : "is-dragging",
       ].filter(Boolean).join(" "))}
       ref={railRef}
-      style={{ "--canvas-tool-rail-center": `${center * 100}%` } as CSSProperties}
+      style={{
+        "--canvas-tool-rail-center": `${center * 100}%`,
+        "--canvas-tool-rail-half": `${railHeight / 2}px`,
+      } as CSSProperties}
       onAuxClick={stopUiPropagationAndDefault}
       onClick={stopUiPropagation}
       onContextMenu={stopUiPropagationAndDefault}
