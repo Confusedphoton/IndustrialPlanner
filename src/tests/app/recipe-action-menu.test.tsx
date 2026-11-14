@@ -5,6 +5,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  canChooseRecipeForActionTarget,
   RecipeActionMenu,
   resolveFlowNodeActionTarget,
   resolveLiveFlowNodeActionTarget,
@@ -43,27 +44,37 @@ describe("resolveMenuPlacement", () => {
   it.each([
     { label: "below a card near the top", anchorTop: 40 },
     { label: "above a card near the bottom", anchorTop: 450 },
-    { label: "clamped when neither side has room", anchorTop: 230 },
-  ])("keeps a 326px menu inside a 1180x540 viewport when opened $label", ({ anchorTop }) => {
+    { label: "when neither side has room", anchorTop: 230 },
+  ])("keeps a 326px menu inside a 1180x540 viewport above the status bar when opened $label", ({ anchorTop }) => {
     vi.stubGlobal("innerWidth", 1180);
     vi.stubGlobal("innerHeight", 540);
 
-    const placement = resolveMenuPlacement(anchorAt(anchorTop), 280, 326);
+    const placement = resolveMenuPlacement(anchorAt(anchorTop), 280, 326, 512);
 
     expect(placement.top).toBeGreaterThanOrEqual(8);
-    // 底部还要让出 28px 状态栏。
-    expect(placement.top + Math.min(326, placement.maxHeight)).toBeLessThanOrEqual(540 - 28 - 8);
+    expect(placement.top + Math.min(326, placement.maxHeight)).toBeLessThanOrEqual(512 - 8);
     expect(placement.left + 280).toBeLessThanOrEqual(1172);
+  });
+
+  it("opens beside the tapped card instead of covering it when it fits neither above nor below", () => {
+    vi.stubGlobal("innerWidth", 1180);
+    vi.stubGlobal("innerHeight", 540);
+    const anchor = anchorAt(230);
+
+    const placement = resolveMenuPlacement(anchor, 280, 326, 512);
+
+    const overlapsHorizontally = placement.left < anchor.right && placement.left + 280 > anchor.left;
+    expect(overlapsHorizontally).toBe(false);
   });
 
   it("limits the menu height to the space above the status bar so it scrolls instead of clipping", () => {
     vi.stubGlobal("innerWidth", 1180);
     vi.stubGlobal("innerHeight", 300);
 
-    const placement = resolveMenuPlacement(anchorAt(120), 280, 420);
+    const placement = resolveMenuPlacement(anchorAt(120), 280, 420, 272);
 
     expect(placement.top).toBe(8);
-    expect(placement.top + placement.maxHeight).toBeLessThanOrEqual(300 - 28 - 8);
+    expect(placement.top + placement.maxHeight).toBeLessThanOrEqual(272 - 8);
   });
 });
 
@@ -85,6 +96,16 @@ describe("resolveLiveFlowNodeActionTarget", () => {
 
     expect(live.recipeId).toBe("recipe_treatment");
     expect(live.details?.[0]).toContain("×6");
+  });
+
+  it("offers recipe choices only when the item has a single card, where a choice reaches the tapped card", () => {
+    const reactor = flowNode("row-reactor", "item_effluent", "recipe_reactor", "×2");
+    const treatment = flowNode("row-treatment", "item_effluent", "recipe_treatment", "×5");
+    const carbon = flowNode("row-carbon", "item_carbon", "recipe_wood", "×1");
+    const nodes = [reactor, treatment, carbon];
+
+    expect(canChooseRecipeForActionTarget(resolveFlowNodeActionTarget(reactor, anchorAt(100)), nodes)).toBe(false);
+    expect(canChooseRecipeForActionTarget(resolveFlowNodeActionTarget(carbon, anchorAt(100)), nodes)).toBe(true);
   });
 
   it("follows a recipe switch only when the item maps to a single card", () => {

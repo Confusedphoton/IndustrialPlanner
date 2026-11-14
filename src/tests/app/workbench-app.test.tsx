@@ -576,6 +576,28 @@ describe("WorkbenchApp", () => {
     document.body.classList.remove("is-resizing-toolbox-bottom-dock");
   });
 
+  it("fits the whole base into the canvas when a document without a saved view first gets a canvas size", async () => {
+    const workspace = await createPlacementWorkspace();
+    const appHost = createAppTestHost(workspace);
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+    act(() => {
+      appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 1000, height: 800 });
+    });
+
+    const view = appHost.mainCanvas.view;
+    for (const corner of [{ x: 0, y: 0 }, { x: 79, y: 79 }]) {
+      const cell = view.queries.findClientRectForGridCell(corner);
+      expect(cell).not.toBeNull();
+      expect(cell!.left).toBeGreaterThanOrEqual(0);
+      expect(cell!.top).toBeGreaterThanOrEqual(0);
+      expect(cell!.left + cell!.width).toBeLessThanOrEqual(1000);
+      expect(cell!.top + cell!.height).toBeLessThanOrEqual(800);
+    }
+  });
+
   it("applies persisted left dock width to the shell style", () => {
     localStorage.setItem(
       WORKBENCH_STATE_LOCAL_STORAGE_KEY,

@@ -109,6 +109,13 @@ function dispatchDragEvent(
   target.dispatchEvent(event);
 }
 
+/** 只占最后一个收藏位，让收藏格显示出来并留出前面的空位。 */
+function seedLastFavoriteSlot(appHost: AppHost): void {
+  runInAction(() => {
+    appHost.internalState.workbench.quickPlaceFavoriteEntityIds = [...Array<null>(9).fill(null), "furnance_1"];
+  });
+}
+
 describe("QuickPlacePopup", () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -149,6 +156,7 @@ describe("QuickPlacePopup", () => {
   });
 
   it("keeps pointer-opened search unfocused and blurs it before interacting outside the input", () => {
+    seedLastFavoriteSlot(appHost);
     act(() => {
       root.render(<QuickPlacePopup appHost={appHost} />);
     });
@@ -412,6 +420,7 @@ describe("QuickPlacePopup", () => {
   });
 
   it("commits the highlighted favorite slot when a mobile drag ends without drop", () => {
+    seedLastFavoriteSlot(appHost);
     act(() => {
       root.render(<QuickPlacePopup appHost={appHost} />);
     });
@@ -433,6 +442,7 @@ describe("QuickPlacePopup", () => {
   });
 
   it("uses the active in-memory payload when mobile drop data is empty", () => {
+    seedLastFavoriteSlot(appHost);
     act(() => {
       root.render(<QuickPlacePopup appHost={appHost} />);
     });
@@ -453,6 +463,23 @@ describe("QuickPlacePopup", () => {
     });
 
     expect(emptyFavoriteSlot?.getAttribute("aria-label")).toBe(`1 ${deviceButton?.title}`);
+  });
+
+  it("hides the favorite slots until a device is starred", () => {
+    act(() => {
+      root.render(<QuickPlacePopup appHost={appHost} />);
+    });
+
+    expect(container.querySelector(".quick-place-favorite-slot")).toBeNull();
+
+    const deviceButton = container.querySelector<HTMLButtonElement>('[role="option"]');
+    const starToggle = deviceButton?.parentElement?.querySelector<HTMLButtonElement>("[aria-pressed]");
+    act(() => {
+      starToggle?.click();
+    });
+
+    const firstSlot = container.querySelector(".quick-place-favorite-slot");
+    expect(firstSlot?.getAttribute("aria-label")).toBe(`1 ${deviceButton?.title}`);
   });
 
   it("lists recently placed devices above the results while the search is empty", () => {

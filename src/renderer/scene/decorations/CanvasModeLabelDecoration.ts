@@ -10,7 +10,8 @@ import type { DecorationSyncContext } from "./DecorationSyncContext";
 /**
  * 模式标签只做安静的状态提示：小号字、半透明，放在画布顶部居中，
  * 避开贴边的画布工具条与左上角的模式开关，不与工具按钮争夺注意力。
- * 文字取主题正文色，描边取画布底色，浅色与深色主题下都清晰。
+ * 描边取画布实际底色（蓝图样式会改它），文字在主题正文色与外壳底色中取与画布对比更强的一个，
+ * 深色主题叠加浅色蓝图画布时也清晰。
  */
 const MODE_LABEL_TEXT_STYLE = {
   fontSize: 13,
@@ -52,8 +53,12 @@ export function createCanvasModeLabelDecoration(
       }
       if (appliedTheme !== ctx.theme) {
         appliedTheme = ctx.theme;
-        modeLabel.style.fill = resolveAppThemeColorNumber(ctx.theme, "text-0");
-        modeLabel.style.stroke = { ...MODE_LABEL_TEXT_STYLE.stroke, color: resolveAppThemeColorNumber(ctx.theme, "canvas-bg") };
+        const background = resolveAppThemeColorNumber(ctx.theme, "in-canvas-bg");
+        modeLabel.style.fill = resolveHigherContrastColor(background, [
+          resolveAppThemeColorNumber(ctx.theme, "text-0"),
+          resolveAppThemeColorNumber(ctx.theme, "shell-bg"),
+        ]);
+        modeLabel.style.stroke = { ...MODE_LABEL_TEXT_STYLE.stroke, color: background };
       }
       modeLabel.visible = true;
       modeLabel.x = Math.round((ctx.viewportState.width - modeLabel.width) / 2);
@@ -64,4 +69,26 @@ export function createCanvasModeLabelDecoration(
       modeLabel.destroy({ children: true });
     },
   };
+}
+
+function resolveHigherContrastColor(background: number, candidates: readonly number[]): number {
+  const backgroundLuminance = resolveRelativeLuminance(background);
+  let best = candidates[0] ?? 0;
+  let bestDistance = -1;
+  for (const candidate of candidates) {
+    const distance = Math.abs(resolveRelativeLuminance(candidate) - backgroundLuminance);
+    if (distance > bestDistance) {
+      best = candidate;
+      bestDistance = distance;
+    }
+  }
+  return best;
+}
+
+function resolveRelativeLuminance(color: number): number {
+  const channel = (value: number) => {
+    const srgb = value / 255;
+    return srgb <= 0.04045 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel((color >> 16) & 0xff) + 0.7152 * channel((color >> 8) & 0xff) + 0.0722 * channel(color & 0xff);
 }

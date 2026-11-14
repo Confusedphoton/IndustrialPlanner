@@ -97,6 +97,22 @@ describe("resolveDockLayoutBudget", () => {
   });
 });
 
+describe("resolveDockLayoutBudget with an edge tool rail", () => {
+  it("keeps the minimum canvas width free of the rail it hosts", () => {
+    const budget = resolveDockLayoutBudget({
+      viewportWidth: 1024,
+      leftToolbarWidth: 68,
+      leftDockWidth: 320,
+      rightDockWidth: 0,
+      recipeDockWidth: 440,
+      recipeDockMinWidth: RECIPE_DOCK_MIN_WIDTH,
+      canvasReservedWidth: 66,
+    });
+
+    expect(canvasWidth(1024, 68, budget) - 66).toBeGreaterThanOrEqual(MIN_CANVAS_WIDTH_PX);
+  });
+});
+
 describe("resolveStackedRightColumn", () => {
   it.each([0, 0.1, 0.5, 0.95, 1])("keeps both stacked panes at their minimum heights for a persisted ratio of %s", (recipeRatio) => {
     const columnHeight = 824;

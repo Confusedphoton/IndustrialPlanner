@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
@@ -43,6 +44,7 @@ import {
   type ProductionPlanningResult,
   type ProductionPlanningSourceConfig,
 } from "@/app/shell/production-planning/production-planning-model";
+import type { ProductionPlanningCandidate } from "@/app/shell/production-planning/production-planning-candidate";
 import { resolveEffectiveActivityIds } from "@/shared/registry/activity-availability";
 import { sortRecipesByDefaultPriority } from "@/shared/registry/recipe-visibility";
 import styles from "@/app/shell/app-shell.module.scss";
@@ -59,6 +61,7 @@ import {
 import {
   RecipeActionMenu,
   resolveFlowNodeActionTarget,
+  canChooseRecipeForActionTarget,
   resolveLiveFlowNodeActionTarget,
   type RecipeActionTarget,
 } from "./recipe-action-menu";
@@ -79,6 +82,9 @@ const RECIPE_TREE_SOURCE_CONFIG: ProductionPlanningSourceConfig = {
 };
 const RECIPE_TREE_INFINITE_ITEM_IDS: ReadonlySet<string> = new Set(["item_liquid_sewage"]);
 const SEARCH_RESULT_LIMIT = 8;
+/** 树形视图缩进参考线的最大层数；更深的层级不再缩进，窄停靠栏里名称仍有空间。 */
+const RECIPE_TREE_GUIDE_DEPTH_LIMIT = 6;
+const RECIPE_TREE_CHIP_INPUT_LIMIT = 3;
 const VIEWPORT_MARGIN_PX = 8;
 const TOP_BAR_CLEARANCE_PX = 56;
 /** 底部状态栏高度；浮层不压到状态栏上。 */
@@ -270,8 +276,10 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
   const minimized = state.minimized && !docked;
   const showsGraph = !minimized && state.pins.length > 0 && state.viewMode === "graph";
   const combinedPlan = useCombinedRecipeTreePlan(index, showsGraph || actionTarget !== null);
-  const liveActionTarget = useMemo(
-    () => actionTarget === null || combinedPlan === null ? actionTarget : resolveLiveActionTarget(actionTarget, combinedPlan, index, t),
+  const liveAction = useMemo(
+    () => actionTarget === null || combinedPlan === null
+      ? (actionTarget === null ? null : { target: actionTarget, canChooseRecipe: true })
+      : resolveLiveAction(actionTarget, combinedPlan, index, t),
     [actionTarget, combinedPlan, index, t],
   );
 
@@ -413,14 +421,22 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
               </div>
             )}
           </RecipeActionMenuContext.Provider>
-          {liveActionTarget === null ? null : (
+          {liveAction === null ? null : (
             <RecipeActionMenu
               appHost={appHost}
-              editor={<RecipeTreeNodeEditor index={index} itemId={liveActionTarget.itemId} t={t} />}
+              editor={(
+                <RecipeTreeNodeEditor
+                  activeRecipeId={liveAction.target.recipeId}
+                  canChooseRecipe={liveAction.canChooseRecipe}
+                  index={index}
+                  itemId={liveAction.target.itemId}
+                  t={t}
+                />
+              )}
               index={index}
               onClose={closeActionMenu}
               t={t}
-              target={liveActionTarget}
+              target={liveAction.target}
             />
           )}
           {docked ? null : (
@@ -574,40 +590,42 @@ const RecipeTreePinSection = observer(function RecipeTreePinSection({
         </button>
         <img alt="" className={cm(styles, "recipe-tree-item-icon")} src={resolveProductionPlanningItemIconSrc(pin.itemId, index)} />
         <strong className={cm(styles, "recipe-tree-pin-name")} title={itemName}>{itemName}</strong>
-        <label className={cm(styles, "recipe-tree-rate")}>
-          <NumberInput
-            aria-label={t("recipeTree.targetRate")}
-            className={cm(styles, "recipe-tree-rate-input")}
-            emptyFallback={pin.perMinute}
-            min={0.01}
-            onCommit={(value) => {
-              if (value > 0) {
-                state.updatePin(pin.id, { perMinute: value });
-              }
-            }}
-            value={pin.perMinute}
-          />
-          <span>{t("recipeTree.perMinute")}</span>
-        </label>
-        <button
-          aria-label={t("recipeTree.moveUp")}
-          className={cm(styles, "recipe-tree-icon-button")}
-          disabled={isFirst}
-          onClick={() => state.movePin(pin.id, -1)}
-          title={t("recipeTree.moveUp")}
-          type="button"
-        >
-          <LucideChevronUp />
-        </button>
-        <button
-          aria-label={t("recipeTree.unpin")}
-          className={cm(styles, "recipe-tree-icon-button")}
-          onClick={() => state.removePin(pin.id)}
-          title={t("recipeTree.unpin")}
-          type="button"
-        >
-          <LucidePinOff />
-        </button>
+        <span className={cm(styles, "recipe-tree-pin-controls")}>
+          <label className={cm(styles, "recipe-tree-rate")}>
+            <NumberInput
+              aria-label={t("recipeTree.targetRate")}
+              className={cm(styles, "recipe-tree-rate-input")}
+              emptyFallback={pin.perMinute}
+              min={0.01}
+              onCommit={(value) => {
+                if (value > 0) {
+                  state.updatePin(pin.id, { perMinute: value });
+                }
+              }}
+              value={pin.perMinute}
+            />
+            <span>{t("recipeTree.perMinute")}</span>
+          </label>
+          <button
+            aria-label={t("recipeTree.moveUp")}
+            className={cm(styles, "recipe-tree-icon-button")}
+            disabled={isFirst}
+            onClick={() => state.movePin(pin.id, -1)}
+            title={t("recipeTree.moveUp")}
+            type="button"
+          >
+            <LucideChevronUp />
+          </button>
+          <button
+            aria-label={t("recipeTree.unpin")}
+            className={cm(styles, "recipe-tree-icon-button")}
+            onClick={() => state.removePin(pin.id)}
+            title={t("recipeTree.unpin")}
+            type="button"
+          >
+            <LucidePinOff />
+          </button>
+        </span>
       </div>
       {pin.collapsed ? null : root === null ? (
         <p className={cm(styles, "recipe-tree-empty")}>{t("recipeTree.noRecipe")}</p>
@@ -665,22 +683,26 @@ const RecipeTreeNode = observer(function RecipeTreeNode({
     .filter((candidate) => candidate.sourceType === "system-recipe");
   const byproducts = recipeNode?.outputs.filter((output) => output.itemId !== node.itemId && output.perMinute > 0) ?? [];
   const externalPerMinute = node.supply.manual + node.supply.infinite + node.supply.surplus + node.supply.cycle;
+  const openNodeActionMenu = (anchor: DOMRect) => openActionMenu({
+    itemId: node.itemId,
+    recipeId: recipeNode?.recipeId ?? null,
+    anchor,
+  });
 
   return (
-    <li aria-expanded={children.length > 0 ? !collapsed : undefined} role="treeitem">
+    <li
+      aria-expanded={children.length > 0 ? !collapsed : undefined}
+      role="treeitem"
+      style={{ "--recipe-tree-depth": Math.min(depth, RECIPE_TREE_GUIDE_DEPTH_LIMIT) } as CSSProperties}
+    >
       <div
         className={cm(styles, "recipe-tree-node")}
         onClick={(event) => {
-          if ((event.target as HTMLElement).closest("button, select") !== null) {
+          if ((event.target as HTMLElement).closest("button") !== null) {
             return;
           }
-          openActionMenu({
-            itemId: node.itemId,
-            recipeId: recipeNode?.recipeId ?? null,
-            anchor: event.currentTarget.getBoundingClientRect(),
-          });
+          openNodeActionMenu(event.currentTarget.getBoundingClientRect());
         }}
-        style={{ paddingLeft: depth * 14 }}
       >
         {children.length > 0 ? (
           <button
@@ -695,40 +717,37 @@ const RecipeTreeNode = observer(function RecipeTreeNode({
         <img alt="" className={cm(styles, "recipe-tree-item-icon")} src={resolveProductionPlanningItemIconSrc(node.itemId, index)} />
         <span className={cm(styles, "recipe-tree-node-name")} title={itemName}>{itemName}</span>
         {isUpkeep ? <span className={cm(styles, "recipe-tree-tag")}>{t("recipeTree.upkeep")}</span> : null}
-        <span className={cm(styles, "recipe-tree-node-rate")}>
-          {formatProductionFlow(node.demandPerMinute)}
-          <small>{t("recipeTree.perMinute")}</small>
+        <span className={cm(styles, "recipe-tree-node-metrics")}>
+          <span className={cm(styles, "recipe-tree-node-rate")}>
+            {formatProductionFlow(node.demandPerMinute)}
+            <small>{t("recipeTree.perMinute")}</small>
+          </span>
+          {machineId !== null && recipeNode !== null ? (
+            <span
+              className={cm(styles, "recipe-tree-machine")}
+              title={`${t(index.entityById.get(machineId)?.nameKey ?? machineId)} × ${formatProductionDeviceCount(recipeNode.deviceCount)}`}
+            >
+              <img alt="" src={resolveProductionPlanningEntityIconSrc(machineId, index)} />
+              <span>×{formatProductionDeviceCount(recipeNode.deviceCount)}</span>
+            </span>
+          ) : recipeNode === null ? (
+            <span className={cm(styles, "recipe-tree-tag is-raw")}>
+              {node.isCycleSource ? t("recipeTree.cycle") : t("recipeTree.raw")}
+            </span>
+          ) : null}
         </span>
-        {machineId !== null && recipeNode !== null ? (
-          <span
-            className={cm(styles, "recipe-tree-machine")}
-            title={`${t(index.entityById.get(machineId)?.nameKey ?? machineId)} × ${formatProductionDeviceCount(recipeNode.deviceCount)}`}
-          >
-            <img alt="" src={resolveProductionPlanningEntityIconSrc(machineId, index)} />
-            <span>×{formatProductionDeviceCount(recipeNode.deviceCount)}</span>
-          </span>
-        ) : recipeNode === null ? (
-          <span className={cm(styles, "recipe-tree-tag is-raw")}>
-            {node.isCycleSource ? t("recipeTree.cycle") : t("recipeTree.raw")}
-          </span>
-        ) : null}
       </div>
       {recipeNode !== null && (candidates.length > 1 || byproducts.length > 0 || externalPerMinute > 0.0001) ? (
-        <div className={cm(styles, "recipe-tree-node-detail")} style={{ paddingLeft: depth * 14 + 40 }}>
+        <div className={cm(styles, "recipe-tree-node-detail")}>
           {candidates.length > 1 ? (
-            <select
-              aria-label={t("recipeTree.recipe")}
-              className={cm(styles, "recipe-tree-recipe-select")}
-              onChange={(event) => state.setRecipeChoice(pin.id, node.itemId, event.currentTarget.value || null)}
-              value={pin.recipeChoices[node.itemId] ?? ""}
-            >
-              <option value="">{t("productionPlanning.autoRecipe")}</option>
-              {candidates.map((candidate) => (
-                <option key={candidate.id} value={candidate.id}>
-                  {resolveProductionPlanningCandidateName(candidate, index, t)}
-                </option>
-              ))}
-            </select>
+            <RecipeTreeRecipeChip
+              activeRecipeId={recipeNode.recipeId}
+              candidates={candidates}
+              chosen={pin.recipeChoices[node.itemId] !== undefined}
+              index={index}
+              onOpen={openNodeActionMenu}
+              t={t}
+            />
           ) : null}
           {byproducts.map((output) => (
             <span className={cm(styles, "recipe-tree-byproduct")} key={output.id}>
@@ -762,6 +781,61 @@ const RecipeTreeNode = observer(function RecipeTreeNode({
     </li>
   );
 });
+
+/**
+ * 有多条备选配方的节点上的配方芯片：显示当前配方的原料图标与「自动」或序号，
+ * 点按打开该物品的节点菜单，在菜单里切换配方。
+ */
+function RecipeTreeRecipeChip({
+  activeRecipeId,
+  candidates,
+  chosen,
+  index,
+  onOpen,
+  t,
+}: {
+  activeRecipeId: string | null;
+  candidates: readonly ProductionPlanningCandidate[];
+  chosen: boolean;
+  index: ProductionPlanningIndex;
+  onOpen: (anchor: DOMRect) => void;
+  t: Translate;
+}) {
+  const recipeIds = sortRecipesByDefaultPriority(candidates.flatMap((candidate) => {
+    const recipe = candidate.recipeId === null ? undefined : index.recipeById.get(candidate.recipeId);
+    return recipe === undefined ? [] : [recipe];
+  })).map((recipe) => recipe.id);
+  const activeRecipe = activeRecipeId === null ? undefined : index.recipeById.get(activeRecipeId);
+  const activeCandidate = candidates.find((candidate) => candidate.recipeId === activeRecipeId);
+  const inputItemIds = activeRecipe?.inputs
+    .map((flow) => flow.itemId)
+    .filter((itemId) => index.itemById.has(itemId))
+    .slice(0, RECIPE_TREE_CHIP_INPUT_LIMIT) ?? [];
+  const label = chosen && activeRecipeId !== null && recipeIds.includes(activeRecipeId)
+    ? `${recipeIds.indexOf(activeRecipeId) + 1}/${recipeIds.length}`
+    : t("recipeTree.recipeAuto");
+  const description = t("recipeTree.recipeChip").replace(
+    "{recipe}",
+    activeCandidate === undefined ? t("productionPlanning.autoRecipe") : resolveProductionPlanningCandidateName(activeCandidate, index, t),
+  );
+
+  return (
+    <button
+      aria-haspopup="menu"
+      aria-label={description}
+      className={cm(styles, "recipe-tree-recipe-chip", chosen && "is-chosen")}
+      onClick={(event) => onOpen(event.currentTarget.getBoundingClientRect())}
+      title={description}
+      type="button"
+    >
+      {inputItemIds.map((itemId) => (
+        <img alt="" key={itemId} src={resolveProductionPlanningItemIconSrc(itemId, index)} />
+      ))}
+      <span>{label}</span>
+      <LucideChevronDown aria-hidden />
+    </button>
+  );
+}
 
 function RecipeTreeTotals({
   plan,
@@ -965,19 +1039,23 @@ function useCombinedRecipeTreePlan(index: ProductionPlanningIndex, needed: boole
 }
 
 /**
- * 菜单打开后目标的配方、产量可能被就地编辑；方案变化时按当前方案重新解析该物品的节点，
- * 使明细与“按此配方放置”等操作始终对应编辑后的状态。
+ * 菜单打开后目标的配方、产量可能被就地编辑；方案变化时按当前方案重新解析被点的卡片，
+ * 使明细与“按此配方放置”等操作始终对应编辑后的状态，并判断改配方能否作用于这张卡片。
  */
-function resolveLiveActionTarget(
+function resolveLiveAction(
   target: RecipeActionTarget,
   plan: ProductionPlanningResult,
   index: ProductionPlanningIndex,
   t: Translate,
-): RecipeActionTarget {
+): { target: RecipeActionTarget; canChooseRecipe: boolean } {
   if (target.itemId === null) {
-    return target;
+    return { target, canChooseRecipe: false };
   }
-  return resolveLiveFlowNodeActionTarget(target, buildProductionFlowGraph(plan, index, t, "item").nodes);
+  const nodes = buildProductionFlowGraph(plan, index, t, "item").nodes;
+  return {
+    target: resolveLiveFlowNodeActionTarget(target, nodes),
+    canChooseRecipe: canChooseRecipeForActionTarget(target, nodes),
+  };
 }
 
 const RecipeTreeGraph = observer(function RecipeTreeGraph({
@@ -1027,10 +1105,15 @@ const RecipeTreeGraph = observer(function RecipeTreeGraph({
  * 不必切回树形视图使用原生下拉框。配方选择作用于所有钉住目标（流程图合并了它们）。
  */
 const RecipeTreeNodeEditor = observer(function RecipeTreeNodeEditor({
+  activeRecipeId,
+  canChooseRecipe,
   index,
   itemId,
   t,
 }: {
+  /** 当前方案里这张卡片实际使用的配方，标记为“使用中”。 */
+  activeRecipeId: string | null;
+  canChooseRecipe: boolean;
   index: ProductionPlanningIndex;
   itemId: string | null;
   t: Translate;
@@ -1040,8 +1123,9 @@ const RecipeTreeNodeEditor = observer(function RecipeTreeNodeEditor({
     return null;
   }
   const pin = state.pins.find((candidate) => candidate.itemId === itemId);
-  const candidates = (index.candidatesByOutputItem.get(itemId) ?? [])
-    .filter((candidate) => candidate.sourceType === "system-recipe");
+  const candidates = canChooseRecipe
+    ? (index.candidatesByOutputItem.get(itemId) ?? []).filter((candidate) => candidate.sourceType === "system-recipe")
+    : [];
   const selectedCandidateId = state.pins.map((candidate) => candidate.recipeChoices[itemId]).find((id) => id !== undefined) ?? null;
   if (pin === undefined && candidates.length < 2) {
     return null;
@@ -1051,6 +1135,7 @@ const RecipeTreeNodeEditor = observer(function RecipeTreeNodeEditor({
     return recipe === undefined ? [] : [recipe];
   });
   const machinesDiffer = new Set(candidateRecipes.map((recipe) => recipe.machineId)).size > 1;
+  const outputsDiffer = new Set(candidateRecipes.map((recipe) => formatRecipeFlows(recipe.outputs, index, t))).size > 1;
   const chooseRecipe = (candidateId: string | null) => {
     for (const candidate of state.pins) {
       state.setRecipeChoice(candidate.id, itemId, candidateId);
@@ -1095,7 +1180,8 @@ const RecipeTreeNodeEditor = observer(function RecipeTreeNodeEditor({
         </div>
       )}
       {candidates.length < 2 ? null : (
-        // 备选配方可能只差设备：设备不同时每行先写设备名再列原料；设备都相同时只列原料，设备图标照常显示。
+        // 备选配方可能只差设备、原料数量或产物：设备不同时每行先写设备名，再列带数量的原料；
+        // 产物不同时再列产物。设备都相同时只列原料，设备图标照常显示。
         <div aria-label={t("recipeTree.recipe")} className={cm(styles, "recipe-action-menu-recipes")} role="group">
           <button
             aria-pressed={selectedCandidateId === null}
@@ -1107,13 +1193,11 @@ const RecipeTreeNodeEditor = observer(function RecipeTreeNodeEditor({
           </button>
           {sortRecipesByDefaultPriority(candidateRecipes).map((recipe) => {
             const candidate = candidates.find((entry) => entry.recipeId === recipe.id);
-            const inputNames = recipe.inputs
-              .filter((flow) => index.itemById.has(flow.itemId))
-              .map((flow) => resolveProductionPlanningItemName(flow.itemId, index, t))
-              .join(" + ");
+            const inputs = formatRecipeFlows(recipe.inputs, index, t);
             const machineName = t(index.entityById.get(recipe.machineId)?.nameKey ?? recipe.machineId);
-            const primary = machinesDiffer || inputNames === "" ? machineName : inputNames;
-            const secondary = machinesDiffer ? inputNames : "";
+            const primary = machinesDiffer || inputs === "" ? machineName : inputs;
+            const details = [machinesDiffer ? inputs : "", outputsDiffer ? `→ ${formatRecipeFlows(recipe.outputs, index, t)}` : ""]
+              .filter((line) => line !== "");
             return (
               <button
                 aria-pressed={candidate !== undefined && candidate.id === selectedCandidateId}
@@ -1125,11 +1209,16 @@ const RecipeTreeNodeEditor = observer(function RecipeTreeNodeEditor({
                 <img alt="" src={resolveProductionPlanningEntityIconSrc(recipe.machineId, index)} />
                 <span className={cm(styles, "recipe-action-menu-recipe-text")}>
                   <span className={cm(styles, "recipe-action-menu-recipe-machine")}>{primary}</span>
-                  {secondary === "" ? null : (
-                    <span className={cm(styles, "recipe-action-menu-recipe-inputs")}>{secondary}</span>
-                  )}
+                  {details.map((line) => (
+                    <span className={cm(styles, "recipe-action-menu-recipe-inputs")} key={line}>{line}</span>
+                  ))}
                 </span>
-                <span className={cm(styles, "recipe-action-menu-recipe-duration")}>{recipe.durationSeconds}s</span>
+                <span className={cm(styles, "recipe-action-menu-recipe-meta")}>
+                  {recipe.id === activeRecipeId ? (
+                    <span className={cm(styles, "recipe-action-menu-recipe-in-use")}>{t("recipeTree.recipeInUse")}</span>
+                  ) : null}
+                  <span>{recipe.durationSeconds}s</span>
+                </span>
               </button>
             );
           })}
@@ -1138,3 +1227,18 @@ const RecipeTreeNodeEditor = observer(function RecipeTreeNodeEditor({
     </div>
   );
 });
+
+/** 配方的原料或产物清单：“名称 ×数量”，数量为 1 时省略。 */
+function formatRecipeFlows(
+  flows: readonly { readonly itemId: string; readonly amount: number }[],
+  index: ProductionPlanningIndex,
+  t: Translate,
+): string {
+  return flows
+    .filter((flow) => index.itemById.has(flow.itemId))
+    .map((flow) => {
+      const name = resolveProductionPlanningItemName(flow.itemId, index, t);
+      return flow.amount > 1 ? `${name} ×${flow.amount}` : name;
+    })
+    .join(" + ");
+}

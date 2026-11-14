@@ -16,6 +16,10 @@
   color: var(--text-0);
 }
 
+.quick-place-popup.is-favorites-collapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .quick-place-favorites {
   display: grid;
   height: 100%;
@@ -163,23 +167,37 @@
   gap: 5px;
 }
 
+.quick-place-recent-strip .quick-place-device-row {
+  flex: 0 1 96px;
+  min-width: 64px;
+}
+
 .quick-place-recent-strip .quick-place-device-button,
 .quick-place-recent-strip .quick-place-device-button.has-variant {
   position: relative;
-  grid-template-columns: 32px;
-  justify-content: center;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 28px auto;
+  align-content: start;
   justify-items: center;
-  width: 44px;
-  height: 44px;
-  padding: 0;
+  gap: 3px;
+  height: 56px;
+  padding: 6px 4px 0;
 }
 
+.quick-place-recent-strip .quick-place-device-name {
+  max-width: 100%;
+  color: var(--text-1);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+// 变体徽标贴在图标右下角，不压住下方名称。
 .quick-place-recent-strip .quick-place-variant-badge {
   position: absolute;
-  right: 2px;
-  bottom: 2px;
-  width: 16px;
-  height: 16px;
+  top: 22px;
+  left: calc(50% + 7px);
+  width: 14px;
+  height: 14px;
 }
 
 .quick-place-group-title {

@@ -5,11 +5,7 @@ import type { EditorViewContract } from "@/domain/editor/editor-view-contract";
 import type { EditorViewState } from "@/domain/editor/editor-view-state";
 import type { SceneBounds, SceneSpace } from "@/domain/shared/scene-space";
 import type { SceneSnapshotSource } from "@/domain/shared/scene-snapshot";
-import type { GridRect } from "@/domain/shared/grid";
-import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
-import { resolveBaseBuiltinEntities, type BaseDefinition } from "@/domain/registry/types/base-definition";
 import { resolveBaseOuterBounds } from "@/shared/geometry/base-areas";
-import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 import type { EditorDocumentWriter } from "./history";
 import { clampViewportGridSize, DEFAULT_VIEWPORT_GRID_SIZE } from "./viewport-settings";
 
@@ -34,34 +30,13 @@ export function normalizeWorldDocumentViewportSettings(value: unknown): WorldDoc
   };
 }
 
-/** 文档实体与基地内置实体（如核心）占地的外包矩形；都没有时为 null。 */
-export function resolveWorldDocumentContentBounds(document: WorldDocument, registry: {
-  readonly entityDefinitions: readonly EntityDefinition[]; readonly baseDefinitions: readonly BaseDefinition[];
-}): GridRect | null {
-  const entities = [...resolveBaseBuiltinEntities({ baseDefinitions: registry.baseDefinitions, baseId: document.baseId }),
-    ...Object.values(document.entities)];
-  const definitions = new Map(registry.entityDefinitions.map(definition => [definition.id, definition]));
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const entity of entities) {
-    const definition = definitions.get(entity.definitionId);
-    if (definition === undefined) continue;
-    const rect = resolveEntityGridRect({ entity, definition });
-    minX = Math.min(minX, rect.x); minY = Math.min(minY, rect.y);
-    maxX = Math.max(maxX, rect.x + rect.width); maxY = Math.max(maxY, rect.y + rect.height);
-  }
-  return minX === Infinity ? null : { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
-}
-
 export function applyWorldDocumentViewportSettings(options: {
-  document: WorldDocument; view: EditorViewContract; space: SceneSpace; contentBounds?: GridRect | null;
+  document: WorldDocument; view: EditorViewContract; space: SceneSpace;
 }): void {
   const baseBounds = resolveBaseOuterBounds(options.space);
-  // 没有保存过视口的文档首次打开时对准已有内容（新基地即核心），没有内容时对准基地中心，而不是坐标原点。
-  const firstCenter = options.contentBounds == null
-    ? resolveSceneBoundsCenter(baseBounds)
-    : { x: options.contentBounds.x + options.contentBounds.width / 2, y: options.contentBounds.y + options.contentBounds.height / 2 };
+  // 没有保存过视口的文档先对准基地中心；画布有尺寸后由工作台把整个基地放进可用区域。
   const saved = normalizeWorldDocumentViewportSettings(options.document.documentSettings.viewport)
-    ?? { ...createDefaultWorldDocumentViewportSettings(), center: firstCenter };
+    ?? { ...createDefaultWorldDocumentViewportSettings(), center: resolveSceneBoundsCenter(baseBounds) };
   options.view.actions.setBoundsPolicy({ kind: "space", padding: 2,
     bounds: baseBounds ?? { minX: null, minY: null, maxX: null, maxY: null } });
   options.view.actions.setViewportDisplayRotation(saved.displayRotation);
@@ -94,7 +69,7 @@ export function persistWorldDocumentViewportSettings(options: {
 /** 由组合根仅为主 View 显式创建；临时视图没有存储资格或页面监听。 */
 export function bindEditorViewToDocument(options: {
   document: SceneSnapshotSource<WorldDocument>; documentWriter: EditorDocumentWriter;
-  view: EditorViewContract; readSpace(): SceneSpace; readContentBounds?(document: WorldDocument): GridRect | null;
+  view: EditorViewContract; readSpace(): SceneSpace;
 }): { flush(): void; dispose(): void } {
   let timer: ReturnType<typeof setTimeout> | null = null;
   let disposed = false;
@@ -111,8 +86,7 @@ export function bindEditorViewToDocument(options: {
     // 组合根把 flush 接到 Editor 的 beforeDocumentChange，旧文档在切换前已保存。
     documentKey = document.documentKey;
     restoring = true;
-    try { applyWorldDocumentViewportSettings({ document, view: options.view, space: options.readSpace(),
-      contentBounds: options.readContentBounds?.(document) }); }
+    try { applyWorldDocumentViewportSettings({ document, view: options.view, space: options.readSpace() }); }
     finally { restoring = false; }
   });
   const stopView = reaction(() => [options.view.state.center.x, options.view.state.center.y,

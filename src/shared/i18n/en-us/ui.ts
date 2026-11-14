@@ -1459,6 +1459,7 @@ const UI: Record<string, string> = {
     "recipeTree.pickItem": "Choose an item to pin",
     "recipeTree.pinLimitReached": "Pin limit reached",
     "recipeTree.targetRate": "Target rate per minute",
+    "recipeTree.recipeInUse": "In use",
     "recipeTree.decreaseRate": "Decrease rate",
     "recipeTree.increaseRate": "Increase rate",
     "recipeTree.perMinute": "/min",
@@ -1472,6 +1473,8 @@ const UI: Record<string, string> = {
     "recipeTree.supplied": "Supplied",
     "recipeTree.machines": "Machines",
     "recipeTree.inputs": "Raw inputs",
+    "recipeTree.recipeAuto": "Auto",
+    "recipeTree.recipeChip": "Recipe: {recipe}",
     "workbench.utility.recipeTree": "Recipes",
     "workbench.utility.toolbox": "Toolbox",
 };

@@ -2,7 +2,7 @@ export const MIN_CANVAS_WIDTH_PX = 360;
 const MIN_CANVAS_VIEWPORT_RATIO = 0.3;
 export const MIN_RIGHT_DOCK_WIDTH_PX = 320;
 /** 右侧面板挤占画布时，左侧放置面板最多收窄到这里；磁贴网格按列宽自适应，仍可用。 */
-export const MIN_SQUEEZED_LEFT_DOCK_WIDTH_PX = 240;
+export const MIN_SQUEEZED_LEFT_DOCK_WIDTH_PX = 220;
 
 export interface DockLayoutBudgetInput {
   readonly viewportWidth: number;
@@ -14,6 +14,8 @@ export interface DockLayoutBudgetInput {
   /** 0 when the recipe tree is not docked. */
   readonly recipeDockWidth: number;
   readonly recipeDockMinWidth: number;
+  /** 贴在画布边缘的工具条所占的宽度；画布最小宽度指去掉它之后仍可作业的部分。 */
+  readonly canvasReservedWidth?: number;
 }
 
 export interface DockLayoutBudget {
@@ -33,7 +35,10 @@ export interface DockLayoutBudget {
  * （不低于 MIN_SQUEEZED_LEFT_DOCK_WIDTH_PX）；它是用户主动打开的主要入口，不自动收起。
  */
 export function resolveDockLayoutBudget(input: DockLayoutBudgetInput): DockLayoutBudget {
-  const minCanvasWidth = Math.max(MIN_CANVAS_WIDTH_PX, Math.round(input.viewportWidth * MIN_CANVAS_VIEWPORT_RATIO));
+  const minCanvasWidth = Math.max(
+    MIN_CANVAS_WIDTH_PX + (input.canvasReservedWidth ?? 0),
+    Math.round(input.viewportWidth * MIN_CANVAS_VIEWPORT_RATIO),
+  );
   const rightMinimum = input.rightDockWidth > 0 && input.recipeDockWidth > 0
     ? Math.max(MIN_RIGHT_DOCK_WIDTH_PX, input.recipeDockMinWidth)
     : input.rightDockWidth > 0

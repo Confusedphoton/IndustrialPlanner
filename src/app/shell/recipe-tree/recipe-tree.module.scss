@@ -206,20 +206,33 @@
   border-bottom: 0;
 }
 
+// 停靠栏较窄时产量与按钮换到第二行靠右，名称保留整行宽度。
 .recipe-tree-pin-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 4px;
   padding: 4px 4px 4px 2px;
 }
 
 .recipe-tree-pin-name {
-  flex: 1;
+  display: -webkit-box;
+  flex: 1 1 120px;
   min-width: 0;
   overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow-wrap: break-word;
   font-size: 13px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.recipe-tree-pin-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
 }
 
 .recipe-tree-item-icon {
@@ -254,16 +267,33 @@
   list-style: none;
 }
 
+.recipe-tree-nodes li {
+  --recipe-tree-indent: calc(var(--recipe-tree-depth, 0) * 8px);
+}
+
+// 层级用缩进区里的细竖线表示，每层只缩进 8px，窄停靠栏里名称仍能完整显示。
+.recipe-tree-node,
+.recipe-tree-node-detail {
+  background-image: repeating-linear-gradient(
+    to right,
+    transparent 0 3px,
+    var(--line) 3px 4px,
+    transparent 4px 8px
+  );
+  background-repeat: no-repeat;
+  background-size: var(--recipe-tree-indent) 100%;
+}
+
 .recipe-tree-node {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   min-height: 36px;
-  padding-right: 8px;
+  padding: 2px 8px 2px var(--recipe-tree-indent);
 }
 
 .recipe-tree-node:hover {
-  background: var(--surface-2);
+  background-color: var(--surface-2);
 }
 
 .recipe-tree-node-toggle,
@@ -274,7 +304,6 @@
   flex: none;
   width: 30px;
   height: 30px;
-  margin-left: 2px;
   padding: 0;
   border: 0;
   border-radius: 6px;
@@ -293,16 +322,30 @@
 }
 
 .recipe-tree-node-name {
+  display: -webkit-box;
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow-wrap: break-word;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.recipe-tree-node-metrics {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  line-height: 1.2;
 }
 
 .recipe-tree-node-rate {
-  flex: none;
   color: var(--text-1);
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -359,20 +402,45 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  padding-right: 8px;
-  padding-bottom: 4px;
+  padding: 0 8px 4px calc(var(--recipe-tree-indent) + 34px);
   color: var(--text-2);
 }
 
-.recipe-tree-recipe-select {
-  max-width: 100%;
-  min-height: 32px;
-  padding: 2px 6px;
+.recipe-tree-recipe-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: none;
+  min-height: var(--pen-target);
+  padding: 0 6px 0 8px;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--surface-2);
   color: var(--text-1);
   font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.recipe-tree-recipe-chip:hover {
+  border-color: var(--accent);
+  color: var(--text-0);
+}
+
+.recipe-tree-recipe-chip.is-chosen {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.recipe-tree-recipe-chip img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.recipe-tree-recipe-chip svg {
+  width: 14px;
+  height: 14px;
 }
 
 .recipe-tree-byproduct {
@@ -471,6 +539,7 @@
   z-index: 20;
   overflow-y: auto;
   overscroll-behavior: contain;
+  touch-action: pan-y;
   width: 280px;
   padding: 6px;
   border: 1px solid var(--line-strong);
@@ -483,6 +552,17 @@
 .recipe-action-menu-content {
   display: grid;
   gap: 2px;
+}
+
+.recipe-action-menu-head {
+  position: sticky;
+  z-index: 1;
+  top: -6px;
+  display: grid;
+  gap: 2px;
+  margin: -6px -6px 0;
+  padding: 6px 6px 0;
+  background: var(--surface-2);
 }
 
 .recipe-action-menu-title {
@@ -542,8 +622,8 @@
   min-width: 0;
   max-width: none;
   height: auto;
-  // 左缘留出与拖动条同宽的槽，拖动条不压住标题栏和树节点的按钮。
-  padding-left: 12px;
+  // 拖动条骑在左边界上，一半伸到画布一侧，不压住标题栏和树节点的按钮。
+  overflow: visible;
   border-width: 0 0 0 1px;
   border-radius: 0;
   box-shadow: none;
@@ -558,8 +638,8 @@
   z-index: 2;
   top: 0;
   bottom: 0;
-  left: 0;
-  width: 12px;
+  left: -9px;
+  width: 18px;
   cursor: ew-resize;
   touch-action: none;
 }
@@ -568,7 +648,7 @@
   content: "";
   position: absolute;
   top: 50%;
-  left: 4px;
+  left: 7px;
   width: 4px;
   height: 40px;
   border-radius: 2px;
@@ -786,21 +866,32 @@ button.recipe-tree-chip:hover {
 }
 
 .recipe-action-menu-recipe-inputs {
-  overflow: hidden;
   color: var(--text-1);
   font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
-.recipe-action-menu-recipe-duration {
+.recipe-action-menu-recipe-meta {
+  display: grid;
   flex: 0 0 auto;
+  justify-items: end;
+  gap: 2px;
   color: var(--text-2);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
 
+.recipe-action-menu-recipe-in-use {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-weight: 650;
+}
+
+// 选中态用左侧强调条加描边，与悬停的浅色底区分开。
 .recipe-action-menu-recipe[aria-pressed="true"] {
   border-color: var(--accent);
-  background: var(--accent-soft);
+  box-shadow: inset 4px 0 0 var(--accent);
+  background: var(--surface-2);
 }

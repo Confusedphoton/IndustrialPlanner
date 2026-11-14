@@ -52,7 +52,7 @@ export const MIN_LEFT_DOCK_WIDTH = 320;
 export const MAX_LEFT_DOCK_WIDTH = 600;
 export const DEFAULT_LEFT_DOCK_WIDTH = 320;
 export const DEFAULT_RIGHT_DOCK_WIDTH = 380;
-export const MOBILE_LEFT_DOCK_WIDTH = 180;
+export const MOBILE_LEFT_DOCK_WIDTH = 220;
 
 export function clampLeftDockWidth(width: number): number {
   return Math.min(MAX_LEFT_DOCK_WIDTH, Math.max(MIN_LEFT_DOCK_WIDTH, Math.round(width)));

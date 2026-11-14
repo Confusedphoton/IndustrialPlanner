@@ -1,11 +1,12 @@
 import { completeYituliuCallback } from "@/shared/storage/yituliu-session";
 import { CanvasNotices } from "./canvas/canvas-notices";
-import { action, runInAction } from "mobx";
+import { action, reaction, runInAction } from "mobx";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 import { BottomStatusBar } from "@/app/shell/layout/bottom-status-bar";
 import { CanvasToolRail } from "@/app/shell/canvas/canvas-tool-rail";
 import { canvasToolRailState } from "@/app/shell/canvas/canvas-tool-rail-state";
+import { fitCanvasViewportToBase } from "@/app/input/gesture/actions";
 import { CanvasPanel } from "@/app/shell/canvas/canvas-panel";
 import { CanvasFloatingToolbar } from "@/app/shell/canvas/canvas-floating-toolbar";
 import { CanvasTopLeftCornerToolbar } from "@/app/shell/canvas/canvas-top-left-corner-toolbar";
@@ -746,6 +747,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     rightDockWidth: showRightDock ? DEFAULT_RIGHT_DOCK_WIDTH : 0,
     recipeDockWidth: recipeTreeOverlayState.dockLayoutWidth === 0 ? 0 : recipeTreeOverlayState.dockWidth,
     recipeDockMinWidth: RECIPE_TREE_DOCK_MIN_WIDTH,
+    canvasReservedWidth: canvasToolRailState.width,
   });
   useEffect(() => {
     recipeTreeOverlayState.setDockWidthLimit(dockLayoutBudget.recipeDockMaxWidth);
@@ -774,6 +776,36 @@ export const WorkbenchApp = observer(function WorkbenchApp({
       cancelAnimationFrame(secondFrame);
     };
   }, [appHost, rightLayoutSignature]);
+  // 没有保存过视口的文档（新建或从未平移缩放过）首次显示时，等画布有了尺寸再把整个基地放进避开工具条的区域。
+  useEffect(() => {
+    const editor = appHost.workspace.editor;
+    if (editor === null) return;
+    const handledDocumentKeys = new Set<string>();
+    let pendingDocumentKey: string | null = null;
+    const fitPending = (): void => {
+      const rect = appHost.mainCanvas.view.state.clientRect;
+      if (pendingDocumentKey === null || rect.width <= 0 || rect.height <= 0) return;
+      pendingDocumentKey = null;
+      fitCanvasViewportToBase(appHost.mainCanvas, {
+        left: canvasToolRailState.side === "left" ? canvasToolRailState.width : 0,
+        right: canvasToolRailState.side === "right" ? canvasToolRailState.width : 0,
+      });
+    };
+    const stopDocument = editor.document.subscribe((snapshot) => {
+      if (handledDocumentKeys.has(snapshot.documentKey)) return;
+      handledDocumentKeys.add(snapshot.documentKey);
+      pendingDocumentKey = snapshot.documentSettings.viewport === undefined ? snapshot.documentKey : null;
+      fitPending();
+    });
+    const stopRect = reaction(
+      () => [appHost.mainCanvas.view.state.clientRect.width, appHost.mainCanvas.view.state.clientRect.height],
+      fitPending,
+    );
+    return () => {
+      stopDocument();
+      stopRect();
+    };
+  }, [appHost]);
   const locale = appHost.state.settings.locale;
   useEffect(() => {
     document.documentElement.lang = locale === "zh-CN" ? "zh-CN" : "en";

@@ -36,6 +36,7 @@ import { recentPlacementDevices } from "@/app/recent-placement-devices";
 import { useEditorDocumentSnapshot } from "../hooks";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { avoidCanvasToolRail, type CanvasRect } from "@/app/shell/canvas/canvas-tool-rail-bounds";
+import { resolveOverlayBottomLimit } from "@/app/shell/layout/status-bar-bounds";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import styles from "@/app/shell/app-shell.module.scss";
 
@@ -190,11 +191,13 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
     return null;
   }
 
-  const popupStyle = resolvePopupStyle(anchor.x, anchor.y, appHost.mainCanvas.view.state.clientRect);
   const favoriteSlots = Array.from({ length: QUICK_PLACE_FAVORITE_LIMIT }, (_, index) => {
     const id = favorites[index];
     return id !== null && id !== undefined && availableEntityIds.has(id) ? id : null;
   });
+  // 没有任何收藏时收起收藏格，把位置让给设备列表；行尾的星标会填入第一个空位，收藏格随之出现。
+  const showsFavorites = favoriteSlots.some((id) => id !== null);
+  const popupStyle = resolvePopupStyle(anchor.x, anchor.y, appHost.mainCanvas.view.state.clientRect, showsFavorites);
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (appHost.gestureAdapter.handleKeyDown(event.nativeEvent)) {
@@ -352,7 +355,7 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
   }
 
   /** 设备行；isListOption 为 false 时是「最近」分组的快捷行，不参与列表框的键盘导航。 */
-  /** compact：最近使用条里的纯图标按钮，名称只在无障碍标签与提示里。 */
+  /** compact：最近使用条里的图标按钮，名称以单行小字显示在图标下方。 */
   function renderDeviceRow(entry: QuickPlaceDeviceEntry, isListOption: boolean, compact = false) {
     const variant = variantById.get(entry.id);
     const label = `${entry.name}${variant === undefined ? "" : ` · ${t(variant.longNameKey)}`}`;
@@ -403,7 +406,7 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
             draggable={false}
             src={entry.iconSrc}
           />
-          {compact ? null : <span className={cm(styles, "quick-place-device-name")}>{entry.name}</span>}
+          <span className={cm(styles, "quick-place-device-name")}>{entry.name}</span>
           {variant === undefined ? null : (
             <span
               aria-hidden="true"
@@ -437,103 +440,105 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
   return (
     <div
       aria-label={t("workbench.quickPlace.title")}
-      className={cm(styles, "quick-place-popup panel-surface")}
+      className={cm(styles, "quick-place-popup panel-surface", !showsFavorites && "is-favorites-collapsed")}
       onKeyDownCapture={handleKeyDown}
       onKeyUpCapture={handleKeyUp}
       ref={rootRef}
       role="dialog"
       style={popupStyle}
     >
-      <section
-        aria-label={t("workbench.quickPlace.favoritesLabel")}
-        className={cm(styles, "quick-place-favorites")}
-        ref={favoritesRef}
-      >
-        {favoriteSlots.map((deviceId, index) => {
-          const entry = deviceId === null ? null : entryById.get(deviceId) ?? null;
-          const variant = entry === null ? undefined : variantById.get(entry.id);
-          const shortcut = QUICK_PLACE_SLOT_SHORTCUTS[index];
-          const label = entry === null
-            ? `${t("workbench.quickPlace.emptyFavorite")} ${shortcut}`
-            : `${shortcut} ${entry.name}${variant === undefined ? "" : ` · ${t(variant.longNameKey)}`}`;
+      {showsFavorites ? (
+        <section
+          aria-label={t("workbench.quickPlace.favoritesLabel")}
+          className={cm(styles, "quick-place-favorites")}
+          ref={favoritesRef}
+        >
+          {favoriteSlots.map((deviceId, index) => {
+            const entry = deviceId === null ? null : entryById.get(deviceId) ?? null;
+            const variant = entry === null ? undefined : variantById.get(entry.id);
+            const shortcut = QUICK_PLACE_SLOT_SHORTCUTS[index];
+            const label = entry === null
+              ? `${t("workbench.quickPlace.emptyFavorite")} ${shortcut}`
+              : `${shortcut} ${entry.name}${variant === undefined ? "" : ` · ${t(variant.longNameKey)}`}`;
 
-          return (
-            <button
-              aria-label={label}
-              className={cm(
-                styles,
-                "quick-place-favorite-slot",
-                entry === null && "is-empty",
-                draggingFavoriteIndex === index && "is-dragging",
-                dropTargetIndex === index && "is-drop-target",
-              )}
-              draggable={entry !== null}
-              key={shortcut}
-              onClick={(event) => {
-                if (entry !== null) {
-                  selectDeviceFromKeyboardClick(entry.id, event);
-                }
-              }}
-              onPointerDown={handleSelectablePointerDown}
-              onPointerUp={(event) => {
-                if (entry !== null) {
-                  selectDeviceFromPointer(entry.id, event);
-                }
-              }}
-              onDragOver={(event) => {
-                event.preventDefault();
-                event.dataTransfer.dropEffect = draggingFavoriteIndex === null ? "copy" : "move";
-                updateDropTargetIndex(index);
-              }}
-              onDragEnter={() => updateDropTargetIndex(index)}
-              onDragLeave={(event) => {
-                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-                  if (dropTargetIndexRef.current === index) {
-                    updateDropTargetIndex(null);
+            return (
+              <button
+                aria-label={label}
+                className={cm(
+                  styles,
+                  "quick-place-favorite-slot",
+                  entry === null && "is-empty",
+                  draggingFavoriteIndex === index && "is-dragging",
+                  dropTargetIndex === index && "is-drop-target",
+                )}
+                draggable={entry !== null}
+                key={shortcut}
+                onClick={(event) => {
+                  if (entry !== null) {
+                    selectDeviceFromKeyboardClick(entry.id, event);
                   }
-                }
-              }}
-              onDragEnd={(event) => {
-                if (entry !== null) {
-                  handleFavoriteDragEnd(event, index);
-                }
-              }}
-              onDragStart={(event) => {
-                if (entry !== null) {
-                  favoriteDropHandledRef.current = false;
-                  setDraggingFavoriteIndex(index);
-                  writeDragPayload(event, {
-                    source: "favorite",
-                    deviceId: entry.id,
-                    index,
-                  });
-                }
-              }}
-              onDrop={(event) => handleFavoriteDrop(event, index)}
-              title={label}
-              type="button"
-            >
-              <span className={cm(styles, "quick-place-favorite-shortcut")}>{shortcut}</span>
-              {entry === null ? null : (
-                <img
-                  alt=""
-                  className={cm(styles, "quick-place-device-icon")}
-                  draggable={false}
-                  src={entry.iconSrc}
-                />
-              )}
-              {variant === undefined ? null : (
-                <span
-                  aria-hidden="true"
-                  className={cm(styles, "quick-place-variant-badge")}
-                  data-entity-variant-name={variant.variantName}
-                  style={resolveQuickPlaceVariantIconStyle(variant.iconPath)}
-                />
-              )}
-            </button>
-          );
-        })}
-      </section>
+                }}
+                onPointerDown={handleSelectablePointerDown}
+                onPointerUp={(event) => {
+                  if (entry !== null) {
+                    selectDeviceFromPointer(entry.id, event);
+                  }
+                }}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = draggingFavoriteIndex === null ? "copy" : "move";
+                  updateDropTargetIndex(index);
+                }}
+                onDragEnter={() => updateDropTargetIndex(index)}
+                onDragLeave={(event) => {
+                  if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                    if (dropTargetIndexRef.current === index) {
+                      updateDropTargetIndex(null);
+                    }
+                  }
+                }}
+                onDragEnd={(event) => {
+                  if (entry !== null) {
+                    handleFavoriteDragEnd(event, index);
+                  }
+                }}
+                onDragStart={(event) => {
+                  if (entry !== null) {
+                    favoriteDropHandledRef.current = false;
+                    setDraggingFavoriteIndex(index);
+                    writeDragPayload(event, {
+                      source: "favorite",
+                      deviceId: entry.id,
+                      index,
+                    });
+                  }
+                }}
+                onDrop={(event) => handleFavoriteDrop(event, index)}
+                title={label}
+                type="button"
+              >
+                <span className={cm(styles, "quick-place-favorite-shortcut")}>{shortcut}</span>
+                {entry === null ? null : (
+                  <img
+                    alt=""
+                    className={cm(styles, "quick-place-device-icon")}
+                    draggable={false}
+                    src={entry.iconSrc}
+                  />
+                )}
+                {variant === undefined ? null : (
+                  <span
+                    aria-hidden="true"
+                    className={cm(styles, "quick-place-variant-badge")}
+                    data-entity-variant-name={variant.variantName}
+                    style={resolveQuickPlaceVariantIconStyle(variant.iconPath)}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </section>
+      ) : null}
 
       <section className={cm(styles, "quick-place-menu")}>
         <header className={cm(styles, "quick-place-menu-header")}>
@@ -643,9 +648,7 @@ function isPointInsideElement(event: DragEvent<HTMLElement>, element: HTMLElemen
   );
 }
 
-const STATUS_BAR_HEIGHT_PX = 28;
-
-function resolvePopupStyle(anchorX: number, anchorY: number, canvas: CanvasRect): CSSProperties {
+function resolvePopupStyle(anchorX: number, anchorY: number, canvas: CanvasRect, showsFavorites: boolean): CSSProperties {
   const viewportMargin = 8;
   const popupPaddingBlock = 20;
   const popupPaddingInline = 20;
@@ -658,18 +661,19 @@ function resolvePopupStyle(anchorX: number, anchorY: number, canvas: CanvasRect)
   const menuMaxWidth = 418;
   const minHeight = popupPaddingBlock + favoriteRows * favoriteMinSlotSize + (favoriteRows - 1) * favoriteGap;
   const maxHeight = popupPaddingBlock + favoriteRows * favoriteMaxSlotSize + (favoriteRows - 1) * favoriteGap;
-  // 底部 28px 状态栏不被弹出层覆盖。
-  const availableHeight = window.innerHeight - STATUS_BAR_HEIGHT_PX;
+  // 底部状态栏不被弹出层覆盖。
+  const availableHeight = resolveOverlayBottomLimit();
   const height = Math.min(maxHeight, Math.max(minHeight, availableHeight - viewportMargin * 2));
   const favoriteSlotSize = (height - popupPaddingBlock - (favoriteRows - 1) * favoriteGap) / favoriteRows;
   const favoriteColumnWidth = favoriteSlotSize * 2 + favoriteGap;
-  const minWidth = popupPaddingInline + favoriteColumnWidth + contentGap + menuMinWidth;
-  const maxWidth = popupPaddingInline + favoriteColumnWidth + contentGap + menuMaxWidth;
+  const favoriteColumnSpan = showsFavorites ? favoriteColumnWidth + contentGap : 0;
+  const minWidth = popupPaddingInline + favoriteColumnSpan + menuMinWidth;
+  const maxWidth = popupPaddingInline + favoriteColumnSpan + menuMaxWidth;
   const width = Math.min(maxWidth, Math.max(minWidth, window.innerWidth - viewportMargin * 2));
   const top = clamp(anchorY - 20, viewportMargin, availableHeight - height - viewportMargin);
   const left = avoidCanvasToolRail({
     canvas,
-    left: anchorX - favoriteColumnWidth - 10,
+    left: anchorX - favoriteColumnSpan,
     width,
     top,
     height,

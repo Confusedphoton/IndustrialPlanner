@@ -1453,6 +1453,7 @@ const UI: Record<string, string> = {
     "recipeTree.pickItem": "选择要钉住的物品",
     "recipeTree.pinLimitReached": "已达到钉住上限",
     "recipeTree.targetRate": "目标产量（每分钟）",
+    "recipeTree.recipeInUse": "使用中",
     "recipeTree.decreaseRate": "降低产量",
     "recipeTree.increaseRate": "提高产量",
     "recipeTree.perMinute": "/分",
@@ -1466,6 +1467,8 @@ const UI: Record<string, string> = {
     "recipeTree.supplied": "外部供给",
     "recipeTree.machines": "设备",
     "recipeTree.inputs": "原料投入",
+    "recipeTree.recipeAuto": "自动",
+    "recipeTree.recipeChip": "配方：{recipe}",
     "workbench.utility.recipeTree": "配方树",
     "workbench.utility.toolbox": "工具箱",
 };
