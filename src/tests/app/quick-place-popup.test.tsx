@@ -482,6 +482,32 @@ describe("QuickPlacePopup", () => {
     expect(firstSlot?.getAttribute("aria-label")).toBe(`1 ${deviceButton?.title}`);
   });
 
+  it("keeps the device list under the pen when the first star reveals the favorite slots", () => {
+    act(() => {
+      root.render(<QuickPlacePopup appHost={appHost} />);
+    });
+
+    const popup = container.querySelector<HTMLElement>('[role="dialog"]');
+    const favoritesSelector = `[aria-label="${appHost.actions.translate("workbench.quickPlace.favoritesLabel")}"]`;
+    // 收藏格在设备列表左侧；右缘不动、只向左变宽时，设备列表与行尾星标留在原位。
+    const popupBox = () => ({
+      left: Number.parseFloat(popup!.style.left),
+      right: Number.parseFloat(popup!.style.left) + Number.parseFloat(popup!.style.width),
+    });
+    const before = popupBox();
+    expect(container.querySelector(favoritesSelector)).toBeNull();
+
+    const starToggle = container.querySelector('[role="option"]')?.parentElement?.querySelector<HTMLButtonElement>("[aria-pressed]");
+    act(() => {
+      starToggle?.click();
+    });
+
+    const after = popupBox();
+    expect(container.querySelector(favoritesSelector)).not.toBeNull();
+    expect(after.right).toBe(before.right);
+    expect(after.left).toBeLessThan(before.left);
+  });
+
   it("lists recently placed devices above the results while the search is empty", () => {
     const [first, second] = Array.from(
       buildQuickPlaceDeviceEntries({

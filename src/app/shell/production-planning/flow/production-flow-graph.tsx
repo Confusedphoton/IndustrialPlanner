@@ -111,6 +111,8 @@ const MIN_SCALE = 0.05;
 const MAX_SCALE = 3.0;
 /** 低于该缩放时文字难以辨认；适配视图改为只适配交叉轴，沿流向平移查看。 */
 const MIN_READABLE_FIT_SCALE = 0.85;
+/** 总览里低于该比例时屏幕尺寸的名称标签会高过层间距、压到下一层卡片，不再显示。 */
+const MIN_OVERVIEW_LABEL_SCALE = 0.2;
 const TAP_SLOP_PX = 6;
 const ORIENTATION_HYSTERESIS = 1.15;
 const FIT_MARGIN = 16;
@@ -685,10 +687,12 @@ export function ProductionFlowGraph({
             width: surfaceSize.width,
             height: surfaceSize.height,
             transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.scale})`,
-          }}
+            "--flow-scale": viewport.scale,
+          } as React.CSSProperties}
         >
           <FlowSurfaceContent
             compact={viewport.scale < MIN_READABLE_FIT_SCALE}
+            overviewLabels={viewport.scale >= MIN_OVERVIEW_LABEL_SCALE}
             graph={graph}
             metrics={metrics}
             onNodePointerDown={handleNodePointerDown}
@@ -705,6 +709,7 @@ export function ProductionFlowGraph({
 /** 节点、连线与标签只随布局变化重绘；平移缩放只改变外层 transform。 */
 const FlowSurfaceContent = memo(function FlowSurfaceContent({
   compact,
+  overviewLabels,
   graph,
   orientation,
   metrics,
@@ -714,6 +719,8 @@ const FlowSurfaceContent = memo(function FlowSurfaceContent({
 }: {
   /** 低于可读比例（总览）时卡片只显示放大的图标与速率，连线标签隐藏；只在越过阈值时重绘。 */
   readonly compact: boolean;
+  /** 总览时在卡片下方显示屏幕尺寸固定的名称标签。 */
+  readonly overviewLabels: boolean;
   readonly graph: SankeyGraph<ProductionFlowNode, ProductionFlowLink>;
   readonly orientation: ProductionFlowOrientation;
   readonly metrics: CardMetrics;
@@ -734,6 +741,7 @@ const FlowSurfaceContent = memo(function FlowSurfaceContent({
           <FlowNode
             compact={compact}
             key={node.id}
+            overviewLabel={compact && overviewLabels}
             metrics={metrics}
             node={node}
             onPointerDown={onNodePointerDown}
@@ -779,12 +787,14 @@ function FlowToolbarButton({
 
 function FlowNode({
   compact,
+  overviewLabel,
   node,
   orientation,
   metrics,
   onPointerDown,
 }: {
   readonly compact: boolean;
+  readonly overviewLabel: boolean;
   readonly node: SankeyNode<ProductionFlowNode>;
   readonly orientation: ProductionFlowOrientation;
   readonly metrics: CardMetrics;
@@ -834,6 +844,7 @@ function FlowNode({
           )}
         </span>
       </div>
+      {overviewLabel ? <span className={styles["production-flow-node-overview-label"]}>{source.title}</span> : null}
     </div>
   );
 }

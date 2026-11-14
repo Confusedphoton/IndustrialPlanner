@@ -111,6 +111,21 @@ describe("resolveDockLayoutBudget with an edge tool rail", () => {
 
     expect(canvasWidth(1024, 68, budget) - 66).toBeGreaterThanOrEqual(MIN_CANVAS_WIDTH_PX);
   });
+
+  it("narrows the recipe dock below its usual minimum once the palette is at its floor in a short window", () => {
+    const budget = resolveDockLayoutBudget({
+      viewportWidth: 1024,
+      leftToolbarWidth: 51,
+      leftDockWidth: 220,
+      rightDockWidth: 0,
+      recipeDockWidth: 440,
+      recipeDockMinWidth: RECIPE_DOCK_MIN_WIDTH,
+      canvasReservedWidth: 114,
+    });
+
+    expect(canvasWidth(1024, 51, budget) - 114).toBeGreaterThanOrEqual(MIN_CANVAS_WIDTH_PX);
+    expect(budget.recipeDockWidth).toBeLessThan(RECIPE_DOCK_MIN_WIDTH);
+  });
 });
 
 describe("resolveStackedRightColumn", () => {

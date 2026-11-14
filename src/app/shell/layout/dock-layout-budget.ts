@@ -3,6 +3,8 @@ const MIN_CANVAS_VIEWPORT_RATIO = 0.3;
 export const MIN_RIGHT_DOCK_WIDTH_PX = 320;
 /** 右侧面板挤占画布时，左侧放置面板最多收窄到这里；磁贴网格按列宽自适应，仍可用。 */
 export const MIN_SQUEEZED_LEFT_DOCK_WIDTH_PX = 220;
+/** 左侧面板收到下限后画布仍不够时，配方树停靠栏最多再收窄到这里（纵向流程图仍能放下卡片）。 */
+export const MIN_SQUEEZED_RECIPE_DOCK_WIDTH_PX = 260;
 
 export interface DockLayoutBudgetInput {
   readonly viewportWidth: number;
@@ -32,7 +34,8 @@ export interface DockLayoutBudget {
 /**
  * 侧栏同时打开时为画布保留最小可用宽度：先把配方树停靠栏收窄到下限，再收窄属性面板；
  * 两者的下限之和仍放不下时，二者上下叠放在同一右栏。右栏取最小宽度后画布仍不够时，左侧放置面板收窄
- * （不低于 MIN_SQUEEZED_LEFT_DOCK_WIDTH_PX）；它是用户主动打开的主要入口，不自动收起。
+ * （不低于 MIN_SQUEEZED_LEFT_DOCK_WIDTH_PX），仍不够时配方树停靠栏再低于其常规下限收窄（不低于 MIN_SQUEEZED_RECIPE_DOCK_WIDTH_PX）。
+ * 左侧面板是用户主动打开的主要入口，不自动收起。
  */
 export function resolveDockLayoutBudget(input: DockLayoutBudgetInput): DockLayoutBudget {
   const minCanvasWidth = Math.max(
@@ -68,7 +71,7 @@ export function resolveDockLayoutBudget(input: DockLayoutBudgetInput): DockLayou
     };
   }
 
-  const recipeDockMaxWidth = Math.max(input.recipeDockMinWidth, sideBudget - input.rightDockWidth);
+  const recipeDockMaxWidth = Math.max(Math.min(input.recipeDockMinWidth, MIN_SQUEEZED_RECIPE_DOCK_WIDTH_PX), sideBudget - input.rightDockWidth);
   const recipeDockWidth = input.recipeDockWidth === 0 ? 0 : Math.min(input.recipeDockWidth, recipeDockMaxWidth);
 
   const rightDockWidth = input.rightDockWidth === 0

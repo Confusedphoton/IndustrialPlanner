@@ -68,6 +68,7 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
   const suppressPointerSelectionRef = useRef(false);
   const [draggingFavoriteIndex, setDraggingFavoriteIndex] = useState<number | null>(null);
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
+  const [viewportRevision, setViewportRevision] = useState(0);
   const deviceListId = useId();
   const t = appHost.actions.translate;
   const runtime = appHost.mainCanvas.state.runtime.quickPlace;
@@ -115,6 +116,12 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
       ] as const;
     }));
   }, [appHost, entries]);
+  // 状态栏位置只在弹出层打开和窗口尺寸变化时读取，避免每次渲染都强制布局。
+  const viewportBounds = useMemo(
+    () => (visible ? measurePopupViewportBounds() : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 每次打开（新的 anchor）与窗口尺寸变化时重新测量。
+    [anchor, viewportRevision, visible],
+  );
   const filteredEntries = useMemo(
     () => filterQuickPlaceDeviceEntries(entries, runtime.searchQuery),
     [entries, runtime.searchQuery],
@@ -154,6 +161,18 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
   }, [runtime, runtime.openSource, visible]);
 
   useEffect(() => {
+    if (!visible) {
+      return;
+    }
+
+    const handleResize = () => setViewportRevision((revision) => revision + 1);
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [visible]);
+
+  useEffect(() => {
     if (activeResultId === null) {
       return;
     }
@@ -187,7 +206,7 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
     };
   }, [appHost, visible]);
 
-  if (!visible || anchor === null) {
+  if (!visible || anchor === null || viewportBounds === null) {
     return null;
   }
 
@@ -197,7 +216,7 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
   });
   // 没有任何收藏时收起收藏格，把位置让给设备列表；行尾的星标会填入第一个空位，收藏格随之出现。
   const showsFavorites = favoriteSlots.some((id) => id !== null);
-  const popupStyle = resolvePopupStyle(anchor.x, anchor.y, appHost.mainCanvas.view.state.clientRect, showsFavorites);
+  const popupStyle = resolvePopupStyle(anchor.x, anchor.y, appHost.mainCanvas.view.state.clientRect, viewportBounds, showsFavorites);
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (appHost.gestureAdapter.handleKeyDown(event.nativeEvent)) {
@@ -648,7 +667,23 @@ function isPointInsideElement(event: DragEvent<HTMLElement>, element: HTMLElemen
   );
 }
 
-function resolvePopupStyle(anchorX: number, anchorY: number, canvas: CanvasRect, showsFavorites: boolean): CSSProperties {
+interface PopupViewportBounds {
+  readonly right: number;
+  /** 底部状态栏不被弹出层覆盖。 */
+  readonly bottom: number;
+}
+
+function measurePopupViewportBounds(): PopupViewportBounds {
+  return { right: window.innerWidth, bottom: resolveOverlayBottomLimit() };
+}
+
+function resolvePopupStyle(
+  anchorX: number,
+  anchorY: number,
+  canvas: CanvasRect,
+  viewport: PopupViewportBounds,
+  showsFavorites: boolean,
+): CSSProperties {
   const viewportMargin = 8;
   const popupPaddingBlock = 20;
   const popupPaddingInline = 20;
@@ -661,33 +696,35 @@ function resolvePopupStyle(anchorX: number, anchorY: number, canvas: CanvasRect,
   const menuMaxWidth = 418;
   const minHeight = popupPaddingBlock + favoriteRows * favoriteMinSlotSize + (favoriteRows - 1) * favoriteGap;
   const maxHeight = popupPaddingBlock + favoriteRows * favoriteMaxSlotSize + (favoriteRows - 1) * favoriteGap;
-  // 底部状态栏不被弹出层覆盖。
-  const availableHeight = resolveOverlayBottomLimit();
-  const height = Math.min(maxHeight, Math.max(minHeight, availableHeight - viewportMargin * 2));
+  const height = Math.min(maxHeight, Math.max(minHeight, viewport.bottom - viewportMargin * 2));
   const favoriteSlotSize = (height - popupPaddingBlock - (favoriteRows - 1) * favoriteGap) / favoriteRows;
   const favoriteColumnWidth = favoriteSlotSize * 2 + favoriteGap;
-  const favoriteColumnSpan = showsFavorites ? favoriteColumnWidth + contentGap : 0;
-  const minWidth = popupPaddingInline + favoriteColumnSpan + menuMinWidth;
-  const maxWidth = popupPaddingInline + favoriteColumnSpan + menuMaxWidth;
-  const width = Math.min(maxWidth, Math.max(minWidth, window.innerWidth - viewportMargin * 2));
-  const top = clamp(anchorY - 20, viewportMargin, availableHeight - height - viewportMargin);
-  const left = avoidCanvasToolRail({
+  const favoriteColumnSpan = favoriteColumnWidth + contentGap;
+  // 始终按带收藏格的完整宽度定位，收起收藏格时只去掉左侧那一段：
+  // 第一次收藏时收藏格向左长出，设备列表与笔下的那一行不移动。
+  const expandedWidth = Math.min(
+    popupPaddingInline + favoriteColumnSpan + menuMaxWidth,
+    Math.max(popupPaddingInline + favoriteColumnSpan + menuMinWidth, viewport.right - viewportMargin * 2),
+  );
+  const top = clamp(anchorY - 20, viewportMargin, viewport.bottom - height - viewportMargin);
+  const expandedLeft = avoidCanvasToolRail({
     canvas,
     left: anchorX - favoriteColumnSpan,
-    width,
+    width: expandedWidth,
     top,
     height,
     minLeft: viewportMargin,
-    maxRight: window.innerWidth - viewportMargin,
+    maxRight: viewport.right - viewportMargin,
   });
+  const collapsedSpan = showsFavorites ? 0 : favoriteColumnSpan;
 
   return {
     "--quick-place-favorite-column-width": `${favoriteColumnWidth}px`,
     "--quick-place-favorite-slot-size": `${favoriteSlotSize}px`,
     height,
-    left,
+    left: expandedLeft + collapsedSpan,
     top,
-    width,
+    width: expandedWidth - collapsedSpan,
   } as CSSProperties;
 }
 

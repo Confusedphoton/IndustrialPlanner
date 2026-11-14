@@ -921,11 +921,17 @@ describe("WorkbenchApp", () => {
 
     expect(handle).not.toBeNull();
     expect(workbench).not.toBeNull();
+    // jsdom 未实现指针捕获。
+    handle!.setPointerCapture = vi.fn();
+    const drag = (fromX: number, toX: number) => {
+      const pointer = { pointerId: 1, pointerType: "pen", clientY: 200 };
+      dispatchPointerEvent(handle!, "pointerdown", { ...pointer, clientX: fromX });
+      dispatchPointerEvent(handle!, "pointermove", { ...pointer, clientX: toX });
+      dispatchPointerEvent(handle!, "pointerup", { ...pointer, clientX: toX });
+    };
 
     act(() => {
-      handle?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, clientX: DEFAULT_LEFT_DOCK_WIDTH - 50 }));
-      window.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: 420 }));
-      window.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, clientX: 470 }));
+      drag(DEFAULT_LEFT_DOCK_WIDTH - 50, 420);
     });
 
     expect(appHost.state.workbench.leftDockWidth).toBe(470);
@@ -938,9 +944,7 @@ describe("WorkbenchApp", () => {
     expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBeNull();
 
     act(() => {
-      handle?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, clientX: 470 }));
-      window.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: 900 }));
-      window.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, clientX: 900 }));
+      drag(470, 900);
     });
 
     expect(appHost.state.workbench.leftDockWidth).toBe(600);

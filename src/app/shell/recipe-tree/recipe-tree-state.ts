@@ -107,8 +107,9 @@ export class RecipeTreeOverlayState {
     this.stackRatio = Math.min(RECIPE_TREE_STACK_MAX_RATIO, Math.max(RECIPE_TREE_STACK_MIN_RATIO, ratio));
   }
 
+  /** 由工作台布局给出；矮窄窗口里可能低于 RECIPE_TREE_DOCK_MIN_WIDTH，此时拖动条没有可调范围。 */
   public setDockWidthLimit(limit: number): void {
-    this.dockWidthLimit = Math.max(RECIPE_TREE_DOCK_MIN_WIDTH, Math.round(limit));
+    this.dockWidthLimit = Math.round(limit);
   }
 
   public toggleDocked(): void {

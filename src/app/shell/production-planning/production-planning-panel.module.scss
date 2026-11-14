@@ -1839,9 +1839,14 @@
 }
 
 // 总览缩放下的简化卡片：去掉小字，只留放大的物品图标与不带单位的速率；字号按卡片宽度取值，不会溢出到相邻卡片。
+// 总览卡片不裁切：名称标签伸到卡片下方的层间距里。
 .production-flow-nodes.is-compact .production-flow-node {
   grid-template-columns: 44px minmax(0, 1fr);
   gap: 8px;
+  overflow: visible;
+}
+
+.production-flow-nodes.is-compact .production-flow-node-text {
   overflow: hidden;
 }
 
@@ -1850,20 +1855,28 @@
   height: 44px;
 }
 
-// 名称保留一行放在速率下方，总览里也能认出是哪种物品。
-.production-flow-nodes.is-compact .production-flow-node-text {
-  display: flex;
-  flex-direction: column-reverse;
-  gap: 2px;
+// 总览里卡片上只留图标和速率，名称移到卡片下方的标签；两者都按 --flow-scale 反向缩放，屏幕上约 11px。
+.production-flow-nodes.is-compact .production-flow-node strong {
+  display: none;
 }
 
-.production-flow-nodes.is-compact .production-flow-node strong {
-  display: block;
+.production-flow-node-overview-label {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 50%;
+  max-width: 100%;
+  padding: 0 calc(4px / var(--flow-scale, 1));
   overflow: hidden;
-  font-size: 1rem;
+  border-radius: calc(4px / var(--flow-scale, 1));
+  background: var(--surface-2);
+  color: var(--text-0);
+  font-size: calc(11px / var(--flow-scale, 1));
+  font-weight: 600;
+  line-height: 1.3;
   text-overflow: ellipsis;
+  transform: translateX(-50%);
   white-space: nowrap;
-  -webkit-line-clamp: unset;
+  pointer-events: none;
 }
 
 .production-flow-nodes.is-compact .production-flow-node-machine,
@@ -1874,7 +1887,7 @@
 .production-flow-nodes.is-compact .production-flow-node-rate {
   overflow: hidden;
   margin-left: 0;
-  font-size: 1.6rem;
+  font-size: min(calc(12px / var(--flow-scale, 1)), 2.2rem);
   line-height: 1;
   text-overflow: clip;
   white-space: nowrap;

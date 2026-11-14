@@ -54,22 +54,25 @@ export function resolveFlowNodeActionTarget(node: ProductionFlowNode, anchor: DO
 }
 
 /**
- * 按当前流程图重新找回菜单对应的卡片：优先同一节点 id；节点 id 随配方切换而变化时，
- * 只有该物品恰好对应一个配方节点才改写，避免把动作换到另一台设备或外部供给上。
- */
-/**
- * 配方选择按物品记录：同一物品在图中只有一张生产卡片时，改配方才作用于被点的卡片；
- * 有多张卡片（不同设备并行、副产物）时改选可能落在另一张卡片上或毫无效果，不提供配方切换。
+ * 配方选择按物品记录，只在它能改变被点的卡片时提供：该物品在图中只有这一张卡片（不含外部供给等其他来源），
+ * 且这张卡片是按需求生产该物品的普通节点。副产物、外部供给或多台设备并行时，改选落不到这张卡片上。
  */
 export function canChooseRecipeForActionTarget(
   target: RecipeActionTarget,
   nodes: readonly ProductionFlowNode[],
 ): boolean {
-  return target.itemId !== null && nodes.filter((candidate) => (
-    candidate.itemId === target.itemId && candidate.recipeNode !== undefined && candidate.tone !== "source"
-  )).length <= 1;
+  if (target.itemId === null) {
+    return false;
+  }
+  const itemNodes = nodes.filter((candidate) => candidate.itemId === target.itemId);
+  const [onlyNode] = itemNodes;
+  return itemNodes.length === 1 && onlyNode !== undefined && onlyNode.tone === "normal" && onlyNode.recipeNode !== undefined;
 }
 
+/**
+ * 按当前流程图重新找回菜单对应的卡片：优先同一节点 id；节点 id 随配方切换而变化时，
+ * 只有该物品恰好对应一个配方节点才改写，避免把动作换到另一台设备或外部供给上。
+ */
 export function resolveLiveFlowNodeActionTarget(
   target: RecipeActionTarget,
   nodes: readonly ProductionFlowNode[],
@@ -159,6 +162,8 @@ export function RecipeActionMenu({
         : next;
     });
     place();
+    // 打开时把“使用中”的配方滚进可见区，从配方芯片打开时用户要看的就是它。
+    menu.querySelector("[data-recipe-in-use]")?.scrollIntoView?.({ block: "nearest" });
     if (typeof ResizeObserver === "undefined") {
       return;
     }
@@ -180,7 +185,7 @@ export function RecipeActionMenu({
         : { left: placement.left, top: placement.top, maxHeight: placement.maxHeight }}
     >
       <div className={cm(styles, "recipe-action-menu-content")}>
-        {/* 标题、明细和操作项固定在顶部：在下方长配方列表里滚动并改选后，“放置”等操作仍在笔下。 */}
+        {/* 标题、明细和“放置”固定在顶部：在下方长配方列表里滚动并改选后，主操作仍在笔下；次要操作随列表滚动。 */}
         <div className={cm(styles, "recipe-action-menu-head")}>
           {itemName !== null ? (
             <div className={cm(styles, "recipe-action-menu-title")}>
@@ -189,90 +194,90 @@ export function RecipeActionMenu({
             </div>
           ) : null}
           {target.details === undefined || target.details.length === 0 ? null : (
-            <div className={cm(styles, "recipe-action-menu-details")}>
-              {target.details.map((line) => <span key={line}>{line}</span>)}
-            </div>
+            <div className={cm(styles, "recipe-action-menu-details")}>{target.details.join(" · ")}</div>
           )}
           {recipe !== undefined && machineName !== null ? (
-            <>
-              <button
-                className={cm(styles, "recipe-action-menu-item")}
-                onClick={() => run(() => startPlacementWithRecipe(appHost, recipe))}
-                role="menuitem"
-                type="button"
-              >
-                <LucideHammer aria-hidden />
-                <span>{t("recipeTree.action.place").replace("{machine}", machineName)}</span>
-              </button>
-              <button
-                className={cm(styles, "recipe-action-menu-item")}
-                onClick={() => run(() => selectFacilitiesForRecipe(appHost, recipe))}
-                role="menuitem"
-                type="button"
-              >
-                <LucideMousePointerClick aria-hidden />
-                <span>{t("recipeTree.action.selectFacilities").replace("{machine}", machineName)}</span>
-              </button>
-              {/* 只在有可应用的选中设备时出现，不显示“对 0 个选中设备……”这类无效项。 */}
-              {selectedMachines === 0 ? null : (
-                <button
-                  className={cm(styles, "recipe-action-menu-item")}
-                  onClick={() => run(() => applyRecipeToSelection(appHost, recipe))}
-                  role="menuitem"
-                  type="button"
-                >
-                  <LucideWand aria-hidden />
-                  <span>{t("recipeTree.action.applyRecipe").replace("{count}", String(selectedMachines))}</span>
-                </button>
-              )}
-            </>
-          ) : null}
-          {itemId !== null ? (
-            <>
-              {selectedAdmissions === 0 ? null : (
-                <button
-                  className={cm(styles, "recipe-action-menu-item")}
-                  onClick={() => run(() => applyItemToSelectedAdmissions(appHost, itemId))}
-                  role="menuitem"
-                  type="button"
-                >
-                  <LucideFilter aria-hidden />
-                  <span>{t("recipeTree.action.applyFilter").replace("{count}", String(selectedAdmissions))}</span>
-                </button>
-              )}
-              <button
-                className={cm(styles, "recipe-action-menu-item")}
-                onClick={() => run(() => selectAdmissionsForItem(appHost, itemId))}
-                role="menuitem"
-                type="button"
-              >
-                <LucideMousePointerClick aria-hidden />
-                <span>{t("recipeTree.action.selectAdmissions")}</span>
-              </button>
-              {existingPin === undefined ? (
-                <button
-                  className={cm(styles, "recipe-action-menu-item")}
-                  onClick={() => run(() => recipeTreeOverlayState.addPin(itemId))}
-                  role="menuitem"
-                  type="button"
-                >
-                  <LucidePin aria-hidden />
-                  <span>{t("recipeTree.action.pin")}</span>
-                </button>
-              ) : (
-                <button
-                  className={cm(styles, "recipe-action-menu-item")}
-                  onClick={() => run(() => recipeTreeOverlayState.removePin(existingPin.id))}
-                  role="menuitem"
-                  type="button"
-                >
-                  <LucidePinOff aria-hidden />
-                  <span>{t("recipeTree.unpin")}</span>
-                </button>
-              )}
-            </>
+            <button
+              className={cm(styles, "recipe-action-menu-item is-primary")}
+              onClick={() => run(() => startPlacementWithRecipe(appHost, recipe))}
+              role="menuitem"
+              type="button"
+            >
+              <LucideHammer aria-hidden />
+              <span>{t("recipeTree.action.place").replace("{machine}", machineName)}</span>
+            </button>
           ) : null}
         </div>
+        {recipe !== undefined && machineName !== null ? (
+          <>
+            <button
+              className={cm(styles, "recipe-action-menu-item")}
+              onClick={() => run(() => selectFacilitiesForRecipe(appHost, recipe))}
+              role="menuitem"
+              type="button"
+            >
+              <LucideMousePointerClick aria-hidden />
+              <span>{t("recipeTree.action.selectFacilities").replace("{machine}", machineName)}</span>
+            </button>
+            {/* 只在有可应用的选中设备时出现，不显示“对 0 个选中设备……”这类无效项。 */}
+            {selectedMachines === 0 ? null : (
+              <button
+                className={cm(styles, "recipe-action-menu-item")}
+                onClick={() => run(() => applyRecipeToSelection(appHost, recipe))}
+                role="menuitem"
+                type="button"
+              >
+                <LucideWand aria-hidden />
+                <span>{t("recipeTree.action.applyRecipe").replace("{count}", String(selectedMachines))}</span>
+              </button>
+            )}
+          </>
+        ) : null}
+        {itemId !== null ? (
+          <>
+            {selectedAdmissions === 0 ? null : (
+              <button
+                className={cm(styles, "recipe-action-menu-item")}
+                onClick={() => run(() => applyItemToSelectedAdmissions(appHost, itemId))}
+                role="menuitem"
+                type="button"
+              >
+                <LucideFilter aria-hidden />
+                <span>{t("recipeTree.action.applyFilter").replace("{count}", String(selectedAdmissions))}</span>
+              </button>
+            )}
+            <button
+              className={cm(styles, "recipe-action-menu-item")}
+              onClick={() => run(() => selectAdmissionsForItem(appHost, itemId))}
+              role="menuitem"
+              type="button"
+            >
+              <LucideMousePointerClick aria-hidden />
+              <span>{t("recipeTree.action.selectAdmissions")}</span>
+            </button>
+            {existingPin === undefined ? (
+              <button
+                className={cm(styles, "recipe-action-menu-item")}
+                onClick={() => run(() => recipeTreeOverlayState.addPin(itemId))}
+                role="menuitem"
+                type="button"
+              >
+                <LucidePin aria-hidden />
+                <span>{t("recipeTree.action.pin")}</span>
+              </button>
+            ) : (
+              <button
+                className={cm(styles, "recipe-action-menu-item")}
+                onClick={() => run(() => recipeTreeOverlayState.removePin(existingPin.id))}
+                role="menuitem"
+                type="button"
+              >
+                <LucidePinOff aria-hidden />
+                <span>{t("recipeTree.unpin")}</span>
+              </button>
+            )}
+          </>
+        ) : null}
         {editor}
       </div>
     </div>
@@ -289,8 +294,8 @@ interface MenuPlacement {
 }
 
 /**
- * 依次尝试卡片下方、上方、右侧、左侧，选第一处放得下整张菜单的位置，尽量不盖住被点的卡片；
- * 都放不下时贴着可用区域底部，菜单内部滚动。可用区域的下边界是状态栏顶端。
+ * 依次尝试卡片下方、上方（整张菜单放得下时），再试右侧、左侧（高度按可用区域截断、内部滚动），
+ * 尽量不盖住被点的卡片；都不行时贴着可用区域底部。可用区域的下边界是状态栏顶端。
  */
 export function resolveMenuPlacement(
   anchor: DOMRect,
@@ -301,7 +306,6 @@ export function resolveMenuPlacement(
   const viewportWidth = window.innerWidth;
   const bottomLimit = bottomEdge - MENU_VIEWPORT_MARGIN_PX;
   const maxHeight = bottomLimit - MENU_VIEWPORT_MARGIN_PX;
-  const fitsVertically = height <= maxHeight;
   const clampLeft = (left: number) => Math.max(MENU_VIEWPORT_MARGIN_PX, Math.min(left, viewportWidth - width - MENU_VIEWPORT_MARGIN_PX));
   const clampTop = (top: number) => Math.max(MENU_VIEWPORT_MARGIN_PX, Math.min(top, bottomLimit - Math.min(height, maxHeight)));
   const below = anchor.bottom + MENU_ANCHOR_GAP_PX;
@@ -313,11 +317,11 @@ export function resolveMenuPlacement(
     return { left: clampLeft(anchor.left), top: above, maxHeight };
   }
   const right = anchor.right + MENU_ANCHOR_GAP_PX;
-  if (fitsVertically && right + width <= viewportWidth - MENU_VIEWPORT_MARGIN_PX) {
+  if (right + width <= viewportWidth - MENU_VIEWPORT_MARGIN_PX) {
     return { left: right, top: clampTop(anchor.top), maxHeight };
   }
   const left = anchor.left - MENU_ANCHOR_GAP_PX - width;
-  if (fitsVertically && left >= MENU_VIEWPORT_MARGIN_PX) {
+  if (left >= MENU_VIEWPORT_MARGIN_PX) {
     return { left, top: clampTop(anchor.top), maxHeight };
   }
   return { left: clampLeft(anchor.left), top: clampTop(bottomLimit), maxHeight };

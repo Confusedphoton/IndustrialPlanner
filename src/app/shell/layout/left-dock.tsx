@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ComponentType } from "react";
+import { useEffect, useRef, type ComponentType, type PointerEvent as ReactPointerEvent } from "react";
 import { observer } from "mobx-react-lite";
 import { BasePanel } from "@/app/shell/panels/base-panel";
 import { BlueprintPanel } from "@/app/shell/panels/blueprint-panel";
@@ -60,35 +60,48 @@ const LeftDockView = observer(function LeftDockView({
     };
   }, []);
 
-  const handleResizeStart = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (isTouchLayout) {
+  const handleResizeStart = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (isTouchLayout || event.button !== 0) {
       return;
     }
 
     event.preventDefault();
 
+    const target = event.currentTarget;
+    const pointerId = event.pointerId;
     const startX = event.clientX;
     const startWidth = appHost.state.workbench.leftDockWidth;
 
     resizeCleanupRef.current?.();
 
-    const handlePointerMove = (moveEvent: MouseEvent) => {
-      const deltaX = moveEvent.clientX - startX;
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      if (moveEvent.pointerId !== pointerId) {
+        return;
+      }
 
-      appHost.internalActions.setLeftDockWidth(clampLeftDockWidth(startWidth + deltaX));
+      appHost.internalActions.setLeftDockWidth(clampLeftDockWidth(startWidth + moveEvent.clientX - startX));
     };
 
     const stopResize = () => {
-      window.removeEventListener("mousemove", handlePointerMove);
-      window.removeEventListener("mouseup", stopResize);
+      target.removeEventListener("pointermove", handlePointerMove);
+      target.removeEventListener("pointerup", handlePointerEnd);
+      target.removeEventListener("pointercancel", handlePointerEnd);
       document.body.classList.remove("is-resizing-left-dock");
       resizeCleanupRef.current = null;
     };
 
+    const handlePointerEnd = (endEvent: PointerEvent) => {
+      if (endEvent.pointerId === pointerId) {
+        stopResize();
+      }
+    };
+
     resizeCleanupRef.current = stopResize;
+    target.setPointerCapture(pointerId);
     document.body.classList.add("is-resizing-left-dock");
-    window.addEventListener("mousemove", handlePointerMove);
-    window.addEventListener("mouseup", stopResize);
+    target.addEventListener("pointermove", handlePointerMove);
+    target.addEventListener("pointerup", handlePointerEnd);
+    target.addEventListener("pointercancel", handlePointerEnd);
   };
 
   return (
@@ -122,7 +135,7 @@ const LeftDockView = observer(function LeftDockView({
           </div>
         </section>
       </aside>
-      {isTouchLayout ? null : <div className={cm(styles, "dock-resize-handle")} onMouseDown={handleResizeStart} />}
+      {isTouchLayout ? null : <div aria-hidden className={cm(styles, "dock-resize-handle")} onPointerDown={handleResizeStart} />}
     </div>
   );
 });

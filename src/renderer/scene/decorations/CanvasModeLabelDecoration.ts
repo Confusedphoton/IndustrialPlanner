@@ -1,6 +1,5 @@
 import type { TextStyleOptions } from "pixi.js";
 import { Text } from "pixi.js";
-import type { AppTheme } from "@/domain/app/types/theme";
 import type { ScenePresentation } from "@/domain/document/scene-view-input";
 import { lookupText, type UiKey } from "@/shared/i18n";
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
@@ -33,7 +32,7 @@ export function createCanvasModeLabelDecoration(
 ): DecorationLayer {
   const modeLabel = new Text({ text: "", style: MODE_LABEL_TEXT_STYLE });
   modeLabel.alpha = MODE_LABEL_ALPHA;
-  let appliedTheme: AppTheme | null = null;
+  let appliedColors: { background: number; fill: number } | null = null;
 
   return {
     container: modeLabel,
@@ -51,13 +50,15 @@ export function createCanvasModeLabelDecoration(
       if (modeLabel.text !== text) {
         modeLabel.text = text;
       }
-      if (appliedTheme !== ctx.theme) {
-        appliedTheme = ctx.theme;
-        const background = resolveAppThemeColorNumber(ctx.theme, "in-canvas-bg");
-        modeLabel.style.fill = resolveHigherContrastColor(background, [
-          resolveAppThemeColorNumber(ctx.theme, "text-0"),
-          resolveAppThemeColorNumber(ctx.theme, "shell-bg"),
-        ]);
+      // 蓝图/草地样式每帧都会生成新的主题对象，按解析出的颜色比较，只在颜色真正变化时改样式，避免每帧重绘文字。
+      const background = resolveAppThemeColorNumber(ctx.theme, "in-canvas-bg");
+      const fill = resolveHigherContrastColor(background, [
+        resolveAppThemeColorNumber(ctx.theme, "text-0"),
+        resolveAppThemeColorNumber(ctx.theme, "shell-bg"),
+      ]);
+      if (appliedColors?.background !== background || appliedColors.fill !== fill) {
+        appliedColors = { background, fill };
+        modeLabel.style.fill = fill;
         modeLabel.style.stroke = { ...MODE_LABEL_TEXT_STYLE.stroke, color: background };
       }
       modeLabel.visible = true;

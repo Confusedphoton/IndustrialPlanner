@@ -67,6 +67,16 @@ describe("resolveMenuPlacement", () => {
     expect(overlapsHorizontally).toBe(false);
   });
 
+  it("opens a menu that has to scroll beside the card rather than over it", () => {
+    vi.stubGlobal("innerWidth", 1440);
+    vi.stubGlobal("innerHeight", 420);
+    const anchor = anchorAt(180, 54, 1229);
+
+    const placement = resolveMenuPlacement(anchor, 280, 820, 392);
+
+    expect(placement.left < anchor.right && placement.left + 280 > anchor.left).toBe(false);
+  });
+
   it("limits the menu height to the space above the status bar so it scrolls instead of clipping", () => {
     vi.stubGlobal("innerWidth", 1180);
     vi.stubGlobal("innerHeight", 300);
@@ -106,6 +116,15 @@ describe("resolveLiveFlowNodeActionTarget", () => {
 
     expect(canChooseRecipeForActionTarget(resolveFlowNodeActionTarget(reactor, anchorAt(100)), nodes)).toBe(false);
     expect(canChooseRecipeForActionTarget(resolveFlowNodeActionTarget(carbon, anchorAt(100)), nodes)).toBe(true);
+  });
+
+  it("offers no recipe choice on a byproduct card or an item that also has an external supply card", () => {
+    const byproduct = { ...flowNode("row-sewage", "item_sewage", "recipe_reactor", "×2"), tone: "byproduct" as const };
+    const produced = flowNode("row-water", "item_water", "recipe_pump", "×1");
+    const supply = { ...flowNode("source-water", "item_water", "recipe_supply", ""), tone: "source" as const, recipeNode: undefined };
+
+    expect(canChooseRecipeForActionTarget(resolveFlowNodeActionTarget(byproduct, anchorAt(100)), [byproduct])).toBe(false);
+    expect(canChooseRecipeForActionTarget(resolveFlowNodeActionTarget(produced, anchorAt(100)), [produced, supply])).toBe(false);
   });
 
   it("follows a recipe switch only when the item maps to a single card", () => {

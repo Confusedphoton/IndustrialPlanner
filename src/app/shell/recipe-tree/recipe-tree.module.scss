@@ -267,29 +267,30 @@
   list-style: none;
 }
 
-.recipe-tree-nodes li {
-  --recipe-tree-indent: calc(var(--recipe-tree-depth, 0) * 8px);
+.recipe-tree-nodes {
+  container-type: inline-size;
 }
 
-// 层级用缩进区里的细竖线表示，每层只缩进 8px，窄停靠栏里名称仍能完整显示。
-.recipe-tree-node,
-.recipe-tree-node-detail {
+.recipe-tree-nodes li {
+  --recipe-tree-indent: calc(var(--recipe-tree-depth, 0) * 12px);
+}
+
+// 层级用缩进区里的细竖线表示，每层缩进 12px；叶子行同样保留展开按钮列，子行图标总在父行右侧。
+.recipe-tree-node {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 4px;
+  min-height: 36px;
+  padding: 2px 8px 2px var(--recipe-tree-indent);
   background-image: repeating-linear-gradient(
     to right,
-    transparent 0 3px,
-    var(--line) 3px 4px,
-    transparent 4px 8px
+    transparent 0 5px,
+    var(--line-strong) 5px 6px,
+    transparent 6px 12px
   );
   background-repeat: no-repeat;
   background-size: var(--recipe-tree-indent) 100%;
-}
-
-.recipe-tree-node {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 36px;
-  padding: 2px 8px 2px var(--recipe-tree-indent);
 }
 
 .recipe-tree-node:hover {
@@ -302,8 +303,8 @@
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 30px;
-  height: 30px;
+  width: var(--pen-target);
+  height: var(--pen-target);
   padding: 0;
   border: 0;
   border-radius: 6px;
@@ -397,13 +398,20 @@
   text-align: center;
 }
 
-.recipe-tree-node-detail {
+// 窄容器里配方芯片与副产物另起一行，与物品图标对齐；容器足够宽时芯片并入名称行。
+.recipe-tree-node-detail,
+.recipe-tree-node-extras {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  padding: 0 8px 4px calc(var(--recipe-tree-indent) + 34px);
   color: var(--text-2);
+}
+
+.recipe-tree-node-detail {
+  order: 1;
+  flex-basis: 100%;
+  padding: 0 0 2px calc(var(--pen-target) + 4px);
 }
 
 .recipe-tree-recipe-chip {
@@ -439,8 +447,46 @@
 }
 
 .recipe-tree-recipe-chip svg {
+  flex: none;
   width: 14px;
   height: 14px;
+}
+
+.recipe-tree-recipe-chip img,
+.recipe-tree-recipe-chip small {
+  flex: none;
+}
+
+.recipe-tree-recipe-chip > span {
+  min-width: 0;
+  max-width: 7.5em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recipe-tree-recipe-chip small {
+  color: var(--text-2);
+  font-size: 10px;
+}
+
+@container (min-width: 340px) {
+  .recipe-tree-node-detail {
+    display: contents;
+  }
+
+  // 芯片最多占到「物品图标 + 约四字宽名称 + 右侧数值列」之外的宽度，放不下时先省略芯片上的配方名。
+  .recipe-tree-recipe-chip {
+    flex-shrink: 1;
+    min-width: 0;
+    max-width: calc(100% - var(--pen-target) - 148px);
+  }
+
+  .recipe-tree-node-extras {
+    order: 1;
+    flex-basis: 100%;
+    padding: 0 0 2px calc(var(--pen-target) + 4px);
+  }
 }
 
 .recipe-tree-byproduct {
@@ -562,6 +608,7 @@
   gap: 2px;
   margin: -6px -6px 0;
   padding: 6px 6px 0;
+  border-bottom: 1px solid var(--line);
   background: var(--surface-2);
 }
 
@@ -576,10 +623,7 @@
 }
 
 .recipe-action-menu-details {
-  display: grid;
-  gap: 2px;
-  padding: 4px 6px 6px;
-  border-bottom: 1px solid var(--line);
+  padding: 2px 6px 4px;
   color: var(--text-1);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
@@ -601,6 +645,15 @@
   background: transparent;
   color: var(--text-0);
   text-align: left;
+}
+
+// 固定在顶部的主操作：强调色底，与随列表滚动的次要操作区分。
+.recipe-action-menu-item.is-primary {
+  margin-bottom: 4px;
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-weight: 600;
 }
 
 .recipe-action-menu-item:hover:not(:disabled) {
@@ -887,6 +940,10 @@ button.recipe-tree-chip:hover {
   background: var(--accent-soft);
   color: var(--accent-strong);
   font-weight: 650;
+}
+
+.recipe-action-menu-recipe.is-static {
+  cursor: default;
 }
 
 // 选中态用左侧强调条加描边，与悬停的浅色底区分开。

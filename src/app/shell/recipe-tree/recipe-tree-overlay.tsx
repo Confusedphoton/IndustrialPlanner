@@ -47,10 +47,12 @@ import {
 import type { ProductionPlanningCandidate } from "@/app/shell/production-planning/production-planning-candidate";
 import { resolveEffectiveActivityIds } from "@/shared/registry/activity-availability";
 import { sortRecipesByDefaultPriority } from "@/shared/registry/recipe-visibility";
+import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
 import {
+  RECIPE_TREE_DOCK_MIN_WIDTH,
   RECIPE_TREE_MIN_HEIGHT,
   RECIPE_TREE_MIN_WIDTH,
   hookRecipeTreeOverlayPersistence,
@@ -84,7 +86,6 @@ const RECIPE_TREE_INFINITE_ITEM_IDS: ReadonlySet<string> = new Set(["item_liquid
 const SEARCH_RESULT_LIMIT = 8;
 /** 树形视图缩进参考线的最大层数；更深的层级不再缩进，窄停靠栏里名称仍有空间。 */
 const RECIPE_TREE_GUIDE_DEPTH_LIMIT = 6;
-const RECIPE_TREE_CHIP_INPUT_LIMIT = 3;
 const VIEWPORT_MARGIN_PX = 8;
 const TOP_BAR_CLEARANCE_PX = 56;
 /** 底部状态栏高度；浮层不压到状态栏上。 */
@@ -294,7 +295,8 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
         height: minimized ? undefined : rect.height,
       }}
     >
-      {docked ? (
+      {/* 布局给停靠栏留的最大宽度不超过其下限时拖动没有效果，不显示拖动条。 */}
+      {docked && state.dockWidthLimit > RECIPE_TREE_DOCK_MIN_WIDTH ? (
         <div
           aria-hidden
           className={cm(styles, "recipe-tree-dock-resize")}
@@ -683,6 +685,8 @@ const RecipeTreeNode = observer(function RecipeTreeNode({
     .filter((candidate) => candidate.sourceType === "system-recipe");
   const byproducts = recipeNode?.outputs.filter((output) => output.itemId !== node.itemId && output.perMinute > 0) ?? [];
   const externalPerMinute = node.supply.manual + node.supply.infinite + node.supply.surplus + node.supply.cycle;
+  const hasRecipeChoice = candidates.length > 1;
+  const hasExtras = byproducts.length > 0 || externalPerMinute > 0.0001;
   const openNodeActionMenu = (anchor: DOMRect) => openActionMenu({
     itemId: node.itemId,
     recipeId: recipeNode?.recipeId ?? null,
@@ -717,6 +721,35 @@ const RecipeTreeNode = observer(function RecipeTreeNode({
         <img alt="" className={cm(styles, "recipe-tree-item-icon")} src={resolveProductionPlanningItemIconSrc(node.itemId, index)} />
         <span className={cm(styles, "recipe-tree-node-name")} title={itemName}>{itemName}</span>
         {isUpkeep ? <span className={cm(styles, "recipe-tree-tag")}>{t("recipeTree.upkeep")}</span> : null}
+        {recipeNode !== null && (hasRecipeChoice || hasExtras) ? (
+          <span className={cm(styles, "recipe-tree-node-detail")}>
+            {hasRecipeChoice ? (
+              <RecipeTreeRecipeChip
+                activeRecipeId={recipeNode.recipeId}
+                candidates={candidates}
+                chosen={pin.recipeChoices[node.itemId] !== undefined}
+                index={index}
+                onOpen={openNodeActionMenu}
+                t={t}
+              />
+            ) : null}
+            {hasExtras ? (
+              <span className={cm(styles, "recipe-tree-node-extras")}>
+                {byproducts.map((output) => (
+                  <span className={cm(styles, "recipe-tree-byproduct")} key={output.id}>
+                    +<img alt="" src={resolveProductionPlanningItemIconSrc(output.itemId, index)} />
+                    {formatProductionFlow(output.perMinute)}
+                  </span>
+                ))}
+                {externalPerMinute > 0.0001 ? (
+                  <span className={cm(styles, "recipe-tree-tag")}>
+                    {t("recipeTree.supplied")} {formatProductionFlow(externalPerMinute)}
+                  </span>
+                ) : null}
+              </span>
+            ) : null}
+          </span>
+        ) : null}
         <span className={cm(styles, "recipe-tree-node-metrics")}>
           <span className={cm(styles, "recipe-tree-node-rate")}>
             {formatProductionFlow(node.demandPerMinute)}
@@ -737,31 +770,6 @@ const RecipeTreeNode = observer(function RecipeTreeNode({
           ) : null}
         </span>
       </div>
-      {recipeNode !== null && (candidates.length > 1 || byproducts.length > 0 || externalPerMinute > 0.0001) ? (
-        <div className={cm(styles, "recipe-tree-node-detail")}>
-          {candidates.length > 1 ? (
-            <RecipeTreeRecipeChip
-              activeRecipeId={recipeNode.recipeId}
-              candidates={candidates}
-              chosen={pin.recipeChoices[node.itemId] !== undefined}
-              index={index}
-              onOpen={openNodeActionMenu}
-              t={t}
-            />
-          ) : null}
-          {byproducts.map((output) => (
-            <span className={cm(styles, "recipe-tree-byproduct")} key={output.id}>
-              +<img alt="" src={resolveProductionPlanningItemIconSrc(output.itemId, index)} />
-              {formatProductionFlow(output.perMinute)}
-            </span>
-          ))}
-          {externalPerMinute > 0.0001 ? (
-            <span className={cm(styles, "recipe-tree-tag")}>
-              {t("recipeTree.supplied")} {formatProductionFlow(externalPerMinute)}
-            </span>
-          ) : null}
-        </div>
-      ) : null}
       {children.length > 0 && !collapsed ? (
         <ul role="group">
           {children.map(({ child, upkeep }, childIndex) => (
@@ -783,8 +791,8 @@ const RecipeTreeNode = observer(function RecipeTreeNode({
 });
 
 /**
- * 有多条备选配方的节点上的配方芯片：显示当前配方的原料图标与「自动」或序号，
- * 点按打开该物品的节点菜单，在菜单里切换配方。
+ * 有多条备选配方的节点上的配方芯片：以文字标出当前配方——各备选所用设备不同时显示设备名，
+ * 否则显示区分各备选的主要原料；未手动指定时附带次要的「自动」标记。点按打开该物品的节点菜单切换配方。
  */
 function RecipeTreeRecipeChip({
   activeRecipeId,
@@ -801,19 +809,8 @@ function RecipeTreeRecipeChip({
   onOpen: (anchor: DOMRect) => void;
   t: Translate;
 }) {
-  const recipeIds = sortRecipesByDefaultPriority(candidates.flatMap((candidate) => {
-    const recipe = candidate.recipeId === null ? undefined : index.recipeById.get(candidate.recipeId);
-    return recipe === undefined ? [] : [recipe];
-  })).map((recipe) => recipe.id);
-  const activeRecipe = activeRecipeId === null ? undefined : index.recipeById.get(activeRecipeId);
   const activeCandidate = candidates.find((candidate) => candidate.recipeId === activeRecipeId);
-  const inputItemIds = activeRecipe?.inputs
-    .map((flow) => flow.itemId)
-    .filter((itemId) => index.itemById.has(itemId))
-    .slice(0, RECIPE_TREE_CHIP_INPUT_LIMIT) ?? [];
-  const label = chosen && activeRecipeId !== null && recipeIds.includes(activeRecipeId)
-    ? `${recipeIds.indexOf(activeRecipeId) + 1}/${recipeIds.length}`
-    : t("recipeTree.recipeAuto");
+  const subject = resolveRecipeChipSubject(activeRecipeId, candidates, index, t);
   const description = t("recipeTree.recipeChip").replace(
     "{recipe}",
     activeCandidate === undefined ? t("productionPlanning.autoRecipe") : resolveProductionPlanningCandidateName(activeCandidate, index, t),
@@ -828,13 +825,46 @@ function RecipeTreeRecipeChip({
       title={description}
       type="button"
     >
-      {inputItemIds.map((itemId) => (
-        <img alt="" key={itemId} src={resolveProductionPlanningItemIconSrc(itemId, index)} />
-      ))}
-      <span>{label}</span>
+      {subject === null ? null : <img alt="" src={subject.iconSrc} />}
+      <span>{subject?.name ?? t("recipeTree.recipeAuto")}</span>
+      {chosen || subject === null ? null : <small>{t("recipeTree.recipeAuto")}</small>}
       <LucideChevronDown aria-hidden />
     </button>
   );
+}
+
+/** 配方芯片上用来区分当前配方的对象：备选配方的设备不同则取设备，否则取其他备选不全都使用的第一种原料。 */
+function resolveRecipeChipSubject(
+  activeRecipeId: string | null,
+  candidates: readonly ProductionPlanningCandidate[],
+  index: ProductionPlanningIndex,
+  t: Translate,
+): { readonly name: string; readonly iconSrc: string } | null {
+  const activeRecipe = activeRecipeId === null ? undefined : index.recipeById.get(activeRecipeId);
+  if (activeRecipe === undefined) {
+    return null;
+  }
+
+  const recipes = candidates.flatMap((candidate) => {
+    const recipe = candidate.recipeId === null ? undefined : index.recipeById.get(candidate.recipeId);
+    return recipe === undefined ? [] : [recipe];
+  });
+  const machine = {
+    name: t(index.entityById.get(activeRecipe.machineId)?.nameKey ?? activeRecipe.machineId),
+    iconSrc: resolveProductionPlanningEntityIconSrc(activeRecipe.machineId, index),
+  };
+  if (new Set(recipes.map((recipe) => recipe.machineId)).size > 1) {
+    return machine;
+  }
+
+  const inputItemIds = activeRecipe.inputs.map((flow) => flow.itemId).filter((itemId) => index.itemById.has(itemId));
+  const alternatives = recipes.filter((recipe) => recipe.id !== activeRecipe.id);
+  const itemId = inputItemIds.find((candidateItemId) => (
+    alternatives.some((recipe) => !recipe.inputs.some((flow) => flow.itemId === candidateItemId))
+  )) ?? inputItemIds[0];
+  return itemId === undefined
+    ? machine
+    : { name: resolveProductionPlanningItemName(itemId, index, t), iconSrc: resolveProductionPlanningItemIconSrc(itemId, index) };
 }
 
 function RecipeTreeTotals({
@@ -1123,11 +1153,14 @@ const RecipeTreeNodeEditor = observer(function RecipeTreeNodeEditor({
     return null;
   }
   const pin = state.pins.find((candidate) => candidate.itemId === itemId);
-  const candidates = canChooseRecipe
-    ? (index.candidatesByOutputItem.get(itemId) ?? []).filter((candidate) => candidate.sourceType === "system-recipe")
-    : [];
+  const itemCandidates = (index.candidatesByOutputItem.get(itemId) ?? [])
+    .filter((candidate) => candidate.sourceType === "system-recipe");
+  const candidates = canChooseRecipe ? itemCandidates : [];
+  // 改选落不到这张卡片上时不给选项，只把它实际使用的配方显示出来。
+  const activeRecipe = activeRecipeId === null ? undefined : index.recipeById.get(activeRecipeId);
+  const readOnlyRecipe = !canChooseRecipe && itemCandidates.length >= 2 ? activeRecipe : undefined;
   const selectedCandidateId = state.pins.map((candidate) => candidate.recipeChoices[itemId]).find((id) => id !== undefined) ?? null;
-  if (pin === undefined && candidates.length < 2) {
+  if (pin === undefined && candidates.length < 2 && readOnlyRecipe === undefined) {
     return null;
   }
   const candidateRecipes = candidates.flatMap((candidate) => {
@@ -1193,11 +1226,6 @@ const RecipeTreeNodeEditor = observer(function RecipeTreeNodeEditor({
           </button>
           {sortRecipesByDefaultPriority(candidateRecipes).map((recipe) => {
             const candidate = candidates.find((entry) => entry.recipeId === recipe.id);
-            const inputs = formatRecipeFlows(recipe.inputs, index, t);
-            const machineName = t(index.entityById.get(recipe.machineId)?.nameKey ?? recipe.machineId);
-            const primary = machinesDiffer || inputs === "" ? machineName : inputs;
-            const details = [machinesDiffer ? inputs : "", outputsDiffer ? `→ ${formatRecipeFlows(recipe.outputs, index, t)}` : ""]
-              .filter((line) => line !== "");
             return (
               <button
                 aria-pressed={candidate !== undefined && candidate.id === selectedCandidateId}
@@ -1206,26 +1234,44 @@ const RecipeTreeNodeEditor = observer(function RecipeTreeNodeEditor({
                 onClick={() => chooseRecipe(candidate?.id ?? null)}
                 type="button"
               >
-                <img alt="" src={resolveProductionPlanningEntityIconSrc(recipe.machineId, index)} />
-                <span className={cm(styles, "recipe-action-menu-recipe-text")}>
-                  <span className={cm(styles, "recipe-action-menu-recipe-machine")}>{primary}</span>
-                  {details.map((line) => (
-                    <span className={cm(styles, "recipe-action-menu-recipe-inputs")} key={line}>{line}</span>
-                  ))}
-                </span>
-                <span className={cm(styles, "recipe-action-menu-recipe-meta")}>
-                  {recipe.id === activeRecipeId ? (
-                    <span className={cm(styles, "recipe-action-menu-recipe-in-use")}>{t("recipeTree.recipeInUse")}</span>
-                  ) : null}
-                  <span>{recipe.durationSeconds}s</span>
-                </span>
+                {renderRecipeRow(recipe, machinesDiffer, outputsDiffer)}
               </button>
             );
           })}
         </div>
       )}
+      {readOnlyRecipe === undefined ? null : (
+        <div aria-label={t("recipeTree.recipe")} className={cm(styles, "recipe-action-menu-recipe is-static")} role="group">
+          {renderRecipeRow(readOnlyRecipe, true, false)}
+        </div>
+      )}
     </div>
   );
+
+  function renderRecipeRow(recipe: RecipeDefinition, showMachine: boolean, showOutputs: boolean) {
+    const inputs = formatRecipeFlows(recipe.inputs, index, t);
+    const machineName = t(index.entityById.get(recipe.machineId)?.nameKey ?? recipe.machineId);
+    const primary = showMachine || inputs === "" ? machineName : inputs;
+    const details = [showMachine ? inputs : "", showOutputs ? `→ ${formatRecipeFlows(recipe.outputs, index, t)}` : ""]
+      .filter((line) => line !== "");
+    return (
+      <>
+        <img alt="" src={resolveProductionPlanningEntityIconSrc(recipe.machineId, index)} />
+        <span className={cm(styles, "recipe-action-menu-recipe-text")}>
+          <span className={cm(styles, "recipe-action-menu-recipe-machine")}>{primary}</span>
+          {details.map((line) => (
+            <span className={cm(styles, "recipe-action-menu-recipe-inputs")} key={line}>{line}</span>
+          ))}
+        </span>
+        <span className={cm(styles, "recipe-action-menu-recipe-meta")}>
+          {recipe.id === activeRecipeId ? (
+            <span className={cm(styles, "recipe-action-menu-recipe-in-use")} data-recipe-in-use="">{t("recipeTree.recipeInUse")}</span>
+          ) : null}
+          <span>{recipe.durationSeconds}s</span>
+        </span>
+      </>
+    );
+  }
 });
 
 /** 配方的原料或产物清单：“名称 ×数量”，数量为 1 时省略。 */
