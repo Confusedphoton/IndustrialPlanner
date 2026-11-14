@@ -1146,7 +1146,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
   const workbenchStyle = {
     ...resolveInCanvasThemeCssVariables(effectiveCanvasTheme),
     "--left-toolbar-width": `${leftToolbarWidth}px`,
-    "--left-dock-width": leftDockOpen ? `${effectiveLeftDockWidth}px` : "0px",
+    "--left-dock-width": `${dockLayoutBudget.leftDockWidth}px`,
     "--right-dock-width": `${dockLayoutBudget.rightDockWidth}px`,
     // 配方树停靠栏占用最右侧一列。
     "--recipe-dock-width": `${dockLayoutBudget.recipeDockWidth}px`,

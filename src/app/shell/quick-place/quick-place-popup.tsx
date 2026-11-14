@@ -352,7 +352,8 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
   }
 
   /** 设备行；isListOption 为 false 时是「最近」分组的快捷行，不参与列表框的键盘导航。 */
-  function renderDeviceRow(entry: QuickPlaceDeviceEntry, isListOption: boolean) {
+  /** compact：最近使用条里的纯图标按钮，名称只在无障碍标签与提示里。 */
+  function renderDeviceRow(entry: QuickPlaceDeviceEntry, isListOption: boolean, compact = false) {
     const variant = variantById.get(entry.id);
     const label = `${entry.name}${variant === undefined ? "" : ` · ${t(variant.longNameKey)}`}`;
     const favoriteIndex = favoriteSlots.indexOf(entry.id);
@@ -402,7 +403,7 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
             draggable={false}
             src={entry.iconSrc}
           />
-          <span className={cm(styles, "quick-place-device-name")}>{entry.name}</span>
+          {compact ? null : <span className={cm(styles, "quick-place-device-name")}>{entry.name}</span>}
           {variant === undefined ? null : (
             <span
               aria-hidden="true"
@@ -412,21 +413,23 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
             />
           )}
         </button>
-        <button
-          aria-label={favoriteToggleLabel}
-          aria-pressed={isFavorite}
-          className={cm(styles, "quick-place-favorite-toggle", isFavorite && "is-favorite")}
-          disabled={!canAddFavorite}
-          onClick={() => {
-            commitFavorites(isFavorite
-              ? removeQuickPlaceFavoriteAtSlot(favorites, favoriteIndex)
-              : placeQuickPlaceFavoriteAtSlot(favorites, entry.id, favoriteSlots.indexOf(null)));
-          }}
-          title={favoriteToggleLabel}
-          type="button"
-        >
-          {isFavorite ? <LucideStarOff aria-hidden="true" /> : <LucideStar aria-hidden="true" />}
-        </button>
+        {compact ? null : (
+          <button
+            aria-label={favoriteToggleLabel}
+            aria-pressed={isFavorite}
+            className={cm(styles, "quick-place-favorite-toggle", isFavorite && "is-favorite")}
+            disabled={!canAddFavorite}
+            onClick={() => {
+              commitFavorites(isFavorite
+                ? removeQuickPlaceFavoriteAtSlot(favorites, favoriteIndex)
+                : placeQuickPlaceFavoriteAtSlot(favorites, entry.id, favoriteSlots.indexOf(null)));
+            }}
+            title={favoriteToggleLabel}
+            type="button"
+          >
+            {isFavorite ? <LucideStarOff aria-hidden="true" /> : <LucideStar aria-hidden="true" />}
+          </button>
+        )}
       </div>
     );
   }
@@ -560,7 +563,9 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
         {recentEntries.length === 0 ? null : (
           <section aria-labelledby={`${deviceListId}-recent`} className={cm(styles, "quick-place-recent")}>
             <h3 className={cm(styles, "quick-place-group-title")} id={`${deviceListId}-recent`}>{t("placement.recent")}</h3>
-            {recentEntries.map((entry) => renderDeviceRow(entry, false))}
+            <div className={cm(styles, "quick-place-recent-strip")}>
+              {recentEntries.map((entry) => renderDeviceRow(entry, false, true))}
+            </div>
           </section>
         )}
         <div className={cm(styles, "quick-place-device-list")} id={deviceListId} role="listbox">

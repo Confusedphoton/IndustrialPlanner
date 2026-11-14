@@ -581,7 +581,7 @@ describe("WorkbenchApp", () => {
       WORKBENCH_STATE_LOCAL_STORAGE_KEY,
       JSON.stringify({
         leftDockOpen: true,
-        rightDockOpen: true,
+        rightDockOpen: false,
         leftDockWidth: 512,
       }),
     );
@@ -1571,7 +1571,7 @@ describe("WorkbenchApp", () => {
 
   it("keeps full desktop left toolbar sizing on touch-enabled desktop devices", async () => {
     setViewport({
-      width: 1234,
+      width: 1600,
       height: 899,
       userAgent:
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0",

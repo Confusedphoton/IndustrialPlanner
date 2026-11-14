@@ -982,6 +982,30 @@ describe("ProductionFlowGraph touch regression", () => {
     expect(surface.style.transform).toBe(userCamera);
   });
 
+  it("keeps a dragged card where the user put it when the display mode changes", () => {
+    render({ nodeDrag: "move" });
+    const canvas = getFlowCanvas(container);
+    const card = canvas.querySelector<HTMLElement>("[data-flow-node-id]")!;
+    const nodeId = card.dataset.flowNodeId!;
+    act(() => {
+      dispatchPointerEvent(card, "pointerdown", { pointerId: 1, pointerType: "pen", clientX: 200, clientY: 200, buttons: 1 });
+    });
+    act(() => {
+      dispatchPointerEvent(card, "pointermove", { pointerId: 1, pointerType: "pen", clientX: 260, clientY: 290, buttons: 1 });
+    });
+    act(() => {
+      dispatchPointerEvent(card, "pointerup", { pointerId: 1, pointerType: "pen", clientX: 260, clientY: 290 });
+    });
+    const findCard = () => Array.from(canvas.querySelectorAll<HTMLElement>("[data-flow-node-id]"))
+      .find((candidate) => candidate.dataset.flowNodeId === nodeId)!;
+    const moved = { left: findCard().style.left, top: findCard().style.top };
+
+    vi.mocked(buildProductionFlowGraph).mockReturnValue(createMockGraphInput());
+    render({ nodeDrag: "move", displayMode: "item" });
+
+    expect({ left: findCard().style.left, top: findCard().style.top }).toEqual(moved);
+  });
+
   // ==================== Test 4: 双指 pinch 进入 pinch 状态 ====================
   it("switches from pan to pinch when a second pointer arrives", () => {
     render();

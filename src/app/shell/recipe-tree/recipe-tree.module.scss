@@ -471,8 +471,6 @@
   z-index: 20;
   overflow-y: auto;
   overscroll-behavior: contain;
-  display: grid;
-  gap: 2px;
   width: 280px;
   padding: 6px;
   border: 1px solid var(--line-strong);
@@ -480,6 +478,11 @@
   background: var(--surface-2);
   box-shadow: 0 10px 28px var(--shadow-floating-control);
   font-size: 13px;
+}
+
+.recipe-action-menu-content {
+  display: grid;
+  gap: 2px;
 }
 
 .recipe-action-menu-title {
@@ -539,6 +542,8 @@
   min-width: 0;
   max-width: none;
   height: auto;
+  // 左缘留出与拖动条同宽的槽，拖动条不压住标题栏和树节点的按钮。
+  padding-left: 12px;
   border-width: 0 0 0 1px;
   border-radius: 0;
   box-shadow: none;
@@ -554,7 +559,7 @@
   top: 0;
   bottom: 0;
   left: 0;
-  width: 14px;
+  width: 12px;
   cursor: ew-resize;
   touch-action: none;
 }
@@ -729,7 +734,7 @@ button.recipe-tree-chip:hover {
   display: grid;
   gap: 6px;
   padding: 6px 4px;
-  border-bottom: 1px solid var(--line);
+  border-top: 1px solid var(--line);
 }
 
 .recipe-action-menu-rate {
@@ -750,7 +755,10 @@ button.recipe-tree-chip:hover {
 }
 
 .recipe-action-menu-recipe {
+  display: flex;
+  align-items: center;
   justify-content: flex-start;
+  gap: 8px;
   min-height: var(--pen-target);
   padding: 4px 10px;
   border: 1px solid var(--line);
@@ -758,6 +766,38 @@ button.recipe-tree-chip:hover {
   background: var(--surface-1);
   color: var(--text-0);
   text-align: left;
+}
+
+.recipe-action-menu-recipe > img {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.recipe-action-menu-recipe-text {
+  display: grid;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.recipe-action-menu-recipe-machine {
+  font-weight: 600;
+}
+
+.recipe-action-menu-recipe-inputs {
+  overflow: hidden;
+  color: var(--text-1);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recipe-action-menu-recipe-duration {
+  flex: 0 0 auto;
+  color: var(--text-2);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
 
 .recipe-action-menu-recipe[aria-pressed="true"] {

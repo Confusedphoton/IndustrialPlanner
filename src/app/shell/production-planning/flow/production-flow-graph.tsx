@@ -296,11 +296,23 @@ export function ProductionFlowGraph({
     pinch: null,
   });
 
+  // 手动拖动过的卡片相对自动布局的位移（布局坐标）。数值或显示方式变化而重建布局时按节点 id 保留，
+  // 换向（层方向与横向互换）、换成节点不同的另一张图或重置布局时清空。
+  const movedNodeOffsetsRef = useRef(new Map<string, { layer: number; cross: number }>());
+  const offsetsLayoutKeyRef = useRef(`${orientation}#${nodeSetKey}`);
+  const initialLayoutRef = useRef(initialLayout);
   useEffect(() => {
-    setGraph(cloneSankeyGraph(initialLayout));
-  }, [initialLayout]);
+    initialLayoutRef.current = initialLayout;
+    const layoutKey = `${orientation}#${nodeSetKey}`;
+    if (offsetsLayoutKeyRef.current !== layoutKey) {
+      offsetsLayoutKeyRef.current = layoutKey;
+      movedNodeOffsetsRef.current.clear();
+    }
+    setGraph(applyMovedNodeOffsets(cloneSankeyGraph(initialLayout), movedNodeOffsetsRef.current));
+  }, [initialLayout, nodeSetKey, orientation]);
 
   const resetNodeLayout = useCallback(() => {
+    movedNodeOffsetsRef.current.clear();
     setGraph(cloneSankeyGraph(initialLayout));
     fit("auto", initialLayout.nodes);
   }, [fit, initialLayout]);
@@ -501,6 +513,10 @@ export function ProductionFlowGraph({
             node.x1 = press.startX1 + layerDelta;
             node.y0 = press.startY0 + crossDelta;
             node.y1 = press.startY1 + crossDelta;
+            const laidOut = initialLayoutRef.current.nodes.find((candidate) => candidate.id === node.id);
+            if (laidOut !== undefined) {
+              movedNodeOffsetsRef.current.set(node.id, { layer: node.x0 - laidOut.x0, cross: node.y0 - laidOut.y0 });
+            }
             return node;
           }),
           links: current.links,
@@ -1159,6 +1175,25 @@ function normalizeViewportState(value: ViewportState | undefined): ViewportState
 
 function normalizeFiniteNumber(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function applyMovedNodeOffsets(
+  graph: SankeyGraph<ProductionFlowNode, ProductionFlowLink>,
+  offsets: ReadonlyMap<string, { layer: number; cross: number }>,
+): SankeyGraph<ProductionFlowNode, ProductionFlowLink> {
+  if (offsets.size === 0) {
+    return graph;
+  }
+  for (const node of graph.nodes) {
+    const offset = offsets.get(node.id);
+    if (offset !== undefined) {
+      node.x0 += offset.layer;
+      node.x1 += offset.layer;
+      node.y0 += offset.cross;
+      node.y1 += offset.cross;
+    }
+  }
+  return updateSankeyLinkBreadths(graph);
 }
 
 function cloneSankeyGraph(

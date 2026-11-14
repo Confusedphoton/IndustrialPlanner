@@ -40,9 +40,10 @@ export function resolveWorldDocumentContentBounds(document: WorldDocument, regis
 }): GridRect | null {
   const entities = [...resolveBaseBuiltinEntities({ baseDefinitions: registry.baseDefinitions, baseId: document.baseId }),
     ...Object.values(document.entities)];
+  const definitions = new Map(registry.entityDefinitions.map(definition => [definition.id, definition]));
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const entity of entities) {
-    const definition = registry.entityDefinitions.find(item => item.id === entity.definitionId);
+    const definition = definitions.get(entity.definitionId);
     if (definition === undefined) continue;
     const rect = resolveEntityGridRect({ entity, definition });
     minX = Math.min(minX, rect.x); minY = Math.min(minY, rect.y);

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   MIN_CANVAS_WIDTH_PX,
   MIN_RIGHT_DOCK_WIDTH_PX,
+  MIN_SQUEEZED_LEFT_DOCK_WIDTH_PX,
   STACK_MIN_INSPECTOR_HEIGHT_PX,
   STACK_MIN_RECIPE_HEIGHT_PX,
   resolveDockLayoutBudget,
@@ -12,8 +13,8 @@ import {
 
 const RECIPE_DOCK_MIN_WIDTH = 300;
 
-function canvasWidth(viewportWidth: number, leftToolbarWidth: number, leftDockWidth: number, budget: ReturnType<typeof resolveDockLayoutBudget>) {
-  return viewportWidth - leftToolbarWidth - leftDockWidth - budget.rightDockWidth - budget.recipeDockWidth;
+function canvasWidth(viewportWidth: number, leftToolbarWidth: number, budget: ReturnType<typeof resolveDockLayoutBudget>) {
+  return viewportWidth - leftToolbarWidth - budget.leftDockWidth - budget.rightDockWidth - budget.recipeDockWidth;
 }
 
 describe("resolveDockLayoutBudget", () => {
@@ -33,8 +34,27 @@ describe("resolveDockLayoutBudget", () => {
       recipeDockMinWidth: RECIPE_DOCK_MIN_WIDTH,
     });
 
-    expect(canvasWidth(viewportWidth, leftToolbarWidth, leftDockWidth, budget)).toBeGreaterThanOrEqual(minCanvas);
+    expect(canvasWidth(viewportWidth, leftToolbarWidth, budget)).toBeGreaterThanOrEqual(minCanvas);
     expect(budget.rightDockWidth).toBeGreaterThanOrEqual(MIN_RIGHT_DOCK_WIDTH_PX);
+  });
+
+  it.each([
+    { label: "the recipe dock", rightDockWidth: 0, recipeDockWidth: 440 },
+    { label: "the inspector", rightDockWidth: 380, recipeDockWidth: 0 },
+    { label: "both right docks", rightDockWidth: 380, recipeDockWidth: 440 },
+  ])("narrows the palette instead of the canvas at 1024 px with $label open", ({ rightDockWidth, recipeDockWidth }) => {
+    const budget = resolveDockLayoutBudget({
+      viewportWidth: 1024,
+      leftToolbarWidth: 68,
+      leftDockWidth: 320,
+      rightDockWidth,
+      recipeDockWidth,
+      recipeDockMinWidth: RECIPE_DOCK_MIN_WIDTH,
+    });
+
+    expect(canvasWidth(1024, 68, budget)).toBeGreaterThanOrEqual(MIN_CANVAS_WIDTH_PX);
+    expect(budget.leftDockWidth).toBeLessThan(320);
+    expect(budget.leftDockWidth).toBeGreaterThanOrEqual(MIN_SQUEEZED_LEFT_DOCK_WIDTH_PX);
   });
 
   it("stacks the inspector and recipe dock only when side by side would squeeze the canvas", () => {
@@ -72,7 +92,8 @@ describe("resolveDockLayoutBudget", () => {
     });
 
     expect(budget.recipeDockWidth).toBe(budget.recipeDockMaxWidth);
-    expect(canvasWidth(1440, 68, 320, budget)).toBe(Math.round(1440 * 0.3));
+    expect(budget.leftDockWidth).toBe(320);
+    expect(canvasWidth(1440, 68, budget)).toBe(Math.round(1440 * 0.3));
   });
 });
 

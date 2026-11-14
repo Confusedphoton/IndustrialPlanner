@@ -28,7 +28,6 @@ import { buildProductionFlowGraph, ProductionFlowGraph } from "@/app/shell/produ
 
 import type { AppHost } from "@/app/host/app-host";
 import { NumberInput } from "@/app/shell/shared/number-input";
-import { RecipeTileGrid } from "@/app/shell/inspector/recipe-tile-grid";
 import { DEFAULT_RIGHT_DOCK_WIDTH } from "@/app/state/state-impl";
 import {
   buildProductionPlanningIndex,
@@ -45,6 +44,7 @@ import {
   type ProductionPlanningSourceConfig,
 } from "@/app/shell/production-planning/production-planning-model";
 import { resolveEffectiveActivityIds } from "@/shared/registry/activity-availability";
+import { sortRecipesByDefaultPriority } from "@/shared/registry/recipe-visibility";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -56,7 +56,12 @@ import {
   type RecipeTreeOverlayRect,
   type RecipeTreePin,
 } from "./recipe-tree-state";
-import { RecipeActionMenu, resolveFlowNodeActionTarget, type RecipeActionTarget } from "./recipe-action-menu";
+import {
+  RecipeActionMenu,
+  resolveFlowNodeActionTarget,
+  resolveLiveFlowNodeActionTarget,
+  type RecipeActionTarget,
+} from "./recipe-action-menu";
 import { resolveStackRatioForBoundary, resolveStackedRightColumn } from "@/app/shell/layout/dock-layout-budget";
 
 /** 节点快捷操作菜单的打开入口（树行与流程图节点共用）。 */
@@ -260,10 +265,15 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
 
   const title = t("recipeTree.title");
   const [actionTarget, setActionTarget] = useState<RecipeActionTarget | null>(null);
-  const combinedPlan = useCombinedRecipeTreePlan(index);
   const closeActionMenu = useCallback(() => setActionTarget(null), []);
   const docked = state.docked;
   const minimized = state.minimized && !docked;
+  const showsGraph = !minimized && state.pins.length > 0 && state.viewMode === "graph";
+  const combinedPlan = useCombinedRecipeTreePlan(index, showsGraph || actionTarget !== null);
+  const liveActionTarget = useMemo(
+    () => actionTarget === null || combinedPlan === null ? actionTarget : resolveLiveActionTarget(actionTarget, combinedPlan, index, t),
+    [actionTarget, combinedPlan, index, t],
+  );
 
   return (
     <section
@@ -381,10 +391,11 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
               <div className={cm(styles, "recipe-tree-body")}>
                 <p className={cm(styles, "recipe-tree-empty")}>{t("recipeTree.empty")}</p>
               </div>
-            ) : state.viewMode === "graph" ? (
+            ) : showsGraph && combinedPlan !== null ? (
               <RecipeTreeGraph
                 appHost={appHost}
                 index={index}
+                plan={combinedPlan}
                 search={<RecipeTreeSearch appHost={appHost} inline index={index} t={t} />}
                 t={t}
               />
@@ -402,14 +413,14 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
               </div>
             )}
           </RecipeActionMenuContext.Provider>
-          {actionTarget === null ? null : (
+          {liveActionTarget === null ? null : (
             <RecipeActionMenu
               appHost={appHost}
-              editor={<RecipeTreeNodeEditor index={index} itemId={actionTarget.itemId} t={t} />}
+              editor={<RecipeTreeNodeEditor index={index} itemId={liveActionTarget.itemId} t={t} />}
               index={index}
               onClose={closeActionMenu}
               t={t}
-              target={resolveLiveActionTarget(actionTarget, combinedPlan, index, t)}
+              target={liveActionTarget}
             />
           )}
           {docked ? null : (
@@ -919,12 +930,19 @@ function clampRectToViewport(rect: RecipeTreeOverlayRect, viewport: ViewportSize
   };
 }
 
-/** 合并全部钉住目标求解，共用的中间产物在流程图中只出现一次；下方显示合计设备与原料。 */
-/** 合并全部钉住目标的产线求解结果；流程图与节点菜单共用，保证菜单显示与操作始终对应当前方案。 */
-function useCombinedRecipeTreePlan(index: ProductionPlanningIndex): ProductionPlanningResult {
+/**
+ * 合并全部钉住目标的产线求解结果，由配方树卡片求解一次，流程图与节点菜单共用，
+ * 保证菜单显示与操作始终对应当前方案。用不到时（树形视图且菜单未打开、卡片最小化）不求解。
+ */
+function useCombinedRecipeTreePlan(index: ProductionPlanningIndex, needed: boolean): ProductionPlanningResult | null {
   const state = recipeTreeOverlayState;
-  const pinsSignature = JSON.stringify(state.pins.map((pin) => [pin.itemId, pin.perMinute, pin.recipeChoices]));
-  return useMemo<ProductionPlanningResult>(() => {
+  const pinsSignature = needed
+    ? JSON.stringify(state.pins.map((pin) => [pin.itemId, pin.perMinute, pin.recipeChoices]))
+    : null;
+  return useMemo<ProductionPlanningResult | null>(() => {
+    if (pinsSignature === null) {
+      return null;
+    }
     const recipeChoices = new Map<string, string>();
     for (const pin of state.pins) {
       for (const [itemId, candidateId] of Object.entries(pin.recipeChoices)) {
@@ -947,7 +965,7 @@ function useCombinedRecipeTreePlan(index: ProductionPlanningIndex): ProductionPl
 }
 
 /**
- * 菜单打开后目标的配方、产量可能被就地编辑；每次渲染都按当前方案重新解析该物品的节点，
+ * 菜单打开后目标的配方、产量可能被就地编辑；方案变化时按当前方案重新解析该物品的节点，
  * 使明细与“按此配方放置”等操作始终对应编辑后的状态。
  */
 function resolveLiveActionTarget(
@@ -959,25 +977,24 @@ function resolveLiveActionTarget(
   if (target.itemId === null) {
     return target;
   }
-  const node = buildProductionFlowGraph(plan, index, t, "item").nodes
-    .find((candidate) => candidate.itemId === target.itemId && candidate.recipeNode !== undefined && candidate.tone !== "source");
-  return node === undefined ? target : resolveFlowNodeActionTarget(node, target.anchor);
+  return resolveLiveFlowNodeActionTarget(target, buildProductionFlowGraph(plan, index, t, "item").nodes);
 }
 
 const RecipeTreeGraph = observer(function RecipeTreeGraph({
   appHost,
   index,
+  plan,
   search,
   t,
 }: {
   appHost: AppHost;
   index: ProductionPlanningIndex;
+  plan: ProductionPlanningResult;
   search: ReactNode;
   t: Translate;
 }) {
   const openActionMenu = useContext(RecipeActionMenuContext);
   const [totalsExpanded, setTotalsExpanded] = useState(false);
-  const plan = useCombinedRecipeTreePlan(index);
 
   return (
     <div className={cm(styles, totalsExpanded ? "recipe-tree-graph-body is-totals-expanded" : "recipe-tree-graph-body")}>
@@ -1033,6 +1050,7 @@ const RecipeTreeNodeEditor = observer(function RecipeTreeNodeEditor({
     const recipe = candidate.recipeId === null ? undefined : index.recipeById.get(candidate.recipeId);
     return recipe === undefined ? [] : [recipe];
   });
+  const machinesDiffer = new Set(candidateRecipes.map((recipe) => recipe.machineId)).size > 1;
   const chooseRecipe = (candidateId: string | null) => {
     for (const candidate of state.pins) {
       state.setRecipeChoice(candidate.id, itemId, candidateId);
@@ -1077,7 +1095,7 @@ const RecipeTreeNodeEditor = observer(function RecipeTreeNodeEditor({
         </div>
       )}
       {candidates.length < 2 ? null : (
-        // 与属性面板相同的配方磁贴：原料 → 产物，同产物多配方时显示“由 X 制取”，一眼能区分。
+        // 备选配方可能只差设备：设备不同时每行先写设备名再列原料；设备都相同时只列原料，设备图标照常显示。
         <div aria-label={t("recipeTree.recipe")} className={cm(styles, "recipe-action-menu-recipes")} role="group">
           <button
             aria-pressed={selectedCandidateId === null}
@@ -1085,17 +1103,36 @@ const RecipeTreeNodeEditor = observer(function RecipeTreeNodeEditor({
             onClick={() => chooseRecipe(null)}
             type="button"
           >
-            {t("productionPlanning.autoRecipe")}
+            <span className={cm(styles, "recipe-action-menu-recipe-machine")}>{t("productionPlanning.autoRecipe")}</span>
           </button>
-          <RecipeTileGrid
-            index={index}
-            onSelect={(recipeId) => chooseRecipe(
-              recipeId === null ? null : candidates.find((candidate) => candidate.recipeId === recipeId)?.id ?? null,
-            )}
-            recipes={candidateRecipes}
-            selectedRecipeId={candidates.find((candidate) => candidate.id === selectedCandidateId)?.recipeId ?? null}
-            t={t}
-          />
+          {sortRecipesByDefaultPriority(candidateRecipes).map((recipe) => {
+            const candidate = candidates.find((entry) => entry.recipeId === recipe.id);
+            const inputNames = recipe.inputs
+              .filter((flow) => index.itemById.has(flow.itemId))
+              .map((flow) => resolveProductionPlanningItemName(flow.itemId, index, t))
+              .join(" + ");
+            const machineName = t(index.entityById.get(recipe.machineId)?.nameKey ?? recipe.machineId);
+            const primary = machinesDiffer || inputNames === "" ? machineName : inputNames;
+            const secondary = machinesDiffer ? inputNames : "";
+            return (
+              <button
+                aria-pressed={candidate !== undefined && candidate.id === selectedCandidateId}
+                className={cm(styles, "recipe-action-menu-recipe")}
+                key={recipe.id}
+                onClick={() => chooseRecipe(candidate?.id ?? null)}
+                type="button"
+              >
+                <img alt="" src={resolveProductionPlanningEntityIconSrc(recipe.machineId, index)} />
+                <span className={cm(styles, "recipe-action-menu-recipe-text")}>
+                  <span className={cm(styles, "recipe-action-menu-recipe-machine")}>{primary}</span>
+                  {secondary === "" ? null : (
+                    <span className={cm(styles, "recipe-action-menu-recipe-inputs")}>{secondary}</span>
+                  )}
+                </span>
+                <span className={cm(styles, "recipe-action-menu-recipe-duration")}>{recipe.durationSeconds}s</span>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
