@@ -1180,6 +1180,8 @@ const UI: Record<string, string> = {
     "productionPlanning.resetLayout": "重置布局",
     "productionPlanning.flowOverview": "总览整条产线",
     "productionPlanning.flowFocusTarget": "聚焦目标产物",
+    "productionPlanning.flowOverviewShort": "总览",
+    "productionPlanning.flowFocusTargetShort": "聚焦",
     "productionPlanning.flowZoomIn": "放大",
     "productionPlanning.flowZoomOut": "缩小",
     "productionPlanning.flowLayoutVertical": "改为自上而下排列",

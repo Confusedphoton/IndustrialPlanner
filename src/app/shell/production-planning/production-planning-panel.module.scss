@@ -1636,6 +1636,45 @@
   height: 18px;
 }
 
+.production-flow-toolbar button.has-text {
+  display: inline-flex;
+  gap: 5px;
+  width: auto;
+  padding: 0 10px 0 8px;
+  border-color: var(--line);
+  background: var(--surface-2);
+}
+
+.production-flow-toolbar-text {
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.production-flow-toolbar-divider {
+  align-self: center;
+  width: 1px;
+  height: 20px;
+  margin: 0 3px;
+  background: var(--line);
+}
+
+// 工具栏窄于约 440px 时（窄停靠栏、并入搜索框时）文字按钮只留图标。
+.production-flow-toolbar {
+  container-type: inline-size;
+}
+
+@container (max-width: 440px) {
+  .production-flow-toolbar-text {
+    display: none;
+  }
+
+  .production-flow-toolbar button.has-text {
+    width: 36px;
+    padding: 0;
+  }
+}
+
 .production-flow-surface {
   position: absolute;
   top: 0;

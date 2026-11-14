@@ -807,6 +807,8 @@ export type UiKey =
   | "productionPlanning.resetLayout"
   | "productionPlanning.flowOverview"
   | "productionPlanning.flowFocusTarget"
+  | "productionPlanning.flowOverviewShort"
+  | "productionPlanning.flowFocusTargetShort"
   | "productionPlanning.flowZoomIn"
   | "productionPlanning.flowZoomOut"
   | "productionPlanning.flowLayoutVertical"

@@ -142,6 +142,7 @@ export function ProductionFlowGraph({
   const initialLayout = useMemo(() => createOrientedLayout(graphInput, metrics), [graphInput, metrics]);
   const [graph, setGraph] = useState(() => cloneSankeyGraph(initialLayout));
   const graphRef = useRef(graph);
+  const hasVisibleFitRef = useRef(false);
   useEffect(() => {
     graphRef.current = graph;
   }, [graph]);
@@ -178,6 +179,9 @@ export function ProductionFlowGraph({
   ) => {
     const element = canvasRef.current;
     if (element === null || layoutNodes.length === 0) return;
+    // 隐藏时（尺寸为 0）适配没有意义，留待显示后再做。
+    if (element.clientWidth === 0 || element.clientHeight === 0) return;
+    hasVisibleFitRef.current = true;
     const rects = layoutNodes.map((node) => resolveCardRect(node, orientation, metrics));
     // 溢出时锚定规划目标；没有标记目标时退回到所有终端节点（副产物也是终端，但不是用户要看的产物）。
     const targetNodes = layoutNodes.filter((node) => node.source.isTarget === true);
@@ -236,7 +240,14 @@ export function ProductionFlowGraph({
         return current;
       });
     };
+    // 图被暂时隐藏（尺寸为 0，例如展开合计时）不适配，重新显示时也保留原视口；只有真实的尺寸变化才重新适配。
+    let hidden = element.clientWidth === 0 || element.clientHeight === 0;
     const observer = new ResizeObserver(() => {
+      const nowHidden = element.clientWidth === 0 || element.clientHeight === 0;
+      const revealed = hidden && !nowHidden;
+      hidden = nowHidden;
+      if (nowHidden) return;
+      if (revealed && hasVisibleFitRef.current) return;
       resolveAutoOrientation();
       if (fitToView) fitRef.current();
     });
@@ -477,6 +488,19 @@ export function ProductionFlowGraph({
     }
   }, [graph.nodes, onNodeActivate]);
 
+  // 总览（低于可读比例）时，无论点在卡片还是空白处都先以该点为中心放大到可读比例；
+  // 卡片缩到只有几像素时，点中与否不应决定完全不同的结果。可读比例下点卡片才打开操作。
+  const handleTap = useCallback((event: React.PointerEvent<HTMLDivElement>, nodeId: string | null) => {
+    if (viewportRef.current.scale < MIN_READABLE_FIT_SCALE) {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      zoomAt(event.clientX - (rect?.left ?? 0), event.clientY - (rect?.top ?? 0), 1);
+      return;
+    }
+    if (nodeId !== null) {
+      activateNode(nodeId);
+    }
+  }, [activateNode, zoomAt]);
+
   const handlePointerUp = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     const interaction = interactionRef.current;
 
@@ -495,12 +519,8 @@ export function ProductionFlowGraph({
         && pan.tapEligible
         && event.type === "pointerup"
         && Math.hypot(event.clientX - pan.startClientX, event.clientY - pan.startClientY) < TAP_SLOP_PX;
-      if (isTap && pan.pressedNodeId !== null) {
-        activateNode(pan.pressedNodeId);
-      } else if (isTap && viewportRef.current.scale < MIN_READABLE_FIT_SCALE) {
-        // 总览时点按空白处：以该点为中心放大到可读比例。
-        const rect = canvasRef.current?.getBoundingClientRect();
-        zoomAt(event.clientX - (rect?.left ?? 0), event.clientY - (rect?.top ?? 0), 1);
+      if (isTap) {
+        handleTap(event, pan.pressedNodeId);
       }
       return;
     }
@@ -523,10 +543,10 @@ export function ProductionFlowGraph({
     if (press?.pointerId === event.pointerId) {
       interaction.node = null;
       if (!press.moving && event.type === "pointerup") {
-        activateNode(press.nodeId);
+        handleTap(event, press.nodeId);
       }
     }
-  }, [activateNode, zoomAt]);
+  }, [handleTap]);
 
   const surfaceSize = useMemo(() => {
     const bounds = unionRects(graph.nodes.map((node) => resolveCardRect(node, orientation, metrics)));
@@ -553,12 +573,21 @@ export function ProductionFlowGraph({
       <div className={styles["production-flow-toolbar"]}>
         {toolbarLeading === undefined ? null : <div className={styles["production-flow-toolbar-leading"]}>{toolbarLeading}</div>}
         <div className={styles["production-flow-toolbar-buttons"]} role="toolbar">
-        <FlowToolbarButton label={t("productionPlanning.flowOverview")} onClick={() => fit("overview")}>
+        <FlowToolbarButton
+          label={t("productionPlanning.flowOverview")}
+          onClick={() => fit("overview")}
+          text={t("productionPlanning.flowOverviewShort")}
+        >
           <LucideScan aria-hidden="true" />
         </FlowToolbarButton>
-        <FlowToolbarButton label={t("productionPlanning.flowFocusTarget")} onClick={() => fit("focus")}>
+        <FlowToolbarButton
+          label={t("productionPlanning.flowFocusTarget")}
+          onClick={() => fit("focus")}
+          text={t("productionPlanning.flowFocusTargetShort")}
+        >
           <LucideLocateFixed aria-hidden="true" />
         </FlowToolbarButton>
+        <span aria-hidden="true" className={styles["production-flow-toolbar-divider"]} />
         <FlowToolbarButton label={t("productionPlanning.flowZoomOut")} onClick={() => zoomAroundCenter(1 / 1.2)}>
           <LucideZoomOut aria-hidden="true" />
         </FlowToolbarButton>
@@ -660,15 +689,25 @@ const FlowSurfaceContent = memo(function FlowSurfaceContent({
 function FlowToolbarButton({
   label,
   onClick,
+  text,
   children,
 }: {
   readonly label: string;
   readonly onClick: () => void;
+  /** 常用的视图操作带短文字，便于一眼认出；工具栏变窄时只留图标。 */
+  readonly text?: string;
   readonly children: React.ReactNode;
 }) {
   return (
-    <button aria-label={label} onClick={onClick} title={label} type="button">
+    <button
+      aria-label={label}
+      className={text === undefined ? undefined : styles["has-text"]}
+      onClick={onClick}
+      title={label}
+      type="button"
+    >
       {children}
+      {text === undefined ? null : <span className={styles["production-flow-toolbar-text"]}>{text}</span>}
     </button>
   );
 }

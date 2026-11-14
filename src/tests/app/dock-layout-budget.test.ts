@@ -6,6 +6,7 @@ import {
   STACK_MIN_INSPECTOR_HEIGHT_PX,
   STACK_MIN_RECIPE_HEIGHT_PX,
   resolveDockLayoutBudget,
+  resolveStackRatioForBoundary,
   resolveStackedRightColumn,
 } from "@/app/shell/layout/dock-layout-budget";
 
@@ -109,6 +110,19 @@ describe("resolveStackedRightColumn", () => {
     if (column.mode === "split") {
       expect((1 - column.recipeRatio) * columnHeight).toBeGreaterThanOrEqual(STACK_MIN_INSPECTOR_HEIGHT_PX);
       expect(column.recipeRatio * columnHeight + recipeExtraHeight).toBeGreaterThanOrEqual(STACK_MIN_RECIPE_HEIGHT_PX);
+    }
+  });
+
+  it("maps a splitter position back to the ratio that renders the inspector at that height", () => {
+    // 1280x900 with a 160px timeline: the two fractional rows share 664px.
+    const columnHeight = 664;
+    const inspectorHeight = 300;
+    const ratio = resolveStackRatioForBoundary({ boundaryFromColumnTop: inspectorHeight, columnHeight });
+    const column = resolveStackedRightColumn({ columnHeight, recipeExtraHeight: 160, recipeRatio: ratio, inspectorEmpty: false, focus: "inspector" });
+
+    expect(column.mode).toBe("split");
+    if (column.mode === "split") {
+      expect((1 - column.recipeRatio) * columnHeight).toBeCloseTo(inspectorHeight);
     }
   });
 });

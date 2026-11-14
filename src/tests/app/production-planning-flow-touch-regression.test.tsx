@@ -458,7 +458,7 @@ describe("ProductionFlowGraph touch regression", () => {
     expect(afterTop).toBeLessThan(0);
   });
 
-  it("pans from a card in pan mode without moving it, and a tap activates the card", () => {
+  it("pans from a card in pan mode; a tap while zoomed out zooms in, the next tap activates the card", () => {
     const onNodeActivate = vi.fn();
     render({ nodeDrag: "pan", onNodeActivate, initialViewport: { x: 22, y: 22, scale: 0.5 } });
     const canvas = getFlowCanvas(container);
@@ -480,13 +480,20 @@ describe("ProductionFlowGraph touch regression", () => {
     expect({ left: node.style.left, top: node.style.top }).toEqual(nodePosition);
     expect(onNodeActivate).not.toHaveBeenCalled();
 
-    act(() => {
-      dispatchPointerEvent(node, "pointerdown", { pointerId: 2, pointerType: "pen", clientX: 200, clientY: 200, buttons: 1 });
-    });
-    act(() => {
-      dispatchPointerEvent(canvas, "pointerup", { pointerId: 2, pointerType: "pen", clientX: 202, clientY: 201 });
-    });
+    const tapNode = (pointerId: number) => {
+      act(() => {
+        dispatchPointerEvent(node, "pointerdown", { pointerId, pointerType: "pen", clientX: 200, clientY: 200, buttons: 1 });
+      });
+      act(() => {
+        dispatchPointerEvent(canvas, "pointerup", { pointerId, pointerType: "pen", clientX: 202, clientY: 201 });
+      });
+    };
 
+    tapNode(2);
+    expect(onNodeActivate).not.toHaveBeenCalled();
+    expect(surface.style.transform).toContain("scale(1)");
+
+    tapNode(3);
     expect(onNodeActivate).toHaveBeenCalledTimes(1);
   });
 
@@ -901,6 +908,40 @@ describe("ProductionFlowGraph touch regression", () => {
     expect(x + Number.parseFloat(node.style.left) * scale).toBeGreaterThanOrEqual(0);
     expect(right).toBeLessThanOrEqual(800);
     expect(bottom).toBeLessThanOrEqual(600);
+  });
+
+  it("keeps the camera when the graph is hidden and shown again", () => {
+    let size = { width: 800, height: 600 };
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(() => size.width);
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(() => size.height);
+    render({ fitToView: true });
+    const canvas = getFlowCanvas(container);
+    const surface = canvas.querySelector<HTMLDivElement>("[class*='production-flow-surface']")!;
+    const notifyResize = () => {
+      act(() => {
+        for (const observer of ResizeObserverMock.instances) {
+          observer["callback"]([], observer as unknown as ResizeObserver);
+        }
+      });
+    };
+
+    act(() => {
+      dispatchPointerEvent(canvas, "pointerdown", { pointerId: 1, pointerType: "pen", clientX: 300, clientY: 300, buttons: 1 });
+    });
+    act(() => {
+      dispatchPointerEvent(canvas, "pointermove", { pointerId: 1, pointerType: "pen", clientX: 420, clientY: 360, buttons: 1 });
+    });
+    act(() => {
+      dispatchPointerEvent(canvas, "pointerup", { pointerId: 1, pointerType: "pen", clientX: 420, clientY: 360 });
+    });
+    const userCamera = surface.style.transform;
+
+    size = { width: 0, height: 0 };
+    notifyResize();
+    size = { width: 800, height: 600 };
+    notifyResize();
+
+    expect(surface.style.transform).toBe(userCamera);
   });
 
   // ==================== Test 4: 双指 pinch 进入 pinch 状态 ====================

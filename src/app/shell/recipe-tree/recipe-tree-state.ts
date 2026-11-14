@@ -31,8 +31,8 @@ export const RECIPE_TREE_DOCK_MIN_WIDTH = 300;
 export const RECIPE_TREE_DOCK_MAX_WIDTH = 960;
 const RECIPE_TREE_DOCK_DEFAULT_WIDTH = 440;
 const RECIPE_TREE_STACK_DEFAULT_RATIO = 0.6;
-const RECIPE_TREE_STACK_MIN_RATIO = 0.25;
-const RECIPE_TREE_STACK_MAX_RATIO = 0.85;
+const RECIPE_TREE_STACK_MIN_RATIO = 0.05;
+const RECIPE_TREE_STACK_MAX_RATIO = 0.95;
 const DEFAULT_RECT: RecipeTreeOverlayRect = { x: -1, y: 72, width: 380, height: 520 };
 
 export type RecipeTreeViewMode = "tree" | "graph";

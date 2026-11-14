@@ -93,3 +93,14 @@ export function resolveStackedRightColumn(input: {
   const maxRatio = 1 - STACK_MIN_INSPECTOR_HEIGHT_PX / input.columnHeight;
   return { mode: "split", recipeRatio: Math.min(maxRatio, Math.max(minRatio, input.recipeRatio)) };
 }
+
+/**
+ * 分隔条拖动的反向映射：分隔线到右栏顶边的距离就是属性面板的高度，
+ * 比例只作用于两栏的按比例行（不含配方树额外跨越的底部停靠栏行），与 resolveStackedRightColumn 一致。
+ */
+export function resolveStackRatioForBoundary(input: {
+  readonly boundaryFromColumnTop: number;
+  readonly columnHeight: number;
+}): number {
+  return 1 - input.boundaryFromColumnTop / Math.max(1, input.columnHeight);
+}

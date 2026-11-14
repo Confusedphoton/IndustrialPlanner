@@ -1187,6 +1187,8 @@ const UI: Record<string, string> = {
     "productionPlanning.resetLayout": "Reset Layout",
     "productionPlanning.flowOverview": "Overview: show the whole chain",
     "productionPlanning.flowFocusTarget": "Focus on the target",
+    "productionPlanning.flowOverviewShort": "Overview",
+    "productionPlanning.flowFocusTargetShort": "Focus",
     "productionPlanning.flowZoomIn": "Zoom in",
     "productionPlanning.flowZoomOut": "Zoom out",
     "productionPlanning.flowLayoutVertical": "Lay out top to bottom",

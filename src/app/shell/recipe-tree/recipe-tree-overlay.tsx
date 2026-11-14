@@ -53,6 +53,7 @@ import {
   type RecipeTreePin,
 } from "./recipe-tree-state";
 import { RecipeActionMenu, resolveFlowNodeActionTarget, type RecipeActionTarget } from "./recipe-action-menu";
+import { resolveStackRatioForBoundary, resolveStackedRightColumn } from "@/app/shell/layout/dock-layout-budget";
 
 /** 节点快捷操作菜单的打开入口（树行与流程图节点共用）。 */
 const RecipeActionMenuContext = createContext<(target: RecipeActionTarget) => void>(() => {});
@@ -97,7 +98,12 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
     [registry, selectedActivityIds, showAllActivityContent],
   );
 
-  const rect = resolveOnScreenRect(state.rect);
+  // 读取可观察的屏幕尺寸：窗口缩放时重新渲染并把浮层夹回视口内。
+  const viewport = {
+    width: appHost.state.screenProfile.viewportWidth,
+    height: appHost.state.screenProfile.viewportHeight,
+  };
+  const rect = resolveOnScreenRect(state.rect, viewport);
   const dragCleanupRef = useRef<(() => void) | null>(null);
   useEffect(() => () => dragCleanupRef.current?.(), []);
 
@@ -150,7 +156,7 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
     if (state.docked || (event.target as HTMLElement).closest("button") !== null) {
       return;
     }
-    beginPointerTracking(event, (dx, dy, start) => clampRectToViewport({ ...start, x: start.x + dx, y: start.y + dy }));
+    beginPointerTracking(event, (dx, dy, start) => clampRectToViewport({ ...start, x: start.x + dx, y: start.y + dy }, viewport));
   };
 
   const handleResizePointerDown = (event: ReactPointerEvent<HTMLElement>) => {
@@ -158,7 +164,7 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
       ...start,
       width: Math.max(RECIPE_TREE_MIN_WIDTH, start.width + dx),
       height: Math.max(RECIPE_TREE_MIN_HEIGHT, start.height + dy),
-    }));
+    }, viewport));
   };
 
   // 停靠栏左缘拖动调整宽度（向左拖动变宽）。
@@ -198,17 +204,34 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
     event.preventDefault();
     const target = event.currentTarget;
     const pointerId = event.pointerId;
-    // 右栏从属性面板顶边到配方树底边；比例按指针到底边的距离计算。
+    // 按比例分配的只有属性面板行与配方树行；配方树额外跨越的底部停靠栏行不参与。
     const overlayRect = target.parentElement?.getBoundingClientRect();
-    const columnTop = document.querySelector(`.${cm(styles, "dock-right")}`)?.getBoundingClientRect().top;
-    if (overlayRect === undefined || columnTop === undefined) {
+    const dockRect = document.querySelector(`.${cm(styles, "dock-right")}`)?.getBoundingClientRect();
+    const workbench = target.closest<HTMLElement>(`.${cm(styles, "workbench")}`);
+    if (overlayRect === undefined || dockRect === undefined || workbench === null) {
       return;
     }
-    const columnHeight = Math.max(1, overlayRect.bottom - columnTop);
+    const bottomDockHeight = Number.parseFloat(getComputedStyle(workbench).getPropertyValue("--toolbox-bottom-dock-height")) || 0;
+    const columnHeight = dockRect.height + overlayRect.height - bottomDockHeight;
+    // 保留按下时笔尖与分隔线的偏移，分隔线跟随笔尖移动而不是跳到笔尖处。
+    const grabOffset = event.clientY - overlayRect.top;
     target.setPointerCapture(pointerId);
     const handleMove = (moveEvent: PointerEvent) => {
       if (moveEvent.pointerId === pointerId) {
-        state.setStackRatio((overlayRect.bottom - moveEvent.clientY) / columnHeight);
+        // 用布局同一套高度下限夹紧，拖过极限后往回拖时分隔线立即跟随，没有空行程。
+        const column = resolveStackedRightColumn({
+          columnHeight,
+          recipeExtraHeight: bottomDockHeight,
+          recipeRatio: resolveStackRatioForBoundary({
+            boundaryFromColumnTop: moveEvent.clientY - grabOffset - dockRect.top,
+            columnHeight,
+          }),
+          inspectorEmpty: false,
+          focus: "inspector",
+        });
+        if (column.mode === "split") {
+          state.setStackRatio(column.recipeRatio);
+        }
       }
     };
     const stop = (endEvent: PointerEvent) => {
@@ -819,19 +842,23 @@ function RecipeTreeTotals({
   );
 }
 
-function resolveOnScreenRect(rect: RecipeTreeOverlayRect): RecipeTreeOverlayRect {
+interface ViewportSize {
+  readonly width: number;
+  readonly height: number;
+}
+
+function resolveOnScreenRect(rect: RecipeTreeOverlayRect, viewport: ViewportSize): RecipeTreeOverlayRect {
   if (rect.x >= 0) {
-    return clampRectToViewport(rect);
+    return clampRectToViewport(rect, viewport);
   }
 
   // 首次显示：贴靠视口右侧，避开左侧工具栏与面板。
-  const viewportWidth = typeof window === "undefined" ? 1280 : window.innerWidth;
-  return clampRectToViewport({ ...rect, x: viewportWidth - rect.width - 24 });
+  return clampRectToViewport({ ...rect, x: viewport.width - rect.width - 24 }, viewport);
 }
 
-function clampRectToViewport(rect: RecipeTreeOverlayRect): RecipeTreeOverlayRect {
-  const viewportWidth = typeof window === "undefined" ? 1280 : window.innerWidth;
-  const viewportHeight = typeof window === "undefined" ? 800 : window.innerHeight;
+function clampRectToViewport(rect: RecipeTreeOverlayRect, viewport: ViewportSize): RecipeTreeOverlayRect {
+  const viewportWidth = viewport.width;
+  const viewportHeight = viewport.height;
   const width = Math.min(Math.max(RECIPE_TREE_MIN_WIDTH, rect.width), viewportWidth - VIEWPORT_MARGIN_PX * 2);
   const height = Math.min(Math.max(RECIPE_TREE_MIN_HEIGHT, rect.height), viewportHeight - TOP_BAR_CLEARANCE_PX - VIEWPORT_MARGIN_PX);
   return {
