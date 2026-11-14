@@ -78,7 +78,7 @@ describe("resolveDockLayoutBudget", () => {
 describe("resolveStackedRightColumn", () => {
   it.each([0, 0.1, 0.5, 0.95, 1])("keeps both stacked panes at their minimum heights for a persisted ratio of %s", (recipeRatio) => {
     const columnHeight = 824;
-    const column = resolveStackedRightColumn({ columnHeight, recipeRatio, inspectorEmpty: false, focus: "inspector" });
+    const column = resolveStackedRightColumn({ columnHeight, recipeExtraHeight: 0, recipeRatio, inspectorEmpty: false, focus: "inspector" });
 
     expect(column.mode).toBe("split");
     if (column.mode === "split") {
@@ -88,14 +88,27 @@ describe("resolveStackedRightColumn", () => {
   });
 
   it("expands only the focused pane when the column is too short for both", () => {
-    expect(resolveStackedRightColumn({ columnHeight: 464, recipeRatio: 0.25, inspectorEmpty: false, focus: "recipe" }))
+    expect(resolveStackedRightColumn({ columnHeight: 464, recipeExtraHeight: 0, recipeRatio: 0.25, inspectorEmpty: false, focus: "recipe" }))
       .toEqual({ mode: "single", expanded: "recipe" });
-    expect(resolveStackedRightColumn({ columnHeight: 464, recipeRatio: 0.25, inspectorEmpty: false, focus: "inspector" }))
+    expect(resolveStackedRightColumn({ columnHeight: 464, recipeExtraHeight: 0, recipeRatio: 0.25, inspectorEmpty: false, focus: "inspector" }))
       .toEqual({ mode: "single", expanded: "inspector" });
   });
 
   it("gives the whole column to the recipe tree while nothing is selected", () => {
-    expect(resolveStackedRightColumn({ columnHeight: 824, recipeRatio: 0.3, inspectorEmpty: true, focus: "inspector" }))
+    expect(resolveStackedRightColumn({ columnHeight: 824, recipeExtraHeight: 0, recipeRatio: 0.3, inspectorEmpty: true, focus: "inspector" }))
       .toEqual({ mode: "single", expanded: "recipe" });
+  });
+
+  it.each([0, 0.5, 1])("keeps the inspector at its minimum when a bottom dock takes height (ratio %s)", (recipeRatio) => {
+    // 1280x900 with a 260px timeline docked: 900 - 48 - 28 - 260 = 564px shared by the two fractional rows.
+    const columnHeight = 564;
+    const recipeExtraHeight = 260;
+    const column = resolveStackedRightColumn({ columnHeight, recipeExtraHeight, recipeRatio, inspectorEmpty: false, focus: "inspector" });
+
+    expect(column.mode).toBe("split");
+    if (column.mode === "split") {
+      expect((1 - column.recipeRatio) * columnHeight).toBeGreaterThanOrEqual(STACK_MIN_INSPECTOR_HEIGHT_PX);
+      expect(column.recipeRatio * columnHeight + recipeExtraHeight).toBeGreaterThanOrEqual(STACK_MIN_RECIPE_HEIGHT_PX);
+    }
   });
 });

@@ -1443,6 +1443,8 @@ const UI: Record<string, string> = {
     "workbench.utility.saveBlueprint": "Save Blueprint",
     "workbench.utility.settings": "Settings",
     "recipeTree.title": "Recipe Tree",
+    "recipeTree.expandPane": "Show Recipe Tree",
+    "rightDock.expandPane": "Show device properties",
     "recipeTree.empty": "Search for an item above to pin its full production tree here.",
     "recipeTree.searchPlaceholder": "Pin an item…",
     "recipeTree.pinLimitReached": "Pin limit reached",

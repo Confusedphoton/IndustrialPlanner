@@ -268,11 +268,26 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
         <LucideListTree aria-hidden className={cm(styles, "recipe-tree-header-icon")} />
         <h2>{title}</h2>
         <span className={cm(styles, "recipe-tree-header-count")}>{state.pins.length}</span>
+        {docked ? (
+          <button
+            aria-expanded={false}
+            aria-label={t("recipeTree.expandPane")}
+            className={cm(styles, "recipe-tree-icon-button stack-pane-expand-button")}
+            onClick={() => state.setStackFocus("recipe")}
+            title={t("recipeTree.expandPane")}
+            type="button"
+          >
+            <LucideChevronUp />
+          </button>
+        ) : null}
         <div aria-label={t("recipeTree.view")} className={cm(styles, "recipe-tree-view-toggle")} role="group">
           <button
             aria-pressed={state.viewMode === "tree"}
             className={cm(styles, "recipe-tree-icon-button")}
-            onClick={() => state.setViewMode("tree")}
+            onClick={() => {
+              state.setViewMode("tree");
+              state.setStackFocus("recipe");
+            }}
             title={t("recipeTree.viewTree")}
             type="button"
           >
@@ -281,7 +296,10 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
           <button
             aria-pressed={state.viewMode === "graph"}
             className={cm(styles, "recipe-tree-icon-button")}
-            onClick={() => state.setViewMode("graph")}
+            onClick={() => {
+              state.setViewMode("graph");
+              state.setStackFocus("recipe");
+            }}
             title={t("recipeTree.viewGraph")}
             type="button"
           >
@@ -678,10 +696,15 @@ const RecipeTreeNode = observer(function RecipeTreeNode({
 function RecipeTreeTotals({
   plan,
   index,
+  expanded: controlledExpanded,
+  onExpandedChange,
   t,
 }: {
   plan: ProductionPlanningResult;
   index: ProductionPlanningIndex;
+  /** 由流程图视图控制：展开时列表取代流程图占满主体区域。 */
+  expanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
   t: Translate;
 }) {
   const machineTotals = useMemo(() => {
@@ -712,7 +735,9 @@ function RecipeTreeTotals({
     return [...totals.entries()].filter(([, perMinute]) => perMinute > 0.0001);
   }, [plan]);
 
-  const [expanded, setExpanded] = useState(false);
+  const [localExpanded, setLocalExpanded] = useState(false);
+  const expanded = controlledExpanded ?? localExpanded;
+  const setExpanded = onExpandedChange ?? setLocalExpanded;
 
   if (machineTotals.length === 0 && rawTotals.length === 0) {
     return null;
@@ -832,6 +857,7 @@ const RecipeTreeGraph = observer(function RecipeTreeGraph({
 }) {
   const state = recipeTreeOverlayState;
   const openActionMenu = useContext(RecipeActionMenuContext);
+  const [totalsExpanded, setTotalsExpanded] = useState(false);
   const pinsSignature = JSON.stringify(state.pins.map((pin) => [pin.itemId, pin.perMinute, pin.recipeChoices]));
   const plan = useMemo<ProductionPlanningResult>(() => {
     const recipeChoices = new Map<string, string>();
@@ -855,7 +881,7 @@ const RecipeTreeGraph = observer(function RecipeTreeGraph({
   }, [index, pinsSignature]);
 
   return (
-    <div className={cm(styles, "recipe-tree-graph-body")}>
+    <div className={cm(styles, totalsExpanded ? "recipe-tree-graph-body is-totals-expanded" : "recipe-tree-graph-body")}>
       <div className={cm(styles, "recipe-tree-graph")}>
         <ProductionFlowGraph
           displayMode="item"
@@ -870,7 +896,13 @@ const RecipeTreeGraph = observer(function RecipeTreeGraph({
           t={t}
         />
       </div>
-      <RecipeTreeTotals index={index} plan={plan} t={t} />
+      <RecipeTreeTotals
+        expanded={totalsExpanded}
+        index={index}
+        onExpandedChange={setTotalsExpanded}
+        plan={plan}
+        t={t}
+      />
     </div>
   );
 });

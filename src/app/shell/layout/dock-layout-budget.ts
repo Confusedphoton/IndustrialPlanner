@@ -74,7 +74,10 @@ export type StackedRightColumn =
  * 放不下时只展开一栏，另一栏收起为标题栏，点按标题栏切换。属性面板为空时总是让给配方树。
  */
 export function resolveStackedRightColumn(input: {
+  /** 两栏按比例分配的高度（不含底部停靠栏那一行）。 */
   readonly columnHeight: number;
+  /** 配方树额外跨越的底部停靠栏行高度；属性面板不跨这一行。 */
+  readonly recipeExtraHeight: number;
   readonly recipeRatio: number;
   readonly inspectorEmpty: boolean;
   readonly focus: StackedPane;
@@ -82,10 +85,11 @@ export function resolveStackedRightColumn(input: {
   if (input.inspectorEmpty) {
     return { mode: "single", expanded: "recipe" };
   }
-  if (input.columnHeight < STACK_MIN_RECIPE_HEIGHT_PX + STACK_MIN_INSPECTOR_HEIGHT_PX) {
+  const recipeShare = Math.max(0, STACK_MIN_RECIPE_HEIGHT_PX - input.recipeExtraHeight);
+  if (input.columnHeight < recipeShare + STACK_MIN_INSPECTOR_HEIGHT_PX) {
     return { mode: "single", expanded: input.focus };
   }
-  const minRatio = STACK_MIN_RECIPE_HEIGHT_PX / input.columnHeight;
+  const minRatio = recipeShare / input.columnHeight;
   const maxRatio = 1 - STACK_MIN_INSPECTOR_HEIGHT_PX / input.columnHeight;
   return { mode: "split", recipeRatio: Math.min(maxRatio, Math.max(minRatio, input.recipeRatio)) };
 }

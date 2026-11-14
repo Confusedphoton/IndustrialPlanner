@@ -1437,6 +1437,8 @@ const UI: Record<string, string> = {
     "workbench.utility.saveBlueprint": "保存蓝图",
     "workbench.utility.settings": "设置",
     "recipeTree.title": "配方树",
+    "recipeTree.expandPane": "展开配方树",
+    "rightDock.expandPane": "展开设备属性",
     "recipeTree.empty": "在上方搜索物品，将其完整生产链钉在这里。",
     "recipeTree.searchPlaceholder": "钉住物品…",
     "recipeTree.pinLimitReached": "已达到钉住上限",

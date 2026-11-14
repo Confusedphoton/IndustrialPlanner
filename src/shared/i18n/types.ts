@@ -735,6 +735,8 @@ export type UiKey =
   | "mutability.recompile-required"
   | "mutability.runtime-mutable"
   | "recipeTree.title"
+  | "recipeTree.expandPane"
+  | "rightDock.expandPane"
   | "recipeTree.empty"
   | "recipeTree.searchPlaceholder"
   | "recipeTree.pinLimitReached"

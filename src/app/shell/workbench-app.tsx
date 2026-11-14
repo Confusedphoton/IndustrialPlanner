@@ -764,7 +764,9 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     ? resolveStackedRightColumn({
       columnHeight: screenProfile.viewportHeight
         - (showFloatingTopBarControls ? 0 : TOP_BAR_HEIGHT_PX)
-        - (showBottomStatusBar ? BOTTOM_BAR_HEIGHT_PX : 0),
+        - (showBottomStatusBar ? BOTTOM_BAR_HEIGHT_PX : 0)
+        - bottomDockGridHeight,
+      recipeExtraHeight: bottomDockGridHeight,
       recipeRatio: recipeTreeOverlayState.stackRatio,
       inspectorEmpty: selectionCount === 0,
       focus: recipeTreeOverlayState.stackFocus,

@@ -1,4 +1,5 @@
 import { observer } from "mobx-react-lite";
+import LucideChevronDown from "~icons/lucide/chevron-down";
 import { EditSelectionInspector } from "@/app/shell/inspector/edit-selection-inspector";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { AppHost } from "@/app/host/app-host";
@@ -26,6 +27,16 @@ export const RightDock = observer(function RightDock({ appHost }: { appHost: App
           <div className={cm(styles, "section-header-copy")}>
             <h2>{t("rightDock.selection")}</h2>
           </div>
+          <button
+            aria-expanded={false}
+            aria-label={t("rightDock.expandPane")}
+            className={cm(styles, "dialog-shell-header-button stack-pane-expand-button")}
+            onClick={() => recipeTreeOverlayState.setStackFocus("inspector")}
+            title={t("rightDock.expandPane")}
+            type="button"
+          >
+            <LucideChevronDown aria-hidden />
+          </button>
           <button
             aria-label={closeDockLabel}
             className={cm(styles, "dialog-shell-header-button right-dock-close-button")}

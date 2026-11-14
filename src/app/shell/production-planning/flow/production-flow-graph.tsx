@@ -70,6 +70,8 @@ interface PanDragState {
   clientY: number;
   /** 从卡片上开始的平移；抬笔时若未移动则视为点按该卡片。 */
   pressedNodeId: string | null;
+  /** 参与过双指缩放的手指抬起时不算点按，避免缩放结束误触发卡片操作或点按放大。 */
+  tapEligible: boolean;
 }
 
 interface PinchState {
@@ -104,10 +106,11 @@ const CARD_METRICS: Record<ProductionFlowOrientation, CardMetrics> = {
   vertical: { layer: 72, cross: 176, layerGap: 76, crossGap: 16 },
 };
 const SURFACE_PADDING = 24;
-const MIN_SCALE = 0.15;
+/** 总览大图时需要远小于可读比例的缩放。 */
+const MIN_SCALE = 0.05;
 const MAX_SCALE = 3.0;
 /** 低于该缩放时文字难以辨认；适配视图改为只适配交叉轴，沿流向平移查看。 */
-const MIN_READABLE_FIT_SCALE = 0.75;
+const MIN_READABLE_FIT_SCALE = 0.85;
 const TAP_SLOP_PX = 6;
 const ORIENTATION_HYSTERESIS = 1.15;
 const FIT_MARGIN = 16;
@@ -138,6 +141,10 @@ export function ProductionFlowGraph({
 
   const initialLayout = useMemo(() => createOrientedLayout(graphInput, metrics), [graphInput, metrics]);
   const [graph, setGraph] = useState(() => cloneSankeyGraph(initialLayout));
+  const graphRef = useRef(graph);
+  useEffect(() => {
+    graphRef.current = graph;
+  }, [graph]);
   const [viewport, setRawViewport] = useState<ViewportState>(() => normalizeViewportState(initialViewport));
   const viewportRef = useRef(viewport);
   const onViewportChangeRef = useRef(onViewportChange);
@@ -164,15 +171,19 @@ export function ProductionFlowGraph({
    * "focus"：保持可读缩放并把规划目标放进视野；整图放不下时沿流向平移查看。
    * "overview"：不设可读下限，整条产线一次显示；随后点按空白处可在该处放大到可读比例。
    */
-  const fit = useCallback((mode: "focus" | "overview" = "focus") => {
+  const fit = useCallback((
+    mode: "focus" | "overview" = "focus",
+    // 默认按当前（可能被手动移动过的）卡片位置适配；换布局时由调用方传入新布局。
+    layoutNodes: readonly SankeyNode<ProductionFlowNode>[] = graphRef.current.nodes,
+  ) => {
     const element = canvasRef.current;
-    if (element === null || initialLayout.nodes.length === 0) return;
-    const rects = initialLayout.nodes.map((node) => resolveCardRect(node, orientation, metrics));
+    if (element === null || layoutNodes.length === 0) return;
+    const rects = layoutNodes.map((node) => resolveCardRect(node, orientation, metrics));
     // 溢出时锚定规划目标；没有标记目标时退回到所有终端节点（副产物也是终端，但不是用户要看的产物）。
-    const targetNodes = initialLayout.nodes.filter((node) => node.source.isTarget === true);
+    const targetNodes = layoutNodes.filter((node) => node.source.isTarget === true);
     const sinkRects = (targetNodes.length > 0
       ? targetNodes
-      : initialLayout.nodes.filter((node) => !node.sourceLinks.some((link) => link.direction === "forward")))
+      : layoutNodes.filter((node) => !node.sourceLinks.some((link) => link.direction === "forward")))
       .map((node) => resolveCardRect(node, orientation, metrics));
     const bounds = unionRects(rects);
     const sinkBounds = unionRects(sinkRects.length > 0 ? sinkRects : rects);
@@ -206,7 +217,7 @@ export function ProductionFlowGraph({
       y: overflowsY ? clampPan(anchoredY, availableHeight, bounds.top, bounds.height, scale, margin) : centerY,
       scale,
     });
-  }, [initialLayout, metrics, orientation, setViewport]);
+  }, [metrics, orientation, setViewport]);
 
   const fitRef = useRef(fit);
   useEffect(() => {
@@ -239,8 +250,8 @@ export function ProductionFlowGraph({
   useEffect(() => {
     const orientationChanged = fittedOrientationRef.current !== orientation;
     fittedOrientationRef.current = orientation;
-    if (fitToView || orientationChanged) fit();
-  }, [fit, fitToView, orientation]);
+    if (fitToView || orientationChanged) fit("focus", initialLayout.nodes);
+  }, [fit, fitToView, initialLayout, orientation]);
 
   const interactionRef = useRef<{
     node: NodePressState | null;
@@ -258,7 +269,7 @@ export function ProductionFlowGraph({
 
   const resetNodeLayout = useCallback(() => {
     setGraph(cloneSankeyGraph(initialLayout));
-    fit();
+    fit("focus", initialLayout.nodes);
   }, [fit, initialLayout]);
 
   /** 以容器内一点为锚缩放到指定比例。 */
@@ -311,6 +322,7 @@ export function ProductionFlowGraph({
 
     if (interaction.pan !== null && interaction.pan.pointerId !== event.pointerId) {
       const p0 = interaction.pan;
+      p0.tapEligible = false;
       const rect = canvasRef.current?.getBoundingClientRect();
       const dx = event.clientX - p0.clientX;
       const dy = event.clientY - p0.clientY;
@@ -340,6 +352,7 @@ export function ProductionFlowGraph({
       clientX: event.clientX,
       clientY: event.clientY,
       pressedNodeId,
+      tapEligible: true,
     };
   }, []);
 
@@ -479,6 +492,7 @@ export function ProductionFlowGraph({
         viewportRef.current,
       );
       const isTap = pinch === null
+        && pan.tapEligible
         && event.type === "pointerup"
         && Math.hypot(event.clientX - pan.startClientX, event.clientY - pan.startClientY) < TAP_SLOP_PX;
       if (isTap && pan.pressedNodeId !== null) {
@@ -1011,6 +1025,7 @@ function createPanFromCurrent(pointerId: number, clientX: number, clientY: numbe
     clientX,
     clientY,
     pressedNodeId: null,
+    tapEligible: false,
   };
 }
 

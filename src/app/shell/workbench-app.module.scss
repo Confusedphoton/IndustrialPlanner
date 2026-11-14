@@ -129,3 +129,13 @@
 .workbench.is-right-stacked .recipe-tree-overlay.is-docked .recipe-tree-header {
   padding-top: 16px;
 }
+
+// 叠放单栏模式下收起的那一栏显示展开按钮（可用键盘操作）；其余情况隐藏。
+.workbench .stack-pane-expand-button {
+  display: none;
+}
+
+.workbench.is-stack-recipe-only .dock-right .stack-pane-expand-button,
+.workbench.is-stack-inspector-only .recipe-tree-overlay.is-docked .stack-pane-expand-button {
+  display: inline-flex;
+}

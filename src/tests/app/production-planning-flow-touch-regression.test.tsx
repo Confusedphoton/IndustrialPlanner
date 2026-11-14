@@ -846,6 +846,63 @@ describe("ProductionFlowGraph touch regression", () => {
     expect({ left: node.style.left, top: node.style.top }).toEqual(nodePosition);
   });
 
+  it.each([[2, 1], [1, 2]])("keeps the pinched zoom when fingers %i then %i lift below readable scale", (firstUp, secondUp) => {
+    render({ initialViewport: { x: 22, y: 22, scale: 0.75 } });
+    const canvas = getFlowCanvas(container);
+    const surface = canvas.querySelector<HTMLDivElement>("[class*='production-flow-surface']")!;
+    vi.spyOn(canvas, "getBoundingClientRect").mockReturnValue({
+      x: 0, y: 0, width: 800, height: 600, left: 0, top: 0, right: 800, bottom: 600,
+    } as DOMRect);
+    const touch = (type: string, pointerId: number, clientX: number) => {
+      act(() => {
+        dispatchPointerEvent(canvas, type, { pointerId, pointerType: "touch", clientX, clientY: 300, buttons: type === "pointerup" ? 0 : 1 });
+      });
+    };
+    const fingerX = (pointerId: number) => (pointerId === 1 ? 300 : 400);
+
+    touch("pointerdown", 1, 200);
+    touch("pointerdown", 2, 600);
+    touch("pointermove", 1, 300);
+    touch("pointermove", 2, 400);
+    const pinched = surface.style.transform;
+    touch("pointerup", firstUp, fingerX(firstUp));
+    touch("pointerup", secondUp, fingerX(secondUp));
+
+    expect(pinched).toContain("scale(0.1875)");
+    expect(surface.style.transform).toBe(pinched);
+  });
+
+  it("fits cards the user has moved when showing the overview", () => {
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(800);
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(600);
+    render();
+    const canvas = getFlowCanvas(container);
+    const surface = canvas.querySelector<HTMLDivElement>("[class*='production-flow-surface']")!;
+    const node = getFlowNode(canvas, "铁板");
+
+    act(() => {
+      dispatchPointerEvent(node, "pointerdown", { pointerId: 1, pointerType: "pen", clientX: 200, clientY: 200, buttons: 1 });
+    });
+    act(() => {
+      dispatchPointerEvent(canvas, "pointermove", { pointerId: 1, pointerType: "pen", clientX: 4200, clientY: 3200, buttons: 1 });
+    });
+    act(() => {
+      dispatchPointerEvent(canvas, "pointerup", { pointerId: 1, pointerType: "pen", clientX: 4200, clientY: 3200 });
+    });
+    act(() => {
+      container.querySelector<HTMLButtonElement>("[aria-label='productionPlanning.flowOverview']")!.click();
+    });
+
+    const match = /translate\(([-\d.]+)px, ([-\d.]+)px\) scale\(([\d.]+)\)/.exec(surface.style.transform);
+    const [x, y, scale] = [Number(match?.[1]), Number(match?.[2]), Number(match?.[3])];
+    const right = x + (Number.parseFloat(node.style.left) + Number.parseFloat(node.style.width)) * scale;
+    const bottom = y + (Number.parseFloat(node.style.top) + Number.parseFloat(node.style.height)) * scale;
+
+    expect(x + Number.parseFloat(node.style.left) * scale).toBeGreaterThanOrEqual(0);
+    expect(right).toBeLessThanOrEqual(800);
+    expect(bottom).toBeLessThanOrEqual(600);
+  });
+
   // ==================== Test 4: 双指 pinch 进入 pinch 状态 ====================
   it("switches from pan to pinch when a second pointer arrives", () => {
     render();
