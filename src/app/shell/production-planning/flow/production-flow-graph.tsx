@@ -237,10 +237,13 @@ export function ProductionFlowGraph({
       };
     };
     // 自动适配（打开、尺寸变化）时，若聚焦视图只能看到很小一部分产线，就先给总览；点按任意处即可放大。
+    // 总览小到连名称都显示不了（矮窗口里的长产线）时没有可读的内容，仍停在规划目标上。
     const focus = place(mode === "overview");
+    const overview = place(true);
     const useOverview = mode === "auto"
+      && overview.scale >= MIN_OVERVIEW_LABEL_SCALE
       && countVisibleCards(rects, focus, element.clientWidth, element.clientHeight) < rects.length * AUTO_OVERVIEW_VISIBLE_FRACTION;
-    setViewport(useOverview ? place(true) : focus);
+    setViewport(useOverview ? overview : focus);
   }, [metrics, orientation, setViewport]);
 
   const fitRef = useRef(fit);
@@ -799,6 +802,10 @@ const FlowSurfaceContent = memo(function FlowSurfaceContent({
   readonly t: (key: string) => string;
 }) {
   const labelPositions = useMemo(() => layoutEdgeLabels(graph.links, orientation, metrics), [graph, metrics, orientation]);
+  const cardClearances = useMemo(
+    () => (compact ? resolveCardClearances(graph.nodes, orientation, metrics) : null),
+    [compact, graph, metrics, orientation],
+  );
   return (
     <>
       <svg className={styles["production-flow-edges"]} width={surfaceSize.width} height={surfaceSize.height}>
@@ -811,6 +818,9 @@ const FlowSurfaceContent = memo(function FlowSurfaceContent({
           <FlowNode
             compact={compact}
             key={node.id}
+            overviewLabelPlacement={compact && overviewLabelScale !== null
+              ? resolveOverviewLabelPlacement(cardClearances?.get(node.id), overviewLabelScale)
+              : null}
             overviewLabelScale={compact ? overviewLabelScale : null}
             metrics={metrics}
             node={node}
@@ -857,6 +867,7 @@ function FlowToolbarButton({
 
 function FlowNode({
   compact,
+  overviewLabelPlacement,
   overviewLabelScale,
   node,
   orientation,
@@ -864,6 +875,8 @@ function FlowNode({
   onPointerDown,
 }: {
   readonly compact: boolean;
+  /** 总览名称标签放在卡片下方还是上方；两侧都放不下（会压到相邻卡片）时为 null，不显示。 */
+  readonly overviewLabelPlacement: "below" | "above" | null;
   readonly overviewLabelScale: number | null;
   readonly node: SankeyNode<ProductionFlowNode>;
   readonly orientation: ProductionFlowOrientation;
@@ -884,6 +897,7 @@ function FlowNode({
     .join("\n");
   // 物品模式下设备名只在提示与点按详情中出现，卡片上以设备图标 + 数量常驻。
   const showSubtitle = source.subtitle !== "" && (source.kind === "recipe" || source.machineCount === undefined);
+  const rateText = compact ? source.rateValue ?? source.rate : source.rate;
 
   return (
     <div
@@ -909,14 +923,19 @@ function FlowNode({
             </span>
           )}
           {showSubtitle ? <span className={styles["production-flow-node-subtitle"]}>{source.subtitle}</span> : null}
-          {source.rate === undefined ? null : (
-            <b className={styles["production-flow-node-rate"]}>{compact ? source.rateValue ?? source.rate : source.rate}</b>
+          {rateText === undefined ? null : (
+            <b
+              className={styles["production-flow-node-rate"]}
+              style={compact ? { "--flow-rate-max": `${resolveCompactRateFontPx(rateText, rect.width)}px` } as React.CSSProperties : undefined}
+            >
+              {rateText}
+            </b>
           )}
         </span>
       </div>
-      {overviewLabelScale === null ? null : (
-        <span className={styles["production-flow-node-overview-label"]}>
-          {truncateOverviewLabel(source.title, rect.width * overviewLabelScale)}
+      {overviewLabelScale === null || overviewLabelPlacement === null ? null : (
+        <span className={[styles["production-flow-node-overview-label"], styles[`is-${overviewLabelPlacement}`]].join(" ")}>
+          {truncateOverviewLabel(source.title, rect.width * overviewLabelScale - OVERVIEW_LABEL_PADDING_PX)}
         </span>
       )}
     </div>
@@ -1348,30 +1367,101 @@ function estimateLayerCount(graphInput: ProductionFlowGraphInput): number {
 }
 
 /** 总览标签约 11px 字号下每个西文字符的屏幕宽度；中日韩字符按两个计。 */
+/** 总览名称标签的屏幕字号、左右内边距与占用高度（含与卡片的间隔），与样式表一致。 */
+const OVERVIEW_LABEL_FONT = "600 11px";
+const OVERVIEW_LABEL_PADDING_PX = 8;
+const OVERVIEW_LABEL_HEIGHT_PX = 17;
+/** 无法测量文字时按每个西文字符的平均宽度估算（中日韩字符按两个计）。 */
 const OVERVIEW_LABEL_CHAR_PX = 6.4;
+/** 总览卡片除速率外占用的宽度（布局单位）：内边距、边框、44px 图标与间距。 */
+const COMPACT_RATE_INSET = 70;
+/** 速率粗体等宽数字的字宽（em）。 */
+const COMPACT_RATE_DIGIT_EM = 0.62;
+const COMPACT_RATE_MAX_FONT_PX = 46;
+
+/** 总览速率的字号上限（布局单位）：整个数值放得进卡片的文字区，不会被截掉位数。 */
+function resolveCompactRateFontPx(rate: string, cardWidth: number): number {
+  const fitted = (cardWidth - COMPACT_RATE_INSET) / (Array.from(rate).length * COMPACT_RATE_DIGIT_EM);
+  return Math.max(1, Math.min(COMPACT_RATE_MAX_FONT_PX, Math.floor(fitted)));
+}
+
+/** 每张卡片正上方与正下方到最近一张卡片的空隙（布局单位）；没有遮挡时为无穷大。 */
+function resolveCardClearances(
+  nodes: readonly SankeyNode<ProductionFlowNode>[],
+  orientation: ProductionFlowOrientation,
+  metrics: CardMetrics,
+): ReadonlyMap<string, { readonly above: number; readonly below: number }> {
+  const rects = nodes.map((node) => ({ id: node.id, rect: resolveCardRect(node, orientation, metrics) }));
+  return new Map(rects.map(({ id, rect }) => {
+    let above = Infinity;
+    let below = Infinity;
+    for (const other of rects) {
+      const overlapsX = other.id !== id
+        && other.rect.left < rect.left + rect.width
+        && other.rect.left + other.rect.width > rect.left;
+      if (!overlapsX) continue;
+      if (other.rect.top >= rect.top + rect.height) {
+        below = Math.min(below, other.rect.top - rect.top - rect.height);
+      } else if (other.rect.top + other.rect.height <= rect.top) {
+        above = Math.min(above, rect.top - other.rect.top - other.rect.height);
+      }
+    }
+    return [id, { above, below }];
+  }));
+}
+
+/** 名称标签优先放在卡片下方，下方放不下就放上方，两边都会压到相邻卡片时不显示。 */
+function resolveOverviewLabelPlacement(
+  clearance: { readonly above: number; readonly below: number } | undefined,
+  scale: number,
+): "below" | "above" | null {
+  const needed = OVERVIEW_LABEL_HEIGHT_PX / scale;
+  if (clearance === undefined || clearance.below >= needed) return "below";
+  return clearance.above >= needed ? "above" : null;
+}
+
+let overviewLabelContext: CanvasRenderingContext2D | null | undefined;
+
+/** 标签文字在屏幕上的宽度：有画布时按实际字体测量，否则按字数估算。 */
+function measureOverviewLabel(text: string): number {
+  if (overviewLabelContext === undefined) {
+    overviewLabelContext = typeof document === "undefined" ? null : document.createElement("canvas").getContext("2d");
+    if (overviewLabelContext !== null) {
+      overviewLabelContext.font = `${OVERVIEW_LABEL_FONT} ${getComputedStyle(document.body).fontFamily}`;
+    }
+  }
+  if (overviewLabelContext !== null) {
+    return overviewLabelContext.measureText(text).width;
+  }
+  return Array.from(text).reduce((sum, char) => sum + (char.charCodeAt(0) > 0x2e7f ? 2 : 1), 0) * OVERVIEW_LABEL_CHAR_PX;
+}
 
 /**
- * 按卡片在屏幕上的宽度截短总览名称，保留最后一个词（“…Powder”“…Ore”），
- * 同一前缀的物品（矿石与粉末、种子与作物）截短后仍能区分。
+ * 按标签在屏幕上可用的宽度截短总览名称，保留最后一个词（“…Powder”“…Ore”），
+ * 同一前缀的物品（矿石与粉末、种子与作物）截短后仍能区分。截短结果本身就放得下，样式不会再加省略号。
  */
-export function truncateOverviewLabel(title: string, screenWidth: number): string {
-  const budget = Math.floor(screenWidth / OVERVIEW_LABEL_CHAR_PX);
-  const units = (text: string) => Array.from(text).reduce((sum, char) => sum + (char.charCodeAt(0) > 0x2e7f ? 2 : 1), 0);
-  if (units(title) <= budget) {
+export function truncateOverviewLabel(
+  title: string,
+  screenWidth: number,
+  measure: (text: string) => number = measureOverviewLabel,
+): string {
+  if (measure(title) <= screenWidth) {
     return title;
   }
   const take = (text: string, limit: number) => {
     let result = "";
     for (const char of text) {
-      if (units(result + char) > limit) break;
+      if (measure(result + char) > limit) break;
       result += char;
     }
-    return result;
+    return result.trimEnd();
   };
+  const ellipsis = measure("…");
   const lastSpace = title.lastIndexOf(" ");
   const lastWord = lastSpace > 0 ? title.slice(lastSpace + 1) : "";
-  if (lastWord !== "" && units(lastWord) + 3 <= budget) {
-    return `${take(title, budget - units(lastWord) - 1).trimEnd()}…${lastWord}`;
+  // 末词前至少留两个字符，否则截短结果看不出是哪个物品。
+  if (lastWord !== "" && measure(lastWord) + ellipsis + measure(title.slice(0, 2)) <= screenWidth) {
+    return `${take(title, screenWidth - measure(lastWord) - ellipsis)}…${lastWord}`;
   }
-  return `${take(title, Math.max(1, budget - 1)).trimEnd()}…`;
+  return `${take(title, screenWidth - ellipsis)}…`;
 }

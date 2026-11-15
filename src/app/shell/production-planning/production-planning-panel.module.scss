@@ -1862,7 +1862,6 @@
 
 .production-flow-node-overview-label {
   position: absolute;
-  top: calc(100% + 2px);
   left: 50%;
   max-width: 100%;
   padding: 0 calc(4px / var(--flow-scale, 1));
@@ -1879,6 +1878,14 @@
   pointer-events: none;
 }
 
+.production-flow-node-overview-label.is-below {
+  top: calc(100% + 2px);
+}
+
+.production-flow-node-overview-label.is-above {
+  bottom: calc(100% + 2px);
+}
+
 .production-flow-nodes.is-compact .production-flow-node-machine,
 .production-flow-nodes.is-compact .production-flow-node-subtitle {
   display: none;
@@ -1887,10 +1894,10 @@
 .production-flow-nodes.is-compact .production-flow-node-rate {
   overflow: hidden;
   margin-left: 0;
-  // 上限约为卡片文字区能容纳四位数的字号，越过上限后速率才随总览缩小。
-  font-size: min(calc(12px / var(--flow-scale, 1)), 46px);
+  // 上限（--flow-rate-max）按数值位数取卡片文字区放得下的字号，越过上限后速率才随总览缩小。
+  font-size: min(calc(12px / var(--flow-scale, 1)), var(--flow-rate-max, 46px));
   line-height: 1;
-  text-overflow: clip;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

@@ -257,7 +257,7 @@
 
 .recipe-tree-rate-input {
   width: 64px;
-  min-height: 32px;
+  min-height: var(--pen-target);
   padding: 2px 6px;
   border: 1px solid var(--line);
   border-radius: 4px;
@@ -277,12 +277,15 @@
   container-type: inline-size;
 }
 
-// 缩进参考线最多画到 --recipe-tree-guide-depth-limit 层，更深的层级不再缩进；
-// 容器越宽能画的层数越多、每层缩进越宽，窄停靠栏里名称仍有空间。
+// 前 --recipe-tree-guide-depth-limit 层按整步缩进并画参考线，更深的层级改用窄步继续缩进，
+// 深层仍能看出父子关系而不是排成同级；容器越宽整步缩进的层数越多，窄停靠栏里名称仍有空间。
 .recipe-tree-nodes li {
   --recipe-tree-indent-step: 10px;
+  --recipe-tree-deep-indent-step: 4px;
   --recipe-tree-guide-depth-limit: 3;
-  --recipe-tree-indent: calc(min(var(--recipe-tree-depth, 0), var(--recipe-tree-guide-depth-limit)) * var(--recipe-tree-indent-step));
+  --recipe-tree-full-indent: calc(min(var(--recipe-tree-depth, 0), var(--recipe-tree-guide-depth-limit)) * var(--recipe-tree-indent-step));
+  --recipe-tree-deep-indent: calc(max(0, var(--recipe-tree-depth, 0) - var(--recipe-tree-guide-depth-limit)) * var(--recipe-tree-deep-indent-step));
+  --recipe-tree-indent: calc(var(--recipe-tree-full-indent) + var(--recipe-tree-deep-indent));
 }
 
 @container (min-width: 300px) {
@@ -318,14 +321,21 @@
   gap: 2px 4px;
   min-height: 36px;
   padding: 2px 8px 2px var(--recipe-tree-indent);
-  background-image: repeating-linear-gradient(
-    to right,
-    transparent 0 calc(var(--recipe-tree-indent-step) / 2 - 1px),
-    var(--line-strong) calc(var(--recipe-tree-indent-step) / 2 - 1px) calc(var(--recipe-tree-indent-step) / 2),
-    transparent calc(var(--recipe-tree-indent-step) / 2) var(--recipe-tree-indent-step)
-  );
+  background-image:
+    repeating-linear-gradient(
+      to right,
+      transparent 0 calc(var(--recipe-tree-indent-step) / 2 - 1px),
+      var(--line-strong) calc(var(--recipe-tree-indent-step) / 2 - 1px) calc(var(--recipe-tree-indent-step) / 2),
+      transparent calc(var(--recipe-tree-indent-step) / 2) var(--recipe-tree-indent-step)
+    ),
+    repeating-linear-gradient(
+      to right,
+      var(--line) 0 1px,
+      transparent 1px var(--recipe-tree-deep-indent-step)
+    );
   background-repeat: no-repeat;
-  background-size: var(--recipe-tree-indent) 100%;
+  background-position: 0 0, var(--recipe-tree-full-indent) 0;
+  background-size: var(--recipe-tree-full-indent) 100%, var(--recipe-tree-deep-indent) 100%;
 }
 
 .recipe-tree-node:hover {

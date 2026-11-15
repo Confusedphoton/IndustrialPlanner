@@ -67,6 +67,7 @@ import {
   resolveLiveFlowNodeActionTarget,
   type RecipeActionTarget,
 } from "./recipe-action-menu";
+import { resolveOverlayBottomLimit } from "@/app/shell/layout/status-bar-bounds";
 import { createFlowNodePlacementDrag, resolveRecipePlacementTarget } from "./recipe-quick-actions";
 import {
   didPanelPlacementDragJustEnd,
@@ -96,8 +97,6 @@ const RECIPE_TREE_INFINITE_ITEM_IDS: ReadonlySet<string> = new Set(["item_liquid
 const SEARCH_RESULT_LIMIT = 8;
 const VIEWPORT_MARGIN_PX = 8;
 const TOP_BAR_CLEARANCE_PX = 56;
-/** 底部状态栏高度；浮层不压到状态栏上。 */
-const STATUS_BAR_CLEARANCE_PX = 28;
 
 export const RecipeTreeOverlay = observer(function RecipeTreeOverlay({ appHost }: { appHost: AppHost }) {
   useEffect(() => hookRecipeTreeOverlayPersistence(), []);
@@ -732,10 +731,21 @@ const RecipeTreeNode = observer(function RecipeTreeNode({
   const externalPerMinute = node.supply.manual + node.supply.infinite + node.supply.surplus + node.supply.cycle;
   const hasRecipeChoice = candidates.length > 1;
   const hasExtras = byproducts.length > 0 || externalPerMinute > 0.0001;
+  // 行内只能以图标与悬停提示表示的内容（设备数、副产物、外部供给），点按后在节点菜单里以文字列出。
   const openNodeActionMenu = (anchor: DOMRect) => openActionMenu({
     itemId: node.itemId,
     recipeId: recipeNode?.recipeId ?? null,
     anchor,
+    details: [
+      `${formatProductionFlow(node.demandPerMinute)}${t("recipeTree.perMinute")}`,
+      ...(machineId === null || recipeNode === null
+        ? []
+        : [`${t(index.entityById.get(machineId)?.nameKey ?? machineId)} ×${formatProductionDeviceCount(recipeNode.deviceCount)}`]),
+      ...byproducts.map((output) => (
+        `+${resolveProductionPlanningItemName(output.itemId, index, t)} ${formatProductionFlow(output.perMinute)}${t("recipeTree.perMinute")}`
+      )),
+      ...(externalPerMinute > 0.0001 ? [`${t("recipeTree.supplied")} ${formatProductionFlow(externalPerMinute)}`] : []),
+    ],
   });
 
   return (
@@ -1087,18 +1097,19 @@ function resolveOnScreenRect(rect: RecipeTreeOverlayRect, viewport: ViewportSize
 
 function clampRectToViewport(rect: RecipeTreeOverlayRect, viewport: ViewportSize): RecipeTreeOverlayRect {
   const viewportWidth = viewport.width;
-  const viewportHeight = viewport.height;
+  // 浮层不压到底部状态栏上；按状态栏实际位置取下边界（状态栏收起时为视口底边）。
+  const bottomLimit = Math.min(viewport.height, resolveOverlayBottomLimit());
   const width = Math.min(Math.max(RECIPE_TREE_MIN_WIDTH, rect.width), viewportWidth - VIEWPORT_MARGIN_PX * 2);
   const height = Math.min(
     Math.max(RECIPE_TREE_MIN_HEIGHT, rect.height),
-    viewportHeight - TOP_BAR_CLEARANCE_PX - STATUS_BAR_CLEARANCE_PX - VIEWPORT_MARGIN_PX,
+    bottomLimit - TOP_BAR_CLEARANCE_PX - VIEWPORT_MARGIN_PX,
   );
   return {
     width,
     height,
     x: Math.max(VIEWPORT_MARGIN_PX, Math.min(rect.x, viewportWidth - width - VIEWPORT_MARGIN_PX)),
     // 整个卡片保持在顶栏下方的视口内，不遮挡仿真控制；矮屏下高度先被收窄。
-    y: Math.max(TOP_BAR_CLEARANCE_PX, Math.min(rect.y, viewportHeight - height - STATUS_BAR_CLEARANCE_PX - VIEWPORT_MARGIN_PX)),
+    y: Math.max(TOP_BAR_CLEARANCE_PX, Math.min(rect.y, bottomLimit - height - VIEWPORT_MARGIN_PX)),
   };
 }
 

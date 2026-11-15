@@ -2461,6 +2461,27 @@ describe("Left dock panel switching", () => {
     });
     expect(container.querySelector(".dock-resize-handle")).toBeNull();
   });
+
+  it("keeps the saved palette width when a pen resting on the squeezed grip only jitters", () => {
+    const appHost = createAppTestHost(createWorkspace());
+    const savedWidth = appHost.state.workbench.leftDockWidth;
+
+    act(() => {
+      root.render(<LeftDock appHost={appHost} maxWidth={250} width={250} />);
+    });
+    const handle = container.querySelector(".dock-resize-handle") as HTMLDivElement;
+    handle.setPointerCapture = vi.fn();
+    const pointer = { pointerId: 1, pointerType: "pen", clientY: 200 };
+
+    act(() => {
+      dispatchPointerEvent(handle, "pointerdown", { ...pointer, clientX: 300 });
+      dispatchPointerEvent(handle, "pointermove", { ...pointer, clientX: 302 });
+      dispatchPointerEvent(handle, "pointermove", { ...pointer, clientX: 298 });
+      dispatchPointerEvent(handle, "pointerup", { ...pointer, clientX: 298 });
+    });
+
+    expect(appHost.state.workbench.leftDockWidth).toBe(savedWidth);
+  });
 });
 
 

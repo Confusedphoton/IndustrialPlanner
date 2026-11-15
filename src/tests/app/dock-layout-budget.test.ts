@@ -18,6 +18,21 @@ function canvasWidth(viewportWidth: number, leftToolbarWidth: number, budget: Re
 }
 
 describe("resolveDockLayoutBudget", () => {
+  it("lets the palette be dragged wider only into width the canvas can spare, not out of the recipe dock", () => {
+    const input = {
+      viewportWidth: 1280,
+      leftToolbarWidth: 68,
+      rightDockWidth: 0,
+      recipeDockWidth: 360,
+      recipeDockMinWidth: RECIPE_DOCK_MIN_WIDTH,
+    };
+    const budget = resolveDockLayoutBudget({ ...input, leftDockWidth: 300 });
+    const widened = resolveDockLayoutBudget({ ...input, leftDockWidth: budget.leftDockMaxWidth });
+
+    expect(budget.leftDockMaxWidth).toBeGreaterThan(300);
+    expect(widened.recipeDockWidth).toBe(budget.recipeDockWidth);
+  });
+
   it.each([
     { viewportWidth: 1920, leftToolbarWidth: 68, leftDockWidth: 320 },
     { viewportWidth: 1440, leftToolbarWidth: 68, leftDockWidth: 320 },

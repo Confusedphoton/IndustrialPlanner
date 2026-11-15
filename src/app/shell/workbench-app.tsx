@@ -749,8 +749,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     canvasReservedWidth: canvasToolRailState.baseWidth,
   };
   const dockLayoutBudget = resolveDockLayoutBudget(dockLayoutBudgetInput);
-  // 左侧面板的上限与它自身的宽度无关，按最大宽度试算即得当前布局下可拖到的最宽值。
-  const leftDockMaxWidth = resolveDockLayoutBudget({ ...dockLayoutBudgetInput, leftDockWidth: MAX_LEFT_DOCK_WIDTH }).leftDockWidth;
+  const leftDockMaxWidth = Math.min(MAX_LEFT_DOCK_WIDTH, dockLayoutBudget.leftDockMaxWidth);
   useEffect(() => {
     recipeTreeOverlayState.setDockWidthLimit(dockLayoutBudget.recipeDockMaxWidth);
   }, [dockLayoutBudget.recipeDockMaxWidth]);

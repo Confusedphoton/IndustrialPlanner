@@ -39,6 +39,9 @@ const PANEL_COMPONENTS: Record<LeftDockPanelId, ComponentType<{ appHost: AppHost
   simulation: SimulationPanel,
 };
 
+/** 拖动抓手超过该距离才开始改变宽度。 */
+const RESIZE_DRAG_SLOP_PX = 6;
+
 const PANEL_ORDER: LeftDockPanelId[] = ["placement", "region", "blueprint", "history", "base", "simulation"];
 
 const LeftDockView = observer(function LeftDockView({
@@ -85,10 +88,16 @@ const LeftDockView = observer(function LeftDockView({
 
     resizeCleanupRef.current?.();
 
+    let dragging = false;
     const handlePointerMove = (moveEvent: PointerEvent) => {
       if (moveEvent.pointerId !== pointerId) {
         return;
       }
+      // 笔尖按住时的细微抖动不算拖动；否则被布局挤窄时的宽度会被当成偏好保存下来。
+      if (!dragging && Math.abs(moveEvent.clientX - startX) < RESIZE_DRAG_SLOP_PX) {
+        return;
+      }
+      dragging = true;
 
       appHost.internalActions.setLeftDockWidth(
         Math.min(maxWidth, Math.max(lowerBound, startWidth + moveEvent.clientX - startX)),

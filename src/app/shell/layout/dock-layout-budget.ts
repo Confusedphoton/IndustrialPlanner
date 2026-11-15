@@ -23,6 +23,8 @@ export interface DockLayoutBudgetInput {
 export interface DockLayoutBudget {
   /** 0 when the left dock is closed. */
   readonly leftDockWidth: number;
+  /** 拖宽左侧面板的上限：只占用画布富余的宽度，不挤窄已打开的右侧停靠栏。 */
+  readonly leftDockMaxWidth: number;
   readonly rightDockWidth: number;
   readonly recipeDockWidth: number;
   /** The widest the recipe dock may be dragged before it would squeeze the canvas below its minimum. */
@@ -52,6 +54,10 @@ export function resolveDockLayoutBudget(input: DockLayoutBudgetInput): DockLayou
     input.viewportWidth - input.leftToolbarWidth - minCanvasWidth - rightMinimum,
   ));
   const sideBudget = input.viewportWidth - input.leftToolbarWidth - leftDockWidth - minCanvasWidth;
+  const resolveLeftDockMaxWidth = (rightColumnsWidth: number) => Math.max(
+    leftDockWidth,
+    input.viewportWidth - input.leftToolbarWidth - minCanvasWidth - rightColumnsWidth,
+  );
 
   if (
     input.rightDockWidth > 0
@@ -64,6 +70,7 @@ export function resolveDockLayoutBudget(input: DockLayoutBudgetInput): DockLayou
     );
     return {
       leftDockWidth,
+      leftDockMaxWidth: resolveLeftDockMaxWidth(columnWidth),
       rightDockWidth: columnWidth,
       recipeDockWidth: 0,
       recipeDockMaxWidth: Math.max(input.recipeDockMinWidth, sideBudget),
@@ -78,7 +85,14 @@ export function resolveDockLayoutBudget(input: DockLayoutBudgetInput): DockLayou
     ? 0
     : Math.min(input.rightDockWidth, Math.max(MIN_SQUEEZED_RIGHT_DOCK_WIDTH_PX, sideBudget - recipeDockWidth));
 
-  return { leftDockWidth, rightDockWidth, recipeDockWidth, recipeDockMaxWidth, stackRightDocks: false };
+  return {
+    leftDockWidth,
+    leftDockMaxWidth: resolveLeftDockMaxWidth(rightDockWidth + recipeDockWidth),
+    rightDockWidth,
+    recipeDockWidth,
+    recipeDockMaxWidth,
+    stackRightDocks: false,
+  };
 }
 
 /** 叠放时配方树至少需要的高度：标题栏、搜索/工具栏行、合计与可用的流程图区域。 */
