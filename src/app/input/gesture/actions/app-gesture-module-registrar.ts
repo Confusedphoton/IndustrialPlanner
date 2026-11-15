@@ -40,6 +40,7 @@ import {
 } from "./hypergryph/hypergryph-single-placement-gesture-module";
 import { createHypergryphRotateSelectionGestureModule } from "./hypergryph/hypergryph-rotate-selection-gesture-module";
 import { createHypergryphPenEraserGestureModule } from "./hypergryph/hypergryph-pen-eraser-gesture-module";
+import { createHypergryphPreviewEdgePanModule } from "./hypergryph/hypergryph-preview-edge-pan-module";
 import { createHypergryphPortDragLogisticsGestureModule } from "./hypergryph/hypergryph-port-drag-logistics-gesture-module";
 import { createHypergryphSaveBlueprintGestureModule } from "./hypergryph/hypergryph-save-blueprint-gesture-module";
 import { createHypergryphMouseViewportPanModule } from "./hypergryph/hypergryph-mouse-viewport-pan-module";
@@ -89,6 +90,7 @@ export class AppGestureModuleRegistrar {
     }
     register("confirm-placement", createHypergryphSinglePlacementGestureModule());
     register("move", createHypergryphMoveGestureModule());
+    register("pan-viewport", createHypergryphPreviewEdgePanModule());
     register("region-edit", createHypergryphRegionGestureModule());
     register("marquee-select", createHypergryphMarqueeGestureModule());
     register("configure-device", createHypergryphDarkPipeLinkGestureModule());

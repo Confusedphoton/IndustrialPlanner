@@ -75,22 +75,12 @@ export function zoomCanvasViewportByButton(canvas: CanvasInteractionController, 
   syncViewportDependents(canvas, editor);
 }
 
-/** 画布左右两侧被常驻浮层（如画布工具条）遮挡的宽度（px）。 */
-export interface CanvasViewportObstruction {
-  readonly left: number;
-  readonly right: number;
-}
-
-const NO_OBSTRUCTION: CanvasViewportObstruction = { left: 0, right: 0 };
-
 /**
  * 把当前基地外框居中到画布未被遮挡的区域，并沿缩放档位调整到能完整显示基地的最大档位（受缩放上下限约束）。
  * 结果停在档位上，之后的滚轮与按钮缩放保持连续。
  */
-export function fitCanvasViewportToBase(
-  canvas: CanvasInteractionController,
-  obstruction: CanvasViewportObstruction = NO_OBSTRUCTION,
-): void {
+export function fitCanvasViewportToBase(canvas: CanvasInteractionController): void {
+  const obstruction = canvas.viewportObstruction;
   const editor = canvas.editor;
   const view = canvas.view;
   if (editor === null || view.state.clientRect.width <= 0 || view.state.clientRect.height <= 0) {

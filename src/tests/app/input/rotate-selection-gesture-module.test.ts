@@ -59,6 +59,80 @@ describe("rotating the selection from the action strip", () => {
   });
 });
 
+describe("double tapping a device to spin it", () => {
+  it("rotates a device when the pen taps it twice in quick succession", async () => {
+    const appHost = await createAppHostWithPlacedDevice();
+    const editor = appHost.workspace.editor!;
+    const [entityId] = editor.document.getSnapshot().entityOrder;
+    editor.actions.clearCollection(EntityCollectionType.selection);
+    const clock = vi.spyOn(performance, "now").mockReturnValue(1000);
+
+    penCanvasTap(appHost, entityCenter(appHost, entityId!), 1);
+    clock.mockReturnValue(1150);
+    penCanvasTap(appHost, entityCenter(appHost, entityId!), 2);
+
+    expect(editor.document.getSnapshot().entities[entityId!]?.rotation).toBe(90);
+    expect([...editor.state.collections.selection]).toEqual([entityId]);
+  });
+
+  it("keeps a slow second tap as an ordinary tap that toggles the selection", async () => {
+    const appHost = await createAppHostWithPlacedDevice();
+    const editor = appHost.workspace.editor!;
+    const [entityId] = editor.document.getSnapshot().entityOrder;
+    editor.actions.clearCollection(EntityCollectionType.selection);
+    const clock = vi.spyOn(performance, "now").mockReturnValue(1000);
+
+    penCanvasTap(appHost, entityCenter(appHost, entityId!), 1);
+    clock.mockReturnValue(2000);
+    penCanvasTap(appHost, entityCenter(appHost, entityId!), 2);
+
+    expect(editor.document.getSnapshot().entities[entityId!]?.rotation).toBe(0);
+    expect(editor.state.collections.selection.length).toBe(0);
+  });
+
+  it("spins a device tapped again right after the pen tap that placed it", async () => {
+    const appHost = await createAppHostWithPlacedDevice();
+    const editor = appHost.workspace.editor!;
+    const position = { x: 300, y: 300 };
+    const clock = vi.spyOn(performance, "now").mockReturnValue(1000);
+    appHost.gestureAdapter.handleUiButtonMouseTap({
+      uiButtonId: "ui-left-dock-placement-mode-storager_1-mouse-tap", button: 0,
+      altKey: false, ctrlKey: false, metaKey: false, shiftKey: false,
+    });
+    penCanvasMove(appHost, position, 1);
+    penCanvasTap(appHost, position, 2);
+    const placedId = editor.document.getSnapshot().entityOrder.at(-1)!;
+    expect(appHost.mainCanvas.state.activeTool).toBe("select");
+
+    clock.mockReturnValue(1150);
+    penCanvasTap(appHost, position, 3);
+
+    expect(editor.document.getSnapshot().entities[placedId]?.rotation).toBe(90);
+  });
+});
+
+function entityCenter(appHost: AppHost, entityId: string): { x: number; y: number } {
+  const entity = appHost.workspace.editor!.document.getSnapshot().entities[entityId]!;
+  const cell = appHost.mainCanvas.view.queries.findClientRectForGridCell({ x: entity.position.x + 1, y: entity.position.y + 1 })!;
+  return { x: cell.left + cell.width / 2, y: cell.top + cell.height / 2 };
+}
+
+function penPointer(position: { x: number; y: number }, pointerId: number, buttons: number) {
+  return {
+    pointerId, pointerType: "pen", clientX: position.x, clientY: position.y, button: 0, buttons,
+    altKey: false, ctrlKey: false, metaKey: false, shiftKey: false,
+  };
+}
+
+function penCanvasMove(appHost: AppHost, position: { x: number; y: number }, pointerId: number): void {
+  appHost.gestureAdapter.handlePointerMove(penPointer(position, pointerId, 0));
+}
+
+function penCanvasTap(appHost: AppHost, position: { x: number; y: number }, pointerId: number): void {
+  appHost.gestureAdapter.handlePointerDown(penPointer(position, pointerId, 1));
+  appHost.gestureAdapter.handlePointerUp(penPointer(position, pointerId, 0));
+}
+
 async function createAppHostWithPlacedDevice(): Promise<AppHost> {
   const workspace: WorkspaceContract = {
     state: createWorkspaceState(), registry: createRegistryContract(),

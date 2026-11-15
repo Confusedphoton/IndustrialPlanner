@@ -98,7 +98,9 @@ describe("canvas viewport zoom buttons", () => {
     test.view.actions.setViewportClientRect({ left: 0, top: 0, width: 1100, height: 300 });
     const rail = 70;
 
-    fitCanvasViewportToBase(test.canvas, { left: rail, right: 0 });
+    vi.spyOn(test.canvas, "viewportObstruction", "get").mockReturnValue({ left: rail, right: 0 });
+
+    fitCanvasViewportToBase(test.canvas);
 
     const { center, gridCellPixelSize } = test.view.state;
     const toScreenX = (worldX: number) => 550 + (worldX - center.x) * gridCellPixelSize;

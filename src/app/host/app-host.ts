@@ -25,6 +25,7 @@ import {
   UiStateReadWrite,
 } from "../state/state-impl";
 import { hookThemeApplicator } from "../theme/theme-applicator";
+import { canvasToolRailState } from "../shell/canvas/canvas-tool-rail-state";
 import { WorkbenchBlueprintFolderDialogController } from "../shell/state/blueprint-folder-dialog-state";
 import { WorkbenchBlueprintPreviewController } from "../shell/state/blueprint-preview-dialog-state";
 import { WorkbenchEncyclopediaPickerController } from "../shell/state/encyclopedia-picker-state";
@@ -75,7 +76,11 @@ export function createAppHost(
     internalState,
     mainCanvas: new CanvasInteractionController({ view: options.mainView, registry: workspace.registry, readEditor: () => workspace.editor, readWorkbench: () => host, workbenchActions: !embedded,
       canHandleSuspendedCommands: owner => owner === "inspector" && !embedded
-        && document.visibilityState !== "hidden" && resolveShortcutInputLayer(host) === "inspector-dialog" }),
+        && document.visibilityState !== "hidden" && resolveShortcutInputLayer(host) === "inspector-dialog",
+      readViewportObstruction: () => ({
+        left: canvasToolRailState.side === "left" ? canvasToolRailState.width : 0,
+        right: canvasToolRailState.side === "right" ? canvasToolRailState.width : 0,
+      }) }),
     sceneFactories: options.sceneFactories,
   } as AppHost;
   const publicSettings = new Proxy(internalState.settings, {

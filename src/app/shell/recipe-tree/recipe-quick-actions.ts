@@ -7,6 +7,12 @@ import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
+import type { ProductionFlowNode } from "@/app/shell/production-planning/flow/flow-graph-builder";
+import {
+  PanelPlacementDrag,
+  resolveDevicePlacementTarget,
+  type PanelPlacementTarget,
+} from "@/app/shell/shared/panel-placement-drag";
 
 /**
  * 配方树/流程图节点的快捷操作。
@@ -33,21 +39,33 @@ function createRecipeConfig(definition: EntityDefinition, recipe: RecipeDefiniti
   return config;
 }
 
+/** 该配方的拖出放置目标：配方所用设备，放下时带上该配方。 */
+export function resolveRecipePlacementTarget(appHost: AppHost, recipe: RecipeDefinition): PanelPlacementTarget | null {
+  const definition = appHost.workspace.registry.queries.findEntityDefinition(recipe.machineId);
+  return definition === null ? null : resolveDevicePlacementTarget(appHost, definition.id, createRecipeConfig(definition, recipe));
+}
+
+/** 流程图卡片拖出流程图时：有配方的卡片放下带该配方的设备，其余卡片（原料、外部供给）不交出。 */
+export function createFlowNodePlacementDrag(appHost: AppHost, node: ProductionFlowNode): PanelPlacementDrag | null {
+  const recipeId = node.recipeId ?? node.recipeNode?.recipeId ?? null;
+  const recipe = recipeId === null ? null : appHost.workspace.registry.queries.findRecipeDefinition(recipeId);
+  const target = recipe === null ? null : resolveRecipePlacementTarget(appHost, recipe);
+  return target === null ? null : new PanelPlacementDrag(appHost, target);
+}
+
 /** 进入该配方设备的放置模式，放下的设备自动带上该配方。返回是否成功进入放置。 */
 export function startPlacementWithRecipe(appHost: AppHost, recipe: RecipeDefinition): boolean {
-  const definition = appHost.workspace.registry.queries.findEntityDefinition(recipe.machineId);
-  if (definition === null) {
+  const target = resolveRecipePlacementTarget(appHost, recipe);
+  if (target === null) {
     return false;
   }
 
-  // 进入前后都写入，避免进入时立即创建的首个 draft 缺少配置，或进入流程清理运行时状态。
-  const config = createRecipeConfig(definition, recipe);
   runInAction(() => {
-    appHost.mainCanvas.state.runtime.singlePlacementConfig = config;
+    appHost.mainCanvas.state.runtime.singlePlacementConfig = target.config;
     appHost.mainCanvas.state.runtime.singlePlacementRotation = null;
   });
   appHost.gestureAdapter.handleUiButtonMouseTap({
-    uiButtonId: `ui-left-dock-placement-mode-${definition.id}-mouse-tap`,
+    uiButtonId: `ui-left-dock-placement-mode-${target.deviceId}-mouse-tap`,
     button: 0,
     altKey: false,
     ctrlKey: false,
@@ -56,14 +74,7 @@ export function startPlacementWithRecipe(appHost: AppHost, recipe: RecipeDefinit
   });
 
   const runtime = appHost.mainCanvas.state.runtime;
-  if (appHost.mainCanvas.state.activeTool !== "single-placement" || runtime.singlePlacementDeviceId !== definition.id) {
-    return false;
-  }
-
-  runInAction(() => {
-    runtime.singlePlacementConfig = config;
-  });
-  return true;
+  return appHost.mainCanvas.state.activeTool === "single-placement" && runtime.singlePlacementDeviceId === target.deviceId;
 }
 
 function readChannelRecipeIds(entity: WorldEntity): readonly string[] {

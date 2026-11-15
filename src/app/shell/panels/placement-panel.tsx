@@ -34,6 +34,11 @@ import {
 } from "@/shared/entity-variants";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import {
+  didPanelPlacementDragJustEnd,
+  resolveDevicePlacementTarget,
+  startPanelPlacementPress,
+} from "@/app/shell/shared/panel-placement-drag";
 
 const DEVICE_SHORTCUT_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] as const;
 const COMPACT_DEVICE_LABEL_MAX_WIDTH = 6.5;
@@ -284,7 +289,10 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
   readonly hotkey: string | null | undefined;
   readonly isActive: boolean;
   readonly labelClassName: string;
-  readonly onButtonPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => void;
+  readonly onButtonPointerDown: (
+    event: ReactPointerEvent<HTMLButtonElement>,
+    button?: Pick<PlacementButtonDefinition, "uiButtonId">,
+  ) => void;
   readonly onButtonPointerUp: (
     event: ReactPointerEvent<HTMLButtonElement>,
     button: Pick<PlacementButtonDefinition, "uiButtonId">,
@@ -417,7 +425,7 @@ const PlacementDeviceButton = observer(function PlacementDeviceButton({
         "aria-pressed": isActive ? isActive : undefined,
         className: cm(styles, className, entityVariant === undefined ? null : "has-entity-variant"),
         "data-ui-button-id": button.uiButtonId,
-        onPointerDown: onButtonPointerDown,
+        onPointerDown: event => onButtonPointerDown(event, button),
         onPointerUp: event => onButtonPointerUp(event, button),
         ref: mainButtonRef,
       }}
@@ -587,14 +595,26 @@ export const PlacementPanel = observer(function PlacementPanel({
     ? null
     : deviceSections[0]?.buttons[0]?.uiButtonId.replace("placement-", "") ?? null;
 
-  const handleButtonPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+  const handleButtonPointerDown = (
+    event: ReactPointerEvent<HTMLButtonElement>,
+    button?: Pick<PlacementButtonDefinition, "uiButtonId">,
+  ) => {
     preventTouchPointerCompatibilityMouseEvents(event);
+    if (button === undefined) {
+      return;
+    }
+    // 磁贴拖到画布上直接放下该设备；点按仍进入放置模式。
+    const deviceId = button.uiButtonId.replace("placement-", "");
+    startPanelPlacementPress(appHost, event, () => resolveDevicePlacementTarget(appHost, deviceId));
   };
 
   const handleButtonPointerUp = (
     event: ReactPointerEvent<HTMLButtonElement>,
     button: Pick<PlacementButtonDefinition, "uiButtonId">,
   ) => {
+    if (didPanelPlacementDragJustEnd()) {
+      return;
+    }
     const deviceId = button.uiButtonId.replace("placement-", "");
     if (event.pointerType !== "mouse" || event.button === 0) {
       // 从面板选择设备时清除配方树带入的放置配置，避免旧配方带到新放置。

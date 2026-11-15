@@ -767,10 +767,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
         const selection = appHost.workspace.editor?.state.collections.selection ?? [];
         const entityId = selection.length === 1 ? selection[0] : undefined;
         if (entityId === undefined) return;
-        appHost.mainCanvas.keepEntityInView(entityId, {
-          left: canvasToolRailState.side === "left" ? canvasToolRailState.width : 0,
-          right: canvasToolRailState.side === "right" ? canvasToolRailState.width : 0,
-        });
+        appHost.mainCanvas.keepEntityInView(entityId);
       });
     });
     return () => {
@@ -788,10 +785,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
       const rect = appHost.mainCanvas.view.state.clientRect;
       if (pendingDocumentKey === null || rect.width <= 0 || rect.height <= 0) return;
       pendingDocumentKey = null;
-      fitCanvasViewportToBase(appHost.mainCanvas, {
-        left: canvasToolRailState.side === "left" ? canvasToolRailState.width : 0,
-        right: canvasToolRailState.side === "right" ? canvasToolRailState.width : 0,
-      });
+      fitCanvasViewportToBase(appHost.mainCanvas);
     };
     const stopDocument = editor.document.subscribe((snapshot) => {
       if (handledDocumentKeys.has(snapshot.documentKey)) return;

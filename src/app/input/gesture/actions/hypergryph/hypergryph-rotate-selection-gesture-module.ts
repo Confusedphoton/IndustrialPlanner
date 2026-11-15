@@ -44,7 +44,7 @@ export function createHypergryphRotateSelectionGestureModule(): GestureMappingMo
   };
 }
 
-function rotateSelectionInPlace(canvas: CanvasInteractionController, editor: EditorContract): GestureHandleResult {
+export function rotateSelectionInPlace(canvas: CanvasInteractionController, editor: EditorContract): GestureHandleResult {
   if (editor.state.collections.selection.length === 0) {
     return { status: "ignored" };
   }

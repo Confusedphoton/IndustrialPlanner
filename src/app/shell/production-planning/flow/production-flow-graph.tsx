@@ -10,6 +10,7 @@ import { resolveWheelZoomDirection } from "@/shared/browser/wheel-zoom";
 
 import type { ProductionPlanningDisplayMode, ProductionPlanningIndex, ProductionPlanningResult } from "../production-planning-model";
 import { CompositeItemIcon } from "@/app/shell/shared";
+import type { PanelPlacementDrag } from "@/app/shell/shared/panel-placement-drag";
 import { buildProductionFlowGraph, type ProductionFlowGraphInput, type ProductionFlowLink, type ProductionFlowNode } from "./flow-graph-builder";
 import { createSankeyLayout, updateSankeyLinkBreadths, type SankeyGraph, type SankeyLink, type SankeyNode } from "./sankey-layout";
 import styles from "../production-planning-panel.module.scss";
@@ -33,6 +34,11 @@ interface ProductionFlowGraphProps {
   readonly onViewportChange?: (viewport: ViewportState) => void;
   /** 节点被点按（未拖动）时回调，用于弹出节点快捷操作；锚点为节点卡片的屏幕矩形。 */
   readonly onNodeActivate?: (node: ProductionFlowNode, anchor: DOMRect) => void;
+  /**
+   * 从卡片开始的拖动离开流程图区域时调用：返回放置拖动则交给它（拖到画布上放下该节点的设备），
+   * 卡片位置与视图恢复到按下时；返回 null 则照常移动卡片或平移。
+   */
+  readonly onNodeDragOut?: (node: ProductionFlowNode) => PanelPlacementDrag | null;
   /** 工具栏行左侧的附加内容（例如调用方的搜索框）。 */
   readonly toolbarLeading?: React.ReactNode;
   readonly t: (key: string) => string;
@@ -55,6 +61,8 @@ interface NodePressState {
   readonly startX1: number;
   readonly startY0: number;
   readonly startY1: number;
+  /** 按下前该卡片相对自动布局的位移；拖出流程图交给放置时恢复。 */
+  readonly startOffset: { readonly layer: number; readonly cross: number } | undefined;
   clientX: number;
   clientY: number;
   moving: boolean;
@@ -132,6 +140,7 @@ export function ProductionFlowGraph({
   nodeDrag = "move",
   onViewportChange,
   onNodeActivate,
+  onNodeDragOut,
   toolbarLeading,
   t,
 }: ProductionFlowGraphProps) {
@@ -292,10 +301,12 @@ export function ProductionFlowGraph({
     node: NodePressState | null;
     pan: PanDragState | null;
     pinch: PinchState | null;
+    dragOut: { readonly pointerId: number; readonly drag: PanelPlacementDrag } | null;
   }>({
     node: null,
     pan: null,
     pinch: null,
+    dragOut: null,
   });
 
   // 手动拖动过的卡片相对自动布局的位移（布局坐标）。数值或显示方式变化而重建布局时按节点 id 保留，
@@ -444,14 +455,59 @@ export function ProductionFlowGraph({
       startX1: node.x1,
       startY0: node.y0,
       startY1: node.y1,
+      startOffset: movedNodeOffsetsRef.current.get(node.id),
       clientX: event.clientX,
       clientY: event.clientY,
       moving: false,
     };
   }, [nodeDrag, startPanOrPinch]);
 
+  /** 从卡片开始的拖动离开流程图区域时交给放置拖动；返回是否已交出。 */
+  const tryHandOffNodeDrag = useCallback((event: React.PointerEvent<HTMLDivElement>, nodeId: string): boolean => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (onNodeDragOut === undefined || rect === undefined) return false;
+    const inside = event.clientX >= rect.left && event.clientX <= rect.right
+      && event.clientY >= rect.top && event.clientY <= rect.bottom;
+    const node = graphRef.current.nodes.find((candidate) => candidate.id === nodeId);
+    const drag = inside || node === undefined ? null : onNodeDragOut(node.source);
+    if (drag === null) return false;
+
+    const interaction = interactionRef.current;
+    const pan = interaction.pan;
+    if (pan !== null) {
+      setViewport({ x: pan.viewportX, y: pan.viewportY, scale: viewportRef.current.scale });
+    }
+    const press = interaction.node;
+    if (press !== null) {
+      if (press.startOffset === undefined) movedNodeOffsetsRef.current.delete(press.nodeId);
+      else movedNodeOffsetsRef.current.set(press.nodeId, press.startOffset);
+      setGraph((current) => updateSankeyLinkBreadths({
+        nodes: current.nodes.map((candidate) => {
+          if (candidate.id !== press.nodeId) return candidate;
+          candidate.x0 = press.startX0;
+          candidate.x1 = press.startX1;
+          candidate.y0 = press.startY0;
+          candidate.y1 = press.startY1;
+          return candidate;
+        }),
+        links: current.links,
+      }));
+    }
+    interaction.pan = null;
+    interaction.node = null;
+    interaction.pinch = null;
+    interaction.dragOut = { pointerId: event.pointerId, drag };
+    drag.move(event.clientX, event.clientY);
+    return true;
+  }, [onNodeDragOut, setViewport]);
+
   const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     const interaction = interactionRef.current;
+
+    if (interaction.dragOut?.pointerId === event.pointerId) {
+      interaction.dragOut.drag.move(event.clientX, event.clientY);
+      return;
+    }
 
     if (interaction.pinch !== null && interaction.pan !== null) {
       const p0 = interaction.pan;
@@ -482,6 +538,9 @@ export function ProductionFlowGraph({
 
     if (interaction.pan !== null && interaction.pan.pointerId === event.pointerId) {
       const pan = interaction.pan;
+      if (pan.pressedNodeId !== null && tryHandOffNodeDrag(event, pan.pressedNodeId)) {
+        return;
+      }
       pan.clientX = event.clientX;
       pan.clientY = event.clientY;
       setViewport({
@@ -499,6 +558,9 @@ export function ProductionFlowGraph({
       const screenDx = event.clientX - press.startClientX;
       const screenDy = event.clientY - press.startClientY;
       if (!press.moving && Math.hypot(screenDx, screenDy) < TAP_SLOP_PX) {
+        return;
+      }
+      if (tryHandOffNodeDrag(event, press.nodeId)) {
         return;
       }
       press.moving = true;
@@ -526,7 +588,7 @@ export function ProductionFlowGraph({
         return updateSankeyLinkBreadths(next);
       });
     }
-  }, [orientation, setViewport]);
+  }, [orientation, setViewport, tryHandOffNodeDrag]);
 
   const activateNode = useCallback((nodeId: string) => {
     if (onNodeActivate === undefined) return;
@@ -566,6 +628,14 @@ export function ProductionFlowGraph({
 
   const handlePointerUp = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     const interaction = interactionRef.current;
+
+    const dragOut = interaction.dragOut;
+    if (dragOut?.pointerId === event.pointerId) {
+      interaction.dragOut = null;
+      if (event.type === "pointerup") dragOut.drag.drop(event.clientX, event.clientY);
+      else dragOut.drag.cancel();
+      return;
+    }
 
     if (interaction.pan?.pointerId === event.pointerId) {
       const pan = interaction.pan;

@@ -28,6 +28,8 @@ export {
 export {
   cleanupPlacementDraft,
   createHypergryphSinglePlacementGestureModule,
+  dragPlacementFromPanel,
+  dropPlacementFromPanel,
   PLACEMENT_RAIL_CANCEL_BUTTON_ID,
   PLACEMENT_RAIL_ROTATE_BUTTON_ID,
 } from "./hypergryph/hypergryph-single-placement-gesture-module";
@@ -40,7 +42,6 @@ export {
   createHypergryphSelectGestureModule,
 } from "./hypergryph/hypergryph-select-gesture-module";
 export {
-  type CanvasViewportObstruction,
   createHypergryphViewportZoomModule,
   fitCanvasViewportToBase,
   zoomCanvasViewportByButton,

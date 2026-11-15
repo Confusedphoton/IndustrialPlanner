@@ -442,10 +442,7 @@ export const CanvasToolRail = observer(function CanvasToolRail({ appHost }: { ap
     <RailButton
       key="fit-base"
       label={t("action.fitBaseInView")}
-      onActivate={() => fitCanvasViewportToBase(canvas, {
-        left: canvasToolRailState.side === "left" ? canvasToolRailState.width : 0,
-        right: canvasToolRailState.side === "right" ? canvasToolRailState.width : 0,
-      })}
+      onActivate={() => fitCanvasViewportToBase(canvas)}
       uiButtonId="canvas-tool-rail-fit-base"
     >
       <LucideScan aria-hidden className={iconClassName} />

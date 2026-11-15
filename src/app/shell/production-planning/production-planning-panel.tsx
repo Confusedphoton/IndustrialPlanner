@@ -75,6 +75,7 @@ import {
 } from "./production-planning-candidate";
 import { ProductionFlowGraph } from "@/app/shell/production-planning/flow";
 import { RecipeActionMenu, resolveFlowNodeActionTarget, type RecipeActionTarget } from "@/app/shell/recipe-tree/recipe-action-menu";
+import { createFlowNodePlacementDrag } from "@/app/shell/recipe-tree/recipe-quick-actions";
 import {
   buildProductionPlanningDeviceMinimumConsumptionRecipeId,
   isProductionPlanningDeviceMinimumConsumptionRecipeId,
@@ -3220,6 +3221,7 @@ function FlowGraph({
         plan={plan}
         index={index}
         onNodeActivate={(node, anchor) => setActionTarget(resolveFlowNodeActionTarget(node, anchor))}
+        onNodeDragOut={(node) => createFlowNodePlacementDrag(appHost, node)}
         onViewportChange={onFlowViewportChange}
         t={t}
       />

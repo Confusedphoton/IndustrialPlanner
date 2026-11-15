@@ -665,6 +665,16 @@ export class GestureAdapter {
     this.resetUiButtonHoldState();
   }
 
+  /** 与双击相同的判定：第二次点按是否紧接在 previous 之后、且落在它附近。 */
+  public isRepeatTap(previous: { readonly atMs: number; readonly position: GesturePosition }, position: GesturePosition): boolean {
+    return this.now() - previous.atMs <= this.thresholds.doubleTapMs
+      && distance(previous.position, position) <= this.thresholds.doubleTapSlopPx;
+  }
+
+  public tapTimeMs(): number {
+    return this.now();
+  }
+
   public needsFrame(): boolean { return this.pendingMergedMove !== null; }
 
   public advanceFrame(timeMs: number): void {

@@ -4,6 +4,7 @@ import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GestureMappingModule } from "../types";
 import { cancelBlueprintPlacement } from "./hypergryph-blueprint-placement-gesture-module";
 import { openOverlapEntityMenuIfNeeded } from "./overlap-entity-candidates";
+import { isEntitySpinTap, recordEntityTap, spinEntity } from "./entity-spin-tap";
 
 export function createHypergryphSelectGestureModule(): GestureMappingModule<AppHost> {
   return {
@@ -171,6 +172,12 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
             return { status: "ignored" };
           }
 
+          if (isEntitySpinTap(context.canvas, event.pointerEntity.id, event.position)) {
+            spinEntity(context.canvas, editor, event.pointerEntity.id, event.position);
+            return { status: "handled" };
+          }
+          recordEntityTap(context.canvas, event.pointerEntity.id, event.position);
+
           if (
             openOverlapEntityMenuIfNeeded({
               canvas: context.canvas,
@@ -198,6 +205,12 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
           if (event.pointerEntity === null) {
             return { status: "ignored" };
           }
+
+          if (isEntitySpinTap(context.canvas, event.pointerEntity.id, event.position)) {
+            spinEntity(context.canvas, editor, event.pointerEntity.id, event.position);
+            return { status: "handled" };
+          }
+          recordEntityTap(context.canvas, event.pointerEntity.id, event.position);
 
           if (
             openOverlapEntityMenuIfNeeded({

@@ -655,8 +655,10 @@
   color: var(--accent-strong);
 }
 
+// 竖向滑动滚动树，横向拖动把该行的设备拖到画布上放下。
 .recipe-tree-node {
   cursor: pointer;
+  touch-action: pan-y;
 }
 
 .recipe-tree-graph-body {
@@ -903,7 +905,12 @@ button.recipe-tree-chip {
   color: var(--text-0);
   font: inherit;
   font-variant-numeric: tabular-nums;
-  touch-action: manipulation;
+  // 与所在列表的滚动方向相反的拖动交给拖出放置。
+  touch-action: pan-y;
+}
+
+.recipe-tree-graph-body .recipe-tree-totals-row button.recipe-tree-chip {
+  touch-action: pan-x;
 }
 
 button.recipe-tree-chip:hover {
@@ -963,6 +970,7 @@ button.recipe-tree-chip:hover {
   min-height: 30px;
   margin: 0;
   color: var(--text-0);
+  touch-action: pan-y;
 }
 
 .recipe-tree-totals-list dd img {

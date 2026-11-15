@@ -144,6 +144,8 @@
 
 .placement-device-button {
   grid-template-columns: 24px minmax(0, 1fr);
+  // 竖向滑动仍滚动列表，横向拖动交给拖出放置（拖到画布上放下设备）。
+  touch-action: pan-y;
 }
 
 .placement-device-button-shell {

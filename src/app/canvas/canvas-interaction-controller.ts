@@ -17,6 +17,7 @@ import { createDemandFrameDriver } from "@/shared/timing/demand-frame-driver";
 import type { SinglePlacementRequest } from "@/domain/editor/types/editor-session-types";
 import type { GridPoint } from "@/domain/shared/grid";
 import type { ClientPixelPoint } from "@/domain/shared/client-pixel";
+import { PreviewEdgePan, type ViewportObstruction } from "./preview-edge-pan";
 
 export interface PlacementPaletteEntry {
   readonly id: string;
@@ -24,6 +25,8 @@ export interface PlacementPaletteEntry {
   readonly availableCount: number | null;
   createRequest(centerGridPoint: GridPoint): SinglePlacementRequest | null;
 }
+
+const NO_VIEWPORT_OBSTRUCTION: ViewportObstruction = { left: 0, right: 0 };
 
 const editingOwners = new WeakMap<EditorContract, CanvasInteractionController>();
 
@@ -86,7 +89,23 @@ export class CanvasInteractionController {
     readonly preparePlacement?: () => Promise<void>;
     readonly workbenchActions?: boolean;
     readonly canHandleSuspendedCommands?: (owner: string) => boolean;
-  }) { this.view = options.view; }
+    /** 画布左右两侧被常驻浮层（画布工具条）遮挡的宽度。 */
+    readonly readViewportObstruction?: () => ViewportObstruction;
+  }) {
+    this.view = options.view;
+    this.edgePan = new PreviewEdgePan({
+      view: options.view,
+      readEditor: () => this.editor,
+      readObstruction: () => this.viewportObstruction,
+      wake: () => this.wakeInput(),
+    });
+  }
+
+  /** 拖动设备预览贴近画布边缘时自动平移地图。 */
+  public readonly edgePan: PreviewEdgePan;
+  public get viewportObstruction(): ViewportObstruction {
+    return this.options.readViewportObstruction?.() ?? NO_VIEWPORT_OBSTRUCTION;
+  }
 
   public get editor(): EditorContract | null { return this.options.readEditor(); }
   public acquireInput(): void {
@@ -189,15 +208,18 @@ export class CanvasInteractionController {
     this.inputDriver = createDemandFrameDriver({
       request: (frame) => requestAnimationFrame(frame),
       cancel: (handle) => cancelAnimationFrame(handle),
-      needsFrame: () => !this.isInputSuspended && (this.inputAdapter?.needsFrame() === true || router.needsFrame()),
+      needsFrame: () => !this.isInputSuspended
+        && (this.inputAdapter?.needsFrame() === true || router.needsFrame() || this.edgePan.needsFrame()),
       onFrame: (timeMs) => {
         this.inputAdapter?.advanceFrame(timeMs);
         router.advanceFrame(timeMs);
+        this.edgePan.advanceFrame(timeMs);
       },
     });
   }
   public wakeInput(): void { this.inputDriver?.wake(); }
   public cancelInput(): void {
+    this.edgePan.stop();
     this.inputRouter?.cancel();
     this.view.actions.cancelMotion();
   }
@@ -258,9 +280,10 @@ export class CanvasInteractionController {
 
   /**
    * 视口变窄（例如打开右侧面板）后，若设备落到可见区域之外，按最小距离平移让它重新完整可见；
-   * 本来就可见时不动视图。obstruction 是画布两侧被常驻浮层（工具条）占用的宽度，设备也要避开。
+   * 本来就可见时不动视图；画布两侧被常驻浮层（工具条）占用的宽度也要避开。
    */
-  public keepEntityInView(entityId: string, obstruction: { readonly left: number; readonly right: number }): void {
+  public keepEntityInView(entityId: string): void {
+    const obstruction = this.viewportObstruction;
     const entity = this.editor?.queries.getEntityById(entityId);
     if (entity == null) return;
     const definition = this.options.registry.queries.findEntityDefinition(entity.definitionId);

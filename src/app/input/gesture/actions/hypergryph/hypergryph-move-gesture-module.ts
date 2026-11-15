@@ -22,6 +22,7 @@ import type { EntityDefinition } from "@/domain/registry/types/entity-definition
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { placeBlueprintFromMoveAndContinue } from "./hypergryph-blueprint-placement-gesture-module";
 import { isPlacementCancelButtonId, isPlacementRotateButtonId } from "./hypergryph-single-placement-gesture-module";
+import { recordEntityLandedBy } from "./entity-spin-tap";
 import {
   didPreviewRectChange,
   isPreviewBoundingBoxAtClientPoint,
@@ -181,39 +182,6 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
           case "tap-long-press-ready":
             return { status: "handled" };
 
-          /*
-          case "key down":
-            if (isSwitchDeviceModeShortcut({
-              appHost: context.appHost,
-              code: event.code,
-              key: event.key,
-              modifiers: event.modifiers,
-            })) {
-              return switchMovePreviewVariant(context.appHost, editor, lastMousePosition);
-            }
-
-            if (isDeleteDeviceShortcut({
-              appHost: context.appHost,
-              code: event.code,
-              key: event.key,
-              modifiers: event.modifiers,
-            })) {
-              deleteMoveOperation(context.appHost, editor);
-              return { status: "handled" };
-            }
-
-            if (!isRotateMoveShortcut({
-              appHost: context.appHost,
-              code: event.code,
-              key: event.key,
-              modifiers: event.modifiers,
-            })) {
-              return { status: "ignored" };
-            }
-
-            rotateMovePreview(context.appHost, editor, lastMousePosition);
-            return { status: "handled" };
-          */
 
           case "mouse dragstart":
             return handleMoveMouseDragStart({
@@ -292,10 +260,24 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
                 });
               }
 
-              applyMoveOperation(context.canvas, editor, "mouse");
+              recordEntityLandedBy(context.canvas, editor, event.position, () => {
+                applyMoveOperation(context.canvas, editor, "mouse");
+              });
               return { status: "handled" };
             }
 
+            return { status: "handled" };
+
+          case "touch double tap":
+            if (!isPreviewBoundingBoxAtClientPoint({
+              editor,
+              view: context.canvas.view,
+              position: event.position,
+              hitSlopPx: TOUCH_PREVIEW_HIT_SLOP_PX,
+            })) {
+              return { status: "ignored" };
+            }
+            rotateMovePreview(context.canvas, editor, null);
             return { status: "handled" };
 
           case "ui-button-touch-tap":
@@ -442,19 +424,6 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             menuInitialMousePosition: null,
           });
 
-        /*
-        case "key down":
-          if (!context.appHost.internalActions.isShortcutFor(
-            SHORTCUT_KEY.MOVE_SELECTION,
-            event.code,
-            event.key,
-            event.modifiers,
-          )) {
-            return { status: "ignored" };
-          }
-
-          return tryEnterMoveModeFromKeyboard(context.appHost, editor, lastMousePosition);
-        */
 
         default:
           return { status: "ignored" };
@@ -902,7 +871,7 @@ function primeMoveAnchorFromPreview(options: {
   }
 }
 
-function driveMovePreview(options: {
+export function driveMovePreview(options: {
   canvas: CanvasInteractionController;
   editor: EditorContract;
   position: GesturePosition;
@@ -1533,18 +1502,6 @@ function safelyCancelMoveDraft(editor: EditorContract): void {
   }
 }
 
-/*
-function isRotateMoveShortcut(options: {
-  appHost: AppHost;
-  code: string | null;
-  key: string | null;
-  modifiers: {
-    alt: boolean;
-    ctrl: boolean;
-    meta: boolean;
-  };
-}): boolean {
-  */
 
 function resolveSinglePreviewEntity(editor: EditorContract): WorldEntity | null {
   const preview = editor.state.collections[EntityCollectionType.preview];

@@ -67,10 +67,20 @@ import {
   resolveLiveFlowNodeActionTarget,
   type RecipeActionTarget,
 } from "./recipe-action-menu";
+import { createFlowNodePlacementDrag, resolveRecipePlacementTarget } from "./recipe-quick-actions";
+import {
+  didPanelPlacementDragJustEnd,
+  resolveDevicePlacementTarget,
+  startPanelPlacementPress,
+} from "@/app/shell/shared/panel-placement-drag";
 import { resolveStackRatioForBoundary, resolveStackedRightColumn } from "@/app/shell/layout/dock-layout-budget";
 
 /** 节点快捷操作菜单的打开入口（树行与流程图节点共用）。 */
 const RecipeActionMenuContext = createContext<(target: RecipeActionTarget) => void>(() => {});
+/** 配方树行与设备合计芯片的按下处理：拖到画布上放下该设备（有配方时带上配方）。 */
+const RecipeTreePlacementPressContext = createContext<
+  (event: ReactPointerEvent<HTMLElement>, machineId: string, recipeId: string | null) => void
+>(() => {});
 
 type Translate = (key: string) => string;
 
@@ -271,6 +281,14 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
   const title = t("recipeTree.title");
   const [actionTarget, setActionTarget] = useState<RecipeActionTarget | null>(null);
   const closeActionMenu = useCallback(() => setActionTarget(null), []);
+  const startPlacementPress = useCallback((
+    event: ReactPointerEvent<HTMLElement>,
+    machineId: string,
+    recipeId: string | null,
+  ) => startPanelPlacementPress(appHost, event, () => {
+    const recipe = recipeId === null ? null : appHost.workspace.registry.queries.findRecipeDefinition(recipeId);
+    return recipe === null ? resolveDevicePlacementTarget(appHost, machineId) : resolveRecipePlacementTarget(appHost, recipe);
+  }), [appHost]);
   const docked = state.docked;
   const minimized = state.minimized && !docked;
   const showsGraph = !minimized && state.pins.length > 0 && state.viewMode === "graph";
@@ -395,6 +413,7 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
           {/* 流程图视图把搜索框并入图的工具栏行，给图留出高度。 */}
           {state.viewMode === "graph" && state.pins.length > 0 ? null : <RecipeTreeSearch appHost={appHost} index={index} t={t} />}
           <RecipeActionMenuContext.Provider value={setActionTarget}>
+          <RecipeTreePlacementPressContext.Provider value={startPlacementPress}>
             {state.pins.length === 0 ? (
               <div className={cm(styles, "recipe-tree-body")}>
                 <p className={cm(styles, "recipe-tree-empty")}>{t("recipeTree.empty")}</p>
@@ -420,6 +439,7 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
                 ))}
               </div>
             )}
+          </RecipeTreePlacementPressContext.Provider>
           </RecipeActionMenuContext.Provider>
           {liveAction === null ? null : (
             <RecipeActionMenu
@@ -685,6 +705,7 @@ const RecipeTreeNode = observer(function RecipeTreeNode({
 }) {
   const state = recipeTreeOverlayState;
   const openActionMenu = useContext(RecipeActionMenuContext);
+  const startPlacementPress = useContext(RecipeTreePlacementPressContext);
   const recipeNode = node.recipeNode;
   const recipe = recipeNode?.recipeId == null ? undefined : index.recipeById.get(recipeNode.recipeId);
   const machineId = recipe?.machineId ?? null;
@@ -726,10 +747,15 @@ const RecipeTreeNode = observer(function RecipeTreeNode({
       <div
         className={cm(styles, isPinRow ? "recipe-tree-node is-pin" : "recipe-tree-node")}
         onClick={(event) => {
-          if ((event.target as HTMLElement).closest("button, input, label") !== null) {
+          if (didPanelPlacementDragJustEnd() || (event.target as HTMLElement).closest("button, input, label") !== null) {
             return;
           }
           openNodeActionMenu(event.currentTarget.getBoundingClientRect());
+        }}
+        onPointerDown={machineId === null || recipeNode === null ? undefined : (event) => {
+          if ((event.target as HTMLElement).closest("input, label") === null) {
+            startPlacementPress(event, machineId, recipeNode.recipeId);
+          }
         }}
       >
         {children.length > 0 || isPinRow ? (
@@ -919,7 +945,7 @@ function RecipeTreeTotals({
 }) {
   // 按显示名称合并：同名设备（例如固体/液体模式的种植机）在合计里只出现一次。
   const machineTotals = useMemo(() => {
-    const totals = new Map<string, { machineId: string; count: number }>();
+    const totals = new Map<string, { machineId: string; count: number; recipeIds: ReadonlySet<string> }>();
     for (const recipeTotal of plan.recipeTotals) {
       const recipe = recipeTotal.recipeId === null ? undefined : index.recipeById.get(recipeTotal.recipeId);
       if (recipe === undefined || recipeTotal.deviceCount <= 0) {
@@ -930,10 +956,12 @@ function RecipeTreeTotals({
       totals.set(nameKey, {
         machineId: existing?.machineId ?? recipe.machineId,
         count: (existing?.count ?? 0) + recipeTotal.deviceCount,
+        recipeIds: new Set([...(existing?.recipeIds ?? []), recipe.id]),
       });
     }
+    // 只用于一种配方的设备拖出时带上该配方；多种配方共用的设备按默认配置放下。
     return [...totals.values()]
-      .map(({ machineId, count }) => [machineId, count] as const)
+      .map(({ machineId, count, recipeIds }) => [machineId, count, recipeIds.size === 1 ? [...recipeIds][0]! : null] as const)
       .sort((left, right) => right[1] - left[1]);
   }, [index, plan]);
   const rawTotals = useMemo(() => {
@@ -953,6 +981,7 @@ function RecipeTreeTotals({
     return [...totals.entries()].filter(([, perMinute]) => perMinute > 0.0001);
   }, [plan]);
 
+  const startPlacementPress = useContext(RecipeTreePlacementPressContext);
   const [localExpanded, setLocalExpanded] = useState(false);
   const expanded = controlledExpanded ?? localExpanded;
   const setExpanded = onExpandedChange ?? setLocalExpanded;
@@ -975,8 +1004,8 @@ function RecipeTreeTotals({
         </button>
         <dl className={cm(styles, "recipe-tree-totals-list")}>
           {machineTotals.length > 0 ? <dt>{t("recipeTree.machines")}</dt> : null}
-          {machineTotals.map(([machineId, count]) => (
-            <dd key={machineId}>
+          {machineTotals.map(([machineId, count, recipeId]) => (
+            <dd key={machineId} onPointerDown={(event) => startPlacementPress(event, machineId, recipeId)}>
               <img alt="" src={resolveProductionPlanningEntityIconSrc(machineId, index)} />
               <span>{t(index.entityById.get(machineId)?.nameKey ?? machineId)}</span>
               <b>×{formatProductionDeviceCount(count)}</b>
@@ -1000,13 +1029,16 @@ function RecipeTreeTotals({
       {machineTotals.length > 0 ? (
         <div className={cm(styles, "recipe-tree-totals-row")}>
           <span className={cm(styles, "recipe-tree-totals-label")}>{t("recipeTree.machines")}</span>
-          {machineTotals.map(([machineId, count]) => (
+          {machineTotals.map(([machineId, count, recipeId]) => (
             <button
               aria-expanded={false}
               aria-label={`${t(index.entityById.get(machineId)?.nameKey ?? machineId)} ×${formatProductionDeviceCount(count)}`}
               className={cm(styles, "recipe-tree-chip")}
               key={machineId}
-              onClick={() => setExpanded(true)}
+              onClick={() => {
+                if (!didPanelPlacementDragJustEnd()) setExpanded(true);
+              }}
+              onPointerDown={(event) => startPlacementPress(event, machineId, recipeId)}
               type="button"
             >
               <img alt="" src={resolveProductionPlanningEntityIconSrc(machineId, index)} />
@@ -1151,6 +1183,7 @@ const RecipeTreeGraph = observer(function RecipeTreeGraph({
           nodeDrag="pan"
           toolbarLeading={search}
           onNodeActivate={(node, anchor) => openActionMenu(resolveFlowNodeActionTarget(node, anchor))}
+          onNodeDragOut={(node) => createFlowNodePlacementDrag(appHost, node)}
           plan={plan}
           t={t}
         />

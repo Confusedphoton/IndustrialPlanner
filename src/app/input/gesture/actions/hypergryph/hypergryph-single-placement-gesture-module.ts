@@ -35,8 +35,10 @@ import {
 } from "@/app/logistics-role-swap";
 import { runInAction } from "mobx";
 import { recentPlacementDevices } from "@/app/recent-placement-devices";
+import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 
 import type { GestureHandleResult, GestureMappingModule, ShortcutActionRoute } from "../types";
+import { recordEntityLandedBy, resolveRepeatTapEntityId, spinEntity } from "./entity-spin-tap";
 import {
   didPreviewRectChange,
   isPreviewBoundingBoxAtClientPoint,
@@ -357,38 +359,6 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
         lastMousePosition = event.position;
       }
 
-      /*
-      if (
-        event.type === "key down"
-        && context.appHost.internalState.activeTool === "select"
-      ) {
-        const groupResult = handleSelectPlacementGroupShortcut({
-          appHost: context.appHost,
-          code: event.code,
-          key: event.key,
-          modifiers: event.modifiers,
-        });
-
-        if (groupResult.status !== "ignored") {
-          return groupResult;
-        }
-
-        const editor = context.workspace.editor;
-        if (editor === null) {
-          return { status: "ignored" };
-        }
-
-        return handleSelectPlacementDeviceShortcut({
-          appHost: context.appHost,
-          editor,
-          registry: context.workspace.registry,
-          lastMousePosition,
-          code: event.code,
-          key: event.key,
-          modifiers: event.modifiers,
-        });
-      }
-      */
 
       const editor = context.canvas.editor;
       if (editor === null) {
@@ -499,6 +469,13 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           context.canvas.actions.trackCanvasFloatingToolbarHover(null);
           return { status: "ignored" };
 
+        case "touch double tap":
+          if (!isPreviewEntityAtClientPoint(editor, context.canvas.view, event.position, TOUCH_PREVIEW_HIT_SLOP_PX)) {
+            return { status: "ignored" };
+          }
+          rotatePlacementPreview(context.canvas, editor, { pointerMode: "touch", currentMousePosition: null });
+          return { status: "handled" };
+
         case "mouse tap":
           if (event.button === 2) {
             cancelPlacementOperation(context.canvas, editor);
@@ -506,11 +483,19 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           }
 
           if (event.button === 0 && !event.longPress) {
-            applyPlacementOperation(context.canvas, editor, {
+            // 连续放置时紧接着再点刚放下的设备：转动它（与随后的预览），而不是在原处再放一台。
+            const justPlacedId = resolveJustPlacedEntityId(context.canvas, editor, event.position);
+            if (justPlacedId !== null) {
+              spinEntity(context.canvas, editor, justPlacedId, event.position);
+              editor.actions.clearCollection(EntityCollectionType.selection);
+              rotatePlacementPreview(context.canvas, editor, { pointerMode: "mouse", currentMousePosition: event.position });
+              return { status: "handled" };
+            }
+            recordEntityLandedBy(context.canvas, editor, event.position, () => applyPlacementOperation(context.canvas, editor, {
               keepPlacement: event.modifiers.ctrl || event.modifiers.shift
                 || context.canvas.state.runtime.singlePlacementContinuous,
               currentMousePosition: event.position,
-            });
+            }));
             return { status: "handled" };
           }
 
@@ -626,8 +611,14 @@ function handlePlacementEntryButtonTap(options: {
       return { status: "handled" };
     }
 
+    // 切换到另一台设备时保留调用方为它写入的初始配置与朝向（例如配方树指定的配方）。
+    const { singlePlacementConfig, singlePlacementRotation } = options.canvas.state.runtime;
     safelyCancelPlacementDraft(options.editor);
     clearPlacementUi(options.canvas);
+    runInAction(() => {
+      options.canvas.state.runtime.singlePlacementConfig = singlePlacementConfig;
+      options.canvas.state.runtime.singlePlacementRotation = singlePlacementRotation;
+    });
 
     return finalizePlacementEnter({
       canvas: options.canvas,
@@ -1109,6 +1100,91 @@ function rotatePlacementPreviewToBuildingSnap(options: {
   });
 }
 
+/**
+ * 从面板（设备列表、配方树、流程图）拖出设备：指针进入画布时进入该设备的放置，预览跟随指针，
+ * 贴近画布边缘时地图跟着平移。配方等初始配置由调用方事先写入 runtime.singlePlacementConfig。
+ * 返回是否处于该设备的放置中。
+ */
+export function dragPlacementFromPanel(
+  canvas: CanvasInteractionController,
+  deviceId: string,
+  position: GesturePosition,
+): boolean {
+  const editor = canvas.editor;
+  if (editor === null) {
+    return false;
+  }
+
+  if (
+    canvas.state.activeTool !== "single-placement"
+    || canvas.state.runtime.singlePlacementDeviceId !== deviceId
+  ) {
+    handlePlacementEntryButtonTap({
+      canvas,
+      editor,
+      deviceId,
+      source: "mouse",
+      initialMousePosition: position,
+      allowFromAnyTool: true,
+    });
+    if (
+      canvas.state.activeTool !== "single-placement"
+      || canvas.state.runtime.singlePlacementDeviceId !== deviceId
+    ) {
+      return false;
+    }
+  }
+
+  if (!ensurePlacementDraftForMouse(canvas, editor, position)) {
+    return false;
+  }
+  const redrive = (next: GesturePosition) => {
+    driveMousePlacementPreview({ canvas, editor, position: next });
+  };
+  redrive(position);
+  canvas.edgePan.track(position, redrive);
+  return true;
+}
+
+/** 结束从面板拖出的放置：落在画布上（position 非 null）放下一台并退出放置，否则取消。 */
+export function dropPlacementFromPanel(
+  canvas: CanvasInteractionController,
+  position: GesturePosition | null,
+): void {
+  canvas.edgePan.stop();
+  const editor = canvas.editor;
+  if (editor === null || canvas.state.activeTool !== "single-placement") {
+    return;
+  }
+
+  if (position === null || !isClientPointInsideViewport(canvas.view, position)) {
+    cancelPlacementOperation(canvas, editor);
+    return;
+  }
+
+  driveMousePlacementPreview({ canvas, editor, position });
+  applyPlacementOperation(canvas, editor, { keepPlacement: false, currentMousePosition: position });
+}
+
+/** 连续放置中，这次点按若紧接着放下一台设备的那次点按、且落在它上面，返回该设备。 */
+function resolveJustPlacedEntityId(
+  canvas: CanvasInteractionController,
+  editor: EditorContract,
+  position: GesturePosition,
+): string | null {
+  const entityId = resolveRepeatTapEntityId(canvas, position);
+  const entity = entityId === null ? null : editor.queries.getEntityById(entityId);
+  const definition = entity === null ? null : canvas.registry.queries.findEntityDefinition(entity.definitionId);
+  const gridPoint = canvas.view.queries.findGridCellForClientPixelPoint(position);
+  if (entity === null || definition === null || gridPoint === null) {
+    return null;
+  }
+  const rect = resolveEntityGridRect({ entity, definition });
+  const onEntity = gridPoint.x >= rect.x && gridPoint.x < rect.x + rect.width
+    && gridPoint.y >= rect.y && gridPoint.y < rect.y + rect.height;
+  return onEntity ? entity.id : null;
+}
+
 export function cleanupPlacementDraft(canvas: CanvasInteractionController): void {
   const editor = canvas.editor;
   if (editor !== null) {
@@ -1555,18 +1631,6 @@ function areGridRectsEqual(left: GridRect, right: GridRect): boolean {
     && left.height === right.height;
 }
 
-/*
-function isRotatePlacementShortcut(options: {
-  appHost: AppHost;
-  code: string | null;
-  key: string | null;
-  modifiers: {
-    alt: boolean;
-    ctrl: boolean;
-    meta: boolean;
-  };
-}): boolean {
-  */
 
 export function resolveDeviceIdForPlacementGroupShortcut(options: {
   registry: RegistryContract;
