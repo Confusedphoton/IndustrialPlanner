@@ -271,6 +271,7 @@ function createWorkbenchStorageSnapshot(options: {
     leftDockOpen: options.leftDockOpen ?? true,
     rightDockOpen: options.rightDockOpen ?? false,
     leftDockWidth: options.leftDockWidth ?? DEFAULT_LEFT_DOCK_WIDTH,
+    touchLeftDockWidth: MOBILE_LEFT_DOCK_WIDTH,
     topBarCollapsed: options.topBarCollapsed ?? false,
     rightDockActiveTab: options.rightDockActiveTab ?? DEFAULT_RIGHT_DOCK_TAB_ID,
     selectedPlacementVariantByCraftGroup:

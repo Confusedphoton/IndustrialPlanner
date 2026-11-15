@@ -23,6 +23,7 @@ import {
   DEFAULT_HELP_DIALOG_TAB_ID,
   DEFAULT_MODULE_BALANCING_CANVAS_ID,
   DEFAULT_LEFT_DOCK_WIDTH,
+  MOBILE_LEFT_DOCK_WIDTH,
   DEFAULT_MODULE_BALANCING_STAGE_ID,
   DEFAULT_RIGHT_DOCK_TAB_ID,
   DEFAULT_TIMELINE_BOTTOM_DOCK_HEIGHT,
@@ -191,6 +192,7 @@ function createWorkbenchStorageSnapshot(options: {
     leftDockOpen: options.leftDockOpen ?? true,
     rightDockOpen: options.rightDockOpen ?? false,
     leftDockWidth: options.leftDockWidth ?? DEFAULT_LEFT_DOCK_WIDTH,
+    touchLeftDockWidth: MOBILE_LEFT_DOCK_WIDTH,
     topBarCollapsed: options.topBarCollapsed ?? false,
     rightDockActiveTab: options.rightDockActiveTab ?? DEFAULT_RIGHT_DOCK_TAB_ID,
     selectedPlacementVariantByCraftGroup:

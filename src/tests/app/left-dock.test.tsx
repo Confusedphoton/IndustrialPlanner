@@ -13,6 +13,8 @@ import { BlueprintPreviewDialog } from "@/app/shell/dialogs/blueprint-preview-di
 import { SaveBlueprintDialog } from "@/app/shell/dialogs/save-blueprint-dialog";
 import { CanvasToolRail } from "@/app/shell/canvas/canvas-tool-rail";
 import { LeftDock } from "@/app/shell/layout/left-dock";
+import { DEFAULT_LEFT_DOCK_WIDTH, MAX_LEFT_DOCK_WIDTH } from "@/app/state/state-impl";
+import { MIN_SQUEEZED_LEFT_DOCK_WIDTH_PX } from "@/app/shell/layout/dock-layout-budget";
 import { LeftToolbar } from "@/app/shell/layout/left-toolbar";
 import { WorkbenchApp } from "@/app/shell/workbench-app";
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
@@ -245,7 +247,7 @@ describe("Left dock panel switching", () => {
       root.render(
         <>
           <LeftToolbar appHost={appHost} />
-          <LeftDock appHost={appHost} />
+          <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
         </>,
       );
     });
@@ -328,7 +330,7 @@ describe("Left dock panel switching", () => {
       .mockImplementation(() => undefined);
 
     act(() => {
-      root.render(<LeftDock appHost={appHost} />);
+      root.render(<LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />);
     });
 
     const fillingButton = container.querySelector(
@@ -459,7 +461,7 @@ describe("Left dock panel switching", () => {
       .mockImplementation(() => undefined);
 
     act(() => {
-      root.render(<LeftDock appHost={appHost} />);
+      root.render(<LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />);
     });
 
     const fillingButton = container.querySelector(
@@ -523,7 +525,7 @@ describe("Left dock panel switching", () => {
     });
 
     act(() => {
-      root.render(<LeftDock appHost={appHost} />);
+      root.render(<LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />);
     });
 
     const visiblePanel = queryVisibleLeftDockPanel(container);
@@ -585,7 +587,7 @@ describe("Left dock panel switching", () => {
       root.render(
         <>
           <LeftToolbar appHost={appHost} />
-          <LeftDock appHost={appHost} />
+          <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
         </>,
       );
     });
@@ -637,7 +639,7 @@ describe("Left dock panel switching", () => {
       root.render(
         <>
           <LeftToolbar appHost={appHost} />
-          <LeftDock appHost={appHost} />
+          <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
         </>,
       );
     });
@@ -754,7 +756,7 @@ describe("Left dock panel switching", () => {
       root.render(
         <>
           <LeftToolbar appHost={appHost} />
-          <LeftDock appHost={appHost} />
+          <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
         </>,
       );
     });
@@ -932,7 +934,7 @@ describe("Left dock panel switching", () => {
       root.render(
         <>
           <LeftToolbar appHost={appHost} />
-          <LeftDock appHost={appHost} />
+          <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
         </>,
       );
     });
@@ -1077,7 +1079,7 @@ describe("Left dock panel switching", () => {
       root.render(
         <>
           <LeftToolbar appHost={appHost} />
-          <LeftDock appHost={appHost} />
+          <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
         </>,
       );
     });
@@ -1108,7 +1110,7 @@ describe("Left dock panel switching", () => {
       root.render(
         <>
           <LeftToolbar appHost={appHost} />
-          <LeftDock appHost={appHost} />
+          <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
         </>,
       );
     });
@@ -1143,7 +1145,7 @@ describe("Left dock panel switching", () => {
     });
 
     await act(async () => {
-      root.render(<LeftDock appHost={appHost} />);
+      root.render(<LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />);
       await flushAsyncEffects();
     });
 
@@ -1202,7 +1204,7 @@ describe("Left dock panel switching", () => {
     });
 
     await act(async () => {
-      root.render(<LeftDock appHost={appHost} />);
+      root.render(<LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />);
       await flushAsyncEffects();
     });
 
@@ -1290,7 +1292,7 @@ describe("Left dock panel switching", () => {
     await act(async () => {
       root.render(
         <>
-          <LeftDock appHost={appHost} />
+          <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
           <BlueprintFolderDialog appHost={appHost} controller={appHost.blueprintFolderDialog} />
         </>,
       );
@@ -1418,7 +1420,7 @@ describe("Left dock panel switching", () => {
     await act(async () => {
       root.render(
         <>
-          <LeftDock appHost={appHost} />
+          <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
           <BlueprintFolderDialog appHost={appHost} controller={appHost.blueprintFolderDialog} />
         </>,
       );
@@ -1509,7 +1511,7 @@ describe("Left dock panel switching", () => {
     await act(async () => {
       root.render(
         <>
-          <LeftDock appHost={appHost} />
+          <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
           <BlueprintFolderDialog appHost={appHost} controller={appHost.blueprintFolderDialog} />
         </>,
       );
@@ -1578,7 +1580,7 @@ describe("Left dock panel switching", () => {
     await act(async () => {
       root.render(
         <>
-          <LeftDock appHost={appHost} />
+          <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
           <BlueprintFolderDialog appHost={appHost} controller={appHost.blueprintFolderDialog} />
         </>,
       );
@@ -1645,7 +1647,7 @@ describe("Left dock panel switching", () => {
     });
 
     await act(async () => {
-      root.render(<LeftDock appHost={appHost} />);
+      root.render(<LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />);
       await flushAsyncEffects();
     });
 
@@ -1706,7 +1708,7 @@ describe("Left dock panel switching", () => {
     });
 
     await act(async () => {
-      root.render(<LeftDock appHost={appHost} />);
+      root.render(<LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />);
       await flushAsyncEffects();
       await flushAsyncEffects();
     });
@@ -1826,7 +1828,7 @@ describe("Left dock panel switching", () => {
     await act(async () => {
       root.render(
         <>
-          <LeftDock appHost={appHost} />
+          <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
           <BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />
           <SaveBlueprintDialog appHost={appHost} />
         </>,
@@ -1885,7 +1887,7 @@ describe("Left dock panel switching", () => {
     await act(async () => {
       root.render(
         <>
-          <LeftDock appHost={appHost} />
+          <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
           <BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />
           <SaveBlueprintDialog appHost={appHost} />
         </>,
@@ -1951,7 +1953,7 @@ describe("Left dock panel switching", () => {
     await act(async () => {
       root.render(
         <>
-          <LeftDock appHost={appHost} />
+          <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
           <BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />
           <SaveBlueprintDialog appHost={appHost} />
         </>,
@@ -2142,7 +2144,7 @@ describe("Left dock panel switching", () => {
     await act(async () => {
       root.render(
         <>
-          <LeftDock appHost={appHost} />
+          <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
           <BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />
         </>,
       );
@@ -2202,7 +2204,7 @@ describe("Left dock panel switching", () => {
     await act(async () => {
       root.render(
         <>
-          <LeftDock appHost={appHost} />
+          <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
           <BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />
         </>,
       );
@@ -2281,7 +2283,7 @@ describe("Left dock panel switching", () => {
     await act(async () => {
       root.render(
         <>
-          <LeftDock appHost={appHost} />
+          <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
           <BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />
           <SaveBlueprintDialog appHost={appHost} />
         </>,
@@ -2420,6 +2422,45 @@ describe("Left dock panel switching", () => {
 
     expect(visiblePanel?.querySelector(`[data-blueprint-id="${blueprint.blueprintId}"]`)).not.toBeNull();
   });
+
+  it("drags a palette squeezed below its regular minimum between the squeezed floor and the width the layout allows", () => {
+    const appHost = createAppTestHost(createWorkspace());
+
+    act(() => {
+      root.render(<LeftDock appHost={appHost} maxWidth={250} width={250} />);
+    });
+
+    const handle = container.querySelector(".dock-resize-handle") as HTMLDivElement | null;
+    expect(handle).not.toBeNull();
+    // jsdom 未实现指针捕获。
+    handle!.setPointerCapture = vi.fn();
+    const drag = (deltaX: number) => {
+      const pointer = { pointerId: 1, pointerType: "pen", clientY: 200 };
+      dispatchPointerEvent(handle!, "pointerdown", { ...pointer, clientX: 300 });
+      dispatchPointerEvent(handle!, "pointermove", { ...pointer, clientX: 300 + deltaX });
+      dispatchPointerEvent(handle!, "pointerup", { ...pointer, clientX: 300 + deltaX });
+    };
+
+    act(() => {
+      drag(-20);
+    });
+    expect(appHost.state.workbench.leftDockWidth).toBe(230);
+
+    act(() => {
+      drag(-100);
+    });
+    expect(appHost.state.workbench.leftDockWidth).toBe(MIN_SQUEEZED_LEFT_DOCK_WIDTH_PX);
+
+    act(() => {
+      drag(100);
+    });
+    expect(appHost.state.workbench.leftDockWidth).toBe(250);
+
+    act(() => {
+      root.render(<LeftDock appHost={appHost} maxWidth={MIN_SQUEEZED_LEFT_DOCK_WIDTH_PX} width={MIN_SQUEEZED_LEFT_DOCK_WIDTH_PX} />);
+    });
+    expect(container.querySelector(".dock-resize-handle")).toBeNull();
+  });
 });
 
 
@@ -2552,7 +2593,7 @@ describe("Base panel power bar", () => {
       root.render(
         <>
           <LeftToolbar appHost={appHost} />
-          <LeftDock appHost={appHost} />
+          <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
         </>,
       );
     });
@@ -2634,7 +2675,7 @@ describe("Base panel power bar", () => {
       root.render(
         <>
           <LeftToolbar appHost={appHost} />
-          <LeftDock appHost={appHost} />
+          <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
         </>,
       );
     });

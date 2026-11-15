@@ -10,6 +10,7 @@ import type { RightDockTabId } from "@/domain/app/types/app-types";
 import type { ClientPixelPoint } from "@/domain/shared/client-pixel";
 import type { AppLocale } from "@/domain/app";
 import { lookupText } from "@/shared/i18n";
+import { isMobileOrTabletScreenProfile } from "@/shared/browser/screen-profile";
 import type { KeyboardShortcutManager, ShortcutEventModifiers } from "./keyboard-shortcut-manager";
 
 import type { ActiveTool } from "@/domain/app/types/app-types";
@@ -491,7 +492,11 @@ export class AppActionImpl implements AppAction, AppInternalAction {
 
 
   public readonly setLeftDockWidth: AppInternalAction["setLeftDockWidth"] = action((width) => {
-    this.internalState.workbench.leftDockWidth = clampLeftDockWidth(width);
+    if (isMobileOrTabletScreenProfile(this.internalState.screenProfile)) {
+      this.internalState.workbench.touchLeftDockWidth = clampLeftDockWidth(width);
+    } else {
+      this.internalState.workbench.leftDockWidth = clampLeftDockWidth(width);
+    }
   });
 
   public readonly setScreenProfile: AppInternalAction["setScreenProfile"] = action((screenProfile) => {

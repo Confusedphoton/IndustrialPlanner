@@ -1659,9 +1659,9 @@
   background: var(--line);
 }
 
-// 工具栏窄于约 440px 时（窄停靠栏、并入搜索框时）文字按钮只留图标。
+// 工具栏窄于约 440px 时（窄停靠栏、并入搜索框时）文字按钮只留图标；具名容器供并入工具栏的搜索框按工具栏宽度收起。
 .production-flow-toolbar {
-  container-type: inline-size;
+  container: production-flow-toolbar / inline-size;
 }
 
 @container (max-width: 440px) {

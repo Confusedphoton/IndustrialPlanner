@@ -8,9 +8,10 @@ import { RegionPanel } from "@/app/shell/panels/region-panel";
 import { SimulationPanel } from "@/app/shell/panels/simulation-panel";
 import type { AppHost } from "@/app/host/app-host";
 import {
-  clampLeftDockWidth,
+  resolveMinLeftDockWidthForScreenProfile,
   type ActivePanel,
 } from "@/app/state/state-impl";
+import { MIN_SQUEEZED_LEFT_DOCK_WIDTH_PX } from "@/app/shell/layout/dock-layout-budget";
 import { isMobileOrTabletScreenProfile } from "@/shared/browser/screen-profile";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
@@ -43,9 +44,13 @@ const PANEL_ORDER: LeftDockPanelId[] = ["placement", "region", "blueprint", "his
 const LeftDockView = observer(function LeftDockView({
   appHost,
   hidden,
+  width,
+  maxWidth,
 }: {
   appHost: AppHost;
   hidden: boolean;
+  width: number;
+  maxWidth: number;
 }) {
   const t = appHost.actions.translate;
   const activePanel = appHost.internalState.runtime.activePanel ?? DEFAULT_ACTIVE_PANEL;
@@ -53,6 +58,10 @@ const LeftDockView = observer(function LeftDockView({
   const resizeCleanupRef = useRef<(() => void) | null>(null);
   const screenProfile = appHost.state.screenProfile;
   const isTouchLayout = isMobileOrTabletScreenProfile(screenProfile);
+  const regularMinWidth = resolveMinLeftDockWidthForScreenProfile(screenProfile);
+  // 画布把面板挤到常规最窄宽度以下时，仍可在挤压下限与布局允许的最宽值之间拖动。
+  const minWidth = maxWidth < regularMinWidth ? MIN_SQUEEZED_LEFT_DOCK_WIDTH_PX : regularMinWidth;
+  const resizable = !hidden && maxWidth > minWidth;
 
   useEffect(() => {
     return () => {
@@ -61,7 +70,7 @@ const LeftDockView = observer(function LeftDockView({
   }, []);
 
   const handleResizeStart = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (isTouchLayout || event.button !== 0) {
+    if (event.button !== 0) {
       return;
     }
 
@@ -70,7 +79,9 @@ const LeftDockView = observer(function LeftDockView({
     const target = event.currentTarget;
     const pointerId = event.pointerId;
     const startX = event.clientX;
-    const startWidth = appHost.state.workbench.leftDockWidth;
+    // 从实际显示的宽度起算：保存的宽度可能被布局挤窄，否则要先拖过这段差值才有反应。
+    const startWidth = width;
+    const lowerBound = Math.min(minWidth, startWidth);
 
     resizeCleanupRef.current?.();
 
@@ -79,7 +90,9 @@ const LeftDockView = observer(function LeftDockView({
         return;
       }
 
-      appHost.internalActions.setLeftDockWidth(clampLeftDockWidth(startWidth + moveEvent.clientX - startX));
+      appHost.internalActions.setLeftDockWidth(
+        Math.min(maxWidth, Math.max(lowerBound, startWidth + moveEvent.clientX - startX)),
+      );
     };
 
     const stopResize = () => {
@@ -135,7 +148,7 @@ const LeftDockView = observer(function LeftDockView({
           </div>
         </section>
       </aside>
-      {isTouchLayout ? null : <div aria-hidden className={cm(styles, "dock-resize-handle")} onPointerDown={handleResizeStart} />}
+      {resizable ? <div aria-hidden className={cm(styles, "dock-resize-handle")} onPointerDown={handleResizeStart} /> : null}
     </div>
   );
 });
@@ -143,11 +156,17 @@ const LeftDockView = observer(function LeftDockView({
 export function LeftDock({
   appHost,
   hidden = false,
+  width,
+  maxWidth,
 }: {
   appHost: AppHost;
   hidden?: boolean;
+  /** 布局实际给面板的宽度（可能被画布挤窄到保存的宽度以下）。 */
+  width: number;
+  /** 当前布局下面板最宽可拖到的宽度。 */
+  maxWidth: number;
 }) {
-  return <LeftDockView appHost={appHost} hidden={hidden} />;
+  return <LeftDockView appHost={appHost} hidden={hidden} maxWidth={maxWidth} width={width} />;
 }
 
 export default LeftDock;

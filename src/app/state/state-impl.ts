@@ -48,26 +48,31 @@ import {
 } from "@/shared/browser/screen-profile";
 import { DEFAULT_APP_THEME_ID, resolveAppTheme } from "../theme";
 
+/** PC 布局下拖动左侧面板时的常规最窄宽度。 */
 export const MIN_LEFT_DOCK_WIDTH = 320;
 export const MAX_LEFT_DOCK_WIDTH = 600;
 export const DEFAULT_LEFT_DOCK_WIDTH = 320;
 export const DEFAULT_RIGHT_DOCK_WIDTH = 380;
+/** 触屏布局（手机、平板与矮窗口）左侧面板的默认宽度，也是任何布局下保存宽度的下限。 */
 export const MOBILE_LEFT_DOCK_WIDTH = 220;
 
 export function clampLeftDockWidth(width: number): number {
-  return Math.min(MAX_LEFT_DOCK_WIDTH, Math.max(MIN_LEFT_DOCK_WIDTH, Math.round(width)));
+  return Math.min(MAX_LEFT_DOCK_WIDTH, Math.max(MOBILE_LEFT_DOCK_WIDTH, Math.round(width)));
 }
 
-// 当前版本要求 mobile 和 tablet 始终共用窄左栏；只有 PC 使用宽左栏与双列布局。
+// mobile 和 tablet 默认使用窄左栏，宽度与 PC 分开保存，两种布局各自记住用户拖出的宽度。
 export function resolveLeftDockWidthForScreenProfile(
-  width: number,
+  workbench: Pick<WorkbenchState, "leftDockWidth" | "touchLeftDockWidth">,
   screenProfile: Pick<ScreenProfile, "deviceClass">,
 ): number {
-  if (isMobileOrTabletScreenProfile(screenProfile)) {
-    return MOBILE_LEFT_DOCK_WIDTH;
-  }
+  return clampLeftDockWidth(isMobileOrTabletScreenProfile(screenProfile)
+    ? workbench.touchLeftDockWidth
+    : workbench.leftDockWidth);
+}
 
-  return clampLeftDockWidth(width);
+/** 当前布局下拖动左侧面板时的常规最窄宽度。 */
+export function resolveMinLeftDockWidthForScreenProfile(screenProfile: Pick<ScreenProfile, "deviceClass">): number {
+  return isMobileOrTabletScreenProfile(screenProfile) ? MOBILE_LEFT_DOCK_WIDTH : MIN_LEFT_DOCK_WIDTH;
 }
 
 export interface AppSettingsReadWrite extends Omit<AppSettings, "regionalMultiBaseEnabled"> {
@@ -114,6 +119,7 @@ export interface WorkbenchStateReadWrite extends WorkbenchState {
   leftDockOpen: boolean;
   rightDockOpen: boolean;
   leftDockWidth: number;
+  touchLeftDockWidth: number;
   topBarCollapsed: boolean;
   rightDockActiveTab: RightDockTabId;
   selectedPlacementVariantByCraftGroup: Record<string, string>;
@@ -593,6 +599,7 @@ class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
   leftDockOpen = true;
   rightDockOpen = false;
   leftDockWidth = DEFAULT_LEFT_DOCK_WIDTH;
+  touchLeftDockWidth = MOBILE_LEFT_DOCK_WIDTH;
   topBarCollapsed = false;
   rightDockActiveTab = DEFAULT_RIGHT_DOCK_TAB_ID;
   selectedPlacementVariantByCraftGroup: Record<string, string> = {};

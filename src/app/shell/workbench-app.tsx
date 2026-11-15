@@ -76,7 +76,7 @@ import {
   resolveDarkPipeRole,
 } from "@/shared/dark-pipe-link";
 import { DEFAULT_RIGHT_DOCK_WIDTH } from "@/app/state/state-impl";
-import { resolveLeftDockWidthForScreenProfile } from "@/app/state/state-impl";
+import { MAX_LEFT_DOCK_WIDTH, resolveLeftDockWidthForScreenProfile } from "@/app/state/state-impl";
 import { resolveDockLayoutBudget, resolveStackedRightColumn } from "@/app/shell/layout/dock-layout-budget";
 
 const TOP_BAR_HEIGHT_PX = 48;
@@ -711,7 +711,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
   const leftDockOpen = appHost.state.workbench.leftDockOpen;
   const rightDockOpen = appHost.state.workbench.rightDockOpen;
   const useInspectorPanel = appHost.state.settings.gameUseInspectorPanel;
-  const leftDockWidth = appHost.state.workbench.leftDockWidth;
   const topBarCollapsed = appHost.state.workbench.topBarCollapsed;
   const screenProfile = appHost.state.screenProfile;
   const activeTool = appHost.mainCanvas.state.activeTool;
@@ -734,13 +733,13 @@ export const WorkbenchApp = observer(function WorkbenchApp({
   const isTouchLandscape = isTouchLandscapeScreenProfile(screenProfile);
   const isTouchLayout = isMobileOrTabletScreenProfile(screenProfile);
   const isCompactLeftToolbar = isTouchLayout;
-  const effectiveLeftDockWidth = resolveLeftDockWidthForScreenProfile(leftDockWidth, screenProfile);
+  const effectiveLeftDockWidth = resolveLeftDockWidthForScreenProfile(appHost.state.workbench, screenProfile);
   const showFloatingTopBarControls = isTouchLandscape && topBarCollapsed;
   const showBottomStatusBar = !showFloatingTopBarControls;
   const showMobilePortraitGate = isMobilePortraitScreenProfile(screenProfile);
   const showRightDock = useInspectorPanel && rightDockOpen;
   const leftToolbarWidth = isCompactLeftToolbar ? 51 : 68;
-  const dockLayoutBudget = resolveDockLayoutBudget({
+  const dockLayoutBudgetInput = {
     viewportWidth: screenProfile.viewportWidth,
     leftToolbarWidth,
     leftDockWidth: leftDockOpen ? effectiveLeftDockWidth : 0,
@@ -748,7 +747,10 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     recipeDockWidth: recipeTreeOverlayState.dockLayoutWidth === 0 ? 0 : recipeTreeOverlayState.dockWidth,
     recipeDockMinWidth: RECIPE_TREE_DOCK_MIN_WIDTH,
     canvasReservedWidth: canvasToolRailState.baseWidth,
-  });
+  };
+  const dockLayoutBudget = resolveDockLayoutBudget(dockLayoutBudgetInput);
+  // 左侧面板的上限与它自身的宽度无关，按最大宽度试算即得当前布局下可拖到的最宽值。
+  const leftDockMaxWidth = resolveDockLayoutBudget({ ...dockLayoutBudgetInput, leftDockWidth: MAX_LEFT_DOCK_WIDTH }).leftDockWidth;
   useEffect(() => {
     recipeTreeOverlayState.setDockWidthLimit(dockLayoutBudget.recipeDockMaxWidth);
   }, [dockLayoutBudget.recipeDockMaxWidth]);
@@ -1212,7 +1214,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           onFullscreenActionFailure={pwaController.openFullscreenNotice}
         />
         <LeftToolbar appHost={appHost} compact={isCompactLeftToolbar} />
-        <LeftDock appHost={appHost} hidden={!leftDockOpen} />
+        <LeftDock appHost={appHost} hidden={!leftDockOpen} maxWidth={leftDockMaxWidth} width={dockLayoutBudget.leftDockWidth} />
         {leftDockOpen
           && (appHost.internalState.runtime.activePanel ?? "placement") === "blueprint"
           && appHost.workspace.sync !== null ? (

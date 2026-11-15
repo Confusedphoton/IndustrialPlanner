@@ -113,6 +113,13 @@
   border-bottom: 0;
 }
 
+// 流程图工具栏放不下可用宽度的输入框时只留物品图鉴按钮。
+@container production-flow-toolbar (max-width: 360px) {
+  .recipe-tree-search.is-inline .recipe-tree-search-input {
+    display: none;
+  }
+}
+
 .recipe-tree-search.is-inline .recipe-tree-search-results {
   top: calc(100% + 4px);
   right: auto;
@@ -206,13 +213,12 @@
   border-bottom: 0;
 }
 
-// 停靠栏较窄时产量与按钮换到第二行靠右，名称保留整行宽度。
+// 没有可用配方的钉住目标没有根节点行，只留名称与操作。
 .recipe-tree-pin-header {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 4px;
-  padding: 4px 4px 4px 2px;
+  padding: 4px 4px 4px 8px;
 }
 
 .recipe-tree-pin-name {
@@ -271,11 +277,40 @@
   container-type: inline-size;
 }
 
+// 缩进参考线最多画到 --recipe-tree-guide-depth-limit 层，更深的层级不再缩进；
+// 容器越宽能画的层数越多、每层缩进越宽，窄停靠栏里名称仍有空间。
 .recipe-tree-nodes li {
-  --recipe-tree-indent: calc(var(--recipe-tree-depth, 0) * 12px);
+  --recipe-tree-indent-step: 10px;
+  --recipe-tree-guide-depth-limit: 3;
+  --recipe-tree-indent: calc(min(var(--recipe-tree-depth, 0), var(--recipe-tree-guide-depth-limit)) * var(--recipe-tree-indent-step));
 }
 
-// 层级用缩进区里的细竖线表示，每层缩进 12px；叶子行同样保留展开按钮列，子行图标总在父行右侧。
+@container (min-width: 300px) {
+  .recipe-tree-nodes li {
+    --recipe-tree-indent-step: 12px;
+    --recipe-tree-guide-depth-limit: 4;
+  }
+}
+
+@container (min-width: 340px) {
+  .recipe-tree-nodes li {
+    --recipe-tree-guide-depth-limit: 6;
+  }
+}
+
+@container (min-width: 420px) {
+  .recipe-tree-nodes li {
+    --recipe-tree-guide-depth-limit: 10;
+  }
+}
+
+@container (min-width: 520px) {
+  .recipe-tree-nodes li {
+    --recipe-tree-guide-depth-limit: 16;
+  }
+}
+
+// 层级用缩进区里每层一条的细竖线表示；叶子行同样保留展开按钮列，子行图标总在父行右侧。
 .recipe-tree-node {
   display: flex;
   flex-wrap: wrap;
@@ -285,9 +320,9 @@
   padding: 2px 8px 2px var(--recipe-tree-indent);
   background-image: repeating-linear-gradient(
     to right,
-    transparent 0 5px,
-    var(--line-strong) 5px 6px,
-    transparent 6px 12px
+    transparent 0 calc(var(--recipe-tree-indent-step) / 2 - 1px),
+    var(--line-strong) calc(var(--recipe-tree-indent-step) / 2 - 1px) calc(var(--recipe-tree-indent-step) / 2),
+    transparent calc(var(--recipe-tree-indent-step) / 2) var(--recipe-tree-indent-step)
   );
   background-repeat: no-repeat;
   background-size: var(--recipe-tree-indent) 100%;
@@ -322,10 +357,11 @@
   height: 16px;
 }
 
+// 名称至少保留约四个字宽；行内放不下时芯片与数值换到下一行，而不是把名称挤成逐字断行。
 .recipe-tree-node-name {
   display: -webkit-box;
   flex: 1;
-  min-width: 0;
+  min-width: 4em;
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -341,6 +377,7 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 1px;
+  margin-left: auto;
   line-height: 1.2;
 }
 
@@ -367,7 +404,7 @@
 }
 
 .recipe-tree-machine {
-  min-width: 52px;
+  min-width: 44px;
   justify-content: flex-end;
   color: var(--text-0);
   font-weight: 600;
@@ -392,35 +429,27 @@
 }
 
 .recipe-tree-tag.is-raw {
-  min-width: 52px;
+  min-width: 44px;
   border-color: var(--pill-warn-border);
   color: var(--warn);
   text-align: center;
 }
 
-// 窄容器里配方芯片与副产物另起一行，与物品图标对齐；容器足够宽时芯片并入名称行。
+// 窄容器里配方芯片与副产物都留在名称行，只显示图标；容器较宽时芯片带上配方名。
 .recipe-tree-node-detail,
 .recipe-tree-node-extras {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-2);
-}
-
-.recipe-tree-node-detail {
-  order: 1;
-  flex-basis: 100%;
-  padding: 0 0 2px calc(var(--pen-target) + 4px);
+  display: contents;
 }
 
 .recipe-tree-recipe-chip {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 3px;
   flex: none;
+  min-width: var(--pen-target);
   min-height: var(--pen-target);
-  padding: 0 6px 0 8px;
+  padding: 0 3px;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--surface-2);
@@ -457,6 +486,12 @@
   flex: none;
 }
 
+.recipe-tree-recipe-chip > span,
+.recipe-tree-recipe-chip small,
+.recipe-tree-byproduct-rate {
+  display: none;
+}
+
 .recipe-tree-recipe-chip > span {
   min-width: 0;
   max-width: 7.5em;
@@ -470,23 +505,86 @@
   font-size: 10px;
 }
 
-@container (min-width: 340px) {
-  .recipe-tree-node-detail {
-    display: contents;
+// 最窄的停靠栏里收紧行内间距与芯片、副产物的内部间距，让带配方芯片和副产物的行仍能放在一行。
+@container (max-width: 299px) {
+  .recipe-tree-node {
+    column-gap: 3px;
+    padding-right: 4px;
   }
 
-  // 芯片最多占到「物品图标 + 约四字宽名称 + 右侧数值列」之外的宽度，放不下时先省略芯片上的配方名。
+  .recipe-tree-node-name {
+    min-width: 3.5em;
+  }
+
+  .recipe-tree-recipe-chip,
+  .recipe-tree-byproduct {
+    gap: 1px;
+  }
+
+  .recipe-tree-recipe-chip {
+    padding: 0 2px;
+  }
+
+  .recipe-tree-recipe-chip svg {
+    width: 12px;
+  }
+}
+
+@container (min-width: 340px) {
+  // 芯片最多占到「物品图标 + 约四字宽名称 + 右侧数值列」之外的宽度，放不下时先省略芯片上的配方名；
+  // 副产物徽标同在名称行时再让出它的宽度。
   .recipe-tree-recipe-chip {
     flex-shrink: 1;
-    min-width: 0;
+    max-width: calc(100% - var(--pen-target) - 148px);
+    padding: 0 6px 0 8px;
+  }
+
+  .recipe-tree-node:has(.recipe-tree-byproduct) .recipe-tree-recipe-chip {
+    max-width: calc(100% - var(--pen-target) - 180px);
+  }
+
+  .recipe-tree-recipe-chip > span,
+  .recipe-tree-recipe-chip small {
+    display: inline;
+  }
+}
+
+// 容器足够宽时副产物与外部供给另起一行并带数值。
+@container (min-width: 460px) {
+  .recipe-tree-byproduct-rate {
+    display: inline;
+  }
+
+  .recipe-tree-node:has(.recipe-tree-byproduct) .recipe-tree-recipe-chip {
     max-width: calc(100% - var(--pen-target) - 148px);
   }
 
   .recipe-tree-node-extras {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     order: 1;
     flex-basis: 100%;
+    gap: 6px;
     padding: 0 0 2px calc(var(--pen-target) + 4px);
+    color: var(--text-2);
   }
+}
+
+// 根节点行同时是钉住目标的标题；窄容器里产量与按钮换到第二行靠右，名称保留整行宽度。
+.recipe-tree-node.is-pin .recipe-tree-pin-controls {
+  flex: 1 0 100%;
+  justify-content: flex-end;
+}
+
+@container (min-width: 460px) {
+  .recipe-tree-node.is-pin .recipe-tree-pin-controls {
+    flex: none;
+  }
+}
+
+.recipe-tree-node.is-pin .recipe-tree-node-name {
+  font-weight: 600;
 }
 
 .recipe-tree-byproduct {
@@ -686,6 +784,23 @@
   cursor: default;
 }
 
+// 左缘拖动条有一半压在停靠栏内容上；树节点与搜索行让出这段宽度，最外层的展开按钮保持完整的笔触区域。
+$recipe-tree-dock-grip-overhang: 9px;
+
+.recipe-tree-overlay.is-docked .recipe-tree-nodes {
+  padding-left: $recipe-tree-dock-grip-overhang;
+}
+
+.recipe-tree-overlay.is-docked .recipe-tree-pin-header,
+.recipe-tree-overlay.is-docked .recipe-tree-search {
+  padding-left: $recipe-tree-dock-grip-overhang + 4px;
+}
+
+// 并入流程图工具栏时工具栏自身已有 4px 左内边距。
+.recipe-tree-overlay.is-docked .recipe-tree-search.is-inline {
+  padding-left: $recipe-tree-dock-grip-overhang - 4px;
+}
+
 .recipe-tree-dock-resize {
   position: absolute;
   z-index: 2;
@@ -719,12 +834,15 @@
 }
 
 // 流程图视图中合计信息（设备与原料）合并为一行，可横向滑动，把高度留给流程图。
+// 右缘渐隐提示还能横向滑动；右侧留白保证滑到底时最后一项不在渐隐区里。
 .recipe-tree-graph-body .recipe-tree-totals:not(.is-expanded) {
   display: flex;
   gap: 14px;
+  padding-right: 24px;
   overflow-x: auto;
   scrollbar-width: none;
   touch-action: pan-x;
+  mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
 }
 
 .recipe-tree-graph-body .recipe-tree-totals:not(.is-expanded) .recipe-tree-totals-row {

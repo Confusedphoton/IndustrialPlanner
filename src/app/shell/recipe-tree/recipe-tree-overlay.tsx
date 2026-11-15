@@ -84,8 +84,6 @@ const RECIPE_TREE_SOURCE_CONFIG: ProductionPlanningSourceConfig = {
 };
 const RECIPE_TREE_INFINITE_ITEM_IDS: ReadonlySet<string> = new Set(["item_liquid_sewage"]);
 const SEARCH_RESULT_LIMIT = 8;
-/** 树形视图缩进参考线的最大层数；更深的层级不再缩进，窄停靠栏里名称仍有空间。 */
-const RECIPE_TREE_GUIDE_DEPTH_LIMIT = 6;
 const VIEWPORT_MARGIN_PX = 8;
 const TOP_BAR_CLEARANCE_PX = 56;
 /** 底部状态栏高度；浮层不压到状态栏上。 */
@@ -566,7 +564,6 @@ const RecipeTreePinSection = observer(function RecipeTreePinSection({
   isFirst: boolean;
   t: Translate;
 }) {
-  const state = recipeTreeOverlayState;
   const plan = useMemo<ProductionPlanningResult>(() => computeProductionPlan({
     targets: [{ id: pin.id, itemId: pin.itemId, perMinute: pin.perMinute }],
     supplies: [],
@@ -578,59 +575,20 @@ const RecipeTreePinSection = observer(function RecipeTreePinSection({
   const root = plan.roots[0] ?? null;
   const itemName = resolveProductionPlanningItemName(pin.itemId, index, t);
 
+  const controls = <RecipeTreePinControls isFirst={isFirst} pin={pin} t={t} />;
+
+  // 钉住目标的名称、产量与操作并入根节点行，不再单独占一行标题。
   return (
     <article className={cm(styles, "recipe-tree-pin")}>
-      <div className={cm(styles, "recipe-tree-pin-header")}>
-        <button
-          aria-expanded={!pin.collapsed}
-          aria-label={itemName}
-          className={cm(styles, "recipe-tree-icon-button")}
-          onClick={() => state.updatePin(pin.id, { collapsed: !pin.collapsed })}
-          type="button"
-        >
-          {pin.collapsed ? <LucideChevronRight /> : <LucideChevronDown />}
-        </button>
-        <img alt="" className={cm(styles, "recipe-tree-item-icon")} src={resolveProductionPlanningItemIconSrc(pin.itemId, index)} />
-        <strong className={cm(styles, "recipe-tree-pin-name")} title={itemName}>{itemName}</strong>
-        <span className={cm(styles, "recipe-tree-pin-controls")}>
-          <label className={cm(styles, "recipe-tree-rate")}>
-            <NumberInput
-              aria-label={t("recipeTree.targetRate")}
-              className={cm(styles, "recipe-tree-rate-input")}
-              emptyFallback={pin.perMinute}
-              min={0.01}
-              onCommit={(value) => {
-                if (value > 0) {
-                  state.updatePin(pin.id, { perMinute: value });
-                }
-              }}
-              value={pin.perMinute}
-            />
-            <span>{t("recipeTree.perMinute")}</span>
-          </label>
-          <button
-            aria-label={t("recipeTree.moveUp")}
-            className={cm(styles, "recipe-tree-icon-button")}
-            disabled={isFirst}
-            onClick={() => state.movePin(pin.id, -1)}
-            title={t("recipeTree.moveUp")}
-            type="button"
-          >
-            <LucideChevronUp />
-          </button>
-          <button
-            aria-label={t("recipeTree.unpin")}
-            className={cm(styles, "recipe-tree-icon-button")}
-            onClick={() => state.removePin(pin.id)}
-            title={t("recipeTree.unpin")}
-            type="button"
-          >
-            <LucidePinOff />
-          </button>
-        </span>
-      </div>
-      {pin.collapsed ? null : root === null ? (
-        <p className={cm(styles, "recipe-tree-empty")}>{t("recipeTree.noRecipe")}</p>
+      {root === null ? (
+        <>
+          <div className={cm(styles, "recipe-tree-pin-header")}>
+            <img alt="" className={cm(styles, "recipe-tree-item-icon")} src={resolveProductionPlanningItemIconSrc(pin.itemId, index)} />
+            <strong className={cm(styles, "recipe-tree-pin-name")} title={itemName}>{itemName}</strong>
+            {controls}
+          </div>
+          <p className={cm(styles, "recipe-tree-empty")}>{t("recipeTree.noRecipe")}</p>
+        </>
       ) : (
         <>
           <ul className={cm(styles, "recipe-tree-nodes")} role="tree">
@@ -640,13 +598,68 @@ const RecipeTreePinSection = observer(function RecipeTreePinSection({
               node={root}
               nodePath="0"
               pin={pin}
+              pinControls={controls}
               t={t}
             />
           </ul>
-          <RecipeTreeTotals index={index} plan={plan} t={t} />
+          {pin.collapsed ? null : <RecipeTreeTotals index={index} plan={plan} t={t} />}
         </>
       )}
     </article>
+  );
+});
+
+/** 钉住目标的产量输入与排序、取消钉住按钮。 */
+const RecipeTreePinControls = observer(function RecipeTreePinControls({
+  pin,
+  isFirst,
+  t,
+}: {
+  pin: RecipeTreePin;
+  isFirst: boolean;
+  t: Translate;
+}) {
+  const state = recipeTreeOverlayState;
+
+  return (
+    <span className={cm(styles, "recipe-tree-pin-controls")}>
+      <label className={cm(styles, "recipe-tree-rate")}>
+        <NumberInput
+          aria-label={t("recipeTree.targetRate")}
+          className={cm(styles, "recipe-tree-rate-input")}
+          emptyFallback={pin.perMinute}
+          min={0.01}
+          onCommit={(value) => {
+            if (value > 0) {
+              state.updatePin(pin.id, { perMinute: value });
+            }
+          }}
+          value={pin.perMinute}
+        />
+        <span>{t("recipeTree.perMinute")}</span>
+      </label>
+      {state.pins.length > 1 ? (
+        <button
+          aria-label={t("recipeTree.moveUp")}
+          className={cm(styles, "recipe-tree-icon-button")}
+          disabled={isFirst}
+          onClick={() => state.movePin(pin.id, -1)}
+          title={t("recipeTree.moveUp")}
+          type="button"
+        >
+          <LucideChevronUp />
+        </button>
+      ) : null}
+      <button
+        aria-label={t("recipeTree.unpin")}
+        className={cm(styles, "recipe-tree-icon-button")}
+        onClick={() => state.removePin(pin.id)}
+        title={t("recipeTree.unpin")}
+        type="button"
+      >
+        <LucidePinOff />
+      </button>
+    </span>
   );
 });
 
@@ -658,6 +671,7 @@ const RecipeTreeNode = observer(function RecipeTreeNode({
   index,
   t,
   isUpkeep = false,
+  pinControls,
 }: {
   node: ProductionPlanningItemNode;
   nodePath: string;
@@ -666,6 +680,8 @@ const RecipeTreeNode = observer(function RecipeTreeNode({
   index: ProductionPlanningIndex;
   t: Translate;
   isUpkeep?: boolean;
+  /** 根节点行承担钉住目标的标题：展开按钮折叠整个目标（含合计），产量由输入框给出。 */
+  pinControls?: ReactNode;
 }) {
   const state = recipeTreeOverlayState;
   const openActionMenu = useContext(RecipeActionMenuContext);
@@ -679,7 +695,15 @@ const RecipeTreeNode = observer(function RecipeTreeNode({
       ...recipeNode.deviceMinimumConsumptionItems.map((child) => ({ child, upkeep: true })),
     ];
   const nodeId = `${pin.id}:${nodePath}`;
-  const collapsed = state.isNodeCollapsed(nodeId);
+  const isPinRow = pinControls !== undefined;
+  const collapsed = isPinRow ? pin.collapsed : state.isNodeCollapsed(nodeId);
+  const toggleCollapsed = () => {
+    if (isPinRow) {
+      state.updatePin(pin.id, { collapsed: !pin.collapsed });
+    } else {
+      state.toggleNodeCollapsed(nodeId);
+    }
+  };
   const itemName = resolveProductionPlanningItemName(node.itemId, index, t);
   const candidates = (index.candidatesByOutputItem.get(node.itemId) ?? [])
     .filter((candidate) => candidate.sourceType === "system-recipe");
@@ -695,24 +719,24 @@ const RecipeTreeNode = observer(function RecipeTreeNode({
 
   return (
     <li
-      aria-expanded={children.length > 0 ? !collapsed : undefined}
+      aria-expanded={children.length > 0 || isPinRow ? !collapsed : undefined}
       role="treeitem"
-      style={{ "--recipe-tree-depth": Math.min(depth, RECIPE_TREE_GUIDE_DEPTH_LIMIT) } as CSSProperties}
+      style={{ "--recipe-tree-depth": depth } as CSSProperties}
     >
       <div
-        className={cm(styles, "recipe-tree-node")}
+        className={cm(styles, isPinRow ? "recipe-tree-node is-pin" : "recipe-tree-node")}
         onClick={(event) => {
-          if ((event.target as HTMLElement).closest("button") !== null) {
+          if ((event.target as HTMLElement).closest("button, input, label") !== null) {
             return;
           }
           openNodeActionMenu(event.currentTarget.getBoundingClientRect());
         }}
       >
-        {children.length > 0 ? (
+        {children.length > 0 || isPinRow ? (
           <button
             aria-label={itemName}
             className={cm(styles, "recipe-tree-node-toggle")}
-            onClick={() => state.toggleNodeCollapsed(nodeId)}
+            onClick={toggleCollapsed}
             type="button"
           >
             {collapsed ? <LucideChevronRight /> : <LucideChevronDown />}
@@ -735,12 +759,21 @@ const RecipeTreeNode = observer(function RecipeTreeNode({
             ) : null}
             {hasExtras ? (
               <span className={cm(styles, "recipe-tree-node-extras")}>
-                {byproducts.map((output) => (
-                  <span className={cm(styles, "recipe-tree-byproduct")} key={output.id}>
-                    +<img alt="" src={resolveProductionPlanningItemIconSrc(output.itemId, index)} />
-                    {formatProductionFlow(output.perMinute)}
-                  </span>
-                ))}
+                {byproducts.map((output) => {
+                  const byproductLabel = `${resolveProductionPlanningItemName(output.itemId, index, t)} +${formatProductionFlow(output.perMinute)}${t("recipeTree.perMinute")}`;
+                  return (
+                    <span
+                      aria-label={byproductLabel}
+                      className={cm(styles, "recipe-tree-byproduct")}
+                      key={output.id}
+                      role="img"
+                      title={byproductLabel}
+                    >
+                      +<img alt="" src={resolveProductionPlanningItemIconSrc(output.itemId, index)} />
+                      <span className={cm(styles, "recipe-tree-byproduct-rate")}>{formatProductionFlow(output.perMinute)}</span>
+                    </span>
+                  );
+                })}
                 {externalPerMinute > 0.0001 ? (
                   <span className={cm(styles, "recipe-tree-tag")}>
                     {t("recipeTree.supplied")} {formatProductionFlow(externalPerMinute)}
@@ -751,10 +784,12 @@ const RecipeTreeNode = observer(function RecipeTreeNode({
           </span>
         ) : null}
         <span className={cm(styles, "recipe-tree-node-metrics")}>
-          <span className={cm(styles, "recipe-tree-node-rate")}>
-            {formatProductionFlow(node.demandPerMinute)}
-            <small>{t("recipeTree.perMinute")}</small>
-          </span>
+          {isPinRow ? null : (
+            <span className={cm(styles, "recipe-tree-node-rate")}>
+              {formatProductionFlow(node.demandPerMinute)}
+              <small>{t("recipeTree.perMinute")}</small>
+            </span>
+          )}
           {machineId !== null && recipeNode !== null ? (
             <span
               className={cm(styles, "recipe-tree-machine")}
@@ -769,6 +804,7 @@ const RecipeTreeNode = observer(function RecipeTreeNode({
             </span>
           ) : null}
         </span>
+        {pinControls}
       </div>
       {children.length > 0 && !collapsed ? (
         <ul role="group">

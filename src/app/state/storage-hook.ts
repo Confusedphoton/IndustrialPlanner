@@ -355,6 +355,11 @@ export function normalizePersistedWorkbenchState(
       && Number.isFinite(persistedWorkbenchState.leftDockWidth)
         ? clampLeftDockWidth(persistedWorkbenchState.leftDockWidth)
         : fallback.leftDockWidth,
+    touchLeftDockWidth:
+      typeof persistedWorkbenchState.touchLeftDockWidth === "number"
+      && Number.isFinite(persistedWorkbenchState.touchLeftDockWidth)
+        ? clampLeftDockWidth(persistedWorkbenchState.touchLeftDockWidth)
+        : fallback.touchLeftDockWidth,
     topBarCollapsed: typeof persistedWorkbenchState.topBarCollapsed === "boolean"
       ? persistedWorkbenchState.topBarCollapsed
       : fallback.topBarCollapsed,

@@ -44,6 +44,8 @@ export interface WorkbenchState {
   readonly leftDockOpen: boolean;
   readonly rightDockOpen: boolean;
   readonly leftDockWidth: number;
+  /** 触屏布局（手机、平板与矮窗口）的左侧面板宽度，与 PC 布局分开保存。 */
+  readonly touchLeftDockWidth: number;
   readonly topBarCollapsed: boolean;
   readonly rightDockActiveTab: RightDockTabId;
   readonly selectedPlacementVariantByCraftGroup: Readonly<Record<string, string>>;
