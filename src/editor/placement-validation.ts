@@ -33,9 +33,8 @@ import {
   hasOuterRingEdgeSnapBehavior,
   resolveOuterRingEdgeSnap,
 } from "./placement-snapping";
+import { WAREHOUSE_BUS_SEGMENT_DEFINITION_ID, WAREHOUSE_BUS_SOURCE_DEFINITION_ID } from "@/shared/warehouse-bus";
 
-const WAREHOUSE_BUS_SEGMENT_DEFINITION_ID = "log_hongs_bus";
-const WAREHOUSE_BUS_SOURCE_DEFINITION_ID = "log_hongs_bus_source";
 const OUTER_RING_EDGE_SNAP_REASON_MESSAGE: UiKey = "placementReason.edgeSnap";
 const WAREHOUSE_BUS_SEED_CONFIG_KEY = "warehouseBusSeed";
 

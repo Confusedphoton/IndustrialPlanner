@@ -2,7 +2,7 @@ import { resolveEditorPlacementGeometry } from "../placement-space";
 import { createBlueprintDocument, type BlueprintDocument } from "@/domain/document/blueprint-document";
 import type { SlotLinkDefinition, WorldEntity } from "@/domain/document/world-document";
 import type { EditorAction } from "@/domain/editor/editor-action";
-import type { SinglePlacementRequest } from "@/domain/editor/types/editor-session-types";
+import type { PositionedPlacementRequest, SinglePlacementRequest } from "@/domain/editor/types/editor-session-types";
 import { isBaseBuiltinEntityId } from "@/domain/registry/types/base-definition";
 import type { DraftEntity } from "../draft-entity";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
@@ -30,6 +30,7 @@ import { allowsFreeProtocolCorePlacement, resolveProtocolCoreDefinitionIdForBase
 type EditorPlacementActions = Pick<
   EditorAction,
   | "createSinglePlacementDraft"
+  | "createPositionedPlacementDraft"
   | "createBlueprintPlacementDraft"
   | "applyPlacementDraft"
   | "cancelPlacementDraft"
@@ -139,6 +140,45 @@ export function createEditorPlacementActions({
         definitionIds: [targetDefinitionId],
         count: 1,
       };
+      syncPlacementValidationState({
+        document: currentDocument,
+        state,
+        workspace,
+      });
+    }),
+
+    createPositionedPlacementDraft: action((requests: readonly PositionedPlacementRequest[]) => {
+      const currentDocument = document.getSnapshot();
+      const preview = resolveCollection(EntityCollectionType.preview);
+      const reservedIds = new Set<string>(state.drafts.map((entity) => entity.id));
+      const nextPreviewDrafts = requests.flatMap((request): DraftEntity[] => {
+        const definition = workspace.registry.queries.findEntityDefinition(request.definitionId);
+        if (definition === null || !Number.isFinite(request.position.x) || !Number.isFinite(request.position.y)) {
+          return [];
+        }
+        const id = generatePlacementDraftId(definition.id, ++placementDraftCounter, reservedIds);
+        return [{
+          id,
+          definitionId: definition.id,
+          position: { ...request.position },
+          rotation: request.rotation,
+          config: definition.placementDefaults?.config === undefined ? {} : { ...definition.placementDefaults.config },
+          tags: [],
+          originalEntityId: id,
+          retainPlacementId: false,
+        }];
+      });
+
+      state.internalTransientState.placementDraftSlotLinks = null;
+      state.regionAnnotations.placementPreview = [];
+      state.regionAnnotations.moveFeedback = null;
+      state.drafts = replacePreviewDrafts({
+        drafts: state.drafts,
+        previewDraftIds: preview,
+        nextPreviewDrafts,
+      });
+      preview.replace(nextPreviewDrafts.map((draft) => draft.id));
+      state.internalTransientState.placementHistoryAction = createPlacementHistoryAction(nextPreviewDrafts);
       syncPlacementValidationState({
         document: currentDocument,
         state,

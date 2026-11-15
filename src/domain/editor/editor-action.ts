@@ -19,7 +19,7 @@ import type { RegionAnnotation } from "../document/region-annotation";
 import type { WorldDocument, WorldDocumentSettings } from "../document/world-document";
 import type { RegionRectOperation } from "./types/region-annotation-types";
 
-import type { SinglePlacementRequest } from "./types/editor-session-types";
+import type { PositionedPlacementRequest, SinglePlacementRequest } from "./types/editor-session-types";
 
 /** 集合旋转的结果：正式文档实体旋转后越出基地或与其他设备新产生重叠时整体不落地。 */
 export type CollectionRotationResult =
@@ -108,6 +108,8 @@ export interface EditorAction {
 	cancelMoveOperationDraft(): void;
 
 	createSinglePlacementDraft(request: SinglePlacementRequest): void;
+	/** 以给定位置与朝向生成一组设备的放置预览，替换当前预览；确认后作为一步历史提交。 */
+	createPositionedPlacementDraft(requests: readonly PositionedPlacementRequest[]): void;
 	createBlueprintPlacementDraft?(blueprint: BlueprintDocument, centerGridPoint: GridPoint): void;
 	applyPlacementDraft(): boolean;
 	cancelPlacementDraft(): void;

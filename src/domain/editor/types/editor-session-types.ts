@@ -31,4 +31,11 @@ export interface SinglePlacementRequest {
   readonly rotation?: GridRotation;
 }
 
+/** 按确定位置与朝向放置的设备（例如沿存取线延伸出的一串基段）。 */
+export interface PositionedPlacementRequest {
+  readonly definitionId: string;
+  readonly position: GridPoint;
+  readonly rotation: GridRotation;
+}
+
 export type { CanvasOperationAvailability, CanvasOperationId } from "../../shared/canvas-operation";
