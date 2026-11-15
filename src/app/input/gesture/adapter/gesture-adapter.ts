@@ -36,7 +36,8 @@ const PINCH_DISTANCE_THRESHOLD_PX = 2;
 const ROTATE_ANGLE_THRESHOLD_DEGREES = 15;
 const TWO_FINGER_MOVE_THRESHOLD_PX = 2;
 const WHEEL_ACCUMULATE_THRESHOLD = 1;
-const DOUBLE_TAP_MS = 300;
+// 手写笔连点比鼠标双击慢，留出较宽的间隔。
+const DOUBLE_TAP_MS = 400;
 const DOUBLE_TAP_SLOP_PX = 12;
 /** 手写笔精确输入的防误触窗口；笔接触或最近一次笔活动（含悬停）后该时长内的触摸视为手掌。 */
 const PEN_PALM_REJECTION_MS = 400;
