@@ -162,8 +162,6 @@ export function RecipeActionMenu({
         : next;
     });
     place();
-    // 打开时把“使用中”的配方滚进可见区，从配方芯片打开时用户要看的就是它。
-    menu.querySelector("[data-recipe-in-use]")?.scrollIntoView?.({ block: "nearest" });
     if (typeof ResizeObserver === "undefined") {
       return;
     }
@@ -173,6 +171,23 @@ export function RecipeActionMenu({
     }
     return () => observer.disconnect();
   }, [target.anchor]);
+
+  // 打开后（位置与高度上限生效后）把“使用中”的配方整行滚进可见区，从配方芯片打开时用户要看的就是它。
+  const revealedActiveRecipeRef = useRef(false);
+  useLayoutEffect(() => {
+    const menu = menuRef.current;
+    if (menu === null || placement === null || revealedActiveRecipeRef.current) {
+      return;
+    }
+    revealedActiveRecipeRef.current = true;
+    const row = menu.querySelector("[data-recipe-in-use]")?.closest("button, [role=group]");
+    if (row instanceof HTMLElement) {
+      const overflow = row.getBoundingClientRect().bottom - menu.getBoundingClientRect().bottom + MENU_VIEWPORT_MARGIN_PX;
+      if (overflow > 0) {
+        menu.scrollTop += overflow;
+      }
+    }
+  }, [placement]);
 
   // 挂到 body：菜单也会从工具箱对话框内的流程图打开，不能被对话框层级或变换裁剪。
   return createPortal((

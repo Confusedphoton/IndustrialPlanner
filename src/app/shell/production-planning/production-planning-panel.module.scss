@@ -1887,7 +1887,8 @@
 .production-flow-nodes.is-compact .production-flow-node-rate {
   overflow: hidden;
   margin-left: 0;
-  font-size: min(calc(12px / var(--flow-scale, 1)), 2.2rem);
+  // 上限约为卡片文字区能容纳四位数的字号，越过上限后速率才随总览缩小。
+  font-size: min(calc(12px / var(--flow-scale, 1)), 46px);
   line-height: 1;
   text-overflow: clip;
   white-space: nowrap;

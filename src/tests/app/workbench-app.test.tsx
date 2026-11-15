@@ -21,7 +21,7 @@ import {
   BACKEND_API_ADDRESS_OVERRIDE_LOCAL_STORAGE_KEY,
 } from "@/shared/storage/backend-api-address";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
-import { MIN_RIGHT_DOCK_WIDTH_PX } from "@/app/shell/layout/dock-layout-budget";
+import { MIN_SQUEEZED_RIGHT_DOCK_WIDTH_PX } from "@/app/shell/layout/dock-layout-budget";
 import { WorkbenchApp } from "@/app/shell/workbench-app";
 import {
   DEFAULT_HELP_DIALOG_TAB_ID,
@@ -1101,7 +1101,7 @@ describe("WorkbenchApp", () => {
     expect(appHost.state.workbench.rightDockOpen).toBe(true);
     // 窄屏上属性面板让出宽度，保证画布最小可用宽度。
     expect(workbench?.style.getPropertyValue("--right-dock-width")).toBe(
-      `${MIN_RIGHT_DOCK_WIDTH_PX}px`,
+      `${MIN_SQUEEZED_RIGHT_DOCK_WIDTH_PX}px`,
     );
     expect(container.querySelector(".workbench-floating-right-dock-button")).toBeNull();
     expect(container.querySelector(".dock-right")).not.toBeNull();

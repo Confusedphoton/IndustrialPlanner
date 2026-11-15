@@ -126,6 +126,20 @@ describe("resolveDockLayoutBudget with an edge tool rail", () => {
     expect(canvasWidth(1024, 51, budget) - 114).toBeGreaterThanOrEqual(MIN_CANVAS_WIDTH_PX);
     expect(budget.recipeDockWidth).toBeLessThan(RECIPE_DOCK_MIN_WIDTH);
   });
+
+  it("keeps the rail-free canvas when the inspector joins the docks in a short window", () => {
+    const budget = resolveDockLayoutBudget({
+      viewportWidth: 1024,
+      leftToolbarWidth: 51,
+      leftDockWidth: 220,
+      rightDockWidth: 380,
+      recipeDockWidth: 440,
+      recipeDockMinWidth: RECIPE_DOCK_MIN_WIDTH,
+      canvasReservedWidth: 114,
+    });
+
+    expect(canvasWidth(1024, 51, budget) - 114).toBeGreaterThanOrEqual(MIN_CANVAS_WIDTH_PX);
+  });
 });
 
 describe("resolveStackedRightColumn", () => {

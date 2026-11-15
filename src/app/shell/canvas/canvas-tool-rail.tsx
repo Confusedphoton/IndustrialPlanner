@@ -148,11 +148,13 @@ function resolveAttachedTop(rail: HTMLElement, group: HTMLElement | null, trigge
   return Math.round(Math.max(0, Math.min(desired, rail.clientHeight - group.offsetHeight)));
 }
 
-/** 对外发布的占用带宽包含贴附的上下文按钮组；临时打开的「更多」弹出组不计入。 */
+/** 对外发布的占用带宽包含贴附的上下文按钮组；临时打开的「更多」弹出组不计入。另发布不含上下文组的常驻带宽。 */
 function publishRailGeometry(rail: HTMLElement, attached: HTMLElement | null): void {
+  const baseWidth = RAIL_EDGE_INSET_PX + rail.offsetWidth;
   canvasToolRailState.setSize(
-    RAIL_EDGE_INSET_PX + rail.offsetWidth + (attached === null ? 0 : RAIL_ATTACHED_GAP_PX + attached.offsetWidth),
+    baseWidth + (attached === null ? 0 : RAIL_ATTACHED_GAP_PX + attached.offsetWidth),
     rail.offsetHeight,
+    baseWidth,
   );
 }
 

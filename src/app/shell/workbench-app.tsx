@@ -747,7 +747,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     rightDockWidth: showRightDock ? DEFAULT_RIGHT_DOCK_WIDTH : 0,
     recipeDockWidth: recipeTreeOverlayState.dockLayoutWidth === 0 ? 0 : recipeTreeOverlayState.dockWidth,
     recipeDockMinWidth: RECIPE_TREE_DOCK_MIN_WIDTH,
-    canvasReservedWidth: canvasToolRailState.width,
+    canvasReservedWidth: canvasToolRailState.baseWidth,
   });
   useEffect(() => {
     recipeTreeOverlayState.setDockWidthLimit(dockLayoutBudget.recipeDockMaxWidth);

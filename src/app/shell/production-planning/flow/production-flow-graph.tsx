@@ -692,7 +692,7 @@ export function ProductionFlowGraph({
         >
           <FlowSurfaceContent
             compact={viewport.scale < MIN_READABLE_FIT_SCALE}
-            overviewLabels={viewport.scale >= MIN_OVERVIEW_LABEL_SCALE}
+            overviewLabelScale={viewport.scale >= MIN_OVERVIEW_LABEL_SCALE ? Math.round(viewport.scale * 50) / 50 : null}
             graph={graph}
             metrics={metrics}
             onNodePointerDown={handleNodePointerDown}
@@ -709,7 +709,7 @@ export function ProductionFlowGraph({
 /** 节点、连线与标签只随布局变化重绘；平移缩放只改变外层 transform。 */
 const FlowSurfaceContent = memo(function FlowSurfaceContent({
   compact,
-  overviewLabels,
+  overviewLabelScale,
   graph,
   orientation,
   metrics,
@@ -719,8 +719,8 @@ const FlowSurfaceContent = memo(function FlowSurfaceContent({
 }: {
   /** 低于可读比例（总览）时卡片只显示放大的图标与速率，连线标签隐藏；只在越过阈值时重绘。 */
   readonly compact: boolean;
-  /** 总览时在卡片下方显示屏幕尺寸固定的名称标签。 */
-  readonly overviewLabels: boolean;
+  /** 总览时在卡片下方显示屏幕尺寸固定的名称标签；值为取整后的缩放比例，用来估算标签能放下的字数，null 时不显示。 */
+  readonly overviewLabelScale: number | null;
   readonly graph: SankeyGraph<ProductionFlowNode, ProductionFlowLink>;
   readonly orientation: ProductionFlowOrientation;
   readonly metrics: CardMetrics;
@@ -741,7 +741,7 @@ const FlowSurfaceContent = memo(function FlowSurfaceContent({
           <FlowNode
             compact={compact}
             key={node.id}
-            overviewLabel={compact && overviewLabels}
+            overviewLabelScale={compact ? overviewLabelScale : null}
             metrics={metrics}
             node={node}
             onPointerDown={onNodePointerDown}
@@ -787,14 +787,14 @@ function FlowToolbarButton({
 
 function FlowNode({
   compact,
-  overviewLabel,
+  overviewLabelScale,
   node,
   orientation,
   metrics,
   onPointerDown,
 }: {
   readonly compact: boolean;
-  readonly overviewLabel: boolean;
+  readonly overviewLabelScale: number | null;
   readonly node: SankeyNode<ProductionFlowNode>;
   readonly orientation: ProductionFlowOrientation;
   readonly metrics: CardMetrics;
@@ -844,7 +844,11 @@ function FlowNode({
           )}
         </span>
       </div>
-      {overviewLabel ? <span className={styles["production-flow-node-overview-label"]}>{source.title}</span> : null}
+      {overviewLabelScale === null ? null : (
+        <span className={styles["production-flow-node-overview-label"]}>
+          {truncateOverviewLabel(source.title, rect.width * overviewLabelScale)}
+        </span>
+      )}
     </div>
   );
 }
@@ -1271,4 +1275,33 @@ function estimateLayerCount(graphInput: ProductionFlowGraphInput): number {
   };
 
   return Math.max(2, ...graphInput.nodes.map((node) => visit(node.id, new Set()) + 1));
+}
+
+/** 总览标签约 11px 字号下每个西文字符的屏幕宽度；中日韩字符按两个计。 */
+const OVERVIEW_LABEL_CHAR_PX = 6.4;
+
+/**
+ * 按卡片在屏幕上的宽度截短总览名称，保留最后一个词（“…Powder”“…Ore”），
+ * 同一前缀的物品（矿石与粉末、种子与作物）截短后仍能区分。
+ */
+export function truncateOverviewLabel(title: string, screenWidth: number): string {
+  const budget = Math.floor(screenWidth / OVERVIEW_LABEL_CHAR_PX);
+  const units = (text: string) => Array.from(text).reduce((sum, char) => sum + (char.charCodeAt(0) > 0x2e7f ? 2 : 1), 0);
+  if (units(title) <= budget) {
+    return title;
+  }
+  const take = (text: string, limit: number) => {
+    let result = "";
+    for (const char of text) {
+      if (units(result + char) > limit) break;
+      result += char;
+    }
+    return result;
+  };
+  const lastSpace = title.lastIndexOf(" ");
+  const lastWord = lastSpace > 0 ? title.slice(lastSpace + 1) : "";
+  if (lastWord !== "" && units(lastWord) + 3 <= budget) {
+    return `${take(title, budget - units(lastWord) - 1).trimEnd()}…${lastWord}`;
+  }
+  return `${take(title, Math.max(1, budget - 1)).trimEnd()}…`;
 }
