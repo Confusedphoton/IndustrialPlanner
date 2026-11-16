@@ -45,9 +45,11 @@ type PortDragSession = {
  * - 输入端口：从指针所在格起笔、终点接入该端口，指针移动时重建路线；
  * 物流类型（传送带/管道）由端口所属物流族决定；松开即提交，取消则丢弃草稿。线头贴近画布边缘时平移地图。
  * 从设备内部（非端口格）开始的拖动不受影响，仍由移动/框选模块处理。
- * 手指没有这条路（拖设备是平移、长按是移动），改由选中设备后出现的端口把手发起，见 startPortHandleDrag。
+ * 手指没有这条路（拖设备是平移、长按是移动），改由选中设备后出现的端口把手发起，见 pressPortHandle。
  */
-export function createHypergryphPortDragLogisticsGestureModule(): GestureMappingModule<AppHost> {
+export function createHypergryphPortDragLogisticsGestureModule(
+  ownerCanvas: CanvasInteractionController,
+): GestureMappingModule<AppHost> {
   let session: PortDragSession | null = null;
 
   return {
@@ -56,7 +58,7 @@ export function createHypergryphPortDragLogisticsGestureModule(): GestureMapping
     priority: 150,
     cancel() {
       session = null;
-      cancelPortHandleDrag();
+      cancelPortHandlePress(ownerCanvas);
     },
     handle(event, context) {
       const canvas = context.canvas;
@@ -121,56 +123,100 @@ export type PortHandleSource =
   | { readonly type: "device-port"; readonly kind: LogisticsKind; readonly endpoint: DevicePortEndpoint }
   | { readonly type: "line-end"; readonly lineCell: GridPoint; readonly handleCell: GridPoint };
 
+/** 按下把手后移动超过该距离才开始拉线，避免点按时抖出一格线。 */
+const HANDLE_DRAG_START_PX = 8;
+
+export interface PortHandlePress {
+  readonly move: (position: GesturePosition) => void;
+  readonly end: (commit: boolean) => void;
+}
+
+interface ActivePortHandlePress {
+  readonly editor: EditorContract;
+  readonly source: PortHandleSource;
+  readonly start: GesturePosition;
+  readonly onSettle: () => void;
+  readonly onDrawing: () => void;
+  session: PortDragSession | null;
+}
+
+/** 每块画布至多一个正在按住的把手；路由取消（含输入被挂起）时由该画布的端口拖动模块丢弃。 */
+const activeHandlePresses = new WeakMap<CanvasInteractionController, ActivePortHandlePress>();
+
 /**
- * 从端口把手拖出一条线（手指、关闭精确输入的笔都走这里）：与从端口格直接拖动同一套铺设、边缘平移与提交，
- * 返回的控制器由把手在指针移动、松开或取消时调用。
+ * 按下端口把手（手指、关闭精确输入的笔都走这里）：移动超过起拖距离后，与从端口格直接拖动同一套铺设、
+ * 边缘平移与提交。按下的那一刻就登记到画布，起拖前被取消也同样失效；之后的 move/end 一律忽略，
+ * 并通过 onSettle 通知把手复原。
  */
-export function startPortHandleDrag(
+export function pressPortHandle(
   canvas: CanvasInteractionController,
   source: PortHandleSource,
-): { readonly move: (position: GesturePosition) => void; readonly end: (commit: boolean) => void } | null {
+  start: GesturePosition,
+  callbacks: { readonly onDrawing: () => void; readonly onSettle: () => void },
+): PortHandlePress | null {
   const editor = canvas.editor;
-  if (editor === null || editor.queries.resolveLogisticsDraftState() !== null) {
+  if (editor === null || !canStartPortHandleDrag(canvas, editor)) {
     return null;
   }
-  const gestureId = "port-handle";
-  const session = source.type === "device-port"
-    ? resolvePortSession(canvas, editor, gestureId, source.kind, source.endpoint)
-    : resolveLineEndSession(canvas, editor, gestureId, source.lineCell, source.handleCell);
-  if (session === null) {
-    return null;
-  }
-  cancelPortHandleDrag();
-  const drag = { canvas, editor, session };
-  activeHandleDrag = drag;
-  // 把手拖动不经过手势路由，但与路由共用取消：路由取消（切换工具、输入被挂起等）时草稿一并丢弃，之后的回调失效。
+  cancelPortHandlePress(canvas);
+  const press: ActivePortHandlePress = { editor, source, start, session: null, ...callbacks };
+  activeHandlePresses.set(canvas, press);
+  const current = () => activeHandlePresses.get(canvas) === press;
   return {
     move: (position) => {
-      if (activeHandleDrag !== drag) return;
-      if (canvas.isInputSuspended) {
-        cancelPortHandleDrag();
+      if (!current()) return;
+      // 挂起或换了工具（如另一只手点了管道工具）：这次按住作废。
+      if (canvas.isInputSuspended || canvas.state.activeTool !== "select") {
+        cancelPortHandlePress(canvas);
         return;
       }
-      drivePortLine(canvas, editor, session, position);
+      if (press.session === null) {
+        if (Math.hypot(position.x - start.x, position.y - start.y) < HANDLE_DRAG_START_PX) return;
+        press.session = canStartPortHandleDrag(canvas, editor) ? resolveHandleSession(canvas, editor, source) : null;
+        if (press.session === null) {
+          cancelPortHandlePress(canvas);
+          return;
+        }
+        press.onDrawing();
+      }
+      drivePortLine(canvas, editor, press.session, position);
     },
     end: (commit) => {
-      if (activeHandleDrag !== drag) return;
-      activeHandleDrag = null;
-      finishPortLine(canvas, editor, session, commit && !canvas.isInputSuspended);
+      if (!current()) return;
+      activeHandlePresses.delete(canvas);
+      if (press.session !== null) {
+        finishPortLine(canvas, editor, press.session, commit && !canvas.isInputSuspended && canvas.state.activeTool === "select");
+      }
+      press.onSettle();
     },
   };
 }
 
-let activeHandleDrag: {
-  readonly canvas: CanvasInteractionController;
-  readonly editor: EditorContract;
-  readonly session: PortDragSession;
-} | null = null;
+function canStartPortHandleDrag(canvas: CanvasInteractionController, editor: EditorContract): boolean {
+  return !canvas.isInputSuspended
+    && canvas.state.activeTool === "select"
+    && canvas.canUseWorkbenchActions
+    && canvas.isOperationEnabled("logistics-placement")
+    && editor.queries.resolveLogisticsDraftState() === null;
+}
 
-function cancelPortHandleDrag(): void {
-  const drag = activeHandleDrag;
-  activeHandleDrag = null;
-  if (drag !== null) finishPortLine(drag.canvas, drag.editor, drag.session, false);
+function resolveHandleSession(
+  canvas: CanvasInteractionController,
+  editor: EditorContract,
+  source: PortHandleSource,
+): PortDragSession | null {
+  const gestureId = "port-handle";
+  return source.type === "device-port"
+    ? resolvePortSession(canvas, editor, gestureId, source.kind, source.endpoint)
+    : resolveLineEndSession(canvas, editor, gestureId, source.lineCell, source.handleCell);
+}
+
+function cancelPortHandlePress(canvas: CanvasInteractionController): void {
+  const press = activeHandlePresses.get(canvas);
+  if (press === undefined) return;
+  activeHandlePresses.delete(canvas);
+  if (press.session !== null) finishPortLine(canvas, press.editor, press.session, false);
+  press.onSettle();
 }
 
 export interface PortDragHandle {

@@ -13,8 +13,13 @@ export interface MarkingMenuGroup {
 export interface MarkingMenuState {
   /** 分类圈的中心：按下的位置，靠近画布边缘时向内挪到整圈都看得见、够得着。 */
   readonly origin: ClientPixelPoint;
-  /** 实际按下的位置。滑动选择按相对它的位移计算，圈心被挪开时也不会一动就选中。 */
+  /** 实际按下的位置：离开它一小段距离之前不做任何选择。 */
   readonly pressPoint: ClientPixelPoint;
+  /**
+   * 笔是否已经到过分类圈以内。圈心被挪开时按下处可能在圈外，必须先回到圈内再向外越过才进入分类，
+   * 这样笔指向的始终是画出来的图标，按下后稍一移动也不会直接展开某个分类。
+   */
+  readonly reachedRing: boolean;
   /** 菜单可用的画布区域；展开的设备圈同样收在其中。 */
   readonly bounds: ClientPixelRect;
   readonly pointer: "mouse" | "touch";
@@ -101,15 +106,35 @@ export function resolveMarkingMenuItemPosition(
   return pointAt(resolveMarkingMenuItemCenter(state, groupIndex), polar.angle, polar.radius);
 }
 
+/** 打开菜单时的初始状态。 */
+export function openMarkingMenuState(options: {
+  readonly pressPoint: ClientPixelPoint;
+  readonly bounds: ClientPixelRect;
+  readonly pointer: MarkingMenuState["pointer"];
+  readonly groups: readonly MarkingMenuGroup[];
+}): MarkingMenuState {
+  const origin = fitMarkingMenuOrigin(options.pressPoint, options.bounds);
+  return {
+    ...options,
+    origin,
+    reachedRing: distance(origin, options.pressPoint) < MARKING_MENU_ENTER_RADIUS_PX,
+    mode: "drag",
+    level: 1,
+    groupIndex: null,
+    itemIndex: null,
+  };
+}
+
 /**
  * 按指针位置更新高亮：第一层选分类，越过分类圈进入第二层选设备，回到中心退回第一层。
- * 判定用的是从按下处起的位移（平移到圈心上），所以圈心被挪进画布时，划动的方向与距离仍与平常一样。
+ * 方向与距离都按画出来的圈判定；不靠边时圈心就是按下处，熟练后可以不看菜单直接两段划出。
  */
 export function trackMarkingMenuPointer(state: MarkingMenuState, point: ClientPixelPoint): MarkingMenuState {
-  return trackFromOrigin(state, {
-    x: state.origin.x + point.x - state.pressPoint.x,
-    y: state.origin.y + point.y - state.pressPoint.y,
-  });
+  if (state.groupIndex === null && distance(state.pressPoint, point) < MARKING_MENU_DEAD_ZONE_PX) {
+    return state;
+  }
+  const reachedRing = state.reachedRing || distance(state.origin, point) < MARKING_MENU_ENTER_RADIUS_PX;
+  return trackFromOrigin({ ...state, reachedRing }, point);
 }
 
 function trackFromOrigin(state: MarkingMenuState, point: ClientPixelPoint): MarkingMenuState {
@@ -124,7 +149,7 @@ function trackFromOrigin(state: MarkingMenuState, point: ClientPixelPoint): Mark
 
   if (state.level === 1 || state.groupIndex === null) {
     const groupIndex = nearestIndex(angleOf(state.origin, point), groupCount, (index) => resolveMarkingMenuGroupAngle(index, groupCount));
-    if (fromOrigin < MARKING_MENU_ENTER_RADIUS_PX) {
+    if (fromOrigin < MARKING_MENU_ENTER_RADIUS_PX || !state.reachedRing) {
       return { ...state, level: 1, groupIndex, itemIndex: null };
     }
     return trackFromOrigin({ ...state, level: 2, groupIndex, itemIndex: null }, point);

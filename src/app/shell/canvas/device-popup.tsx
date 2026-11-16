@@ -82,7 +82,13 @@ export const DevicePopup = observer(function DevicePopup({ appHost }: { appHost:
     gridCellPixelSize: view.gridCellPixelSize,
     displayRotation: view.displayRotation,
   });
-  if (deviceRect === null) {
+  // 设备整台滑出画布露出的部分（侧栏、工具条下面或视口外）时卡片随之收起，不悬在别的面板上。
+  const exposed = canvas.unobstructedClientRect;
+  if (
+    deviceRect === null
+    || deviceRect.left + deviceRect.width <= exposed.left || deviceRect.left >= exposed.left + exposed.width
+    || deviceRect.top + deviceRect.height <= exposed.top || deviceRect.top >= exposed.top + exposed.height
+  ) {
     return null;
   }
 

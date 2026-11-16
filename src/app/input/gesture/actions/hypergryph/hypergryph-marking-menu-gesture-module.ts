@@ -2,11 +2,10 @@ import { runInAction } from "mobx";
 
 import type { CanvasInteractionController } from "@/app/canvas";
 import {
-  fitMarkingMenuOrigin,
+  openMarkingMenuState,
   resolveMarkingMenuDeviceId,
   trackMarkingMenuPointer,
   type MarkingMenuGroup,
-  type MarkingMenuState,
 } from "@/app/canvas/marking-menu";
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
@@ -142,6 +141,13 @@ export function chooseMarkingMenuDevice(
 function chooseHighlightedDevice(canvas: CanvasInteractionController, position: GesturePosition): void {
   const menu = canvas.state.runtime.markingMenu;
   const deviceId = menu === null ? null : resolveMarkingMenuDeviceId(menu);
+  if (menu !== null && menu.level === 1 && menu.groupIndex !== null) {
+    // 停在分类上抬笔：展开该分类，设备留着供点按。
+    runInAction(() => {
+      canvas.state.runtime.markingMenu = { ...menu, mode: "tap", level: 2, itemIndex: null };
+    });
+    return;
+  }
   if (deviceId === null) {
     closeMarkingMenu(canvas);
     return;
@@ -153,7 +159,12 @@ function trackPointer(canvas: CanvasInteractionController, position: GesturePosi
   const menu = canvas.state.runtime.markingMenu;
   if (menu === null) return;
   const next = trackMarkingMenuPointer(menu, position);
-  if (next.level === menu.level && next.groupIndex === menu.groupIndex && next.itemIndex === menu.itemIndex) return;
+  if (
+    next.level === menu.level
+    && next.groupIndex === menu.groupIndex
+    && next.itemIndex === menu.itemIndex
+    && next.reachedRing === menu.reachedRing
+  ) return;
   runInAction(() => {
     canvas.state.runtime.markingMenu = next;
   });
@@ -193,18 +204,7 @@ function openMarkingMenu(canvas: CanvasInteractionController, pointer: "mouse" |
   if (groups.length === 0) {
     return false;
   }
-  const bounds = canvas.unobstructedClientRect;
-  const menu: MarkingMenuState = {
-    origin: fitMarkingMenuOrigin(origin, bounds),
-    pressPoint: origin,
-    bounds,
-    pointer,
-    mode: "drag",
-    groups,
-    level: 1,
-    groupIndex: null,
-    itemIndex: null,
-  };
+  const menu = openMarkingMenuState({ pressPoint: origin, bounds: canvas.unobstructedClientRect, pointer, groups });
   runInAction(() => {
     canvas.state.runtime.markingMenu = menu;
   });

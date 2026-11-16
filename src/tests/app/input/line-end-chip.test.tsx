@@ -8,7 +8,8 @@ import {
   placeConsumerAtLineEnd,
   resolveLineEndTarget,
   resolvePortDragHandles,
-  startPortHandleDrag,
+  pressPortHandle,
+  type PortDragHandle,
 } from "@/app/input/gesture/actions";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
@@ -169,6 +170,11 @@ describe("offering a consumer at the open end of a line dragged from a port", ()
   });
 });
 
+/** 用手指按住把手；之后的 move/end 与把手组件转发的指针事件相同。 */
+function pressHandle(appHost: AppHost, handle: PortDragHandle) {
+  return pressPortHandle(appHost.mainCanvas, handle.source, clientCenter(appHost, handle.cell), { onDrawing() {}, onSettle() {} })!;
+}
+
 describe("drawing a line out of a port with a finger", () => {
   it("offers a handle beyond every free port and draws from it like a pen drag from the port", async () => {
     const appHost = await createAppHost([furnace({ recipe: true })]);
@@ -179,7 +185,7 @@ describe("drawing a line out of a port with a finger", () => {
     expect(handle?.source.type).toBe("device-port");
     expect(handles.length).toBeGreaterThan(1);
 
-    const drag = startPortHandleDrag(appHost.mainCanvas, handle!.source)!;
+    const drag = pressHandle(appHost, handle!);
     const end = { x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 };
     drag.move(clientCenter(appHost, outside));
     drag.move(clientCenter(appHost, end));
@@ -208,7 +214,7 @@ describe("drawing a line out of a port with a finger", () => {
 
     const [handle] = resolvePortDragHandles(appHost.mainCanvas, last.id);
     expect(handle?.cell).toEqual({ x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 });
-    const drag = startPortHandleDrag(appHost.mainCanvas, handle!.source)!;
+    const drag = pressHandle(appHost, handle!);
     drag.move(clientCenter(appHost, { x: inside.x + delta.x * 6, y: inside.y + delta.y * 6 }));
     drag.end(true);
 
@@ -221,7 +227,7 @@ describe("drawing a line out of a port with a finger", () => {
     const handle = resolvePortDragHandles(appHost.mainCanvas, "furnace")
       .find((entry) => entry.cell.x === inside.x + delta.x && entry.cell.y === inside.y + delta.y)!;
 
-    const drag = startPortHandleDrag(appHost.mainCanvas, handle.source)!;
+    const drag = pressHandle(appHost, handle);
     drag.move(clientCenter(appHost, { x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 }));
     appHost.mainCanvas.cancelInput();
     drag.move(clientCenter(appHost, { x: inside.x + delta.x * 6, y: inside.y + delta.y * 6 }));
@@ -231,13 +237,42 @@ describe("drawing a line out of a port with a finger", () => {
     expect(appHost.workspace.editor!.queries.resolveLogisticsDraftState()).toBeNull();
   });
 
+  it("ignores a press that was cancelled before it started drawing", async () => {
+    const appHost = await createAppHost([furnace({ recipe: true })]);
+    const { inside, delta } = furnaceBeltOutput(appHost);
+    const handle = resolvePortDragHandles(appHost.mainCanvas, "furnace")
+      .find((entry) => entry.cell.x === inside.x + delta.x && entry.cell.y === inside.y + delta.y)!;
+
+    const drag = pressHandle(appHost, handle);
+    appHost.mainCanvas.cancelInput();
+    drag.move(clientCenter(appHost, { x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 }));
+    drag.end(true);
+
+    expect(entities(appHost)).toHaveLength(1);
+  });
+
+  it("stops drawing when another tool is chosen mid-drag", async () => {
+    const appHost = await createAppHost([furnace({ recipe: true })]);
+    const { inside, delta } = furnaceBeltOutput(appHost);
+    const handle = resolvePortDragHandles(appHost.mainCanvas, "furnace")
+      .find((entry) => entry.cell.x === inside.x + delta.x && entry.cell.y === inside.y + delta.y)!;
+
+    const drag = pressHandle(appHost, handle);
+    drag.move(clientCenter(appHost, { x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 }));
+    appHost.mainCanvas.actions.setActiveTool("logistics-placement");
+    drag.move(clientCenter(appHost, { x: inside.x + delta.x * 6, y: inside.y + delta.y * 6 }));
+    drag.end(true);
+
+    expect(entities(appHost)).toHaveLength(1);
+  });
+
   it("drops the draft when the drag is cancelled", async () => {
     const appHost = await createAppHost([furnace({ recipe: true })]);
     const { inside, delta } = furnaceBeltOutput(appHost);
     const handle = resolvePortDragHandles(appHost.mainCanvas, "furnace")
       .find((entry) => entry.cell.x === inside.x + delta.x && entry.cell.y === inside.y + delta.y)!;
 
-    const drag = startPortHandleDrag(appHost.mainCanvas, handle.source)!;
+    const drag = pressHandle(appHost, handle);
     drag.move(clientCenter(appHost, { x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 }));
     drag.end(false);
 

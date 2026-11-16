@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  fitMarkingMenuOrigin,
+  openMarkingMenuState,
   resolveMarkingMenuDeviceId,
   resolveMarkingMenuGroupPosition,
   resolveMarkingMenuItemPosition,
@@ -16,18 +16,8 @@ const groups = Array.from({ length: 8 }, (_, groupIndex) => ({
 
 const WIDE_CANVAS = { left: 0, top: 0, width: 2000, height: 2000 };
 
-function openAt(origin = { x: 500, y: 500 }, bounds = WIDE_CANVAS): MarkingMenuState {
-  return {
-    origin: fitMarkingMenuOrigin(origin, bounds),
-    pressPoint: origin,
-    bounds,
-    pointer: "mouse",
-    mode: "drag",
-    groups,
-    level: 1,
-    groupIndex: null,
-    itemIndex: null,
-  };
+function openAt(pressPoint = { x: 500, y: 500 }, bounds = WIDE_CANVAS): MarkingMenuState {
+  return openMarkingMenuState({ pressPoint, bounds, pointer: "mouse", groups });
 }
 
 function flick(state: MarkingMenuState, path: ReadonlyArray<{ x: number; y: number }>): MarkingMenuState {
@@ -50,14 +40,36 @@ describe("marking menu", () => {
     });
   });
 
-  it("measures the stroke from where the pen went down when the ring has been moved in from the edge", () => {
+  it("selects what is drawn under the pen when the ring has been moved in from the edge", () => {
+    const bounds = { left: 0, top: 0, width: 1180, height: 540 };
     const press = { x: 4, y: 530 };
-    const menu = openAt(press, { left: 0, top: 0, width: 1180, height: 540 });
+    const menu = openAt(press, bounds);
 
-    expect(resolveMarkingMenuDeviceId(flick(menu, [{ x: 13, y: 530 }]))).toBeNull();
-    // 与平常一样向右划两段，选中右侧分类的第一台设备。
-    const chosen = flick(menu, [{ x: press.x + 60, y: press.y }, { x: press.x + 140, y: press.y }, { x: press.x + 200, y: press.y }]);
-    expect(resolveMarkingMenuDeviceId(chosen)).toBe("g2-d0");
+    // 按下后的小幅移动不会展开任何分类。
+    const nudged = flick(menu, [{ x: 13, y: 530 }, { x: 40, y: 524 }]);
+    expect(nudged.level).toBe(1);
+    expect(resolveMarkingMenuDeviceId(nudged)).toBeNull();
+
+    // 滑到画出来的正下方分类图标上，选中的正是它；再向外越过即展开它。
+    const south = resolveMarkingMenuGroupPosition(menu.origin, 4, groups.length);
+    const onSouth = flick(menu, [{ x: 60, y: 520 }, south]);
+    expect(onSouth).toMatchObject({ level: 1, groupIndex: 4 });
+    expect(flick(onSouth, [{ x: south.x, y: south.y + 28 }])).toMatchObject({ level: 2, groupIndex: 4 });
+  });
+
+  it("can reach every group from a corner", () => {
+    const bounds = { left: 0, top: 0, width: 1180, height: 540 };
+    const menu = openAt({ x: 4, y: 530 }, bounds);
+    groups.forEach((_, groupIndex) => {
+      const icon = resolveMarkingMenuGroupPosition(menu.origin, groupIndex, groups.length);
+      const beyond = {
+        x: menu.origin.x + (icon.x - menu.origin.x) * 120 / 92,
+        y: menu.origin.y + (icon.y - menu.origin.y) * 120 / 92,
+      };
+      expect(beyond.x).toBeGreaterThanOrEqual(bounds.left);
+      expect(beyond.y).toBeLessThanOrEqual(bounds.top + bounds.height);
+      expect(flick(menu, [menu.origin, icon, beyond])).toMatchObject({ level: 2, groupIndex });
+    });
   });
 
   it("picks a group's first device with two strokes in the group's direction, without looking", () => {

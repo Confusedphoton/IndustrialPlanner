@@ -24,26 +24,38 @@ export interface PlacementTodoEntry {
   readonly placed: number;
 }
 
+/** 画布上已放的生产设备：设定了配方的按配方计；没设配方的（游戏里按投入的原料自动生产）按型号计。 */
+export interface PlacedMachineCounts {
+  readonly byRecipe: Readonly<Record<string, number>>;
+  readonly unsetByMachine: Readonly<Record<string, number>>;
+}
+
 /**
  * 待放清单：配方树钉住的目标还需要的设备，按“已放 / 需要”计数；已放够的排到最后。
- * 已放的数量只算画布上设定了该配方的同型号设备。
+ * 已放的数量先算设定了该配方的设备，再把同型号、没设配方的设备按规划顺序补到各条目上。
  */
 export function resolvePlacementTodoEntries(
   plan: ProductionPlanningResult,
-  placedByRecipe: ReadonlyMap<string, number>,
+  placed: PlacedMachineCounts,
   machineIdOfRecipe: (recipeId: string) => { readonly machineId: string; readonly outputItemId: string | null } | null,
 ): PlacementTodoEntry[] {
+  const unsetLeft = new Map(Object.entries(placed.unsetByMachine));
   const entries = plan.recipeTotals.flatMap((total): PlacementTodoEntry[] => {
     const recipe = total.recipeId === null ? null : machineIdOfRecipe(total.recipeId);
     if (total.recipeId === null || recipe === null || total.deviceCount <= 0) {
       return [];
     }
+    const needed = Math.ceil(total.deviceCount - 1e-4);
+    const configured = placed.byRecipe[total.recipeId] ?? 0;
+    const unset = unsetLeft.get(recipe.machineId) ?? 0;
+    const borrowed = Math.min(unset, Math.max(0, needed - configured));
+    unsetLeft.set(recipe.machineId, unset - borrowed);
     return [{
       recipeId: total.recipeId,
       machineId: recipe.machineId,
       outputItemId: recipe.outputItemId,
-      needed: Math.ceil(total.deviceCount - 1e-4),
-      placed: placedByRecipe.get(total.recipeId) ?? 0,
+      needed,
+      placed: configured + borrowed,
     }];
   });
   return [
@@ -52,16 +64,20 @@ export function resolvePlacementTodoEntries(
   ];
 }
 
-function countPlacedByRecipe(document: WorldDocument): string {
-  const counts: Record<string, number> = {};
+function countPlacedMachines(document: WorldDocument): string {
+  const byRecipe: Record<string, number> = {};
+  const unsetByMachine: Record<string, number> = {};
   for (const entityId of document.entityOrder) {
-    const channelRecipes = document.entities[entityId]?.config.channelRecipes;
-    if (typeof channelRecipes !== "object" || channelRecipes === null) continue;
-    for (const recipeId of Object.values(channelRecipes as Record<string, unknown>)) {
-      if (typeof recipeId === "string") counts[recipeId] = (counts[recipeId] ?? 0) + 1;
-    }
+    const entity = document.entities[entityId];
+    if (entity === undefined) continue;
+    const channelRecipes = entity.config.channelRecipes;
+    const recipeIds = typeof channelRecipes === "object" && channelRecipes !== null
+      ? Object.values(channelRecipes as Record<string, unknown>).filter((recipeId): recipeId is string => typeof recipeId === "string")
+      : [];
+    for (const recipeId of recipeIds) byRecipe[recipeId] = (byRecipe[recipeId] ?? 0) + 1;
+    if (recipeIds.length === 0) unsetByMachine[entity.definitionId] = (unsetByMachine[entity.definitionId] ?? 0) + 1;
   }
-  return JSON.stringify(counts);
+  return JSON.stringify({ byRecipe, unsetByMachine } satisfies PlacedMachineCounts);
 }
 
 /**
@@ -78,13 +94,16 @@ export const PlacementTodoList = observer(function PlacementTodoList({
   const t = appHost.actions.translate;
   const index = useRecipeTreePlanningIndex(appHost);
   const plan = useCombinedRecipeTreePlan(index, recipeTreeOverlayState.pins.length > 0);
-  const selectCounts = useCallback(countPlacedByRecipe, []);
+  const selectCounts = useCallback(countPlacedMachines, []);
   const counts = useEditorDocumentSnapshot(appHost.workspace.editor, selectCounts, Object.is);
   if (plan === null) {
     return null;
   }
   const registry = appHost.workspace.registry;
-  const entries = resolvePlacementTodoEntries(plan, new Map(Object.entries(JSON.parse(counts ?? "{}") as Record<string, number>)), (recipeId) => {
+  const placed = counts === null
+    ? { byRecipe: {}, unsetByMachine: {} }
+    : JSON.parse(counts) as PlacedMachineCounts;
+  const entries = resolvePlacementTodoEntries(plan, placed, (recipeId) => {
     const recipe = index.recipeById.get(recipeId);
     return recipe === undefined ? null : { machineId: recipe.machineId, outputItemId: recipe.outputs[0]?.itemId ?? null };
   });

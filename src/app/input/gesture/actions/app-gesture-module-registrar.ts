@@ -91,7 +91,7 @@ export class AppGestureModuleRegistrar {
     register("select", createHypergryphOverlapEntityMenuGuardModule());
     register("blueprint-placement", createHypergryphBlueprintPlacementGestureModule());
     register("logistics-placement", createHypergryphLogisticsPlacementGestureModule());
-    register("logistics-placement", createHypergryphPortDragLogisticsGestureModule());
+    register("logistics-placement", createHypergryphPortDragLogisticsGestureModule(options.canvas));
     register("logistics-placement", createHypergryphLineEndChipGestureModule());
     register("confirm-placement", createHypergryphBusExtendGestureModule());
     register("confirm-placement", createHypergryphEyedropperGestureModule());

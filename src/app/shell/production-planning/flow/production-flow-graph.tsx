@@ -324,7 +324,10 @@ export function ProductionFlowGraph({
       offsetsLayoutKeyRef.current = layoutKey;
       movedNodeOffsetsRef.current.clear();
     }
-    setGraph(applyMovedNodeOffsets(cloneSankeyGraph(initialLayout), movedNodeOffsetsRef.current));
+    const next = applyMovedNodeOffsets(cloneSankeyGraph(initialLayout), movedNodeOffsetsRef.current);
+    // 立即更新引用：换向后的尺寸回调可能在下一次渲染之前适配，不能拿旧方向的卡片位置配新方向的度量。
+    graphRef.current = next;
+    setGraph(next);
   }, [initialLayout, nodeSetKey, orientation]);
 
   const resetNodeLayout = useCallback(() => {

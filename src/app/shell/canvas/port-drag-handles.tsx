@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import LucideArrowUp from "~icons/lucide/arrow-up";
 
 import type { AppHost } from "@/app/host/app-host";
-import { resolvePortDragHandles, startPortHandleDrag, type PortDragHandle } from "@/app/input/gesture/actions";
+import { pressPortHandle, resolvePortDragHandles, type PortDragHandle, type PortHandlePress } from "@/app/input/gesture/actions";
 import type { WorldDocument } from "@/domain/document/world-document";
 import type { GridEdge } from "@/domain/shared/grid";
 import { useLastPointerType, type LastPointerType } from "@/app/shell/shared/use-last-input-kind";
@@ -14,8 +14,6 @@ import { useEditorDocumentSnapshot } from "../hooks";
 /** 把手直径随格子缩放，但不小于手指可靠按中的尺寸，也不大到盖住相邻端口太多。 */
 const HANDLE_MIN_PX = 30;
 const HANDLE_MAX_PX = 42;
-/** 按下后移动超过该距离才开始拉线，避免点按时抖出一格线。 */
-const DRAG_START_PX = 8;
 const EDGE_ANGLE: Readonly<Record<GridEdge, number>> = { NORTH: 0, EAST: 90, SOUTH: 180, WEST: 270 };
 
 const selectEntities = (document: WorldDocument) => document.entities;
@@ -66,9 +64,7 @@ export function resolveShownPortDragHandles(
 
 interface HandleDrag {
   readonly pointerId: number;
-  readonly start: { readonly x: number; readonly y: number };
-  readonly handle: PortDragHandle;
-  controller: ReturnType<typeof startPortHandleDrag>;
+  readonly press: PortHandlePress;
 }
 
 /**
@@ -88,7 +84,7 @@ export const PortDragHandles = observer(function PortDragHandles({ appHost }: { 
 
   useEffect(() => () => {
     // 拖到一半被卸载（切换布局、关闭画布）时丢弃草稿。
-    drag.current?.controller?.end(false);
+    drag.current?.press.end(false);
     drag.current = null;
   }, []);
 
@@ -105,17 +101,21 @@ export const PortDragHandles = observer(function PortDragHandles({ appHost }: { 
   const finish = (event: ReactPointerEvent, commit: boolean) => {
     const current = drag.current;
     if (current === null || current.pointerId !== event.pointerId) return;
-    drag.current = null;
-    current.controller?.end(commit);
-    setDragging(null);
-    setDrawing(false);
+    current.press.end(commit);
   };
+  // 把手只出现在画布露出的部分：设备滑到侧栏或工具条下面时，把手不能盖住那里的按钮。
+  const visibleRect = canvas.unobstructedClientRect;
 
   return (
     <>
       {shown.map((handle) => {
         const rect = canvas.view.queries.findClientRectForGridCell(handle.cell);
         if (rect === null) return null;
+        const center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+        if (
+          center.x < visibleRect.left || center.x > visibleRect.left + visibleRect.width
+          || center.y < visibleRect.top || center.y > visibleRect.top + visibleRect.height
+        ) return null;
         const label = handle.source.type === "line-end"
           ? t("portHandle.lineEnd")
           : handle.source.endpoint.portDirection === "output" ? t("portHandle.output") : t("portHandle.input");
@@ -132,25 +132,30 @@ export const PortDragHandles = observer(function PortDragHandles({ appHost }: { 
               if (event.button !== 0 || drag.current !== null) return;
               event.preventDefault();
               event.stopPropagation();
+              const settle = () => {
+                if (drag.current?.press !== press) return;
+                drag.current = null;
+                setDragging(null);
+                setDrawing(false);
+              };
+              const press = pressPortHandle(canvas, handle.source, { x: event.clientX, y: event.clientY }, {
+                onDrawing: () => setDrawing(true),
+                onSettle: () => settle(),
+              });
+              if (press === null) return;
               event.currentTarget.setPointerCapture(event.pointerId);
-              drag.current = { pointerId: event.pointerId, start: { x: event.clientX, y: event.clientY }, handle, controller: null };
+              drag.current = { pointerId: event.pointerId, press };
               setDragging(handle);
             }}
             onPointerMove={(event) => {
               const current = drag.current;
               if (current === null || current.pointerId !== event.pointerId) return;
-              const position = { x: event.clientX, y: event.clientY };
-              if (current.controller === null) {
-                if (Math.hypot(position.x - current.start.x, position.y - current.start.y) < DRAG_START_PX) return;
-                current.controller = startPortHandleDrag(canvas, current.handle.source);
-                setDrawing(current.controller !== null);
-              }
-              current.controller?.move(position);
+              current.press.move({ x: event.clientX, y: event.clientY });
             }}
             onPointerUp={(event) => finish(event, true)}
             style={{
-              left: rect.left + rect.width / 2,
-              top: rect.top + rect.height / 2,
+              left: center.x,
+              top: center.y,
               width: size,
               height: size,
               // 拉线时把手让出线头，只保留指针捕获。
