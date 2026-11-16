@@ -1,138 +1,154 @@
-# 明日方舟：终末地集成工业仿真器
+# Arknights: Endfield Industrial Planner · 明日方舟：终末地集成工业仿真器
 
-Arknights Endfield Industrial Planner 是一个运行在浏览器里的《明日方舟：终末地》集成工业产线布置、蓝图管理与仿真工具。
+A browser tool for laying out, simulating and saving integrated industry production lines in *Arknights: Endfield*. Lay out lines, connect belts and pipes, run the simulation, look up recipes, plan production chains and keep a blueprint library, all without opening the game.
 
-你可以不用打开游戏，就先在网页里摆产线、接传送带、配物流、跑仿真、查配方、规划生产链路、保存蓝图，把它当成网页版产线练习场、验证器和草稿本来用。
+一个运行在浏览器里的《明日方舟：终末地》集成工业产线布置、仿真与蓝图管理工具。不用打开游戏，就能在网页里摆产线、接传送带和管道、跑仿真、查配方、规划生产链路、保存蓝图。
 
-## 在线使用
+This repository is a fork of [hsyhhssyy/IndustrialPlanner](https://github.com/hsyhhssyy/IndustrialPlanner). It reworks the planner for pen and touch first, with mouse and keyboard close behind: a tool rail on the canvas, a marking menu at the pen tip, belts drawn straight from ports, and a recipe tree that turns into a to-do list of devices to place.
 
-- 国际站：https://endfield.anonymous-test.top/
-- 中国大陆 CDN：https://endfield.amiyabot.com/
+本仓库是 [hsyhhssyy/IndustrialPlanner](https://github.com/hsyhhssyy/IndustrialPlanner) 的分支，按“手写笔与触控优先、鼠标键盘紧随其后”重新设计了交互：画布常驻工具条、笔尖环形菜单、从端口直接拉线，以及能变成待放置清单的配方树。
 
-当前版本支持桌面端、平板端和手机横屏使用。手机竖屏会显示旋转提示；如果要进行复杂编辑、长时间仿真或大规模蓝图整理，桌面端仍然是效率最高的使用方式。
+![A running production line with the recipe tree's flow graph docked beside it · 运行中的产线与停靠在旁的配方树流程图](.github/readme-assets/overview.png)
 
-兼容浏览器中可以启用离线使用并添加到桌面。离线资源准备完成后，即使断网也可以打开和使用主要功能。
+## Use it · 使用
 
-![产线布置预览](.github/readme-assets/layout-preview.png)
+The hosted sites run the upstream project, so they don't have this fork's pen and touch workflow yet. To get it, run the fork locally (see [Local development](#local-development--本地开发)).
 
-## 主要能力
+下列在线站点部署的是上游项目，暂不包含本分支的笔与触控工作流。要使用本分支，请在本地运行（见[本地开发](#local-development--本地开发)）。
 
-- 规划一整条产线，不用反复进游戏试错。
-- 验证传送带、管道、分流汇流、端口配置、物流优先级是否能跑通。
-- 用仿真快速定位缺料、堵塞、供电不足、节拍不匹配等问题。
-- 查询物品、建筑、配方和生产链路。
-- 使用产线规划器按目标产量反推设备数量、输入消耗和物流吞吐。
-- 使用模块配平工具组合系统配方与自定义模块，评估阶段净产出和库存压力。
-- 保存、恢复、复制、导入、导出和复用蓝图。这里的蓝图是网页工具内的布局数据，不是游戏内可直接导入的蓝图。
+- International · 国际站: https://endfield.anonymous-test.top/
+- Mainland China CDN · 中国大陆 CDN: https://endfield.amiyabot.com/
 
-## 相比游戏内更方便的地方
+Desktop, tablets and landscape phones are supported; portrait phones show a rotate prompt. Supported browsers can install the app and keep using it offline once its resources are cached.
 
-- 支持虚空生产物品，尤其适合流体调试。抽水泵、暗管出口等设备可以配置无限来源；出货口可以无视库存限制直接取出物品。
-- 设备内预置物品可以跟随复制和蓝图保存，适合记录协议存储箱、投料箱等带初始内容的模块。
-- 可以临时重叠放置建筑，便于移动和改造拥挤产线，调整完再拆开。
-- 支持最高 16 倍速仿真，用更短时间观察产线趋势和堵塞位置。
-- 可以切换真实供电或无限供电，设置基地初始电量，并模拟电力不足。
+支持桌面、平板和横屏手机；手机竖屏会显示旋转提示。兼容的浏览器可以安装到桌面，离线资源缓存完成后断网也能使用。
 
-## 当前功能
+## Pen and touch workflow · 笔与触控工作流
 
-### 产线编辑
+### Pick a device · 选设备
 
-- 支持放置、旋转、移动、删除建筑。
-- 支持点选、框选、多选、增减选区、批量移动、批量删除和选区保存蓝图。
-- 支持直接铺设传送带与管道，并自动处理部分连接逻辑。
-- 支持通过传送带叠放生成分流、汇流等结构。
-- 支持多基地切换和不同基地规格下的布局规划。
-- 支持快捷键、触控操作、视角缩放、视角旋转和多种操作模式配置。
+![Marking menu: hold the pen on empty canvas, slide through a category, release on a device · 环形菜单：笔尖在空白处按住，划过分类，在设备上抬笔](.github/readme-assets/marking-menu.png)
 
-### 蓝图嵌入
+- **Marking menu.** Hold the pen on empty canvas (or anywhere while placing) to open a ring of device categories. Slide past a category to fan out its devices, and lift on one to have it in hand. The first device of each category sits straight on from the category, so frequent picks become two strokes you can do blind. Lift without moving and the ring stays open for tapping. A finger or mouse long-press on empty canvas opens it too.<br>**环形菜单。** 笔尖在空白画布上按住（放置中则任意位置），弹出设备分类环；划过某个分类展开其设备，在设备上抬笔即拿到手上。每个分类的第一台设备与分类在同一方向，常用设备可以盲划两笔取到。不移动直接抬笔，菜单会保持打开供点按。手指或鼠标在空白处长按也能打开。
+- **Canvas hotbar.** Quick Place favourites and recent devices sit at the bottom corner of the tool rail. Tap one to swap the device in hand, drag it to drop one, hold it to see its name.<br>**设备快捷栏。** 快速放置的收藏与最近使用的设备排在工具条底角。点按换手上的设备，拖出直接放一台，按住显示名称。
+- **Palette and Quick Place.** Icon category chips filter the list without typing. The palette can collapse to a narrow icon shelf and docks on the same side as the tool rail, so dragging the rail to your pen hand's edge brings the devices with it.<br>**设备面板与快速放置。** 图标分类按钮无需输入即可筛选。面板可收成一列窄设备架，并停靠在工具条同侧：把工具条拖到握笔手一侧，设备也跟过去。
+- **Drag from any panel.** Palette tiles, Recipe Tree rows, machine chips and flow-graph cards can be dragged onto the canvas; the recipe comes along when it is known.<br>**从面板拖出。** 面板磁贴、配方树条目、设备标签和流程图卡片都能直接拖到画布上，已知配方会一并带上。
 
-第三方网站可以通过 iframe 嵌入只读蓝图画布，用 URL 指定蓝图 JSON 文件，支持拖动、缩放和运行仿真，也可以切换 3Dtop／蓝图外观及设备动画。运行、暂停等控件由接入方在自己的页面布局，通过消息接口控制画布。
+### Place · 放置
 
-以 `endfield.amiyabot.com` 为例，可打开[公共蓝图嵌入示例](https://endfield.amiyabot.com/?embed=blueprint&blueprintUrl=%2Fblueprints%2Fgetting-started-tutorial.json&showBase=0&view=3d-top&animations=0&autoplay=0&warmupSeconds=0)。可用 `warmupSeconds` 指定显示前的预热秒数，默认 `0`。URL 参数、基地显示、画面范围和外部控制协议详见[蓝图嵌入接入指南](.github/readme-docs/blueprint-embed.md)。
+| Action · 操作 | Pen · 笔 | Finger · 手指 | Mouse · 鼠标 |
+| --- | --- | --- | --- |
+| Place · 放置 | Tap; the device stays in hand<br>点按；设备留在手上 | Tap a spot to move the preview, tap the preview to place<br>点按目标处移动预览，再点预览放下 | Click<br>单击 |
+| Put the device down · 放下手上的设备 | Barrel tap on empty canvas<br>侧键点空白处 | Cancel button<br>取消按钮 | Right click / Esc<br>右键 / Esc |
+| Place a row · 铺一排 | Drag with a device in hand<br>手持设备拖动 | Long-press the preview, then drag<br>长按预览后拖动 | Drag with a device in hand<br>手持设备拖动 |
+| Rotate · 旋转 | Double-tap the device or preview<br>双击设备或预览 | Double-tap the device or preview<br>双击设备或预览 | Double-click / rotate key<br>双击 / 旋转快捷键 |
+| Copy a placed device · 复制已放置设备 | Barrel tap it (barrel drag drags out a copy)<br>侧键点设备（侧键拖动拖出副本） | Place Another in the device actions<br>设备操作里的“再放一台” | Right click it<br>右键设备 |
+| Delete · 删除 | Eraser end<br>笔的橡皮擦端 | Delete in the device actions<br>设备操作里的删除 | Delete key<br>Delete 键 |
+| Undo / redo · 撤销 / 重做 | Rail buttons<br>工具条按钮 | Two-finger tap / three-finger tap<br>双指点按 / 三指点按 | Shortcuts or rail buttons<br>快捷键或工具条按钮 |
 
-### 蓝图工作流
+- Dragging a preview, a belt or a pipe to the edge of the canvas pans the map. The tool rail counts as an edge.<br>拖动预览或传送带、管道到画布边缘时地图会跟着平移，工具条也算边缘。
+- *Experimental:* with **Pen tilt sets facing** on (Settings → Experimental), leaning a hovering pen up, right, down or left turns the device in hand to face that way.<br>*实验功能：* 开启“按笔的倾斜设定朝向”（设置 → 实验性功能）后，悬停的笔向上下左右倾斜即可让手上的设备转向对应方向。
 
-- 支持正式蓝图、本地蓝图、公共蓝图和临时蓝图。
-- 支持复制选区为临时蓝图、粘贴投放、保存为正式蓝图。
-- 支持蓝图导入、导出、分享与复用，适合沉淀标准化模块。
-- 支持协议核心随蓝图处理，并在正式放置前做必要确认。
-- 保存正式蓝图时会剔除建造区域外设备，避免保存出不可用内容。
+### Connect · 连线
 
-### 仿真与调试
+![Finger port handles: select a device, drag a handle to draw a belt, then the + chip offers a consumer · 端口把手：选中设备，拖动把手拉出传送带，末端的 + 提示可接上消费设备](.github/readme-assets/port-handles.png)
 
-- 支持开始、暂停、退出仿真和多档速度。
-- 支持查看设备运行状态、缺料、堵塞、内部缓存和运行结果。
-- 支持统计产出、消耗、库存与过程信息。
-- 支持完整电力仿真、无限供电、初始电池百分比和耗电调整。
-- 支持物流顺序、端口优先级、仓储格子、预置物品等复杂配置。
-- 当前仿真默认完整计算当前活动基地，跨基地流程更适合作为近似规划参考。
+- **Draw from a port.** With a pen or mouse, drag from a device's port or the open end of a belt or pipe to draw a line. Release to commit.<br>**从端口拉线。** 用笔或鼠标从设备端口或传送带、管道的开放末端拖出即可铺线，抬起提交。
+- **Port handles for fingers.** Tap a device or line segment with a finger and arrow handles appear beyond its free ports. Drag one to draw a line out of an output or into an input. One-finger pan and long-press move still work on the device itself.<br>**手指用端口把手。** 手指点选设备或线段后，空闲端口外侧出现箭头把手，拖动即从输出口拉出或向输入口接入。在设备本身上单指平移、长按移动照旧。
+- **Add a machine at the line end.** When a line drawn from a device ends in open space, a **+** chip appears beyond its end. Tap it to list the machines that consume what the line carries, then pick one to snap it onto the end with a matching input port, as one undo step.<br>**在线末端接上设备。** 从设备拉出的线末端悬空时，末端外侧出现 **+** 提示。点开列出消费线上物品的设备，选一个即以匹配的输入口接在末端，一步即可撤销。
 
-### 规划与查询
+![The + chip lists machines that consume carbon from a Refining Unit · + 提示列出消费精炼炉所产碳块的设备](.github/readme-assets/line-end-chip.png)
 
-- 内置百科，支持物品、建筑、配方查询和生产链路浏览。
-- 产线规划器支持目标产出、外部输入、来源策略、设备视图、物品视图和流程图视图。
-- 模块配平支持系统模块、自定义模块、多阶段配平和阶段净差值统计。
-- 提供帮助面板、操作说明、版本更新记录和中英双语界面。
+### From plan to factory · 从规划到产线
 
-### 持久化与离线
+- **Recipe Tree.** Pin target items and rates; the tree shows the whole chain with machine counts, by-products and raw inputs, as a tree or as a flow graph that fits narrow docks and short windows.<br>**配方树。** 钉住目标物品与产量，按树或流程图显示整条生产链、设备数、副产物和原料，窄停靠栏与矮窗口也能看清。
+- **To-do list.** The pinned plan appears at the top of the palette as device tiles with *placed / needed* counts. Tapping one hands you the device with its recipe already set.<br>**待放置清单。** 钉住的规划以设备磁贴的形式显示在面板顶部，带“已放 / 需要”计数；点按即拿到已设好配方的设备。
+- **Holding tray.** *Hold* lifts the selected devices off the canvas into a tray on the hotbar, together with their recipes, relative layout and the belts and pipes between them. Tap the entry to place the group again; it leaves the tray only once placed.<br>**暂存托盘。** “暂存”把选中的设备连同配方、相对布局和其间的传送带、管道一起收进快捷栏的托盘；点按条目即可重新放置，放下后才从托盘移除。
+- **Depot bus.** With a pen or mouse, drag from a Depot Bus Port or Section to lay sections along the drag.<br>**存取线。** 用笔或鼠标从存取线源桩或存取线基段拖动，即沿拖动方向铺设基段。
 
-- 支持撤销、重做和操作历史时间线回跳。
-- 刷新页面后会保留当前基地的操作历史和常用设置。
-- 版本升级时会自动处理旧数据迁移或丢弃不兼容历史，避免兼容错误。
-- 支持 PWA 离线资源缓存、离线更新提示和添加到桌面。
+### Pen settings · 手写笔设置
 
-## 适合验证的场景
+**Precise Pen Input** (on by default) treats the pen like a mouse on the canvas: hovering shows the preview, the tip clicks and drags, the barrel button is a right click, the eraser end deletes, and touches near an active pen are ignored. Turn it off to use the pen with touch gestures, including the finger port handles.
 
-- 新版本产线预规划。
-- 复杂物流结构联通性检查。
-- 电力覆盖、供需关系和电池策略验证。
-- 协议核心、优先级端口、预置物品、仓储规则等复杂设施调试。
-- 模块化产线配平、产能估算和物流吞吐估算。
-- 攻略配图、录图、截图和布局方案分享。
+**手写笔精确输入**（默认开启）让笔在画布上像鼠标一样工作：悬停显示预览，笔尖点按和拖动，侧键相当于右键，橡皮擦端删除，活动笔附近的触摸会被忽略。关闭后笔按触控手势工作，也会显示端口把手。
 
-## 本地开发
+## What else it does · 其他功能
 
-项目基于 React、MobX、PixiJS、Vite、Vitest 和 TypeScript。
+### Editing · 产线编辑
+
+- Place, rotate, move and delete buildings; select by tap or box, add to or remove from a selection, move or delete in bulk.<br>放置、旋转、移动、删除建筑；点选、框选、增减选区、批量移动和删除。
+- Draw belts and pipes with automatic joins; overlay belts to build splitters and convergers.<br>铺设传送带与管道并自动处理部分连接；叠放传送带生成分流、汇流结构。
+- Overlap buildings temporarily while reworking a crowded line, then pull them apart.<br>改造拥挤产线时可临时重叠放置建筑，调整后再拆开。
+- Switch between bases and plan for each base's size.<br>多基地切换，按不同基地规格规划布局。
+
+### Simulation · 仿真与调试
+
+- Run, pause and stop at up to 16× speed; inspect device status, shortages, blockages, buffers and output.<br>开始、暂停、退出仿真，最高 16 倍速；查看设备状态、缺料、堵塞、内部缓存和产出。
+- Realistic or unlimited power, starting battery charge and adjustable consumption.<br>真实供电或无限供电，可设初始电量与耗电。
+- Logistics order, port priorities, storage slots and preset items.<br>物流顺序、端口优先级、仓储格子与预置物品。
+- Unlimited sources for testing, especially fluids: pumps and conduit outlets can supply without limit, and output ports can take items regardless of stock.<br>虚空来源便于调试，尤其是流体：抽水泵、暗管出口可无限供给，出货口可无视库存取出物品。
+- The active base is simulated in full; treat cross-base flows as approximate.<br>当前活动基地完整计算，跨基地流程仅作近似参考。
+
+### Blueprints · 蓝图
+
+- Saved, local, public and temporary blueprints; copy a selection to a temporary blueprint, paste it and save it.<br>正式、本地、公共与临时蓝图；复制选区为临时蓝图、粘贴投放并保存。
+- Import, export and share; preset items inside devices are kept.<br>导入、导出与分享，设备内预置物品随蓝图保存。
+- Protocol cores travel with blueprints and ask for confirmation before placement; devices outside the buildable area are dropped when saving.<br>协议核心随蓝图处理并在放置前确认；保存时剔除建造区域外的设备。
+- These are blueprints for this tool, not blueprints the game can import.<br>这里的蓝图是本工具内的布局数据，不能直接导入游戏。
+
+### Planning and reference · 规划与查询
+
+- Encyclopedia of items, buildings, recipes and production chains.<br>内置物品、建筑、配方与生产链路百科。
+- Production planner with target output, external inputs, sourcing strategies and flow charts.<br>产线规划器支持目标产出、外部输入、来源策略和流程图。
+- Module balancer for built-in and custom modules across several stages, with the net difference per stage.<br>模块配平支持系统与自定义模块、多阶段配平和每阶段净差值。
+- Undo history with a timeline, persistence across reloads, English and Chinese interface.<br>带时间线的撤销历史，刷新后保留状态，中英双语界面。
+
+### Blueprint embedding · 蓝图嵌入
+
+Other sites can embed a read-only blueprint canvas in an iframe by pointing a URL at a blueprint JSON file. Visitors can pan, zoom and run the simulation; the host page places its own controls and drives the canvas through a message API. See the [example on endfield.amiyabot.com](https://endfield.amiyabot.com/?embed=blueprint&blueprintUrl=%2Fblueprints%2Fgetting-started-tutorial.json&showBase=0&view=3d-top&animations=0&autoplay=0&warmupSeconds=0) and the [embedding guide](.github/readme-docs/blueprint-embed.md) (Chinese).
+
+第三方网站可以用 iframe 嵌入只读蓝图画布，通过 URL 指定蓝图 JSON 文件，访客可以拖动、缩放和运行仿真；控件由接入方自行布局，并通过消息接口控制画布。参见 [endfield.amiyabot.com 上的示例](https://endfield.amiyabot.com/?embed=blueprint&blueprintUrl=%2Fblueprints%2Fgetting-started-tutorial.json&showBase=0&view=3d-top&animations=0&autoplay=0&warmupSeconds=0)和[蓝图嵌入接入指南](.github/readme-docs/blueprint-embed.md)。
+
+## Local development · 本地开发
+
+React 19, MobX, PixiJS, Vite, Vitest and TypeScript. · 基于 React 19、MobX、PixiJS、Vite、Vitest 和 TypeScript。
 
 ```bash
 npm install
-npm run dev
+npm run dev             # dev server on port 5173 · 开发服务器（端口 5173）
+npm run check           # lint, types, tests and build; run before calling work done · 检查、类型、测试与构建，提交前运行
+npm test                # normal Vitest suite · 常规测试
+npm run test:blueprint  # long real-factory simulations (opt-in) · 长时间真实产线仿真（按需）
+npm run test:e2e        # Playwright (opt-in) · 端到端测试（按需）
 ```
 
-常用脚本：
+| Directory · 目录 | Contents · 内容 |
+| --- | --- |
+| `src/app` | Shell, panels, dialogs, PWA, gesture router and input modules<br>应用外壳、面板、对话框、PWA、手势路由与输入模块 |
+| `src/editor` | Editor state, placement validation, selection, history, logistics drafts<br>编辑器状态、放置校验、选区、历史、物流草稿 |
+| `src/simulation` | Simulation host, worker protocol, topology compilation, runtime stages<br>仿真主机、Worker 协议、拓扑编译、运行阶段 |
+| `src/renderer` | Pixi rendering, textures, decoration layers, blueprint previews<br>Pixi 渲染、贴图、装饰层、蓝图预览 |
+| `src/audio` | Device sounds, loading and distance mixing<br>设备音效、加载与距离混音 |
+| `src/registry` | Building, item and recipe definitions<br>建筑、物品、配方定义 |
+| `src/sync` | Cloud sync providers (WebDAV, Cloudflare Worker, Yituliu)<br>云同步（WebDAV、Cloudflare Worker、一图流） |
+| `src/domain` | Contracts between modules: state types, actions and queries<br>模块间契约：状态类型、动作与查询接口 |
+| `src/shared` | Storage, themes, geometry, browser detection, i18n, shared utilities<br>存储、主题、几何、浏览器环境判断、国际化、公共工具 |
 
-```bash
-npm run dev          # 启动本地开发服务器
-npm run build        # TypeScript 构建检查并打包
-npm run preview      # 预览生产构建
-npm run typecheck    # 仅运行 TypeScript 检查
-npm run lint         # 运行 ESLint
-npm run test         # 运行常规 Vitest 测试
-npm run test:blueprint  # 运行蓝图仿真测试
-```
+Contributor and agent conventions live in [AGENTS.md](AGENTS.md). · 协作约定见 [AGENTS.md](AGENTS.md)。
 
-源码入口：
+## Notes · 说明
 
-- `src/app`：应用外壳、面板、对话框、PWA、输入手势和工作台状态。
-- `src/editor`：编辑器状态、放置校验、选区、历史、物流草稿和文档操作。
-- `src/simulation`：仿真主机、Worker 协议、拓扑编译和运行时阶段。
-- `src/renderer`：Pixi 渲染、贴图、装饰层和蓝图预览。
-- `src/audio`：设备音效映射、按需加载与解码、播放生命周期和视口距离混音。
-- `src/registry`：建筑、物品、配方等注册表定义。
-- `src/domain`：跨模块契约、状态类型和动作/查询接口。
-- `src/shared`：存储、主题、几何、浏览器环境判断、蓝图库和公共工具。
+- The tool is under active development; some features ship as beta first.<br>工具持续迭代中，部分功能会先以 Beta 形式上线。
+- Recipes, buildings or icons from upcoming versions may be supported early from available information; the released game wins if they differ.<br>新版本的配方、建筑或图标可能依据现有资料提前支持，如与正式版不同，以游戏实装为准。
+- For very complex priorities, extreme throughput or cross-base setups, confirm the result in the game.<br>非常复杂的物流优先级、极端吞吐或跨基地联动，请回到游戏内做最终确认。
+- Browser data is local to the browser. Export important blueprints before clearing it or switching devices.<br>数据保存在当前浏览器中，清理浏览器数据或更换设备前请导出重要蓝图。
 
-## 当前说明
+## Feedback · 反馈
 
-- 这是一个持续迭代中的工具，部分内容会先以 Beta 形式上线。
-- 某些新版本配方、建筑或图标可能会先依据现有资料做预支持，正式版如有变化，请以游戏实装为准。
-- 涉及非常复杂的物流优先级、极端吞吐或跨基地联动时，网页结果仍建议回到游戏内做最终确认。
-- 浏览器本地数据依赖当前浏览器配置，请在清理浏览器数据或更换设备前导出重要蓝图。
+Pen, touch and other workflow issues in this fork: open an issue on [this repository](https://github.com/Confusedphoton/IndustrialPlanner/issues). Devices, recipes, logistics or simulation results that differ from the game: report them [upstream](https://github.com/hsyhhssyy/IndustrialPlanner/issues).
 
-## 反馈
+本分支的笔、触控等交互问题请在[本仓库](https://github.com/Confusedphoton/IndustrialPlanner/issues)提交 Issue；设备、配方、物流或仿真结果与游戏不符，请反馈到[上游仓库](https://github.com/hsyhhssyy/IndustrialPlanner/issues)。
 
-如果你发现某些设备、配方、物流或仿真结果与游戏表现不一致，可以通过 GitHub Issue 或相关发布帖反馈。
+## License · 许可证
 
-## 许可证
-
-本项目采用 MIT License，详见 [LICENSE](LICENSE)。
+MIT License, see [LICENSE](LICENSE). · 本项目采用 MIT License，详见 [LICENSE](LICENSE)。
