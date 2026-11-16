@@ -84,6 +84,7 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   quickPlaceEnabled: true,
   invertWheelZoom: false,
   penPreciseInput: true,
+  penTiltFacing: false,
   hypergryphSelectionRightDockSync: false,
   hypergryphInspectorOpenOnSecondClick: false,
   gameUseBlueprintStyleDeviceImages: false,

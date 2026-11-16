@@ -1025,6 +1025,8 @@ const UI: Record<string, string> = {
     "placement.showFullPalette": "Full palette",
     "canvasHotbar.tray": "Holding tray",
     "canvasHotbar.discard": "Discard",
+    "settingsField.game-pen-tilt-facing": "Pen tilt sets facing (experiment)",
+    "settingsField.game-pen-tilt-facingDescription": "While placing with a hovering pen, lean the pen toward one of four directions to turn the device in hand that way. Holding the pen upright leaves the facing alone.",
     "toolbar.canvasTools": "Canvas Tools",
     "toolbar.canvasToolsMove": "Move toolbar (drag to either edge)",
     "toolbar.canvasToolsMore": "More view tools",

@@ -89,6 +89,8 @@ export interface AppSettingsReadWrite extends Omit<AppSettings, "regionalMultiBa
   invertWheelZoom: boolean;
   /** 手写笔按鼠标精确输入处理（悬停预览、笔尖拖动、侧键右键、橡皮擦删除）；关闭时沿用触控手势。 */
   penPreciseInput: boolean;
+  /** 试验：放置时按笔的倾斜方向设定手上设备的朝向。 */
+  penTiltFacing: boolean;
   hypergryphSelectionRightDockSync: boolean;
   hypergryphInspectorOpenOnSecondClick: boolean;
   gameUseBlueprintStyleDeviceImages: boolean;
@@ -801,6 +803,7 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     quickPlaceEnabled: true,
     invertWheelZoom: false,
     penPreciseInput: true,
+    penTiltFacing: false,
     hypergryphSelectionRightDockSync: false,
     hypergryphInspectorOpenOnSecondClick: false,
     gameUseBlueprintStyleDeviceImages: false,
