@@ -47,7 +47,7 @@ export function createHypergryphPenEraserGestureModule(): GestureMappingModule<A
           editor.actions.clearCollection(EntityCollectionType.selection);
           canvas.actions.hideCanvasFloatingToolbar();
           canvas.actions.hideCanvasRightDockToolbar();
-          markEntityAt(canvas, event.position);
+          markEntityForErase(canvas, event.position);
           return { status: "claimed" };
         }
 
@@ -55,7 +55,7 @@ export function createHypergryphPenEraserGestureModule(): GestureMappingModule<A
           if (event.originButton !== PEN_ERASER_BUTTON) {
             return { status: "ignored" };
           }
-          markEntityAt(canvas, event.position);
+          markEntityForErase(canvas, event.position);
           return { status: "handled" };
 
         case "mouse dragend":
@@ -79,7 +79,8 @@ function canEraseFromTool(activeTool: CanvasInteractionController["state"]["acti
   return activeTool === "select" || activeTool === "marquee";
 }
 
-function markEntityAt(
+/** 把指针下的设备加入待删除的选择（划过的设备逐个累积，抬笔时一次删除）。 */
+export function markEntityForErase(
   canvas: CanvasInteractionController,
   position: { readonly x: number; readonly y: number },
 ): void {
@@ -100,7 +101,8 @@ function markEntityAt(
   editor.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId: entity.id });
 }
 
-function deleteErasedSelection(canvas: CanvasInteractionController): GestureHandleResult {
+/** 删除累积的选择，形成单条撤销记录。 */
+export function deleteErasedSelection(canvas: CanvasInteractionController): GestureHandleResult {
   const editor = canvas.editor;
   if (editor === null) {
     return { status: "ignored" };
