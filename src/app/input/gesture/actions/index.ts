@@ -54,6 +54,11 @@ export { createPanelToggleGestureModule } from "./panel-toggle-gesture-module";
 export { createQuickPlaceGestureModule, openQuickPlace } from "./quick-place-gesture-module";
 export { pullFromHoldingTray } from "./hypergryph/hypergryph-holding-tray-gesture-module";
 export {
+  resolvePortDragHandles,
+  startPortHandleDrag,
+  type PortDragHandle,
+} from "./hypergryph/hypergryph-port-drag-logistics-gesture-module";
+export {
   closeLineEndChip,
   resolveLineEndTarget,
   expandLineEndChip,

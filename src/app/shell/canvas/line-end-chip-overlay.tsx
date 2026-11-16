@@ -16,7 +16,6 @@ import { resolveDevicePlacementTarget, type PanelPlacementTarget } from "@/app/s
 import { resolvePlacementPointerSource } from "@/app/shell/shared/placement-pointer-source";
 import type { WorldDocument } from "@/domain/document/world-document";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
-import { resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport-transform";
 import { isRecipeAvailableByActivity, resolveEffectiveActivityIds } from "@/shared/registry/activity-availability";
 import { isRecipeVisibleInToolbox, sortRecipesByDefaultPriority } from "@/shared/registry/recipe-visibility";
 import styles from "@/app/shell/app-shell.module.scss";
@@ -113,15 +112,8 @@ export const LineEndChipOverlay = observer(function LineEndChipOverlay({ appHost
   ) {
     return null;
   }
-  const view = canvas.view.state;
   const cellCenter = (cell: { readonly x: number; readonly y: number }) => {
-    const rect = resolveViewportRectFromWorldGridRect({
-      gridRect: { ...cell, width: 1, height: 1 },
-      viewportBounds: view.clientRect,
-      viewportCenter: view.center,
-      gridCellPixelSize: view.gridCellPixelSize,
-      displayRotation: view.displayRotation,
-    });
+    const rect = canvas.view.queries.findClientRectForGridCell(cell);
     return rect === null ? null : { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
   };
   const end = cellCenter(chip.endCell);

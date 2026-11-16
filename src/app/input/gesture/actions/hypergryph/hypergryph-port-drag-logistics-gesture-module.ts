@@ -3,12 +3,14 @@ import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
 import type { EditorContract } from "@/domain/editor/editor-contract";
 import type { GridEdge, GridPoint, GridRect } from "@/domain/shared/grid";
-import { resolveGridEdgeDelta, rotateGridEdge } from "@/shared/geometry/port";
+import { oppositeGridEdge, resolveGridEdgeDelta, resolveRotatedPortGeometry, rotateGridEdge } from "@/shared/geometry/port";
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
-import type { CreateLogisticsDraftStartOptions, LogisticsKind } from "@/domain/shared/logistics";
+import type { CreateLogisticsDraftStartOptions, LogisticsDraftEndpoint, LogisticsKind } from "@/domain/shared/logistics";
 
 import type { GestureMappingModule } from "../types";
 import { isOpenBeyondLine, offerLineEndChip } from "./hypergryph-line-end-chip-gesture-module";
+
+type DevicePortEndpoint = Extract<LogisticsDraftEndpoint, { readonly type: "device-port" }>;
 
 /**
  * forward：固定起点，终点跟随指针（设备输出端口、物流线开放的输出端）。
@@ -41,30 +43,12 @@ type PortDragSession = {
  * 选择工具下，鼠标/手写笔从设备的端口格开始拖动时：
  * - 输出端口：从该端口起笔，终点跟随指针（与传送带工具从输出端口起笔一致）；
  * - 输入端口：从指针所在格起笔、终点接入该端口，指针移动时重建路线；
- * 物流类型（传送带/管道）由端口所属物流族决定；松开即提交，取消则丢弃草稿。
+ * 物流类型（传送带/管道）由端口所属物流族决定；松开即提交，取消则丢弃草稿。线头贴近画布边缘时平移地图。
  * 从设备内部（非端口格）开始的拖动不受影响，仍由移动/框选模块处理。
+ * 手指没有这条路（拖设备是平移、长按是移动），改由选中设备后出现的端口把手发起，见 startPortHandleDrag。
  */
 export function createHypergryphPortDragLogisticsGestureModule(): GestureMappingModule<AppHost> {
   let session: PortDragSession | null = null;
-
-  const finish = (canvas: CanvasInteractionController, editor: EditorContract | null, commit: boolean) => {
-    const finished = session;
-    session = null;
-    if (editor === null || editor.queries.resolveLogisticsDraftState() === null) {
-      return;
-    }
-    const draft = editor.queries.resolveLogisticsDraftState();
-    if (commit && draft?.canApply === true) {
-      const endCell = draft.cells.at(-1)?.gridPoint ?? null;
-      editor.actions.applyLogisticDraft();
-      // 顺流铺出的线末端停在空地上时，提示可在末端接上消费该物品的设备。
-      if (finished?.mode === "forward" && endCell !== null) {
-        offerLineEndChip(canvas, editor, draft.kind, endCell);
-      }
-      return;
-    }
-    editor.actions.cancelLogisticsDraft();
-  };
 
   return {
     id: "hypergryph-port-drag-logistics-gesture",
@@ -94,14 +78,16 @@ export function createHypergryphPortDragLogisticsGestureModule(): GestureMapping
           if (startGridPoint === null) {
             return { status: "ignored" };
           }
-          const next = resolvePortSession(canvas, editor, event.gestureId, startGridPoint)
-            ?? resolveLineEndSession(canvas, editor, event.gestureId, startGridPoint, pointerGridPoint);
+          const port = editor.queries.findDevicePortAtGridPoint(startGridPoint);
+          const next = port !== null
+            ? resolvePortSession(canvas, editor, event.gestureId, port.kind, port.endpoint)
+            : resolveLineEndSession(canvas, editor, event.gestureId, startGridPoint, pointerGridPoint);
           if (next === null) {
             return { status: "ignored" };
           }
 
           session = next;
-          updateDraft(canvas, editor, session, pointerGridPoint);
+          drivePortLine(canvas, editor, session, event.position);
           return { status: "claimed" };
         }
 
@@ -109,21 +95,162 @@ export function createHypergryphPortDragLogisticsGestureModule(): GestureMapping
           if (session === null || session.gestureId !== event.gestureId) {
             return { status: "ignored" };
           }
-          updateDraft(canvas, editor, session, resolveGridPoint(canvas, event.position));
+          drivePortLine(canvas, editor, session, event.position);
           return { status: "handled" };
 
-        case "mouse dragend":
+        case "mouse dragend": {
           if (session === null || session.gestureId !== event.gestureId) {
             return { status: "ignored" };
           }
-          finish(canvas, editor, event.reason === "release");
+          const finished = session;
+          session = null;
+          finishPortLine(canvas, editor, finished, event.reason === "release");
           return { status: "handled" };
+        }
 
         default:
           return { status: "ignored" };
       }
     },
   };
+}
+
+/** 端口把手：设备的某个端口（选中设备时在端口外侧格显示），或物流线的开放端。 */
+export type PortHandleSource =
+  | { readonly type: "device-port"; readonly kind: LogisticsKind; readonly endpoint: DevicePortEndpoint }
+  | { readonly type: "line-end"; readonly lineCell: GridPoint; readonly handleCell: GridPoint };
+
+/**
+ * 从端口把手拖出一条线（手指、关闭精确输入的笔都走这里）：与从端口格直接拖动同一套铺设、边缘平移与提交，
+ * 返回的控制器由把手在指针移动、松开或取消时调用。
+ */
+export function startPortHandleDrag(
+  canvas: CanvasInteractionController,
+  source: PortHandleSource,
+): { readonly move: (position: GesturePosition) => void; readonly end: (commit: boolean) => void } | null {
+  const editor = canvas.editor;
+  if (editor === null || editor.queries.resolveLogisticsDraftState() !== null) {
+    return null;
+  }
+  const gestureId = "port-handle";
+  const session = source.type === "device-port"
+    ? resolvePortSession(canvas, editor, gestureId, source.kind, source.endpoint)
+    : resolveLineEndSession(canvas, editor, gestureId, source.lineCell, source.handleCell);
+  if (session === null) {
+    return null;
+  }
+  return {
+    move: (position) => drivePortLine(canvas, editor, session, position),
+    end: (commit) => finishPortLine(canvas, editor, session, commit),
+  };
+}
+
+export interface PortDragHandle {
+  readonly key: string;
+  readonly source: PortHandleSource;
+  /** 把手所在格：端口或线端外侧的空格。 */
+  readonly cell: GridPoint;
+  /** 物品在把手处流动的方向（输出向外、输入向内），用于画箭头。 */
+  readonly flowEdge: GridEdge;
+}
+
+/**
+ * 选中实体可以拖出线的把手：设备每个外侧仍空着的输入/输出端口；传送带/管道节则是它开放的一端
+ * （与从线端直接拖动的取舍一致：输出端开放时只给输出端）。
+ */
+export function resolvePortDragHandles(canvas: CanvasInteractionController, entityId: string): PortDragHandle[] {
+  const editor = canvas.editor;
+  const entity = editor?.queries.getEntityById(entityId) ?? null;
+  const registry = canvas.registry.queries;
+  const definition = entity === null ? null : registry.findEntityDefinition(entity.definitionId);
+  if (editor === null || entity === null || definition === null) {
+    return [];
+  }
+  const offset = (cell: GridPoint, edge: GridEdge): GridPoint => {
+    const delta = resolveGridEdgeDelta(edge);
+    return { x: cell.x + delta.x, y: cell.y + delta.y };
+  };
+
+  const lineKind: LogisticsKind | null = registry.isBelt(definition.id) ? "belt" : registry.isPipe(definition.id) ? "pipe" : null;
+  if (lineKind !== null) {
+    const edgeOf = (direction: "input" | "output") => {
+      const port = definition.portGroups.find((group) => group.direction === direction)?.ports[0];
+      return port === undefined ? null : rotateGridEdge(port.edge, entity.rotation);
+    };
+    const outputEdge = edgeOf("output");
+    const inputEdge = edgeOf("input");
+    const cell = entity.position;
+    for (const [edge, flowEdge] of [[outputEdge, outputEdge], [inputEdge, inputEdge === null ? null : oppositeGridEdge(inputEdge)]] as const) {
+      if (edge === null || flowEdge === null || !isOpenBeyondLine(editor, entity, lineKind, offset(cell, edge))) continue;
+      const handleCell = offset(cell, edge);
+      return [{ key: `${entity.id}:${edge}`, source: { type: "line-end", lineCell: { ...cell }, handleCell }, cell: handleCell, flowEdge }];
+    }
+    return [];
+  }
+
+  return definition.portGroups.flatMap((group) => {
+    if (group.direction === "bidirectional") return [];
+    const kind: LogisticsKind = group.isPipe ? "pipe" : "belt";
+    return group.ports.flatMap((port): PortDragHandle[] => {
+      const geometry = resolveRotatedPortGeometry({ footprint: definition.footprint, port, rotation: entity.rotation });
+      const inside = { x: entity.position.x + geometry.cell.x, y: entity.position.y + geometry.cell.y };
+      const outside = offset(inside, geometry.edge);
+      if (!isOpenBeyondLine(editor, entity, kind, outside)) return [];
+      const endpoint: DevicePortEndpoint = {
+        type: "device-port",
+        entityId: entity.id,
+        portGroupId: group.id,
+        portId: port.id,
+        portKind: group.kind,
+        portDirection: group.direction === "output" ? "output" : "input",
+        insideGridPoint: inside,
+        outsideGridPoint: outside,
+        edge: geometry.edge,
+      };
+      return [{
+        key: `${entity.id}:${group.id}:${port.id}`,
+        source: { type: "device-port", kind, endpoint },
+        cell: outside,
+        flowEdge: group.direction === "output" ? geometry.edge : oppositeGridEdge(geometry.edge),
+      }];
+    });
+  });
+}
+
+/** 按指针位置更新草稿，并让线头贴近画布边缘时平移地图（平移后按新的格重画）。 */
+function drivePortLine(
+  canvas: CanvasInteractionController,
+  editor: EditorContract,
+  session: PortDragSession,
+  position: GesturePosition,
+): void {
+  updateDraft(canvas, editor, session, resolveGridPoint(canvas, position));
+  canvas.edgePan.track(position, (next) => {
+    updateDraft(canvas, editor, session, resolveGridPoint(canvas, next));
+  }, "pointer");
+}
+
+function finishPortLine(
+  canvas: CanvasInteractionController,
+  editor: EditorContract,
+  session: PortDragSession,
+  commit: boolean,
+): void {
+  canvas.edgePan.stop("pointer");
+  const draft = editor.queries.resolveLogisticsDraftState();
+  if (draft === null) {
+    return;
+  }
+  if (commit && draft.canApply) {
+    const endCell = draft.cells.at(-1)?.gridPoint ?? null;
+    editor.actions.applyLogisticDraft();
+    // 顺流铺出的线末端停在空地上时，提示可在末端接上消费该物品的设备。
+    if (session.mode === "forward" && endCell !== null) {
+      offerLineEndChip(canvas, editor, draft.kind, endCell);
+    }
+    return;
+  }
+  editor.actions.cancelLogisticsDraft();
 }
 
 function resolveGridPoint(canvas: CanvasInteractionController, position: GesturePosition | null): GridPoint | null {
@@ -138,18 +265,14 @@ function isSameGridPoint(left: GridPoint, right: GridPoint): boolean {
   return left.x === right.x && left.y === right.y;
 }
 
-/** 起拖格恰好是设备端口（输入或输出）内侧格时的会话；设备内部其余格不触发。 */
+/** 从设备端口（输入或输出，传送带或管道族）起拖的会话。 */
 function resolvePortSession(
   canvas: CanvasInteractionController,
   editor: EditorContract,
   gestureId: string,
-  gridPoint: GridPoint,
+  kind: LogisticsKind,
+  endpoint: DevicePortEndpoint,
 ): PortDragSession | null {
-  const port = editor.queries.findDevicePortAtGridPoint(gridPoint);
-  if (port === null) {
-    return null;
-  }
-  const { kind, endpoint } = port;
   if (endpoint.portDirection === "output") {
     return {
       gestureId,

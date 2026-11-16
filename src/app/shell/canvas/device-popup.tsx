@@ -52,6 +52,8 @@ export const DevicePopup = observer(function DevicePopup({ appHost }: { appHost:
     editor === null
     || canvas.state.activeTool !== "select"
     || editor.queries.resolveLogisticsDraftState() !== null
+    // 刚拉出的线末端提示是下一步，卡片让出位置，提示消失后再回来。
+    || canvas.state.runtime.lineEndChip !== null
     || (appHost.state.settings.gameUseInspectorPanel && appHost.state.workbench.rightDockOpen)
   ) {
     return null;

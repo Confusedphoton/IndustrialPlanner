@@ -2,7 +2,7 @@ import type { EntityDefinition, ItemDomain, PortGroupDefinition } from "@/domain
 import type { GridEdge, GridPoint, GridRotation } from "@/domain/shared/grid";
 import type { LogisticsKind } from "@/domain/shared/logistics";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
-import { resolveRotatedPortGeometry } from "@/shared/geometry/port";
+import { oppositeGridEdge, resolveRotatedPortGeometry } from "@/shared/geometry/port";
 import { matchesItemAcceptRule } from "@/shared/registry/item-accept-rule";
 
 /**
@@ -30,7 +30,6 @@ export interface LineEndSnapPlacement {
 type SnapDefinition = Pick<EntityDefinition, "footprint" | "portGroups" | "portStorageBindings" | "recipeChannels">;
 
 const ROTATIONS: readonly GridRotation[] = [0, 90, 180, 270];
-const OPPOSITE_EDGE: Readonly<Record<GridEdge, GridEdge>> = { NORTH: "SOUTH", SOUTH: "NORTH", EAST: "WEST", WEST: "EAST" };
 
 /**
  * 设备接到线末端的全部摆法：某个能收下线上物品、且通向配方原料存储组的同族输入端口落在末端外侧格并朝向线末端。
@@ -45,7 +44,7 @@ export function resolveLineEndSnapPlacements(options: {
   readonly resolveItemDomain: (itemId: string) => ItemDomain | null;
 }): LineEndSnapPlacement[] {
   const { definition } = options;
-  const facing = OPPOSITE_EDGE[options.flowEdge];
+  const facing = oppositeGridEdge(options.flowEdge);
   const alongX = options.flowEdge === "NORTH" || options.flowEdge === "SOUTH";
   const groups = definition.portGroups.filter((group) => isFeedingInputGroup(definition, group, options.kind));
   const candidates: Array<LineEndSnapPlacement & { readonly offCenter: number }> = [];

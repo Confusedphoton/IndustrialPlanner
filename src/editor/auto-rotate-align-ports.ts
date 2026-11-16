@@ -6,7 +6,7 @@ import {
 } from "@/domain/registry/types/entity-placement-behavior";
 import type { GridPoint, GridRect, GridRotation } from "@/domain/shared/grid";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
-import { resolveGridEdgeDelta, rotateGridEdge, rotateLocalPortCell } from "@/shared/geometry/port";
+import { oppositeGridEdge, resolveGridEdgeDelta, rotateGridEdge, rotateLocalPortCell } from "@/shared/geometry/port";
 
 type AutoRotateAlignPortsBehavior = Extract<
   EntityPlacementBehaviorDeclaration,
@@ -295,21 +295,6 @@ function checkPortMatchAtCell(options: {
 
   // 该格没有任何同种类端口 → 视为空置
   return "idle";
-}
-
-function oppositeGridEdge(
-  edge: ReturnType<typeof rotateGridEdge>,
-): ReturnType<typeof rotateGridEdge> {
-  switch (edge) {
-    case "NORTH":
-      return "SOUTH";
-    case "EAST":
-      return "WEST";
-    case "SOUTH":
-      return "NORTH";
-    case "WEST":
-      return "EAST";
-  }
 }
 
 function rotationSteps(from: GridRotation, to: GridRotation): number {

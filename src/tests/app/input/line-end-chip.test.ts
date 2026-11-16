@@ -2,11 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AppHost } from "@/app/host/app-host";
 import { resolveLineEndSnapPlacements } from "@/app/canvas/line-end-chip";
-import { placeConsumerAtLineEnd, resolveLineEndTarget } from "@/app/input/gesture/actions";
+import {
+  placeConsumerAtLineEnd,
+  resolveLineEndTarget,
+  resolvePortDragHandles,
+  startPortHandleDrag,
+} from "@/app/input/gesture/actions";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createWorldDocument, type WorldEntity } from "@/domain/document/world-document";
 import type { GridPoint } from "@/domain/shared/grid";
+import { thinPortDragHandles } from "@/app/shell/canvas/port-drag-handles";
 import { createRegistryContract } from "@/registry";
 import { resolveRotatedPortGeometry } from "@/shared/geometry/port";
 import { createAppTestHost, createEditorTestHost } from "@/tests/helpers/app-test-workspace";
@@ -141,6 +147,94 @@ describe("offering a consumer at the open end of a line dragged from a port", ()
   });
 });
 
+describe("drawing a line out of a port with a finger", () => {
+  it("offers a handle beyond every free port and draws from it like a pen drag from the port", async () => {
+    const appHost = await createAppHost([furnace({ recipe: true })]);
+    const { inside, delta } = furnaceBeltOutput(appHost);
+    const outside = { x: inside.x + delta.x, y: inside.y + delta.y };
+    const handles = resolvePortDragHandles(appHost.mainCanvas, "furnace");
+    const handle = handles.find((entry) => entry.cell.x === outside.x && entry.cell.y === outside.y);
+    expect(handle?.source.type).toBe("device-port");
+    expect(handles.length).toBeGreaterThan(1);
+
+    const drag = startPortHandleDrag(appHost.mainCanvas, handle!.source)!;
+    const end = { x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 };
+    drag.move(clientCenter(appHost, outside));
+    drag.move(clientCenter(appHost, end));
+    drag.end(true);
+
+    expect(entities(appHost).filter((entity) => entity.definitionId.startsWith("belt"))).toHaveLength(4);
+    expect(appHost.mainCanvas.state.runtime.lineEndChip?.endCell).toEqual(end);
+    expect(resolvePortDragHandles(appHost.mainCanvas, "furnace").some((entry) => entry.key === handle!.key)).toBe(false);
+  });
+
+  it("keeps one handle per side and port group when the cells are smaller than a handle", async () => {
+    const appHost = await createAppHost([furnace({ recipe: true })]);
+    const handles = resolvePortDragHandles(appHost.mainCanvas, "furnace");
+    const sides = new Set(handles.map((handle) => handle.source.type === "device-port"
+      ? `${handle.source.endpoint.portGroupId}:${handle.flowEdge}` : "line"));
+
+    expect(thinPortDragHandles(handles, 16, 32)).toHaveLength(sides.size);
+    expect(thinPortDragHandles(handles, 40, 32)).toHaveLength(handles.length);
+  });
+
+  it("continues a selected line from its open end", async () => {
+    const appHost = await createAppHost([furnace({ recipe: true })]);
+    const { inside, delta } = furnaceBeltOutput(appHost);
+    penDrag(appHost, inside, [{ x: inside.x + delta.x * 3, y: inside.y + delta.y * 3 }]);
+    const last = entities(appHost).find((entity) => entity.position.x === inside.x + delta.x * 3 && entity.position.y === inside.y + delta.y * 3)!;
+
+    const [handle] = resolvePortDragHandles(appHost.mainCanvas, last.id);
+    expect(handle?.cell).toEqual({ x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 });
+    const drag = startPortHandleDrag(appHost.mainCanvas, handle!.source)!;
+    drag.move(clientCenter(appHost, { x: inside.x + delta.x * 6, y: inside.y + delta.y * 6 }));
+    drag.end(true);
+
+    expect(entities(appHost).filter((entity) => entity.definitionId.startsWith("belt"))).toHaveLength(6);
+  });
+
+  it("drops the draft when the drag is cancelled", async () => {
+    const appHost = await createAppHost([furnace({ recipe: true })]);
+    const { inside, delta } = furnaceBeltOutput(appHost);
+    const handle = resolvePortDragHandles(appHost.mainCanvas, "furnace")
+      .find((entry) => entry.cell.x === inside.x + delta.x && entry.cell.y === inside.y + delta.y)!;
+
+    const drag = startPortHandleDrag(appHost.mainCanvas, handle.source)!;
+    drag.move(clientCenter(appHost, { x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 }));
+    drag.end(false);
+
+    expect(entities(appHost)).toHaveLength(1);
+    expect(appHost.workspace.editor!.queries.resolveLogisticsDraftState()).toBeNull();
+  });
+});
+
+describe("drawing a line toward the canvas edge", () => {
+  it("pans the map while the line head is held at the edge and keeps extending the line", async () => {
+    const appHost = await createAppHost([furnace({ recipe: true })]);
+    const { inside, delta } = furnaceBeltOutput(appHost);
+    const viewport = appHost.mainCanvas.view.state.clientRect;
+    const start = clientCenter(appHost, inside);
+    const edge = delta.y !== 0
+      ? { x: start.x, y: delta.y > 0 ? viewport.top + viewport.height - 2 : viewport.top + 2 }
+      : { x: delta.x > 0 ? viewport.left + viewport.width - 2 : viewport.left + 2, y: start.y };
+    const centerBefore = { ...appHost.mainCanvas.view.state.center };
+
+    const pointer = (position: { x: number; y: number }, buttons: number) => ({ pointerId: 7, pointerType: "pen", clientX: position.x,
+      clientY: position.y, button: 0, buttons, altKey: false, ctrlKey: false, metaKey: false, shiftKey: false });
+    appHost.gestureAdapter.handlePointerDown(pointer(start, 1));
+    appHost.gestureAdapter.handlePointerMove(pointer(clientCenter(appHost, { x: inside.x + delta.x * 3, y: inside.y + delta.y * 3 }), 1));
+    appHost.gestureAdapter.handlePointerMove(pointer(edge, 1));
+    appHost.gestureAdapter.advanceFrame(0);
+    const beltsAtEdge = appHost.workspace.editor!.queries.resolveLogisticsDraftState()!.cells.length;
+    for (let frame = 1; frame <= 30; frame += 1) appHost.mainCanvas.edgePan.advanceFrame(frame * 16);
+    const beltsAfterPan = appHost.workspace.editor!.queries.resolveLogisticsDraftState()!.cells.length;
+    appHost.gestureAdapter.handlePointerUp(pointer(edge, 0));
+
+    expect(appHost.mainCanvas.view.state.center).not.toEqual(centerBefore);
+    expect(beltsAfterPan).toBeGreaterThan(beltsAtEdge);
+  });
+});
+
 function furnace(options: { recipe: boolean }): WorldEntity {
   const definition = createRegistryContract().queries.findEntityDefinition(FURNACE_ID)!;
   const channelId = definition.recipeChannels.find((channel) => channel.type !== "consumption-channel")!.id;
@@ -193,6 +287,11 @@ async function createAppHost(initial: readonly WorldEntity[]): Promise<AppHost> 
   appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 1600, height: 1200 });
   appHost.mainCanvas.view.actions.focusOnBounds({ x: 32, y: 32, width: 0, height: 0 }, { durationMs: 0, gridSize: 1 });
   return appHost;
+}
+
+function clientCenter(appHost: AppHost, cell: GridPoint) {
+  const rect = appHost.mainCanvas.view.queries.findClientRectForGridCell(cell)!;
+  return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
 }
 
 function pointer(appHost: AppHost, cell: GridPoint, buttons: number) {

@@ -73,6 +73,10 @@ export function rotateGridEdge(edge: GridEdge, rotation: GridRotation): GridEdge
   return GRID_EDGE_ORDER[(currentIndex + steps) % GRID_EDGE_ORDER.length] ?? edge;
 }
 
+export function oppositeGridEdge(edge: GridEdge): GridEdge {
+  return rotateGridEdge(edge, 180);
+}
+
 export function resolveGridEdgeDelta(edge: GridEdge): GridPoint {
   switch (edge) {
     case "NORTH":

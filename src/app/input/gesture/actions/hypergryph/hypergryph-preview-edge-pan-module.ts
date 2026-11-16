@@ -60,7 +60,7 @@ function track(canvas: CanvasInteractionController, pointer: DragPointer, positi
   const editor = canvas.editor;
   const redrive = editor === null ? null : resolvePreviewRedrive(canvas, editor, pointer);
   if (redrive === null) {
-    canvas.edgePan.stop();
+    canvas.edgePan.stop("preview");
     return;
   }
   canvas.edgePan.track(position, redrive);

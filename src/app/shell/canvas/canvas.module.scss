@@ -1217,6 +1217,35 @@
   white-space: nowrap;
 }
 
+// 手指的端口拉线把手：选中设备或线段后浮在空着的端口、线端外侧格中心，箭头指向物品流向。
+.port-drag-handle {
+  position: fixed;
+  z-index: 8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 2px solid var(--surface-1);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 3px 10px var(--in-canvas-toolbar-shadow);
+  color: var(--surface-1);
+  transform: translate(-50%, -50%);
+  touch-action: none;
+}
+
+.port-drag-handle.is-input {
+  border-color: var(--accent);
+  background: var(--surface-1);
+  color: var(--accent);
+}
+
+.port-drag-handle svg {
+  width: 60%;
+  height: 60%;
+  pointer-events: none;
+}
+
 // 线末端提示：开放末端之外的「+」按钮；展开后为收在画布内的设备列表，每行图标加名称。
 .line-end-chip-button,
 .line-end-chip-list {
