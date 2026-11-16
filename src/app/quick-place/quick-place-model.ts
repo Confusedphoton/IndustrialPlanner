@@ -53,6 +53,24 @@ export function buildQuickPlaceDeviceEntries(
     });
 }
 
+/** 画布快捷栏最多显示的设备数。 */
+export const CANVAS_HOTBAR_LIMIT = 12;
+
+/** 画布快捷栏的设备顺序：收藏槽位在前（保持槽位顺序），其后补最近放置过的设备；只保留当前基地可放置的。 */
+export function resolveCanvasHotbarDeviceIds(options: {
+  readonly favorites: readonly (string | null)[];
+  readonly recents: readonly string[];
+  readonly isAvailable: (deviceId: string) => boolean;
+}): string[] {
+  const result: string[] = [];
+  for (const deviceId of [...options.favorites, ...options.recents]) {
+    if (deviceId === null || result.includes(deviceId) || !options.isAvailable(deviceId)) continue;
+    result.push(deviceId);
+    if (result.length === CANVAS_HOTBAR_LIMIT) break;
+  }
+  return result;
+}
+
 export function filterQuickPlaceDeviceEntries(
   entries: readonly QuickPlaceDeviceEntry[],
   query: string,

@@ -41,6 +41,7 @@ export const SelectionInspectorActionStrip = observer(function SelectionInspecto
   const selectionIds = [...editor.state.collections.selection];
   const canSaveBlueprint = selectionIds.length > 1;
   const canSwitchVariant = canSwitchSelectedEntityVariant(appHost, selectionIds);
+  const canPickUp = selectionIds.length === 1;
 
   if (selectionIds.length === 0) {
     return null;
@@ -55,6 +56,7 @@ export const SelectionInspectorActionStrip = observer(function SelectionInspecto
     );
   });
   const generalButtonIds = resolveSelectionActionButtonIds({
+    canPickUp,
     canSaveBlueprint,
     canSwitchVariant,
     isDedicatedLogistics: isLogisticsSelection,
@@ -90,6 +92,7 @@ export const SelectionInspectorActionStrip = observer(function SelectionInspecto
 });
 
 function resolveSelectionActionButtonIds(options: {
+  canPickUp: boolean;
   canSaveBlueprint: boolean;
   canSwitchVariant: boolean;
   isDedicatedLogistics: boolean;
@@ -98,6 +101,8 @@ function resolveSelectionActionButtonIds(options: {
 
   if (!options.isDedicatedLogistics) {
     buttonIds.push("canvas-floating-toolbar-button-move", "canvas-floating-toolbar-button-rotate");
+    // 触控没有笔杆键吸管：从操作条拿起同型号、同配方与朝向的设备继续放置。
+    if (options.canPickUp) buttonIds.push("canvas-floating-toolbar-button-pick-up");
   }
 
   if (options.canSwitchVariant) {

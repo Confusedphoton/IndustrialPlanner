@@ -66,6 +66,7 @@ export type GestureEventType =
   | "rotate clockwise"
   | "rotate counterclockwise"
   | "two finger move"
+  | "multi finger tap"
   | "wheel up"
   | "wheel down"
   | "key down"
@@ -102,6 +103,8 @@ interface GestureDragEventBase extends GestureEventBase {
 
 export interface MouseDragStartGestureEvent extends GestureDragEventBase {
   readonly type: "mouse dragstart";
+  /** 来自精确输入模式下的手写笔。 */
+  readonly isPen?: boolean;
   readonly originButton: number;
   readonly button: number;
   readonly buttons: number;
@@ -133,6 +136,8 @@ export interface MouseDragEndGestureEvent extends GestureDragEventBase {
 
 export interface MouseTapGestureEvent extends GestureEventBase {
   readonly type: "mouse tap";
+  /** 来自精确输入模式下的手写笔。 */
+  readonly isPen?: boolean;
   readonly button: number;
   readonly buttons: number;
   readonly position: GesturePosition;
@@ -230,6 +235,13 @@ export interface RotateGestureEvent extends GestureEventBase {
   readonly activeTouchCount: number;
 }
 
+/** 两指或三指同时轻点后一起抬起（期间没有移动）：用于撤销/重做。 */
+export interface MultiFingerTapGestureEvent extends GestureEventBase {
+  readonly type: "multi finger tap";
+  readonly fingerCount: number;
+  readonly position: GesturePosition;
+}
+
 export interface TwoFingerMoveGestureEvent extends GestureEventBase {
   readonly type: "two finger move";
   readonly center: GesturePosition;
@@ -304,6 +316,7 @@ export type GestureEvent =
   | PinchGestureEvent
   | RotateGestureEvent
   | TwoFingerMoveGestureEvent
+  | MultiFingerTapGestureEvent
   | WheelGestureEvent
   | KeyDownGestureEvent
   | KeyUpGestureEvent

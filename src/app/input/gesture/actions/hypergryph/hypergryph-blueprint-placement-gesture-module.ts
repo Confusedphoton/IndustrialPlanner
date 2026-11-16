@@ -22,6 +22,7 @@ import {
   driveMousePlacementPreview,
   drivePlacementPreview,
   isPlacementCancelButtonId,
+  handleTouchPlacementTap,
   isPlacementRotateButtonId,
   primePlacementAnchorFromPreview,
   PLACEMENT_TOOLBAR_BUTTON_IDS,
@@ -406,9 +407,11 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
             : { status: "ignored" };
 
         case "touch tap":
-          // 在画布上落笔即结束对浮动工具条的悬停冻结。
-          context.canvas.actions.trackCanvasFloatingToolbarHover(null);
-          return { status: "ignored" };
+          return handleTouchPlacementTap(context.canvas, editor, event.position, () => {
+            applyBlueprintPlacement(context.canvas, editor, null, {
+              continuous: context.canvas.state.runtime.blueprintPlacementContinuous,
+            });
+          });
 
         case "mouse tap":
           if (event.button === 2) {

@@ -635,7 +635,7 @@ export function ProductionFlowGraph({
     const dragOut = interaction.dragOut;
     if (dragOut?.pointerId === event.pointerId) {
       interaction.dragOut = null;
-      if (event.type === "pointerup") dragOut.drag.drop(event.clientX, event.clientY);
+      if (event.type === "pointerup") dragOut.drag.drop(event.clientX, event.clientY, event.pointerType);
       else dragOut.drag.cancel();
       return;
     }

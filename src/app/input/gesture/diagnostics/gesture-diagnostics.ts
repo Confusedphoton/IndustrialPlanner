@@ -171,6 +171,8 @@ function getEventDetail(event: GestureEvent): string {
       return `rotation ${formatNumber(event.rotationDeltaDegrees)}deg, touches ${event.activeTouchCount}`;
     case "two finger move":
       return `touches ${event.activeTouchCount}`;
+    case "multi finger tap":
+      return `fingers ${event.fingerCount}`;
     case "wheel up":
     case "wheel down":
       return `delta ${formatNumber(event.normalizedDelta)}`;

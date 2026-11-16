@@ -40,6 +40,7 @@ import {
 } from "./hypergryph/hypergryph-single-placement-gesture-module";
 import { createHypergryphRotateSelectionGestureModule } from "./hypergryph/hypergryph-rotate-selection-gesture-module";
 import { createHypergryphPenEraserGestureModule } from "./hypergryph/hypergryph-pen-eraser-gesture-module";
+import { createHypergryphEyedropperGestureModule } from "./hypergryph/hypergryph-eyedropper-gesture-module";
 import { createHypergryphBusExtendGestureModule } from "./hypergryph/hypergryph-bus-extend-gesture-module";
 import { createHypergryphPreviewEdgePanModule } from "./hypergryph/hypergryph-preview-edge-pan-module";
 import { createHypergryphPortDragLogisticsGestureModule } from "./hypergryph/hypergryph-port-drag-logistics-gesture-module";
@@ -87,6 +88,7 @@ export class AppGestureModuleRegistrar {
     register("logistics-placement", createHypergryphLogisticsPlacementGestureModule());
     register("logistics-placement", createHypergryphPortDragLogisticsGestureModule());
     register("confirm-placement", createHypergryphBusExtendGestureModule());
+    register("confirm-placement", createHypergryphEyedropperGestureModule());
     if (options.canvas.canUseWorkbenchActions || options.canvas.getOperationAvailability("logistics-placement").supported) {
       this.unregisterModules.push(bindLogisticsPlacementAlert(options.canvas));
     }

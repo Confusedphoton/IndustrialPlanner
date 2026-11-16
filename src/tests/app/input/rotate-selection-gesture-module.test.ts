@@ -102,12 +102,15 @@ describe("double tapping a device to spin it", () => {
     penCanvasMove(appHost, position, 1);
     penCanvasTap(appHost, position, 2);
     const placedId = editor.document.getSnapshot().entityOrder.at(-1)!;
-    expect(appHost.mainCanvas.state.activeTool).toBe("select");
+    // 笔放下后设备仍在手上；紧接着再点刚放下的设备是旋转它，而不是在原处再放一台。
+    expect(appHost.mainCanvas.state.activeTool).toBe("single-placement");
+    const placedCount = editor.document.getSnapshot().entityOrder.length;
 
     clock.mockReturnValue(1150);
     penCanvasTap(appHost, position, 3);
 
     expect(editor.document.getSnapshot().entities[placedId]?.rotation).toBe(90);
+    expect(editor.document.getSnapshot().entityOrder.length).toBe(placedCount);
   });
 });
 

@@ -700,7 +700,8 @@ const missResult = module.handle(touchDragStartEvent({ position: { x: 32, y: 32 
     expect(cancel.context.canvas.actions.hideCanvasTopLeftCornerToolbar).toHaveBeenCalledTimes(1);
     expect(cancel.context.canvas.state.activeTool).toBe("select");
     expect(cancel.context.canvas.state.runtime.placementAnchor).toBeNull();
-    expect(cancel.context.canvas.state.runtime.singlePlacementContinuous).toBe(false);
+    // 连续放置是用户的工作方式，退出放置后保留，下次拿起设备时仍生效。
+    expect(cancel.context.canvas.state.runtime.singlePlacementContinuous).toBe(true);
     expect(cancel.context.canvas.state.runtime.singlePlacementDeviceId).toBeNull();
     expect(cancel.context.canvas.actions.hideCanvasRightDockToolbar).toHaveBeenCalledTimes(1);
   });

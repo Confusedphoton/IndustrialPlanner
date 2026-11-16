@@ -465,16 +465,12 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
             : { status: "ignored" };
 
         case "touch tap":
-          // 在画布上落笔即结束对浮动工具条的悬停冻结。
-          context.canvas.actions.trackCanvasFloatingToolbarHover(null);
-          return { status: "ignored" };
-
-        case "touch double tap":
-          if (!isPreviewEntityAtClientPoint(editor, context.canvas.view, event.position, TOUCH_PREVIEW_HIT_SLOP_PX)) {
-            return { status: "ignored" };
-          }
-          rotatePlacementPreview(context.canvas, editor, { pointerMode: "touch", currentMousePosition: null });
-          return { status: "handled" };
+          return handleTouchPlacementTap(context.canvas, editor, event.position, () => {
+            recordEntityLandedBy(context.canvas, editor, event.position, () => applyPlacementOperation(context.canvas, editor, {
+              keepPlacement: context.canvas.state.runtime.singlePlacementContinuous,
+              currentMousePosition: null,
+            }));
+          });
 
         case "mouse tap":
           if (event.button === 2) {
@@ -483,6 +479,10 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           }
 
           if (event.button === 0 && !event.longPress) {
+            // 不支持悬停的笔第一次落笔前预览还没出现：先在落笔处生成预览。
+            if (!ensurePlacementDraftForMouse(context.canvas, editor, event.position)) {
+              return { status: "handled" };
+            }
             // 连续放置时紧接着再点刚放下的设备：转动它（与随后的预览），而不是在原处再放一台。
             const justPlacedId = resolveJustPlacedEntityId(context.canvas, editor, event.position);
             if (justPlacedId !== null) {
@@ -491,8 +491,9 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
               rotatePlacementPreview(context.canvas, editor, { pointerMode: "mouse", currentMousePosition: event.position });
               return { status: "handled" };
             }
+            // 笔没有 Shift/Ctrl：用笔放下后设备仍在手上，笔杆键点按（右键）才放下工具。
             recordEntityLandedBy(context.canvas, editor, event.position, () => applyPlacementOperation(context.canvas, editor, {
-              keepPlacement: event.modifiers.ctrl || event.modifiers.shift
+              keepPlacement: event.isPen === true || event.modifiers.ctrl || event.modifiers.shift
                 || context.canvas.state.runtime.singlePlacementContinuous,
               currentMousePosition: event.position,
             }));
@@ -1146,10 +1147,11 @@ export function dragPlacementFromPanel(
   return true;
 }
 
-/** 结束从面板拖出的放置：落在画布上（position 非 null）放下一台并退出放置，否则取消。 */
+/** 结束从面板拖出的放置：落在画布上（position 非 null）放下一台，否则取消；keepInHand 时放下后设备仍在手上。 */
 export function dropPlacementFromPanel(
   canvas: CanvasInteractionController,
   position: GesturePosition | null,
+  keepInHand = false,
 ): void {
   canvas.edgePan.stop();
   const editor = canvas.editor;
@@ -1163,7 +1165,100 @@ export function dropPlacementFromPanel(
   }
 
   driveMousePlacementPreview({ canvas, editor, position });
-  applyPlacementOperation(canvas, editor, { keepPlacement: false, currentMousePosition: position });
+  applyPlacementOperation(canvas, editor, { keepPlacement: keepInHand, currentMousePosition: position });
+}
+
+/**
+ * 触控放置中点按画布：点在预览上即放下；点在别处把预览移到该处，再点一次放下。
+ * 预览在整个基地的缩放下只有几个像素宽，手指很难先拖住它。
+ */
+export function handleTouchPlacementTap(
+  canvas: CanvasInteractionController,
+  editor: EditorContract,
+  position: GesturePosition,
+  place: () => void,
+): GestureHandleResult {
+  // 在画布上落笔即结束对浮动工具条的悬停冻结。
+  canvas.actions.trackCanvasFloatingToolbarHover(null);
+  if (editor.state.collections.preview.length === 0 || !isClientPointInsideViewport(canvas.view, position)) {
+    return { status: "ignored" };
+  }
+  if (isPreviewEntityAtClientPoint(editor, canvas.view, position, TOUCH_PREVIEW_HIT_SLOP_PX)) {
+    place();
+    return { status: "handled" };
+  }
+  editor.actions.moveCollectionCenterPointTo(EntityCollectionType.preview, position, canvas.view.state);
+  const cell = canvas.view.queries.findGridCellForClientPixelPoint(position);
+  if (cell !== null) {
+    canvas.state.runtime.placementAnchor = cell;
+  }
+  canvas.actions.alignCanvasFloatingToolbar();
+  return { status: "handled" };
+}
+
+/** 交到手上的设备：类型，以及放下时带上的初始配置（配方等）与朝向。 */
+export interface HeldDevice {
+  readonly deviceId: string;
+  readonly config?: Readonly<Record<string, unknown>> | null;
+  readonly rotation?: GridRotation | null;
+}
+
+/**
+ * 把一台设备交到手上（进入或留在放置工具）：快捷栏、吸管、环形菜单、待放清单与暂存托盘共用。
+ * 已在放置时原地换成这台设备，预览留在原来的位置；给出 position 时预览出现在该点并跟随指针。
+ * 返回是否已处于该设备的放置中。
+ */
+export function holdDeviceForPlacement(
+  canvas: CanvasInteractionController,
+  device: HeldDevice,
+  options: { readonly source: "mouse" | "touch"; readonly position?: GesturePosition | null },
+): boolean {
+  const editor = canvas.editor;
+  if (editor === null) {
+    return false;
+  }
+
+  const runtime = canvas.state.runtime;
+  runInAction(() => {
+    runtime.singlePlacementConfig = device.config ?? null;
+    runtime.singlePlacementRotation = device.rotation ?? null;
+  });
+  const position = options.position ?? null;
+  const placing = canvas.state.activeTool === "single-placement";
+  const keepAnchor = placing && position === null ? runtime.placementAnchor : null;
+  const source = position !== null ? "mouse" : placing ? runtime.singlePlacementPointerMode ?? options.source : options.source;
+  if (placing && runtime.singlePlacementDeviceId === device.deviceId) {
+    // 同一台设备只更新配置与朝向：重建预览让新配置生效。
+    safelyCancelPlacementDraft(editor);
+    runtime.singlePlacementDeviceId = null;
+  }
+  handlePlacementEntryButtonTap({
+    canvas,
+    editor,
+    deviceId: device.deviceId,
+    source,
+    initialPlacementAnchor: keepAnchor ?? undefined,
+    initialMousePosition: position,
+    allowFromAnyTool: true,
+  });
+  if (canvas.state.activeTool !== "single-placement" || runtime.singlePlacementDeviceId !== device.deviceId) {
+    return false;
+  }
+
+  if (position !== null) {
+    ensurePlacementDraftForMouse(canvas, editor, position);
+  }
+  if (device.rotation !== null && device.rotation !== undefined && editor.state.collections.preview.length > 0) {
+    const steps = ((device.rotation - resolveSinglePlacementPreviewRotation(editor)) / 90 + 4) % 4;
+    for (let step = 0; step < steps; step += 1) {
+      editor.actions.rotateCollectionAroundCenterPoint(EntityCollectionType.preview, 90);
+    }
+    if (position !== null) {
+      editor.actions.moveCollectionCenterPointTo(EntityCollectionType.preview, position, canvas.view.state);
+    }
+    canvas.actions.alignCanvasFloatingToolbar();
+  }
+  return true;
 }
 
 /** 连续放置中，这次点按若紧接着放下一台设备的那次点按、且落在它上面，返回该设备。 */
@@ -1201,7 +1296,6 @@ function clearPlacementUi(canvas: CanvasInteractionController): void {
     canvas.state.runtime.singlePlacementConfig = null;
     canvas.state.runtime.singlePlacementRotation = null;
     canvas.state.runtime.singlePlacementPointerMode = null;
-    canvas.state.runtime.singlePlacementContinuous = false;
   });
   canvas.actions.hideCanvasFloatingToolbar();
   canvas.actions.hideCanvasTopLeftCornerToolbar();

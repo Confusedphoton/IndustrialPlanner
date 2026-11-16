@@ -34,6 +34,7 @@ import {
 } from "@/shared/entity-variants";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import { resolvePlacementPointerSource } from "@/app/shell/shared/placement-pointer-source";
 import {
   didPanelPlacementDragJustEnd,
   resolveDevicePlacementTarget,
@@ -565,8 +566,8 @@ export const PlacementPanel = observer(function PlacementPanel({
   // 设备搜索。输入即过滤，Enter 放置首个匹配，Esc 清空；画布上按 “/” 聚焦。
   const [deviceQuery, setDeviceQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement | null>(null);
-  // 分类跳转用的分组节点。
-  const sectionElementsRef = useRef(new Map<string, HTMLElement>());
+  // 分类芯片筛选列表：只显示所选分类（最大的分类也能放进一屏），再次点按或点「全部」恢复。
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   useEffect(() => {
     if (!active) {
       return;
@@ -591,6 +592,12 @@ export const PlacementPanel = observer(function PlacementPanel({
   const showShortcutHints = !isTouchLayout && appHost.state.settings.gameShowHotkeys;
   const normalizedDeviceQuery = deviceQuery.trim().toLowerCase();
   const deviceSections = filterPlacementDeviceSections(buildPlacementDeviceSections(appHost), normalizedDeviceQuery, t);
+  // 搜索时显示全部分类的匹配结果；所选分类在当前基地不存在时也回到全部。
+  const activeCategory = normalizedDeviceQuery.length === 0
+    && deviceSections.some((section) => section.titleKey === categoryFilter) ? categoryFilter : null;
+  const visibleSections = activeCategory === null
+    ? deviceSections
+    : deviceSections.filter((section) => section.titleKey === activeCategory);
   const firstMatchedDeviceId = normalizedDeviceQuery.length === 0
     ? null
     : deviceSections[0]?.buttons[0]?.uiButtonId.replace("placement-", "") ?? null;
@@ -622,9 +629,10 @@ export const PlacementPanel = observer(function PlacementPanel({
         appHost.mainCanvas.state.runtime.singlePlacementConfig = null;
       });
     }
-    const uiButtonId = `ui-left-dock-placement-mode-${deviceId}-${event.pointerType === "mouse" ? "mouse-tap" : "touch-tap"}`;
+    const source = resolvePlacementPointerSource(appHost, event.pointerType);
+    const uiButtonId = `ui-left-dock-placement-mode-${deviceId}-${source}-tap`;
 
-    if (event.pointerType === "mouse") {
+    if (source === "mouse") {
       appHost.gestureAdapter.handleUiButtonMouseTap({
         uiButtonId,
         button: event.button,
@@ -683,23 +691,22 @@ export const PlacementPanel = observer(function PlacementPanel({
         value={deviceQuery}
       />
       {normalizedDeviceQuery.length === 0 && deviceSections.length > 1 ? (
-        <nav aria-label={t("placement.jumpToCategory")} className={cm(styles, "placement-category-chips")}>
-          {deviceSections.map((section) => (
+        <nav aria-label={t("placement.categoryFilter")} className={cm(styles, "placement-category-chips")}>
+          {[null, ...deviceSections.map((section) => section.titleKey)].map((titleKey) => (
             <button
-              className={cm(styles, "placement-category-chip")}
-              key={section.titleKey}
-              onClick={() => {
-                sectionElementsRef.current.get(section.titleKey)?.scrollIntoView({ block: "start", behavior: "smooth" });
-              }}
+              aria-pressed={activeCategory === titleKey}
+              className={cm(styles, activeCategory === titleKey ? "placement-category-chip is-active" : "placement-category-chip")}
+              key={titleKey ?? "all"}
+              onClick={() => setCategoryFilter(titleKey === activeCategory ? null : titleKey)}
               type="button"
             >
-              {t(section.titleKey)}
+              {t(titleKey ?? "placement.allCategories")}
             </button>
           ))}
         </nav>
       ) : null}
       </div>
-      {normalizedDeviceQuery.length === 0 ? (() => {
+      {normalizedDeviceQuery.length === 0 && activeCategory === null ? (() => {
         const recentButtons = resolveRecentPlacementButtons(deviceSections, recentPlacementDevices.deviceIds);
         if (recentButtons.length === 0) {
           return null;
@@ -741,7 +748,7 @@ export const PlacementPanel = observer(function PlacementPanel({
         );
       })() : null}
 
-      {deviceSections.map((section, sectionIndex) => {
+      {visibleSections.map((section, sectionIndex) => {
         const sectionTitleId = `placement-device-section-${sectionIndex}`;
         const isPlacementGroupActive = (
           appHost.mainCanvas.state.activeTool === "select"
@@ -756,13 +763,6 @@ export const PlacementPanel = observer(function PlacementPanel({
             {sectionIndex > 0 ? <div aria-hidden="true" className={cm(styles, "placement-panel-divider")} /> : null}
             <section
               aria-labelledby={sectionTitleId}
-              ref={(element) => {
-                if (element === null) {
-                  sectionElementsRef.current.delete(section.titleKey);
-                } else {
-                  sectionElementsRef.current.set(section.titleKey, element);
-                }
-              }}
               className={cm(styles, isPlacementGroupActive
                 ? "placement-panel-group is-placement-group-active"
                 : "placement-panel-group")}

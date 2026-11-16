@@ -30,6 +30,8 @@ export {
   createHypergryphSinglePlacementGestureModule,
   dragPlacementFromPanel,
   dropPlacementFromPanel,
+  holdDeviceForPlacement,
+  type HeldDevice,
   PLACEMENT_RAIL_CANCEL_BUTTON_ID,
   PLACEMENT_RAIL_ROTATE_BUTTON_ID,
 } from "./hypergryph/hypergryph-single-placement-gesture-module";

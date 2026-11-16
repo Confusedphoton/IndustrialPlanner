@@ -78,6 +78,13 @@ const CANVAS_FLOATING_TOOLBAR_DEFINITIONS: Record<CanvasFloatingToolbarButtonId,
     icon: "copy",
     tone: "confirm",
   },
+  "canvas-floating-toolbar-button-pick-up": {
+    label: {
+      "zh-CN": "再放一台",
+      "en-US": "Place Another",
+    },
+    icon: "copy",
+  },
   "canvas-floating-toolbar-button-save-blueprint": {
     label: {
       "zh-CN": "保存蓝图",

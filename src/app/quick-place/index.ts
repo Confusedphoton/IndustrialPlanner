@@ -1,4 +1,5 @@
 export {
+  CANVAS_HOTBAR_LIMIT,
   QUICK_PLACE_FAVORITE_LIMIT,
   QUICK_PLACE_SLOT_SHORTCUTS,
   buildQuickPlaceDeviceEntries,
@@ -7,6 +8,7 @@ export {
   normalizeQuickPlaceFavorites,
   placeQuickPlaceFavoriteAtSlot,
   removeQuickPlaceFavoriteAtSlot,
+  resolveCanvasHotbarDeviceIds,
   resolveQuickPlaceSlotIndexFromKey,
   triggerQuickPlaceDeviceSelection,
   type BuildQuickPlaceDeviceEntriesOptions,

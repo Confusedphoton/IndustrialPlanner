@@ -39,6 +39,9 @@ const WHEEL_ACCUMULATE_THRESHOLD = 1;
 // 手写笔连点比鼠标双击慢，留出较宽的间隔。
 const DOUBLE_TAP_MS = 400;
 const DOUBLE_TAP_SLOP_PX = 12;
+/** 多指轻点：从第一指按下到最后一指抬起的最长时间，与参与判定的最多手指数。 */
+const MULTI_FINGER_TAP_MS = 400;
+const MAX_MULTI_FINGER_TAP_FINGERS = 3;
 /** 手写笔精确输入的防误触窗口；笔接触或最近一次笔活动（含悬停）后该时长内的触摸视为手掌。 */
 const PEN_PALM_REJECTION_MS = 400;
 /** 笔尖有轻微抖动，拖动判定阈值略大于鼠标。 */
@@ -216,6 +219,9 @@ interface TouchSession {
   longPressTimer: TimerHandle | null;
   longPress: boolean;
   payload: unknown | null;
+  /** 本次触控同时按下的最多手指数，与是否有手指移动过：判定多指轻点。 */
+  maxTouchCount: number;
+  fingersMoved: boolean;
 }
 
 interface MultiTouchSnapshot {
@@ -800,6 +806,7 @@ export class GestureAdapter {
       this.dispatchGesture({
         type: "mouse dragstart",
         gestureId: session.gestureId,
+        isPen: session.isPen,
         payload: session.payload,
         originButton: session.originButton,
         button: event.button,
@@ -861,6 +868,7 @@ export class GestureAdapter {
       const tapEvent: Extract<GestureEvent, { type: "mouse tap" }> = {
         type: "mouse tap",
         gestureId: session.gestureId,
+        isPen: session.isPen,
         // 手写笔抬起时 buttons 已清零，以按下时解析出的按钮为准（橡皮擦端为 5）。
         button: session.isPen ? session.originButton : event.button,
         buttons: event.buttons,
@@ -900,6 +908,8 @@ export class GestureAdapter {
         longPressTimer: null,
         longPress: false,
         payload: null,
+        maxTouchCount: 1,
+        fingersMoved: false,
       };
       this.touchSession = session;
       this.scheduleLongPressTimers(session, {
@@ -919,6 +929,7 @@ export class GestureAdapter {
         },
       });
     } else if (this.activeTouches.size > 1) {
+      this.touchSession.maxTouchCount = Math.max(this.touchSession.maxTouchCount, this.activeTouches.size);
       this.transitionTouchSessionToMultiTouch(this.touchSession, event);
     }
 
@@ -936,6 +947,9 @@ export class GestureAdapter {
     touch.position = position;
 
     const session = this.touchSession;
+    if (session !== null && distance(touch.startPosition, position) > this.thresholds.touchMoveSlopPx) {
+      session.fingersMoved = true;
+    }
     if (session !== null && session.primaryId === event.pointerId) {
       this.handlePrimaryTouchMove(event, session, touch);
     }
@@ -1059,6 +1073,22 @@ export class GestureAdapter {
       };
       const consumed = this.dispatchGesture(tapEvent);
       this.dispatchDoubleTapIfNeeded("touch", tapEvent, consumed);
+    } else if (
+      reason === "release"
+      && session.state === "multi-touch"
+      && session.maxTouchCount >= 2
+      && session.maxTouchCount <= MAX_MULTI_FINGER_TAP_FINGERS
+      && !session.fingersMoved
+      && this.now() - session.pressStartedAt <= MULTI_FINGER_TAP_MS
+    ) {
+      this.dispatchGesture({
+        type: "multi finger tap",
+        gestureId: this.nextGestureId("multi-finger-tap"),
+        fingerCount: session.maxTouchCount,
+        position: getPosition(event),
+        modifiers: getModifiers(event),
+        sourceEvent: event,
+      });
     } else if (session.state === "dragging") {
       this.dispatchGesture({
         type: "touch dragend",

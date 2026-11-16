@@ -74,11 +74,16 @@ export class PanelPlacementDrag {
     this.showGhost(overCanvas && this.placing ? null : { x, y });
   }
 
-  public drop(x: number, y: number): void {
+  /** 用笔拖放时放下后设备仍在手上，与笔在画布上点按放置一致。 */
+  public drop(x: number, y: number, pointerType: string): void {
     this.removeGhost();
     markDragEnded();
     if (this.placing) {
-      dropPlacementFromPanel(this.appHost.mainCanvas, isOverMainCanvas(this.appHost, x, y) ? { x, y } : null);
+      dropPlacementFromPanel(
+        this.appHost.mainCanvas,
+        isOverMainCanvas(this.appHost, x, y) ? { x, y } : null,
+        pointerType === "pen",
+      );
     }
     this.placing = false;
   }
@@ -173,7 +178,7 @@ export function startPanelPlacementPress(
   const handleUp = (upEvent: PointerEvent) => {
     if (upEvent.pointerId !== pointerId) return;
     finish();
-    drag?.drop(upEvent.clientX, upEvent.clientY);
+    drag?.drop(upEvent.clientX, upEvent.clientY, upEvent.pointerType);
   };
   const handleCancel = (cancelEvent: PointerEvent) => {
     if (cancelEvent.pointerId !== pointerId) return;

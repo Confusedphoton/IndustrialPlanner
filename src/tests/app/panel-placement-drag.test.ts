@@ -54,7 +54,7 @@ describe("dragging a device out of a panel onto the canvas", () => {
     expect(editor.state.collections.preview.length).toBe(1);
 
     drag.move(520, 360);
-    drag.drop(520, 360);
+    drag.drop(520, 360, "mouse");
 
     const placed = editor.queries.listEntities().filter((entity) => entity.definitionId === "grinder_1");
     expect(placed).toHaveLength(1);
@@ -69,7 +69,7 @@ describe("dragging a device out of a panel onto the canvas", () => {
     drag.move(500, 350);
     pointedElement = document.body;
     drag.move(1200, 350);
-    drag.drop(1200, 350);
+    drag.drop(1200, 350, "mouse");
 
     expect(editor.queries.listEntities().some((entity) => entity.definitionId === "grinder_1")).toBe(false);
     expect(session.app.mainCanvas.state.activeTool).toBe("select");

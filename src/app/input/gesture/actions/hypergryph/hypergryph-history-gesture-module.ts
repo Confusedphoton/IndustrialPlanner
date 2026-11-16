@@ -39,7 +39,23 @@ export function createHypergryphHistoryGestureModule(): GestureMappingModule<App
         },
       },
     ],
-    handle() {
+    // 单手持设备时没有键盘：两指轻点撤销，三指轻点重做。
+    handle(event, context) {
+      if (event.type !== "multi finger tap") {
+        return { status: "ignored" };
+      }
+      const editor = context.canvas.editor;
+      if (editor === null) {
+        return { status: "ignored" };
+      }
+      if (event.fingerCount === 2 && context.canvas.isOperationEnabled("undo")) {
+        editor.actions.undoDocumentHistory();
+        return { status: "handled" };
+      }
+      if (event.fingerCount === 3 && context.canvas.isOperationEnabled("redo")) {
+        editor.actions.redoDocumentHistory();
+        return { status: "handled" };
+      }
       return { status: "ignored" };
     },
   };

@@ -479,6 +479,8 @@ describe("WorkbenchApp", () => {
   beforeEach(() => {
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+    // 最近输入方式是全局记录的；每个用例从键盘/鼠标开始，不受前一用例的笔或触控输入影响。
+    window.dispatchEvent(new KeyboardEvent("keydown"));
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);

@@ -1052,3 +1052,94 @@
   height: 14px;
   color: var(--text-2);
 }
+
+// 设备快捷栏：贴在画布工具条一侧的底角，放置中也常驻；超出宽度时横向滑动。
+.canvas-hotbar {
+  position: absolute;
+  grid-area: canvas;
+  align-self: end;
+  justify-self: start;
+  bottom: 10px;
+  left: var(--canvas-hotbar-edge-offset, 76px);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: calc(100% - var(--canvas-hotbar-edge-offset, 76px) - 16px);
+  padding: 5px;
+  overflow-x: auto;
+  border: 1px solid var(--in-canvas-toolbar-button-border);
+  border-radius: 14px;
+  background: var(--in-canvas-toolbar-button-bg);
+  box-shadow: 0 10px 28px var(--in-canvas-toolbar-shadow);
+  backdrop-filter: blur(10px);
+  scrollbar-width: none;
+  touch-action: pan-x;
+}
+
+.canvas-hotbar.is-right {
+  right: var(--canvas-hotbar-edge-offset, 76px);
+  left: auto;
+  justify-self: end;
+  flex-direction: row-reverse;
+}
+
+.canvas-hotbar-button {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--canvas-tool-rail-button-size, 44px);
+  height: var(--canvas-tool-rail-button-size, 44px);
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  touch-action: pan-x;
+}
+
+.canvas-hotbar-button:hover {
+  border-color: var(--in-canvas-toolbar-button-hover-border);
+  background: var(--in-canvas-toolbar-button-hover-bg);
+}
+
+.canvas-hotbar-button.is-active {
+  border-color: var(--in-canvas-toolbar-active-border);
+  background: var(--in-canvas-toolbar-active-bg);
+}
+
+.canvas-hotbar-button img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.canvas-hotbar-peek {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: 1;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--surface-1);
+  box-shadow: 0 4px 12px var(--in-canvas-toolbar-shadow);
+  color: var(--text-0);
+  font-size: 12px;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.canvas-hotbar-held {
+  flex: none;
+  max-width: 14em;
+  padding: 0 8px;
+  overflow: hidden;
+  color: var(--in-canvas-toolbar-button-text);
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

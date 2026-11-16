@@ -2384,8 +2384,11 @@
   color: var(--text-0);
 }
 
-.placement-panel-group {
-  scroll-margin-top: 112px;
+.placement-category-chip.is-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text-0);
+  font-weight: 600;
 }
 
 .placement-button-list.is-tile-grid {

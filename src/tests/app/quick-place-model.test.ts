@@ -8,6 +8,7 @@ import {
   normalizeQuickPlaceFavorites,
   placeQuickPlaceFavoriteAtSlot,
   removeQuickPlaceFavoriteAtSlot,
+  resolveCanvasHotbarDeviceIds,
   resolveQuickPlaceSlotIndexFromKey,
   triggerQuickPlaceDeviceSelection,
 } from "@/app/quick-place";
@@ -184,3 +185,16 @@ function emptyModifiers() {
     shift: false,
   };
 }
+
+describe("canvas hotbar order", () => {
+  it("puts favourites first in slot order, then recents, without duplicates or unavailable devices", () => {
+    const ids = resolveCanvasHotbarDeviceIds({
+      favorites: ["grinder_1", null, "furnance_1"],
+      recents: ["furnance_1", "pipe_splitter", "planter_1"],
+      isAvailable: (deviceId) => deviceId !== "pipe_splitter",
+    });
+
+    expect(ids).toEqual(["grinder_1", "furnance_1", "planter_1"]);
+  });
+});
+

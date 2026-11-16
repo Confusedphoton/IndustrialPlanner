@@ -31,15 +31,16 @@ describe("placement floating toolbar while a pen hovers toward it", () => {
     expect(followed.y).toBeGreaterThan(frozen.y + 150);
   });
 
-  it("releases the hold when the pen lands on the canvas", () => {
-    const { canvas, context, module } = createTouchPlacement();
+  it("releases the hold and follows the preview when a tap moves it elsewhere", () => {
+    const { canvas, context, editor, module } = createTouchPlacement();
     const frozen = { ...canvas.state.runtime.canvasFloatingToolbar.anchor! };
 
     module.handle(hoverMove({ x: frozen.x + 70, y: frozen.y + 40 }), context);
     expect(canvas.state.runtime.canvasFloatingToolbar.anchor).toEqual(frozen);
 
-    module.handle(touchTap({ x: frozen.x + 70, y: frozen.y + 40 }), context);
-    expect(canvas.state.runtime.canvasFloatingToolbar.anchor!.x).toBeGreaterThan(frozen.x + 40);
+    module.handle(touchTap({ x: frozen.x + 300, y: frozen.y + 250 }), context);
+    expect(editor.state.collections.preview.length).toBe(1);
+    expect(canvas.state.runtime.canvasFloatingToolbar.anchor!.x).toBeGreaterThan(frozen.x + 200);
   });
 
   it("follows the preview again after the viewport zooms", () => {
