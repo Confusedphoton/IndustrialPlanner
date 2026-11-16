@@ -1217,41 +1217,24 @@
   white-space: nowrap;
 }
 
-// 线末端提示：贴在开放末端外侧那一格的中心；展开后以同一点为中心列出消费设备。
-.line-end-chip {
-  position: fixed;
-  z-index: 30;
-  width: 0;
-  height: 0;
-}
-
+// 线末端提示：开放末端之外的「+」按钮；展开后为收在画布内的设备列表，每行图标加名称。
 .line-end-chip-button,
 .line-end-chip-list {
-  position: absolute;
-  left: 0;
-  top: 0;
-  transform: translate(-50%, -50%);
-}
-
-.line-end-chip-button,
-.line-end-chip-consumer {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: 1px solid var(--in-canvas-toolbar-button-border);
-  background: var(--in-canvas-toolbar-button-bg);
+  position: fixed;
+  z-index: 30;
   box-shadow: 0 6px 18px var(--in-canvas-toolbar-shadow);
-  backdrop-filter: blur(8px);
 }
 
 .line-end-chip-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   gap: 2px;
-  height: 44px;
-  padding: 0 10px 0 8px;
-  border-color: var(--accent);
+  padding: 0 8px;
+  border: 1px solid var(--accent);
   border-radius: 999px;
+  background: var(--in-canvas-toolbar-button-bg);
+  backdrop-filter: blur(8px);
   color: var(--accent);
 }
 
@@ -1262,34 +1245,72 @@
 }
 
 .line-end-chip-list {
-  display: grid;
-  grid-template-columns: repeat(4, 52px);
-  gap: 6px;
-  padding: 8px;
-  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  overflow-y: auto;
+  border-radius: 12px;
   background: var(--surface-1);
-  box-shadow: 0 8px 24px var(--in-canvas-toolbar-shadow);
+  overscroll-behavior: contain;
 }
 
 .line-end-chip-consumer {
-  width: 52px;
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
   height: 52px;
-  border-radius: 12px;
+  padding: 0 8px 0 4px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-0);
+  text-align: left;
 }
 
-.line-end-chip-consumer img {
-  width: 38px;
-  height: 38px;
+.line-end-chip-consumer:hover,
+.line-end-chip-consumer:focus-visible {
+  background: var(--in-canvas-toolbar-active-bg);
+}
+
+.line-end-chip-icon {
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 44px;
+}
+
+.line-end-chip-icon img {
+  width: 44px;
+  height: 44px;
   object-fit: contain;
   pointer-events: none;
 }
 
-.line-end-chip-consumer .line-end-chip-output {
+.line-end-chip-icon .line-end-chip-output {
   position: absolute;
-  right: 2px;
-  bottom: 2px;
+  right: -2px;
+  bottom: -2px;
   width: 20px;
   height: 20px;
+}
+
+.line-end-chip-name {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.line-end-chip-name > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.line-end-chip-name > span {
+  color: var(--text-1);
 }
 
 // 暂存托盘：快捷栏里以分隔线隔开的一段，每项是一整组设备，右下角为设备数。

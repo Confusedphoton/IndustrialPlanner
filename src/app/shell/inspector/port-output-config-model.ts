@@ -1,6 +1,7 @@
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { GridEdge, GridRotation } from "@/domain/shared/grid";
+import { configuredOutputPortItemId } from "@/shared/device-item-labels";
 import { resolveRotatedPortGeometry } from "@/shared/geometry/port";
 import {
   INSPECTOR_TYPE,
@@ -88,27 +89,7 @@ export function resolveOutputGroupRows(
 
   for (const numberedPortGroup of resolveOutputPortGroupNumbering(definition, portGroupIds)) {
     const { groupIndex, portGroup, portLabel } = numberedPortGroup;
-    const firstPortIndex = 0;
-    const configPath = `portGroups[${groupIndex}].ports[${firstPortIndex}].acceptRule`;
-    const configOverride = entity.config[configPath];
-
-    let currentItemId: string | null = null;
-    if (
-      configOverride !== undefined
-      && configOverride !== null
-      && typeof configOverride === "object"
-    ) {
-      const base = (configOverride as Record<string, unknown>).base;
-      if (
-        base !== undefined
-        && base !== null
-        && typeof base === "object"
-        && (base as Record<string, unknown>).kind === "item"
-        && typeof (base as Record<string, unknown>).itemId === "string"
-      ) {
-        currentItemId = (base as Record<string, unknown>).itemId as string;
-      }
-    }
+    const currentItemId = configuredOutputPortItemId(definition, entity, portGroup.id);
 
     const kindLabel = resolveOutputKindLabel(portGroup);
 

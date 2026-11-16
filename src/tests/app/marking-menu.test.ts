@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  fitMarkingMenuOrigin,
   resolveMarkingMenuDeviceId,
+  resolveMarkingMenuGroupPosition,
+  resolveMarkingMenuItemPosition,
   trackMarkingMenuPointer,
   type MarkingMenuState,
 } from "@/app/canvas/marking-menu";
@@ -11,8 +14,10 @@ const groups = Array.from({ length: 8 }, (_, groupIndex) => ({
   deviceIds: Array.from({ length: groupIndex === 6 ? 20 : 4 }, (_, deviceIndex) => `g${groupIndex}-d${deviceIndex}`),
 }));
 
-function openAt(origin = { x: 500, y: 500 }): MarkingMenuState {
-  return { origin, pointer: "mouse", mode: "drag", groups, level: 1, groupIndex: null, itemIndex: null };
+const WIDE_CANVAS = { left: 0, top: 0, width: 2000, height: 2000 };
+
+function openAt(origin = { x: 500, y: 500 }, bounds = WIDE_CANVAS): MarkingMenuState {
+  return { origin: fitMarkingMenuOrigin(origin, bounds), bounds, pointer: "mouse", mode: "drag", groups, level: 1, groupIndex: null, itemIndex: null };
 }
 
 function flick(state: MarkingMenuState, path: ReadonlyArray<{ x: number; y: number }>): MarkingMenuState {
@@ -20,6 +25,30 @@ function flick(state: MarkingMenuState, path: ReadonlyArray<{ x: number; y: numb
 }
 
 describe("marking menu", () => {
+  it("keeps every group and device on the canvas when opened in a corner", () => {
+    const bounds = { left: 0, top: 0, width: 1180, height: 540 };
+    const menu = openAt({ x: 4, y: 530 }, bounds);
+    const inside = (point: { x: number; y: number }) => (
+      point.x >= bounds.left && point.x <= bounds.left + bounds.width && point.y >= bounds.top && point.y <= bounds.top + bounds.height
+    );
+
+    groups.forEach((group, groupIndex) => {
+      expect(inside(resolveMarkingMenuGroupPosition(menu.origin, groupIndex, groups.length))).toBe(true);
+      group.deviceIds.forEach((_, itemIndex) => {
+        expect(inside(resolveMarkingMenuItemPosition(menu, groupIndex, itemIndex))).toBe(true);
+      });
+    });
+  });
+
+  it("selects the device drawn under the pointer after the ring has been moved in from the edge", () => {
+    const menu = openAt({ x: 4, y: 530 }, { left: 0, top: 0, width: 1180, height: 540 });
+    const target = resolveMarkingMenuItemPosition(menu, 2, 1);
+
+    const chosen = flick(menu, [resolveMarkingMenuGroupPosition(menu.origin, 2, groups.length), { x: menu.origin.x + 130, y: menu.origin.y }, target]);
+
+    expect(resolveMarkingMenuDeviceId(chosen)).toBe("g2-d1");
+  });
+
   it("picks a group's first device with two strokes in the group's direction, without looking", () => {
     // 第 2 组（右方）：先向右划进分类，再沿同一方向划一段。
     const menu = flick(openAt(), [{ x: 560, y: 500 }, { x: 640, y: 500 }, { x: 700, y: 500 }]);

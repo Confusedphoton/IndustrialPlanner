@@ -24,7 +24,7 @@ import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 import { readAdmissionRule } from "@/shared/registry/admission-rule";
-import { matchesItemAcceptRule } from "./item-domain";
+import { matchesItemAcceptRule } from "@/shared/registry/item-accept-rule";
 
 type PortGroupDefinition = EntityDefinition["portGroups"][number];
 type PortDefinition = PortGroupDefinition["ports"][number];
@@ -115,7 +115,7 @@ export function AdmissionRuleInspector({
         title: translate("encyclopediaPicker.title.item"),
         filterItem: (item: ItemDefinition) =>
           matchesItemAcceptRule(
-            item,
+            item.id,
             row.port.acceptRule,
             appHost.workspace.registry.queries.resolveItemDomain,
           ),
@@ -536,7 +536,7 @@ export function applyAdmissionItemToEntity(options: {
       continue;
     }
     const row = resolveAdmissionPortRow(definition, entity, declaration, null, registry.queries);
-    if (row === null || !matchesItemAcceptRule(item, row.port.acceptRule, registry.queries.resolveItemDomain)) {
+    if (row === null || !matchesItemAcceptRule(item.id, row.port.acceptRule, registry.queries.resolveItemDomain)) {
       continue;
     }
     patch[row.acceptRulePath] = createItemAcceptRule(item.id);

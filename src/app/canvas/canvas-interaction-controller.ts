@@ -16,7 +16,7 @@ import type { GestureActionRouter } from "../input/gesture/actions";
 import { createDemandFrameDriver } from "@/shared/timing/demand-frame-driver";
 import type { SinglePlacementRequest } from "@/domain/editor/types/editor-session-types";
 import type { GridPoint } from "@/domain/shared/grid";
-import type { ClientPixelPoint } from "@/domain/shared/client-pixel";
+import type { ClientPixelPoint, ClientPixelRect } from "@/domain/shared/client-pixel";
 import { PreviewEdgePan, type ViewportObstruction } from "./preview-edge-pan";
 
 export interface PlacementPaletteEntry {
@@ -105,6 +105,20 @@ export class CanvasInteractionController {
   public readonly edgePan: PreviewEdgePan;
   public get viewportObstruction(): ViewportObstruction {
     return this.options.readViewportObstruction?.() ?? NO_VIEWPORT_OBSTRUCTION;
+  }
+
+  /** 画布视口去掉两侧被工具条占用的带后剩下的区域：浮在画布上的菜单与提示应收在其中。 */
+  public get unobstructedClientRect(): ClientPixelRect {
+    const viewport = this.view.state.clientRect;
+    const obstruction = this.viewportObstruction;
+    const left = Math.max(0, obstruction.left);
+    const right = Math.max(0, obstruction.right);
+    return {
+      left: viewport.left + left,
+      top: viewport.top,
+      width: Math.max(0, viewport.width - left - right),
+      height: viewport.height,
+    };
   }
 
   public get editor(): EditorContract | null { return this.options.readEditor(); }
@@ -285,7 +299,6 @@ export class CanvasInteractionController {
    * 本来就可见时不动视图；画布两侧被常驻浮层（工具条）占用的宽度也要避开。
    */
   public keepEntityInView(entityId: string): void {
-    const obstruction = this.viewportObstruction;
     const entity = this.editor?.queries.getEntityById(entityId);
     if (entity == null) return;
     const definition = this.options.registry.queries.findEntityDefinition(entity.definitionId);
@@ -295,6 +308,7 @@ export class CanvasInteractionController {
     const bottomRight = this.view.queries.findClientRectForGridCell({ x: bounds.x + bounds.width - 1, y: bounds.y + bounds.height - 1 });
     if (topLeft === null || bottomRight === null) return;
     const viewport = this.view.state.clientRect;
+    const visible = this.unobstructedClientRect;
     const margin = 24;
     const left = Math.min(topLeft.left, bottomRight.left);
     const right = Math.max(topLeft.left + topLeft.width, bottomRight.left + bottomRight.width);
@@ -306,10 +320,10 @@ export class CanvasInteractionController {
     const dx = shift(
       left,
       right,
-      viewport.left + obstruction.left + margin,
-      viewport.left + viewport.width - obstruction.right - margin,
+      visible.left + margin,
+      visible.left + visible.width - margin,
     );
-    const dy = shift(top, bottom, viewport.top + margin, viewport.top + viewport.height - margin);
+    const dy = shift(top, bottom, visible.top + margin, visible.top + visible.height - margin);
     if (dx === 0 && dy === 0) return;
     const start = { x: viewport.left + viewport.width / 2, y: viewport.top + viewport.height / 2 };
     this.view.actions.moveViewportByClientPixelVector({ startClientPixel: start, endClientPixel: { x: start.x + dx, y: start.y + dy } });

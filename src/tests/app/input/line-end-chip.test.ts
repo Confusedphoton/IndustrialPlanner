@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AppHost } from "@/app/host/app-host";
-import { placeConsumerAtLineEnd } from "@/app/input/gesture/actions";
+import { resolveLineEndSnapPlacements } from "@/app/canvas/line-end-chip";
+import { placeConsumerAtLineEnd, resolveLineEndTarget } from "@/app/input/gesture/actions";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createWorldDocument, type WorldEntity } from "@/domain/document/world-document";
@@ -49,7 +50,7 @@ describe("offering a consumer at the open end of a line dragged from a port", ()
     expect(chip?.endCell).toEqual(end);
     const beltCount = entities(appHost).length - 1;
 
-    placeConsumerAtLineEnd(appHost.mainCanvas, { deviceId: GRINDER_ID, config: null });
+    placeConsumerAtLineEnd(appHost.mainCanvas, { deviceId: GRINDER_ID, config: null }, "mouse");
 
     const grinder = entities(appHost).find((entity) => entity.definitionId === GRINDER_ID);
     expect(grinder).toBeDefined();
@@ -61,15 +62,72 @@ describe("offering a consumer at the open end of a line dragged from a port", ()
     expect(entities(appHost)).toHaveLength(beltCount + 1);
   });
 
-  it("goes away on the next canvas action", async () => {
+  it("goes away on the next canvas tap or Escape, but survives panning across empty canvas", async () => {
     const appHost = await createAppHost([furnace({ recipe: true })]);
     const { inside, delta } = furnaceBeltOutput(appHost);
     penDrag(appHost, inside, [{ x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 }]);
     expect(appHost.mainCanvas.state.runtime.lineEndChip).not.toBeNull();
 
-    penTap(appHost, { x: inside.x - delta.x * 10, y: inside.y - delta.y * 10 });
+    const empty = { x: inside.x - delta.x * 10 - 8, y: inside.y - delta.y * 10 - 8 };
+    penDrag(appHost, empty, [{ x: empty.x - 6, y: empty.y - 6 }]);
+    expect(appHost.mainCanvas.state.runtime.lineEndChip).not.toBeNull();
 
+    penTap(appHost, empty);
     expect(appHost.mainCanvas.state.runtime.lineEndChip).toBeNull();
+
+    penDrag(appHost, inside, [{ x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 }]);
+    appHost.gestureAdapter.handleKeyDown(new KeyboardEvent("keydown", { key: "Escape", code: "Escape" }));
+    expect(appHost.mainCanvas.state.runtime.lineEndChip).toBeNull();
+  });
+
+  it("no longer finds an open end once the line is undone", async () => {
+    const appHost = await createAppHost([furnace({ recipe: true })]);
+    const { inside, delta } = furnaceBeltOutput(appHost);
+    penDrag(appHost, inside, [{ x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 }]);
+    const chip = appHost.mainCanvas.state.runtime.lineEndChip!;
+    const editor = appHost.workspace.editor!;
+    expect(resolveLineEndTarget(appHost.mainCanvas, editor, chip.kind, chip.endCell)).not.toBeNull();
+
+    editor.actions.undoDocumentHistory();
+
+    expect(resolveLineEndTarget(appHost.mainCanvas, editor, chip.kind, chip.endCell)).toBeNull();
+  });
+
+  it("only snaps a machine by an input port that accepts the line's item", () => {
+    const acceptOnly = (itemId: string) => ({ base: { kind: "item" as const, itemId }, exclude: [] });
+    const port = (id: string, localCellX: number, itemId: string) => ({
+      id, localCellX, localCellY: 0, edge: "NORTH" as const, acceptRule: acceptOnly(itemId), priorityGroup: 0, roundRobinSeed: 0,
+    });
+    const definition = {
+      footprint: { width: 3, height: 3 },
+      portGroups: [{ id: "in", kind: 1, isPipe: false, direction: "input" as const, ports: [port("centre", 1, "item_other"), port("side", 0, "item_iron_nugget")] }],
+      portStorageBindings: [],
+      recipeChannels: [],
+    };
+
+    const placements = resolveLineEndSnapPlacements({
+      definition,
+      kind: "belt",
+      targetCell: { x: 10, y: 10 },
+      flowEdge: "SOUTH",
+      itemIds: ["item_iron_nugget"],
+      resolveItemDomain: () => 1,
+    });
+
+    expect(placements[0]).toEqual({ position: { x: 10, y: 10 }, rotation: 0 });
+    expect(placements).not.toContainEqual({ position: { x: 9, y: 10 }, rotation: 0 });
+  });
+
+  it("is offered after drawing a line out of a port with the belt tool as well", async () => {
+    const appHost = await createAppHost([furnace({ recipe: true })]);
+    const { inside, delta } = furnaceBeltOutput(appHost);
+    appHost.mainCanvas.actions.setActiveTool("logistics-placement");
+    appHost.mainCanvas.state.runtime.logisticsPlacement.kind = "belt";
+
+    penDrag(appHost, inside, [{ x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 }]);
+
+    expect(appHost.mainCanvas.state.activeTool).toBe("logistics-placement");
+    expect(appHost.mainCanvas.state.runtime.lineEndChip?.itemIds).toEqual(["item_iron_nugget"]);
   });
 
   it("stays out of the way when the line carries nothing it can name", async () => {

@@ -102,6 +102,30 @@ describe("holding tray", () => {
   });
 });
 
+describe("a full holding tray", () => {
+  it("leaves the selection on the canvas instead of dropping a group that is still waiting to be placed", async () => {
+    const { appHost } = await createAppHostWithGrinder({ secondGrinderAt: { x: 26, y: 20 } });
+    const editor = appHost.workspace.editor!;
+    editor.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId: "second" });
+    uiTap(appHost, "canvas-floating-toolbar-button-hold");
+    const first = holdingTrayState.items[0]!;
+    try {
+      for (let index = 1; holdingTrayState.items.length < 12; index += 1) {
+        holdingTrayState.push({ ...first.blueprint, blueprintId: `${first.blueprint.blueprintId}-${index}` });
+      }
+
+      editor.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId: "grinder" });
+      uiTap(appHost, "canvas-floating-toolbar-button-hold");
+
+      expect(Object.keys(editor.document.getSnapshot().entities)).toEqual(["grinder"]);
+      expect(holdingTrayState.items).toHaveLength(12);
+      expect(holdingTrayState.items).toContainEqual(first);
+    } finally {
+      for (const item of [...holdingTrayState.items]) holdingTrayState.discard(item.id);
+    }
+  });
+});
+
 describe("multi-finger taps", () => {
   it("undoes with a two-finger tap and redoes with a three-finger tap", async () => {
     const { appHost } = await createAppHostWithGrinder();

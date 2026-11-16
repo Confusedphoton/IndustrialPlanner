@@ -27,6 +27,7 @@ import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 import { createLogger } from "@/shared/logging/logger";
 
 import type { GestureHandleResult, GestureMappingModule, ShortcutActionRoute } from "../types";
+import { offerLineEndChip } from "./hypergryph-line-end-chip-gesture-module";
 import {
   PLACEMENT_DEVICE_SHORTCUT_KEYS,
   resolveDeviceIdForPlacementGroupShortcut,
@@ -1136,11 +1137,15 @@ function finishMouseLogisticsDrag(
   commit: boolean,
 ): void {
   const draftState = editor.queries.resolveLogisticsDraftState();
+  const endCell = draftState?.cells.at(-1)?.gridPoint ?? null;
   const applied = commit && draftState?.canApply === true && editor.actions.applyLogisticDraft();
   if (!applied) {
     safelyCancelLogisticsDraft(editor);
   }
   softResetLogisticsRuntime(canvas);
+  if (applied && endCell !== null) {
+    offerLineEndChip(canvas, editor, draftState.kind, endCell);
+  }
 }
 
 function logMouseLogisticsPlacementFailure(
@@ -1161,6 +1166,7 @@ function applyTouchLogisticsPlacement(
   canvas: CanvasInteractionController,
   editor: NonNullable<AppHost["workspace"]["editor"]>,
 ): void {
+  const draftState = editor.queries.resolveLogisticsDraftState();
   const applied = editor.actions.applyLogisticDraft();
   if (!applied) {
     canvas.state.runtime.logisticsPlacement.statusMessageKey =
@@ -1170,6 +1176,10 @@ function applyTouchLogisticsPlacement(
 
   softResetLogisticsRuntime(canvas);
   canvas.actions.hideCanvasFloatingToolbar();
+  const endCell = draftState?.cells.at(-1)?.gridPoint ?? null;
+  if (draftState !== null && endCell !== null) {
+    offerLineEndChip(canvas, editor, draftState.kind, endCell);
+  }
 }
 
 function moveTouchLogisticsEnd(options: {

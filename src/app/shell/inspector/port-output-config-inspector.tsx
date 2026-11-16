@@ -24,7 +24,7 @@ import { InspectorCollapsiblePanel } from "@/app/shell/inspector/inspector-colla
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
-import { matchesItemAcceptRule } from "./item-domain";
+import { matchesItemAcceptRule } from "@/shared/registry/item-accept-rule";
 
 
 function resolveItemIconSrc(item: ItemDefinition | null): string | null {
@@ -241,5 +241,5 @@ function matchesOutputPortGroupAcceptRule(
     return itemDomain !== null && (fallbackFlags & itemDomain) !== 0;
   }
 
-  return matchesItemAcceptRule(item, firstPort.acceptRule, resolveItemDomain);
+  return matchesItemAcceptRule(item.id, firstPort.acceptRule, resolveItemDomain);
 }

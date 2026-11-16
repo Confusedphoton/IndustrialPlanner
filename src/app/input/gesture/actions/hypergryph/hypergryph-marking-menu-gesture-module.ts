@@ -2,6 +2,7 @@ import { runInAction } from "mobx";
 
 import type { CanvasInteractionController } from "@/app/canvas";
 import {
+  fitMarkingMenuOrigin,
   resolveMarkingMenuDeviceId,
   trackMarkingMenuPointer,
   type MarkingMenuGroup,
@@ -192,7 +193,17 @@ function openMarkingMenu(canvas: CanvasInteractionController, pointer: "mouse" |
   if (groups.length === 0) {
     return false;
   }
-  const menu: MarkingMenuState = { origin, pointer, mode: "drag", groups, level: 1, groupIndex: null, itemIndex: null };
+  const bounds = canvas.unobstructedClientRect;
+  const menu: MarkingMenuState = {
+    origin: fitMarkingMenuOrigin(origin, bounds),
+    bounds,
+    pointer,
+    mode: "drag",
+    groups,
+    level: 1,
+    groupIndex: null,
+    itemIndex: null,
+  };
   runInAction(() => {
     canvas.state.runtime.markingMenu = menu;
   });

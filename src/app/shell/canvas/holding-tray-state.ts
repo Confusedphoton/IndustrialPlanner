@@ -25,19 +25,26 @@ export class HoldingTrayState {
     makeAutoObservable(this, {}, { autoBind: true });
   }
 
-  public push(blueprint: BlueprintDocument): void {
+  public get isFull(): boolean {
+    return this.items.length >= MAX_TRAY_ITEMS;
+  }
+
+  /** 托盘已满时不收（返回 false），由调用方保留画布上的设备；不会挤掉还没放回去的组。 */
+  public push(blueprint: BlueprintDocument): boolean {
+    if (this.isFull) return false;
     const counts = new Map<string, number>();
     for (const entityId of blueprint.entityOrder) {
       const definitionId = blueprint.entities[entityId]?.definitionId;
       if (definitionId !== undefined) counts.set(definitionId, (counts.get(definitionId) ?? 0) + 1);
     }
     const iconDeviceId = [...counts.entries()].sort((left, right) => right[1] - left[1])[0]?.[0];
-    if (iconDeviceId === undefined) return;
+    if (iconDeviceId === undefined) return false;
     this.items = [
       { id: blueprint.blueprintId, blueprint, iconDeviceId, deviceCount: blueprint.entityOrder.length },
       ...this.items,
-    ].slice(0, MAX_TRAY_ITEMS);
+    ];
     this.persist();
+    return true;
   }
 
   /** 托盘里的一组已放回画布：从托盘移除。 */

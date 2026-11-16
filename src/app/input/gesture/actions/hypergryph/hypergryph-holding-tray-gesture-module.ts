@@ -38,7 +38,10 @@ function holdSelection(canvas: CanvasInteractionController): boolean {
   if (blueprint === null) {
     return false;
   }
-  holdingTrayState.push(blueprint);
+  if (!holdingTrayState.push(blueprint)) {
+    canvas.actions.showCanvasToast("canvasHotbar.trayFull");
+    return true;
+  }
   editor.actions.deleteCollection(EntityCollectionType.selection);
   canvas.actions.hideCanvasFloatingToolbar();
   canvas.actions.hideCanvasRightDockToolbar();

@@ -55,6 +55,7 @@ export { createQuickPlaceGestureModule, openQuickPlace } from "./quick-place-ges
 export { pullFromHoldingTray } from "./hypergryph/hypergryph-holding-tray-gesture-module";
 export {
   closeLineEndChip,
+  resolveLineEndTarget,
   expandLineEndChip,
   placeConsumerAtLineEnd,
 } from "./hypergryph/hypergryph-line-end-chip-gesture-module";

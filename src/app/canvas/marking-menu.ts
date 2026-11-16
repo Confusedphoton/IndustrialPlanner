@@ -1,4 +1,4 @@
-import type { ClientPixelPoint } from "@/domain/shared/client-pixel";
+import type { ClientPixelPoint, ClientPixelRect } from "@/domain/shared/client-pixel";
 
 /**
  * 笔尖处的环形标记菜单：在画布空白处（放置中则任意处）按住，周围出现设备分类的一圈；
@@ -11,7 +11,10 @@ export interface MarkingMenuGroup {
 }
 
 export interface MarkingMenuState {
+  /** 分类圈的中心：按下的位置，靠近画布边缘时向内挪到整圈都看得见、够得着。 */
   readonly origin: ClientPixelPoint;
+  /** 菜单可用的画布区域；展开的设备圈同样收在其中。 */
+  readonly bounds: ClientPixelRect;
   readonly pointer: "mouse" | "touch";
   /** 按住后滑动选择（drag）；按住后原地松开则菜单留着，改为点按选择（tap）。 */
   readonly mode: "drag" | "tap";
@@ -30,6 +33,22 @@ export const MARKING_MENU_ENTER_RADIUS_PX = 118;
 export const MARKING_MENU_ITEM_INNER_RADIUS_PX = 82;
 export const MARKING_MENU_ITEM_OUTER_RADIUS_PX = 146;
 const INNER_RING_CAPACITY = 8;
+/** 圈上按钮的半径加留白：整圈距画布边缘至少这么远。 */
+const RING_EDGE_CLEARANCE_PX = 30;
+
+/** 把圈心挪进画布，使半径为 radius 的整圈留在画布内；画布不够大时居中。 */
+function fitRingCenter(point: ClientPixelPoint, bounds: ClientPixelRect, radius: number): ClientPixelPoint {
+  const inset = radius + RING_EDGE_CLEARANCE_PX;
+  const fit = (value: number, start: number, size: number) => (
+    size <= inset * 2 ? start + size / 2 : Math.min(Math.max(value, start + inset), start + size - inset)
+  );
+  return { x: fit(point.x, bounds.left, bounds.width), y: fit(point.y, bounds.top, bounds.height) };
+}
+
+/** 打开菜单时的圈心：按下的位置挪进画布，使分类圈完整可见。 */
+export function fitMarkingMenuOrigin(point: ClientPixelPoint, bounds: ClientPixelRect): ClientPixelPoint {
+  return fitRingCenter(point, bounds, MARKING_MENU_GROUP_RADIUS_PX);
+}
 
 export function resolveMarkingMenuGroupAngle(index: number, count: number): number {
   return -90 + index * 360 / count;
@@ -39,9 +58,14 @@ export function resolveMarkingMenuGroupPosition(origin: ClientPixelPoint, index:
   return pointAt(origin, resolveMarkingMenuGroupAngle(index, count), MARKING_MENU_GROUP_RADIUS_PX);
 }
 
-/** 分类展开后设备圈的中心：该分类图标的位置。 */
-export function resolveMarkingMenuItemCenter(state: Pick<MarkingMenuState, "origin" | "groups">, groupIndex: number): ClientPixelPoint {
-  return resolveMarkingMenuGroupPosition(state.origin, groupIndex, state.groups.length);
+/** 分类展开后设备圈的中心：该分类图标的位置，靠近画布边缘时向内挪到整圈可见。 */
+export function resolveMarkingMenuItemCenter(
+  state: Pick<MarkingMenuState, "origin" | "groups" | "bounds">,
+  groupIndex: number,
+): ClientPixelPoint {
+  const count = state.groups[groupIndex]?.deviceIds.length ?? 0;
+  const radius = count > INNER_RING_CAPACITY ? MARKING_MENU_ITEM_OUTER_RADIUS_PX : MARKING_MENU_ITEM_INNER_RADIUS_PX;
+  return fitRingCenter(resolveMarkingMenuGroupPosition(state.origin, groupIndex, state.groups.length), state.bounds, radius);
 }
 
 /** 设备在设备圈上的角度与半径；内圈第一个设备沿分类方向，顺着同一方向再划一次即选中。 */
@@ -62,7 +86,7 @@ export function resolveMarkingMenuItemPolar(
 }
 
 export function resolveMarkingMenuItemPosition(
-  state: Pick<MarkingMenuState, "origin" | "groups">,
+  state: Pick<MarkingMenuState, "origin" | "groups" | "bounds">,
   groupIndex: number,
   itemIndex: number,
 ): ClientPixelPoint {

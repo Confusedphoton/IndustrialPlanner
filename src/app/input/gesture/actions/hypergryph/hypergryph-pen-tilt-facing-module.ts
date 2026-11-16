@@ -29,7 +29,9 @@ export function createHypergryphPenTiltFacingModule(): GestureMappingModule<AppH
         return { status: "ignored" };
       }
       const source = event.sourceEvent as { pointerType?: string; tiltX?: number; tiltY?: number } | null;
-      const facing = source?.pointerType === "pen" ? resolveTiltFacing(source.tiltX ?? 0, source.tiltY ?? 0) : null;
+      const facing = source?.pointerType === "pen"
+        ? resolveTiltFacing(source.tiltX ?? 0, source.tiltY ?? 0, canvas.view.state.displayRotation)
+        : null;
       const preview = editor.queries.getEntityById(editor.state.collections.preview[0]!);
       if (facing === null || preview === null || preview.rotation === facing) {
         return { status: "ignored" };
@@ -43,12 +45,15 @@ export function createHypergryphPenTiltFacingModule(): GestureMappingModule<AppH
   };
 }
 
-/** 倾斜方向量化为四个朝向：向上倾为 0°，顺时针依次为 90°、180°、270°；接近竖直时为 null。 */
-export function resolveTiltFacing(tiltX: number, tiltY: number): GridRotation | null {
+/**
+ * 倾斜方向量化为四个朝向：在屏幕上向上倾为 0°，顺时针依次为 90°、180°、270°；接近竖直时为 null。
+ * 视图旋转后换算回网格朝向，让设备在屏幕上朝笔倾斜的方向。
+ */
+export function resolveTiltFacing(tiltX: number, tiltY: number, displayRotation: GridRotation): GridRotation | null {
   if (Math.hypot(tiltX, tiltY) < MIN_LEAN_DEGREES) {
     return null;
   }
-  const angle = Math.atan2(tiltX, -tiltY) * 180 / Math.PI;
+  const angle = Math.atan2(tiltX, -tiltY) * 180 / Math.PI - displayRotation;
   const quadrant = ((Math.round(angle / 90) % 4) + 4) % 4;
   return (quadrant * 90) as GridRotation;
 }

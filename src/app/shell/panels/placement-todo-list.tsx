@@ -125,7 +125,11 @@ export const PlacementTodoList = observer(function PlacementTodoList({
               device={{ deviceId: target.deviceId, config: target.config }}
               held={runtime.singlePlacementDeviceId === target.deviceId && heldRecipeIds.includes(entry.recipeId)}
               key={entry.recipeId}
-              label={`${outputName} · ${machineName} ${entry.placed}/${entry.needed}`}
+              label={t("placement.todoEntry")
+                .replace("{item}", outputName)
+                .replace("{machine}", machineName)
+                .replace("{placed}", String(entry.placed))
+                .replace("{needed}", String(entry.needed))}
               peekClassName={cm(styles, "placement-shelf-peek")}
             />
           );

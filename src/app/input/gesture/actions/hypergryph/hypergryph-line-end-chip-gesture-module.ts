@@ -3,14 +3,13 @@ import { runInAction } from "mobx";
 import type { CanvasInteractionController } from "@/app/canvas";
 import { resolveLineEndSnapPlacements } from "@/app/canvas/line-end-chip";
 import type { AppHost } from "@/app/host/app-host";
-import { resolveOutputGroupRows } from "@/app/shell/inspector/port-output-config-model";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { EditorContract } from "@/domain/editor/editor-contract";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { RegistryQuery } from "@/domain/registry/registry-query";
 import type { GridEdge, GridPoint } from "@/domain/shared/grid";
-import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 import type { LogisticsKind } from "@/domain/shared/logistics";
+import { outputPortItemIds } from "@/shared/device-item-labels";
 import { resolveGridEdgeDelta, rotateGridEdge } from "@/shared/geometry/port";
 
 import type { GestureMappingModule } from "../types";
@@ -20,8 +19,8 @@ import { holdDeviceForPlacement } from "./hypergryph-single-placement-gesture-mo
 const MAX_TRACE_CELLS = 4096;
 
 /**
- * 只观察不消费：线末端提示出现后，画布上的下一次点按、拖动、长按或切换工具都让它消失。
- * 缩放与平移视图不算操作，提示随视图跟着末端。
+ * 只观察不消费：线末端提示出现后，画布上的下一次点按、长按、从设备上开始的拖动、按 Esc 或切换工具都让它消失。
+ * 在空白处拖动（平移视图或框选）、双指与滚轮缩放不算操作，提示随视图跟着末端。
  */
 export function createHypergryphLineEndChipGestureModule(): GestureMappingModule<AppHost> {
   return {
@@ -32,10 +31,15 @@ export function createHypergryphLineEndChipGestureModule(): GestureMappingModule
         return { status: "ignored" };
       }
       switch (event.type) {
-        case "mouse tap":
-        case "touch tap":
         case "mouse dragstart":
         case "touch dragstart":
+          if (event.pointerEntity !== null) closeLineEndChip(context.canvas);
+          return { status: "ignored" };
+        case "key down":
+          if (event.key === "Escape") closeLineEndChip(context.canvas);
+          return { status: "ignored" };
+        case "mouse tap":
+        case "touch tap":
         case "mouse-long-press-ready":
         case "tap-long-press-ready":
         case "multi finger tap":
@@ -70,7 +74,7 @@ export function offerLineEndChip(
   kind: LogisticsKind,
   endCell: GridPoint,
 ): void {
-  const end = resolveOpenLineEnd(canvas, editor, kind, endCell);
+  const end = resolveLineEndTarget(canvas, editor, kind, endCell);
   const itemIds = end === null ? [] : traceLineItemIds(canvas, editor, kind, endCell);
   runInAction(() => {
     canvas.state.runtime.lineEndChip = end === null || itemIds.length === 0
@@ -81,11 +85,12 @@ export function offerLineEndChip(
 
 /**
  * 把选中的设备接到提示所在的线末端：按端口朝向找一个不冲突的摆法直接放下（一步撤销）；
- * 末端周围放不下时把设备交到手上，朝向已对准，由用户自己找位置。
+ * 末端周围放不下时提示原因，并把设备交到手上（朝向已对准），由用户自己找位置。
  */
 export function placeConsumerAtLineEnd(
   canvas: CanvasInteractionController,
   device: { readonly deviceId: string; readonly config: Readonly<Record<string, unknown>> | null },
+  source: "mouse" | "touch",
 ): void {
   const chip = canvas.state.runtime.lineEndChip;
   const editor = canvas.editor;
@@ -94,13 +99,19 @@ export function placeConsumerAtLineEnd(
   if (chip === null || editor === null || definition === null) {
     return;
   }
-  const end = resolveOpenLineEnd(canvas, editor, chip.kind, chip.endCell);
+  const end = resolveLineEndTarget(canvas, editor, chip.kind, chip.endCell);
   const placements = end === null ? [] : resolveLineEndSnapPlacements({
     definition,
     kind: chip.kind,
     targetCell: end.targetCell,
     flowEdge: end.flowEdge,
+    itemIds: chip.itemIds,
+    resolveItemDomain: canvas.registry.queries.resolveItemDomain,
   });
+  // 在传送带/管道工具里，鼠标悬停时可能还挂着下一条线的起笔预览；先收起，避免与设备放置混在一起。
+  if (editor.queries.resolveLogisticsDraftState() !== null) {
+    editor.actions.cancelLogisticsDraft();
+  }
   const config = device.config === null ? undefined : structuredClone(device.config) as Record<string, unknown>;
   for (const placement of placements) {
     editor.actions.createPositionedPlacementDraft([{ definitionId: definition.id, ...placement, config }]);
@@ -110,15 +121,16 @@ export function placeConsumerAtLineEnd(
     }
     editor.actions.cancelPlacementDraft();
   }
+  canvas.actions.showCanvasToast("lineEndChip.noRoom");
   const targetRect = canvas.view.queries.findClientRectForGridCell(chip.targetCell);
   holdDeviceForPlacement(canvas, { deviceId: definition.id, config: device.config, rotation: placements[0]?.rotation }, {
-    source: "mouse",
+    source,
     position: targetRect === null ? null : { x: targetRect.left + targetRect.width / 2, y: targetRect.top + targetRect.height / 2 },
   });
 }
 
-/** 末格是指定族的物流线、输出方向外侧是空格时返回该空格与流出方向。 */
-function resolveOpenLineEnd(
+/** 末格是指定族的物流线、输出方向外侧是空格时返回该空格与流出方向；否则（如线已被撤销或接上）为 null。 */
+export function resolveLineEndTarget(
   canvas: CanvasInteractionController,
   editor: EditorContract,
   kind: LogisticsKind,
@@ -181,30 +193,10 @@ function traceLineItemIds(
       return [];
     }
     const device = editor.queries.getEntityById(port.endpoint.entityId);
-    return device === null ? [] : resolveDeviceOutputItemIds(registry, device, port.endpoint.portGroupId, kind);
+    const definition = device === null ? null : canvas.registry.queries.findEntityDefinition(device.definitionId);
+    return device === null || definition === null
+      ? []
+      : [...outputPortItemIds(definition, device, port.endpoint.portGroupId, canvas.registry)];
   }
   return [];
-}
-
-/** 输出端口运送的物品：端口设定了出口物品时取设定，否则取设备配方中与该族同域的产物。 */
-function resolveDeviceOutputItemIds(
-  registry: RegistryQuery,
-  device: WorldEntity,
-  portGroupId: string,
-  kind: LogisticsKind,
-): string[] {
-  const definition = registry.findEntityDefinition(device.definitionId);
-  if (definition === null) {
-    return [];
-  }
-  const configured = resolveOutputGroupRows(definition, [portGroupId], device)[0]?.currentItemId ?? null;
-  if (configured !== null) {
-    return [configured];
-  }
-  const channelRecipes = device.config.channelRecipes;
-  const recipeIds = typeof channelRecipes === "object" && channelRecipes !== null
-    ? Object.values(channelRecipes as Record<string, unknown>).filter((value): value is string => typeof value === "string")
-    : [];
-  const itemIds = recipeIds.flatMap((recipeId) => registry.findRecipeDefinition(recipeId)?.outputs.map((output) => output.itemId) ?? []);
-  return [...new Set(itemIds)].filter((itemId) => (registry.resolveItemDomain(itemId) === ItemDomainFlag.Solid) === (kind === "belt"));
 }
