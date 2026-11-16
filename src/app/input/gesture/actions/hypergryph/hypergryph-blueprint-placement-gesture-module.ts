@@ -30,6 +30,7 @@ import {
   rotatePlacementPreview,
   syncPlacementEntryUi,
 } from "./hypergryph-single-placement-gesture-module";
+import { holdingTrayState } from "@/app/shell/canvas/holding-tray-state";
 
 const BLUEPRINT_PREVIEW_PLACE_BUTTON_ID = "blueprint-preview-place-button";
 const RIGHT_DOCK_COPY_BUTTON_ID = "canvas-right-dock-toolbar-button-copy";
@@ -675,6 +676,8 @@ function applyBlueprintPlacement(
     if (!applied) {
       return;
     }
+    // 从暂存托盘拿回的一组放下后离开托盘；取消放置则仍留在托盘里。
+    holdingTrayState.markPlaced(record.blueprintId);
 
     if (options.continuous) {
       canvas.state.runtime.placementAnchor = placementAnchor;

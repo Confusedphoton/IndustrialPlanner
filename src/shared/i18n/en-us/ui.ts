@@ -1023,6 +1023,8 @@ const UI: Record<string, string> = {
     "placement.todo": "To place",
     "placement.showShelf": "Narrow shelf",
     "placement.showFullPalette": "Full palette",
+    "canvasHotbar.tray": "Holding tray",
+    "canvasHotbar.discard": "Discard",
     "toolbar.canvasTools": "Canvas Tools",
     "toolbar.canvasToolsMove": "Move toolbar (drag to either edge)",
     "toolbar.canvasToolsMore": "More view tools",

@@ -1215,6 +1215,8 @@ export type UiKey =
   | "placement.todo"
   | "placement.showShelf"
   | "placement.showFullPalette"
+  | "canvasHotbar.tray"
+  | "canvasHotbar.discard"
   | "toolbar.canvasTools"
   | "toolbar.canvasToolsMove"
   | "toolbar.canvasToolsMore"

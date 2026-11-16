@@ -1016,6 +1016,8 @@ const UI: Record<string, string> = {
     "placement.todo": "待放置",
     "placement.showShelf": "窄设备架",
     "placement.showFullPalette": "完整面板",
+    "canvasHotbar.tray": "暂存托盘",
+    "canvasHotbar.discard": "丢弃",
     "toolbar.canvasTools": "画布工具",
     "toolbar.canvasToolsMove": "移动工具条（可拖到任一侧）",
     "toolbar.canvasToolsMore": "更多视图工具",

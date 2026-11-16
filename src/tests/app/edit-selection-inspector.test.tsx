@@ -103,7 +103,8 @@ describe("EditSelectionInspector", () => {
   const actionButtonList = container.querySelector(".selection-inspector-action-button-list") as HTMLElement | null;
 
   expect(actionStrip).not.toBeNull();
-  expect(actionButtonList?.style.gridTemplateColumns).toBe("repeat(5, minmax(0, 1fr))");
+  expect(actionButtonList?.style.gridTemplateColumns).toBe("repeat(6, minmax(0, 1fr))");
+    expect(container.querySelector('[data-ui-button-id="canvas-floating-toolbar-button-hold"]')).not.toBeNull();
     expect(container.querySelector('[data-ui-button-id="canvas-floating-toolbar-button-pick-up"]')).not.toBeNull();
     expect(container.querySelector('[data-ui-button-id="canvas-floating-toolbar-button-move"]')).not.toBeNull();
     expect(container.querySelector('[data-ui-button-id="canvas-floating-toolbar-button-rotate"]')).not.toBeNull();

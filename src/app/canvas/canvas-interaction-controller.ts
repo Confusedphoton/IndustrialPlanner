@@ -137,6 +137,7 @@ export class CanvasInteractionController {
       "canvas-floating-toolbar-button-move": "move",
       "canvas-floating-toolbar-button-copy": "copy",
       "canvas-floating-toolbar-button-pick-up": "confirm-placement",
+      "canvas-floating-toolbar-button-hold": "delete",
       "canvas-floating-toolbar-button-save-blueprint": "save-blueprint",
       "canvas-floating-toolbar-button-delete": "delete",
       "canvas-floating-toolbar-button-delete-many": "delete",
