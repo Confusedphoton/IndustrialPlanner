@@ -1,3 +1,5 @@
+import { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AppHost } from "@/app/host/app-host";
@@ -12,6 +14,7 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createWorldDocument, type WorldEntity } from "@/domain/document/world-document";
 import type { GridPoint } from "@/domain/shared/grid";
+import { LineEndChipOverlay } from "@/app/shell/canvas/line-end-chip-overlay";
 import { thinPortDragHandles } from "@/app/shell/canvas/port-drag-handles";
 import { createRegistryContract } from "@/registry";
 import { resolveRotatedPortGeometry } from "@/shared/geometry/port";
@@ -28,7 +31,12 @@ beforeEach(() => {
   vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
 });
 
+let root: Root | null = null;
+
 afterEach(async () => {
+  act(() => root?.unmount());
+  root = null;
+  document.body.replaceChildren();
   try {
     for (const editor of editors) {
       await editor.internalHistory.flush();
@@ -83,6 +91,20 @@ describe("offering a consumer at the open end of a line dragged from a port", ()
 
     penDrag(appHost, inside, [{ x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 }]);
     appHost.gestureAdapter.handleKeyDown(new KeyboardEvent("keydown", { key: "Escape", code: "Escape" }));
+    expect(appHost.mainCanvas.state.runtime.lineEndChip).toBeNull();
+  });
+
+  it("clears the chip once its line is undone, so the device popup is not held back", async () => {
+    const appHost = await createAppHost([furnace({ recipe: true })]);
+    const container = document.body.appendChild(document.createElement("div"));
+    root = createRoot(container);
+    act(() => root!.render(<LineEndChipOverlay appHost={appHost} />));
+    const { inside, delta } = furnaceBeltOutput(appHost);
+    act(() => penDrag(appHost, inside, [{ x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 }]));
+    expect(appHost.mainCanvas.state.runtime.lineEndChip).not.toBeNull();
+
+    act(() => { appHost.workspace.editor!.actions.undoDocumentHistory(); });
+
     expect(appHost.mainCanvas.state.runtime.lineEndChip).toBeNull();
   });
 
@@ -191,6 +213,22 @@ describe("drawing a line out of a port with a finger", () => {
     drag.end(true);
 
     expect(entities(appHost).filter((entity) => entity.definitionId.startsWith("belt"))).toHaveLength(6);
+  });
+
+  it("stops drawing when canvas input is cancelled mid-drag", async () => {
+    const appHost = await createAppHost([furnace({ recipe: true })]);
+    const { inside, delta } = furnaceBeltOutput(appHost);
+    const handle = resolvePortDragHandles(appHost.mainCanvas, "furnace")
+      .find((entry) => entry.cell.x === inside.x + delta.x && entry.cell.y === inside.y + delta.y)!;
+
+    const drag = startPortHandleDrag(appHost.mainCanvas, handle.source)!;
+    drag.move(clientCenter(appHost, { x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 }));
+    appHost.mainCanvas.cancelInput();
+    drag.move(clientCenter(appHost, { x: inside.x + delta.x * 6, y: inside.y + delta.y * 6 }));
+    drag.end(true);
+
+    expect(entities(appHost)).toHaveLength(1);
+    expect(appHost.workspace.editor!.queries.resolveLogisticsDraftState()).toBeNull();
   });
 
   it("drops the draft when the drag is cancelled", async () => {

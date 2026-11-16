@@ -56,6 +56,7 @@ export function createHypergryphPortDragLogisticsGestureModule(): GestureMapping
     priority: 150,
     cancel() {
       session = null;
+      cancelPortHandleDrag();
     },
     handle(event, context) {
       const canvas = context.canvas;
@@ -139,10 +140,37 @@ export function startPortHandleDrag(
   if (session === null) {
     return null;
   }
+  cancelPortHandleDrag();
+  const drag = { canvas, editor, session };
+  activeHandleDrag = drag;
+  // 把手拖动不经过手势路由，但与路由共用取消：路由取消（切换工具、输入被挂起等）时草稿一并丢弃，之后的回调失效。
   return {
-    move: (position) => drivePortLine(canvas, editor, session, position),
-    end: (commit) => finishPortLine(canvas, editor, session, commit),
+    move: (position) => {
+      if (activeHandleDrag !== drag) return;
+      if (canvas.isInputSuspended) {
+        cancelPortHandleDrag();
+        return;
+      }
+      drivePortLine(canvas, editor, session, position);
+    },
+    end: (commit) => {
+      if (activeHandleDrag !== drag) return;
+      activeHandleDrag = null;
+      finishPortLine(canvas, editor, session, commit && !canvas.isInputSuspended);
+    },
   };
+}
+
+let activeHandleDrag: {
+  readonly canvas: CanvasInteractionController;
+  readonly editor: EditorContract;
+  readonly session: PortDragSession;
+} | null = null;
+
+function cancelPortHandleDrag(): void {
+  const drag = activeHandleDrag;
+  activeHandleDrag = null;
+  if (drag !== null) finishPortLine(drag.canvas, drag.editor, drag.session, false);
 }
 
 export interface PortDragHandle {

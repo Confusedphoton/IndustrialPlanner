@@ -196,6 +196,7 @@ function openMarkingMenu(canvas: CanvasInteractionController, pointer: "mouse" |
   const bounds = canvas.unobstructedClientRect;
   const menu: MarkingMenuState = {
     origin: fitMarkingMenuOrigin(origin, bounds),
+    pressPoint: origin,
     bounds,
     pointer,
     mode: "drag",

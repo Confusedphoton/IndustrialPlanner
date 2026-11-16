@@ -13,6 +13,8 @@ export interface MarkingMenuGroup {
 export interface MarkingMenuState {
   /** 分类圈的中心：按下的位置，靠近画布边缘时向内挪到整圈都看得见、够得着。 */
   readonly origin: ClientPixelPoint;
+  /** 实际按下的位置。滑动选择按相对它的位移计算，圈心被挪开时也不会一动就选中。 */
+  readonly pressPoint: ClientPixelPoint;
   /** 菜单可用的画布区域；展开的设备圈同样收在其中。 */
   readonly bounds: ClientPixelRect;
   readonly pointer: "mouse" | "touch";
@@ -99,8 +101,18 @@ export function resolveMarkingMenuItemPosition(
   return pointAt(resolveMarkingMenuItemCenter(state, groupIndex), polar.angle, polar.radius);
 }
 
-/** 按指针位置更新高亮：第一层选分类，越过分类圈进入第二层选设备，回到中心退回第一层。 */
+/**
+ * 按指针位置更新高亮：第一层选分类，越过分类圈进入第二层选设备，回到中心退回第一层。
+ * 判定用的是从按下处起的位移（平移到圈心上），所以圈心被挪进画布时，划动的方向与距离仍与平常一样。
+ */
 export function trackMarkingMenuPointer(state: MarkingMenuState, point: ClientPixelPoint): MarkingMenuState {
+  return trackFromOrigin(state, {
+    x: state.origin.x + point.x - state.pressPoint.x,
+    y: state.origin.y + point.y - state.pressPoint.y,
+  });
+}
+
+function trackFromOrigin(state: MarkingMenuState, point: ClientPixelPoint): MarkingMenuState {
   const groupCount = state.groups.length;
   if (groupCount === 0) {
     return state;
@@ -115,7 +127,7 @@ export function trackMarkingMenuPointer(state: MarkingMenuState, point: ClientPi
     if (fromOrigin < MARKING_MENU_ENTER_RADIUS_PX) {
       return { ...state, level: 1, groupIndex, itemIndex: null };
     }
-    return trackMarkingMenuPointer({ ...state, level: 2, groupIndex, itemIndex: null }, point);
+    return trackFromOrigin({ ...state, level: 2, groupIndex, itemIndex: null }, point);
   }
 
   const group = state.groups[state.groupIndex]!;

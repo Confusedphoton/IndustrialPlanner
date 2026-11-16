@@ -1,10 +1,10 @@
 import { observer } from "mobx-react-lite";
-import { useMemo, type MouseEvent } from "react";
+import { useEffect, useMemo, type MouseEvent } from "react";
 import LucidePlus from "~icons/lucide/plus";
 
 import { resolveLineEndSnapPlacements, type LineEndChipState } from "@/app/canvas/line-end-chip";
 import type { AppHost } from "@/app/host/app-host";
-import { expandLineEndChip, placeConsumerAtLineEnd, resolveLineEndTarget } from "@/app/input/gesture/actions";
+import { closeLineEndChip, expandLineEndChip, placeConsumerAtLineEnd, resolveLineEndTarget } from "@/app/input/gesture/actions";
 import { canPlaceEntityDefinitionInCurrentBase } from "@/app/placement-zone-availability";
 import {
   resolveProductionPlanningItemIconSrc,
@@ -103,12 +103,18 @@ export const LineEndChipOverlay = observer(function LineEndChipOverlay({ appHost
     [appHost, recipes, chip],
   );
 
+  // 末端已不再开放（撤销、删除、接上）或没有可接的设备时，提示作废：清掉状态，别让设备卡片继续给它让位。
+  const stale = chip !== null && editor !== null
+    && (consumers.length === 0 || resolveLineEndTarget(canvas, editor, chip.kind, chip.endCell) === null);
+  useEffect(() => {
+    if (stale) closeLineEndChip(canvas);
+  }, [canvas, stale]);
+
   if (
     chip === null
     || editor === null
+    || stale
     || (canvas.state.activeTool !== "select" && canvas.state.activeTool !== "logistics-placement")
-    || consumers.length === 0
-    || resolveLineEndTarget(canvas, editor, chip.kind, chip.endCell) === null
   ) {
     return null;
   }

@@ -17,7 +17,17 @@ const groups = Array.from({ length: 8 }, (_, groupIndex) => ({
 const WIDE_CANVAS = { left: 0, top: 0, width: 2000, height: 2000 };
 
 function openAt(origin = { x: 500, y: 500 }, bounds = WIDE_CANVAS): MarkingMenuState {
-  return { origin: fitMarkingMenuOrigin(origin, bounds), bounds, pointer: "mouse", mode: "drag", groups, level: 1, groupIndex: null, itemIndex: null };
+  return {
+    origin: fitMarkingMenuOrigin(origin, bounds),
+    pressPoint: origin,
+    bounds,
+    pointer: "mouse",
+    mode: "drag",
+    groups,
+    level: 1,
+    groupIndex: null,
+    itemIndex: null,
+  };
 }
 
 function flick(state: MarkingMenuState, path: ReadonlyArray<{ x: number; y: number }>): MarkingMenuState {
@@ -40,13 +50,14 @@ describe("marking menu", () => {
     });
   });
 
-  it("selects the device drawn under the pointer after the ring has been moved in from the edge", () => {
-    const menu = openAt({ x: 4, y: 530 }, { left: 0, top: 0, width: 1180, height: 540 });
-    const target = resolveMarkingMenuItemPosition(menu, 2, 1);
+  it("measures the stroke from where the pen went down when the ring has been moved in from the edge", () => {
+    const press = { x: 4, y: 530 };
+    const menu = openAt(press, { left: 0, top: 0, width: 1180, height: 540 });
 
-    const chosen = flick(menu, [resolveMarkingMenuGroupPosition(menu.origin, 2, groups.length), { x: menu.origin.x + 130, y: menu.origin.y }, target]);
-
-    expect(resolveMarkingMenuDeviceId(chosen)).toBe("g2-d1");
+    expect(resolveMarkingMenuDeviceId(flick(menu, [{ x: 13, y: 530 }]))).toBeNull();
+    // 与平常一样向右划两段，选中右侧分类的第一台设备。
+    const chosen = flick(menu, [{ x: press.x + 60, y: press.y }, { x: press.x + 140, y: press.y }, { x: press.x + 200, y: press.y }]);
+    expect(resolveMarkingMenuDeviceId(chosen)).toBe("g2-d0");
   });
 
   it("picks a group's first device with two strokes in the group's direction, without looking", () => {

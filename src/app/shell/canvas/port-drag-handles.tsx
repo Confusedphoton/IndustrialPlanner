@@ -1,12 +1,12 @@
 import { observer } from "mobx-react-lite";
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import LucideArrowUp from "~icons/lucide/arrow-up";
 
 import type { AppHost } from "@/app/host/app-host";
 import { resolvePortDragHandles, startPortHandleDrag, type PortDragHandle } from "@/app/input/gesture/actions";
 import type { WorldDocument } from "@/domain/document/world-document";
 import type { GridEdge } from "@/domain/shared/grid";
-import { useLastPointerType } from "@/app/shell/shared/use-last-input-kind";
+import { useLastPointerType, type LastPointerType } from "@/app/shell/shared/use-last-input-kind";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { useEditorDocumentSnapshot } from "../hooks";
@@ -36,6 +36,34 @@ export function thinPortDragHandles(handles: readonly PortDragHandle[], cellPx: 
   return [...groups.values()].map((side) => side[Math.floor((side.length - 1) / 2)]!);
 }
 
+/**
+ * 当前应显示的把手与直径：用手指（或关闭精确输入的笔）在选择工具里选中了恰好一个实体、且没有正在画的线时才有。
+ * 设备卡片据此给把手留出位置。
+ */
+export function resolveShownPortDragHandles(
+  appHost: AppHost,
+  pointerType: LastPointerType,
+): { readonly handles: PortDragHandle[]; readonly size: number } {
+  const canvas = appHost.mainCanvas;
+  const editor = appHost.workspace.editor;
+  const cellPx = canvas.view.state.gridCellPixelSize;
+  const size = Math.min(HANDLE_MAX_PX, Math.max(HANDLE_MIN_PX, cellPx));
+  const fingerLike = pointerType === "touch" || (pointerType === "pen" && !appHost.internalState.settings.penPreciseInput);
+  const selection = editor?.state.collections.selection ?? [];
+  if (
+    editor === null
+    || !fingerLike
+    || canvas.state.activeTool !== "select"
+    || selection.length !== 1
+    || editor.queries.resolveLogisticsDraftState() !== null
+    || !canvas.canUseWorkbenchActions
+    || !canvas.isOperationEnabled("logistics-placement")
+  ) {
+    return { handles: [], size };
+  }
+  return { handles: thinPortDragHandles(resolvePortDragHandles(canvas, selection[0]!), cellPx, size), size };
+}
+
 interface HandleDrag {
   readonly pointerId: number;
   readonly start: { readonly x: number; readonly y: number };
@@ -58,22 +86,15 @@ export const PortDragHandles = observer(function PortDragHandles({ appHost }: { 
   const [dragging, setDragging] = useState<PortDragHandle | null>(null);
   const [drawing, setDrawing] = useState(false);
 
-  const fingerLike = pointerType === "touch" || (pointerType === "pen" && !appHost.internalState.settings.penPreciseInput);
-  const selection = editor?.state.collections.selection ?? [];
-  const handles = dragging !== null
-    ? [dragging]
-    : editor === null
-      || !fingerLike
-      || canvas.state.activeTool !== "select"
-      || selection.length !== 1
-      || editor.queries.resolveLogisticsDraftState() !== null
-      || !canvas.canUseWorkbenchActions
-      || !canvas.isOperationEnabled("logistics-placement")
-      ? []
-      : resolvePortDragHandles(canvas, selection[0]!);
-  const cellPx = canvas.view.state.gridCellPixelSize;
-  const size = Math.min(HANDLE_MAX_PX, Math.max(HANDLE_MIN_PX, cellPx));
-  const shown = thinPortDragHandles(handles, cellPx, size);
+  useEffect(() => () => {
+    // 拖到一半被卸载（切换布局、关闭画布）时丢弃草稿。
+    drag.current?.controller?.end(false);
+    drag.current = null;
+  }, []);
+
+  const visible = resolveShownPortDragHandles(appHost, pointerType);
+  const size = visible.size;
+  const shown = dragging !== null ? [dragging] : visible.handles;
   if (shown.length === 0) {
     return null;
   }
