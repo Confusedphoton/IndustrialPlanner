@@ -47,6 +47,7 @@ import {
   resolveScreenProfileFromWindow,
 } from "@/shared/browser/screen-profile";
 import { DEFAULT_APP_THEME_ID, resolveAppTheme } from "../theme";
+import type { MarkingMenuState } from "@/app/canvas/marking-menu";
 
 /** PC 布局下拖动左侧面板时的常规最窄宽度。 */
 export const MIN_LEFT_DOCK_WIDTH = 320;
@@ -485,6 +486,8 @@ export interface CanvasRuntimeStateReadWrite {
   canvasAlertKey: UiKey | null;
 
   quickPlace: QuickPlaceRuntimeStateReadWrite;
+  /** 笔尖处打开的环形标记菜单；未打开时为 null。 */
+  markingMenu: MarkingMenuState | null;
   moveAnchor: GridPoint | null;
   moveEnterFrom: ActiveTool | null;
   movePointerMode: "mouse" | "touch" | null;
@@ -737,6 +740,7 @@ class CanvasRuntimeStateReadWriteImpl implements CanvasRuntimeStateReadWrite {
   canvasAlertKey: UiKey | null = null;
 
   quickPlace: QuickPlaceRuntimeStateReadWrite = new QuickPlaceRuntimeStateReadWriteImpl();
+  markingMenu: MarkingMenuState | null = null;
   moveAnchor: GridPoint | null = null;
   moveEnterFrom: ActiveTool | null = null;
   movePointerMode: "mouse" | "touch" | null = null;

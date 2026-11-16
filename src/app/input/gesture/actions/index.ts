@@ -52,6 +52,11 @@ export { createHypergryphViewportRotationModule, ROTATE_VIEW_BUTTON_ID } from ".
 export { createHypergryphHistoryGestureModule } from "./hypergryph/hypergryph-history-gesture-module";
 export { createPanelToggleGestureModule } from "./panel-toggle-gesture-module";
 export { createQuickPlaceGestureModule, openQuickPlace } from "./quick-place-gesture-module";
+export {
+  chooseMarkingMenuDevice,
+  closeMarkingMenu,
+  enterMarkingMenuGroup,
+} from "./hypergryph/hypergryph-marking-menu-gesture-module";
 export type {
   GestureActionContext,
   GestureActionRouterDispatchResult,

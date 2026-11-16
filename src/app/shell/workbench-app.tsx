@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 import { BottomStatusBar } from "@/app/shell/layout/bottom-status-bar";
 import { CanvasHotbar } from "@/app/shell/canvas/canvas-hotbar";
+import { MarkingMenuOverlay } from "@/app/shell/canvas/marking-menu-overlay";
 import { CanvasToolRail } from "@/app/shell/canvas/canvas-tool-rail";
 import { canvasToolRailState } from "@/app/shell/canvas/canvas-tool-rail-state";
 import { fitCanvasViewportToBase } from "@/app/input/gesture/actions";
@@ -1287,6 +1288,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
         <QuickPlacePopup appHost={appHost} />
         <CanvasToolRail appHost={appHost} />
         <CanvasHotbar appHost={appHost} />
+        <MarkingMenuOverlay appHost={appHost} />
         {canvasTopLeftCornerToolbar.visible && canvasTopLeftCornerToolbar.buttonIds.length > 0 ? (
           <CanvasTopLeftCornerToolbar
             canvas={appHost.mainCanvas}

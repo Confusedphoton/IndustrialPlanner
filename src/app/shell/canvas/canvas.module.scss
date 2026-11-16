@@ -1143,3 +1143,79 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+// 环形标记菜单：以按住的位置为原点的固定层；滑动选择时不接收指针，点按方式时整层可点、点空处关闭。
+.marking-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.marking-menu.is-tap {
+  pointer-events: auto;
+}
+
+.marking-menu-origin,
+.marking-menu-group,
+.marking-menu-item,
+.marking-menu-caption {
+  position: fixed;
+  transform: translate(-50%, -50%);
+}
+
+.marking-menu-origin {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  background: var(--surface-1);
+}
+
+.marking-menu-group,
+.marking-menu-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 1px solid var(--in-canvas-toolbar-button-border);
+  border-radius: 50%;
+  background: var(--in-canvas-toolbar-button-bg);
+  box-shadow: 0 6px 18px var(--in-canvas-toolbar-shadow);
+  backdrop-filter: blur(8px);
+  transition: transform 80ms ease-out, opacity 80ms ease-out;
+}
+
+.marking-menu-item {
+  width: 46px;
+  height: 46px;
+}
+
+.marking-menu-group img,
+.marking-menu-item img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.marking-menu-group.is-active,
+.marking-menu-item.is-active {
+  border-color: var(--accent);
+  background: var(--in-canvas-toolbar-active-bg);
+  transform: translate(-50%, -50%) scale(1.18);
+}
+
+.marking-menu-caption {
+  margin-top: 44px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--surface-1);
+  box-shadow: 0 4px 12px var(--in-canvas-toolbar-shadow);
+  color: var(--text-0);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}

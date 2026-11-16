@@ -1225,8 +1225,11 @@ export function holdDeviceForPlacement(
   });
   const position = options.position ?? null;
   const placing = canvas.state.activeTool === "single-placement";
-  const keepAnchor = placing && position === null ? runtime.placementAnchor : null;
-  const source = position !== null ? "mouse" : placing ? runtime.singlePlacementPointerMode ?? options.source : options.source;
+  const source = position !== null || !placing ? options.source : runtime.singlePlacementPointerMode ?? options.source;
+  // 触控按锚点格放预览；鼠标与笔让预览出现在指针处并跟随。
+  const anchor = position !== null && source === "touch"
+    ? canvas.view.queries.findGridCellForClientPixelPoint(position)
+    : placing && position === null ? runtime.placementAnchor : null;
   if (placing && runtime.singlePlacementDeviceId === device.deviceId) {
     // 同一台设备只更新配置与朝向：重建预览让新配置生效。
     safelyCancelPlacementDraft(editor);
@@ -1237,15 +1240,15 @@ export function holdDeviceForPlacement(
     editor,
     deviceId: device.deviceId,
     source,
-    initialPlacementAnchor: keepAnchor ?? undefined,
-    initialMousePosition: position,
+    initialPlacementAnchor: anchor ?? undefined,
+    initialMousePosition: source === "mouse" ? position : null,
     allowFromAnyTool: true,
   });
   if (canvas.state.activeTool !== "single-placement" || runtime.singlePlacementDeviceId !== device.deviceId) {
     return false;
   }
 
-  if (position !== null) {
+  if (position !== null && source === "mouse") {
     ensurePlacementDraftForMouse(canvas, editor, position);
   }
   if (device.rotation !== null && device.rotation !== undefined && editor.state.collections.preview.length > 0) {
@@ -1253,7 +1256,7 @@ export function holdDeviceForPlacement(
     for (let step = 0; step < steps; step += 1) {
       editor.actions.rotateCollectionAroundCenterPoint(EntityCollectionType.preview, 90);
     }
-    if (position !== null) {
+    if (position !== null && source === "mouse") {
       editor.actions.moveCollectionCenterPointTo(EntityCollectionType.preview, position, canvas.view.state);
     }
     canvas.actions.alignCanvasFloatingToolbar();

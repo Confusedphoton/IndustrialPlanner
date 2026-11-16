@@ -7,7 +7,6 @@ import {
   useEffect,
   useRef,
   useState,
-  type ComponentProps,
   type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
@@ -15,25 +14,21 @@ import {
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { EntityVariantDefinition } from "@/domain/registry/types/entity-variant-definition";
 import { useEditorDocumentSnapshot } from "../hooks";
-import { SHORTCUT_KEY, type ShortcutKeyId } from "@/app/actions/keyboard-shortcut-manager";
-import { canPlaceEntityDefinitionInCurrentBase } from "@/app/placement-zone-availability";
-import { recentPlacementDevices } from "@/app/recent-placement-devices";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
-import type { PlacementGroup } from "@/app/state/state-impl";
-import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import { OverlayStackLayer } from "@/app/shell/shared/overlay-stack";
 import { KeyboardShortcutPrompt, PlacementPaletteRow } from "@/app/shell/shared";
 import LucideChevronDown from "~icons/lucide/chevron-down";
+import LucideLayoutGrid from "~icons/lucide/layout-grid";
 import { createEntityIconAssetUrl, createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 import { isMobileOrTabletScreenProfile } from "@/shared/browser/screen-profile";
-import {
-  collapseEntityVariantDefinitions,
-  resolveEntityCraftGroupKey,
-  resolveEntityVariantDefinitions,
-  resolveEntityVariantName,
-} from "@/shared/entity-variants";
+import { resolveEntityVariantName } from "@/shared/entity-variants";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import {
+  buildPlacementDeviceSections,
+  type PlacementButtonDefinition,
+  type PlacementSectionDefinition,
+} from "./placement-catalog";
 import { resolvePlacementPointerSource } from "@/app/shell/shared/placement-pointer-source";
 import {
   didPanelPlacementDragJustEnd,
@@ -56,153 +51,6 @@ function estimateDeviceLabelWidth(label: string): number {
 function resolveDeviceIconPath(definition: EntityDefinition): string {
   return createEntityIconAssetUrl(definition.iconPath);
 }
-
-// ─── uiGroup → 分组配置映射 ───
-const UI_GROUP_SECTION_CONFIG: Record<PlacementGroup, {
-  titleKey: string;
-  shortcutKeyId?: ShortcutKeyId;
-}> = {
-  beltLogistics: {
-    titleKey: "workbench.section.beltLogistics",
-    shortcutKeyId: SHORTCUT_KEY.PLACE_CONVEYOR,
-  },
-  pipeLogistics: {
-    titleKey: "workbench.section.pipeLogistics",
-    shortcutKeyId: SHORTCUT_KEY.PLACE_PIPE,
-  },
-  resourcePower: {
-    titleKey: "workbench.section.resourcePower",
-    shortcutKeyId: SHORTCUT_KEY.RESOURCES_POWER,
-  },
-  warehouse: {
-    titleKey: "workbench.section.warehouse",
-    shortcutKeyId: SHORTCUT_KEY.WAREHOUSE,
-  },
-  basicProduction: {
-    titleKey: "workbench.section.production",
-    shortcutKeyId: SHORTCUT_KEY.BASIC_PRODUCTION,
-  },
-  advancedManufacturing: {
-    titleKey: "workbench.section.advancedManufacturing",
-    shortcutKeyId: SHORTCUT_KEY.SYNTHESIS,
-  },
-  agriculture: {
-    titleKey: "workbench.section.agriculture",
-  },
-  cheat: {
-    titleKey: "workbench.section.cheat",
-    shortcutKeyId: SHORTCUT_KEY.CHEAT,
-  },
-};
-
-/** 设备分组在面板中的显示顺序 */
-const DEVICE_SECTION_ORDER: readonly PlacementGroup[] = [
-  "beltLogistics",
-  "pipeLogistics",
-  "resourcePower",
-  "warehouse",
-  "basicProduction",
-  "advancedManufacturing",
-  "agriculture",
-  "cheat",
-];
-
-// ─── 类型定义 ───
-
-interface PlacementButtonDefinition {
-  readonly uiButtonId: string;
-  readonly labelKey: string;
-  readonly entityVariant?: EntityVariantDefinition;
-  readonly craftGroupKey?: string;
-  readonly variantDefinitions?: readonly EntityDefinition[];
-  readonly icon?: ComponentProps<typeof WorkbenchIcon>["kind"];
-  readonly iconSrc?: string;
-  readonly hotkey?: string | null;
-  readonly hotkeyKeyId?: ShortcutKeyId;
-  readonly visibleWhen?: (appHost: AppHost) => boolean;
-  readonly activeWhen?: (appHost: AppHost) => boolean;
-}
-
-interface PlacementSectionDefinition {
-  readonly uiGroup: PlacementGroup;
-  readonly titleKey: string;
-  readonly shortcutKey: string | null;
-  readonly buttons: readonly PlacementButtonDefinition[];
-}
-
-// ─── 动态构建设备分组 ───
-
-function buildPlacementDeviceSections(appHost: AppHost): readonly PlacementSectionDefinition[] {
-  // 1. 按 uiGroup 分组设备（过滤 hidden，组内按 id 排序）
-  const groupedByUiGroup = new Map<PlacementGroup, EntityDefinition[]>();
-  for (const group of DEVICE_SECTION_ORDER) {
-    groupedByUiGroup.set(group, []);
-  }
-
-  for (const entity of appHost.workspace.registry.entityDefinitions) {
-    if (entity.uiGroup === "hidden") continue;
-    if (entity.tags.includes("不可摆放")) continue;
-    if (!canPlaceEntityDefinitionInCurrentBase(appHost.mainCanvas, entity)) continue;
-    const group = groupedByUiGroup.get(entity.uiGroup);
-    if (group) {
-      group.push(entity);
-    }
-  }
-
-  // 组内按 displayOrder 排序（order 越小越靠前），同 order 按 id 兜底
-  for (const [, entities] of groupedByUiGroup) {
-    entities.sort((a, b) => a.displayOrder - b.displayOrder || a.id.localeCompare(b.id));
-  }
-
-  // 2. 构建设备分组 section
-  const deviceSections: PlacementSectionDefinition[] = DEVICE_SECTION_ORDER
-    .map((uiGroup) => {
-      const config = UI_GROUP_SECTION_CONFIG[uiGroup];
-      const entities = groupedByUiGroup.get(uiGroup) ?? [];
-      const shortcutKey = config.shortcutKeyId === undefined
-        ? null
-        : appHost.internalActions.getKeyboardShortcutFor(config.shortcutKeyId);
-
-      const visibleEntities = appHost.state.settings.collapseDeviceModes
-        ? collapseEntityVariantDefinitions({
-            definitions: entities,
-            selectedVariantNameByCraftGroup:
-              appHost.state.workbench.selectedPlacementVariantByCraftGroup,
-          })
-        : entities;
-      const buttons: PlacementButtonDefinition[] = visibleEntities.map((entity) => {
-        const variantDefinitions = resolveEntityVariantDefinitions({
-          definitionId: entity.id,
-          definitions: entities,
-        });
-        const variantName = resolveEntityVariantName(entity);
-        const entityVariant = variantDefinitions.length > 1 && variantName !== null
-          ? appHost.workspace.registry.entityVariantDefinitions[variantName]
-          : undefined;
-
-        return {
-          uiButtonId: `placement-${entity.id}`,
-          labelKey: entity.nameKey,
-          entityVariant,
-          craftGroupKey: entityVariant === undefined
-            ? undefined
-            : resolveEntityCraftGroupKey(entity) ?? undefined,
-          variantDefinitions: entityVariant === undefined ? undefined : variantDefinitions,
-        };
-      });
-
-      return {
-        uiGroup,
-        titleKey: config.titleKey,
-        shortcutKey: shortcutKey || null,
-        buttons,
-      };
-    })
-    .filter((section) => section.buttons.length > 0);
-
-  return deviceSections;
-}
-
 
 function resolveVariantModeIconSrc(entityVariant: EntityVariantDefinition): string {
   return createPublicAssetUrl(entityVariant.iconPath);
@@ -692,62 +540,31 @@ export const PlacementPanel = observer(function PlacementPanel({
       />
       {normalizedDeviceQuery.length === 0 && deviceSections.length > 1 ? (
         <nav aria-label={t("placement.categoryFilter")} className={cm(styles, "placement-category-chips")}>
-          {[null, ...deviceSections.map((section) => section.titleKey)].map((titleKey) => (
-            <button
-              aria-pressed={activeCategory === titleKey}
-              className={cm(styles, activeCategory === titleKey ? "placement-category-chip is-active" : "placement-category-chip")}
-              key={titleKey ?? "all"}
-              onClick={() => setCategoryFilter(titleKey === activeCategory ? null : titleKey)}
-              type="button"
-            >
-              {t(titleKey ?? "placement.allCategories")}
-            </button>
-          ))}
+          {[null, ...deviceSections].map((section) => {
+            const titleKey = section?.titleKey ?? null;
+            const label = t(titleKey ?? "placement.allCategories");
+            const iconDefinition = section === null
+              ? undefined
+              : appHost.workspace.registry.queries.findEntityDefinition(section.buttons[0]!.uiButtonId.replace("placement-", ""));
+            return (
+              <button
+                aria-label={label}
+                aria-pressed={activeCategory === titleKey}
+                className={cm(styles, activeCategory === titleKey ? "placement-category-chip is-active" : "placement-category-chip")}
+                key={titleKey ?? "all"}
+                onClick={() => setCategoryFilter(titleKey === activeCategory ? null : titleKey)}
+                title={label}
+                type="button"
+              >
+                {iconDefinition === undefined || iconDefinition === null
+                  ? <LucideLayoutGrid aria-hidden />
+                  : <img alt="" src={resolveDeviceIconPath(iconDefinition)} />}
+              </button>
+            );
+          })}
         </nav>
       ) : null}
       </div>
-      {normalizedDeviceQuery.length === 0 && activeCategory === null ? (() => {
-        const recentButtons = resolveRecentPlacementButtons(deviceSections, recentPlacementDevices.deviceIds);
-        if (recentButtons.length === 0) {
-          return null;
-        }
-        return (
-          <>
-          <section aria-labelledby="placement-recent-section" className={cm(styles, "placement-panel-group")}>
-            <div className={cm(styles, "placement-panel-group-header")}>
-              <h3 id="placement-recent-section">{t("placement.recent")}</h3>
-            </div>
-            <div className={cm(styles, "placement-button-list is-tile-grid")}>
-              {recentButtons.map((button) => {
-                const deviceId = button.uiButtonId.replace("placement-", "");
-                const activePlacementDeviceId = appHost.mainCanvas.state.runtime.singlePlacementDeviceId;
-                const isActive = appHost.mainCanvas.state.activeTool === "single-placement"
-                  && (activePlacementDeviceId === deviceId
-                    || (appHost.state.settings.collapseDeviceModes
-                      && button.variantDefinitions?.some((definition) => definition.id === activePlacementDeviceId) === true));
-                return (
-                  <PlacementDeviceButton
-                    appHost={appHost}
-                    button={button}
-                    buttonLabel={t(button.labelKey)}
-                    deviceId={deviceId}
-                    hotkey={null}
-                    isActive={isActive}
-                    key={`recent-${button.uiButtonId}`}
-                    labelClassName="placement-button-label"
-                    onButtonPointerDown={handleButtonPointerDown}
-                    onButtonPointerUp={handleButtonPointerUp}
-                    showDeviceHotkey={false}
-                  />
-                );
-              })}
-            </div>
-          </section>
-          <div aria-hidden="true" className={cm(styles, "placement-panel-divider")} />
-          </>
-        );
-      })() : null}
-
       {visibleSections.map((section, sectionIndex) => {
         const sectionTitleId = `placement-device-section-${sectionIndex}`;
         const isPlacementGroupActive = (
@@ -862,20 +679,3 @@ function isEditableEventTarget(target: EventTarget | null): boolean {
 }
 
 /** 将最近设备 ID 映射回当前基地可用的放置按钮；折叠模式下变体归并到同一按钮。 */
-function resolveRecentPlacementButtons(
-  sections: readonly PlacementSectionDefinition[],
-  recentDeviceIds: readonly string[],
-): readonly PlacementButtonDefinition[] {
-  const buttons = sections.flatMap((section) => section.buttons);
-  const resolved: PlacementButtonDefinition[] = [];
-  for (const deviceId of recentDeviceIds) {
-    const button = buttons.find((candidate) => (
-      candidate.uiButtonId === `placement-${deviceId}`
-      || candidate.variantDefinitions?.some((definition) => definition.id === deviceId) === true
-    ));
-    if (button !== undefined && !resolved.includes(button)) {
-      resolved.push(button);
-    }
-  }
-  return resolved;
-}
