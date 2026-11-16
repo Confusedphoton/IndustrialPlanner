@@ -77,6 +77,29 @@ describe("offering a consumer at the open end of a line dragged from a port", ()
     expect(entities(appHost)).toHaveLength(beltCount + 1);
   });
 
+  it("lays a stub out of the new machine's product output and moves the chip there, so the line can be chained", async () => {
+    const appHost = await createAppHost([furnace({ recipe: true })]);
+    const { inside, delta } = furnaceBeltOutput(appHost);
+    const end = { x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 };
+    penDrag(appHost, inside, [end]);
+    const before = entities(appHost).length;
+
+    placeConsumerAtLineEnd(appHost.mainCanvas, {
+      deviceId: GRINDER_ID,
+      config: { channelRecipes: { default: "r_crusher_iron_powder_from_iron_nugget_basic" } },
+    }, "mouse");
+
+    // 粉碎机与它输出口外的一格线一起放下，提示移到这一格，列出消费铁粉的设备。
+    expect(entities(appHost)).toHaveLength(before + 2);
+    const chip = appHost.mainCanvas.state.runtime.lineEndChip;
+    expect(chip?.itemIds).toEqual(["item_iron_powder"]);
+    expect(entities(appHost).some((entity) => entity.position.x === chip!.endCell.x && entity.position.y === chip!.endCell.y
+      && entity.definitionId.startsWith("belt"))).toBe(true);
+
+    expect(appHost.workspace.editor!.actions.undoDocumentHistory()).toBe(true);
+    expect(entities(appHost)).toHaveLength(before);
+  });
+
   it("goes away on the next canvas tap or Escape, but survives panning across empty canvas", async () => {
     const appHost = await createAppHost([furnace({ recipe: true })]);
     const { inside, delta } = furnaceBeltOutput(appHost);

@@ -1212,6 +1212,7 @@ export type UiKey =
   | "lineEndChip.consumers"
   | "lineEndChip.noRoom"
   | "lineEndChip.consumer"
+  | "lineEndChip.planned"
   | "placement.todoEntry"
   | "canvasHotbar.trayFull"
   | "portHandle.output"

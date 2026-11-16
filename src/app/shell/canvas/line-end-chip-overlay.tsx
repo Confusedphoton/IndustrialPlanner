@@ -10,6 +10,7 @@ import {
   resolveProductionPlanningItemIconSrc,
   resolveProductionPlanningItemName,
 } from "@/app/shell/production-planning/production-planning-model";
+import { usePlacementTodoEntries } from "@/app/shell/panels/placement-todo-list";
 import { resolveRecipePlacementTarget } from "@/app/shell/recipe-tree/recipe-quick-actions";
 import { useRecipeTreePlanningIndex } from "@/app/shell/recipe-tree/recipe-tree-plan";
 import { resolveDevicePlacementTarget, type PanelPlacementTarget } from "@/app/shell/shared/panel-placement-drag";
@@ -98,10 +99,18 @@ export const LineEndChipOverlay = observer(function LineEndChipOverlay({ appHost
       settings.toolboxShowAllActivityContent || isRecipeAvailableByActivity(recipe, activityIds)
     )));
   }, [appHost, settings.selectedActivityIds, settings.toolboxShowAllActivityContent]);
-  const consumers = useMemo(
-    () => chip === null ? [] : resolveLineEndConsumers(appHost, recipes, chip),
-    [appHost, recipes, chip],
-  );
+  const todoEntries = usePlacementTodoEntries(appHost);
+  const consumers = useMemo(() => {
+    const found = chip === null ? [] : resolveLineEndConsumers(appHost, recipes, chip);
+    // 钉住的规划里还缺的设备排最前，已放够的其次，其余保持原顺序。
+    const todo = new Map(todoEntries.map((entry) => [entry.recipeId, entry]));
+    const rank = (consumer: LineEndConsumer) => {
+      const entry = consumer.recipe === null ? undefined : todo.get(consumer.recipe.id);
+      return entry === undefined ? 2 : entry.placed < entry.needed ? 0 : 1;
+    };
+    return [...found].sort((left, right) => rank(left) - rank(right))
+      .map((consumer) => ({ ...consumer, todo: consumer.recipe === null ? null : todo.get(consumer.recipe.id) ?? null }));
+  }, [appHost, recipes, chip, todoEntries]);
 
   // 末端已不再开放（撤销、删除、接上）或没有可接的设备时，提示作废：清掉状态，别让设备卡片继续给它让位。
   const stale = chip !== null && editor !== null
@@ -185,11 +194,16 @@ export const LineEndChipOverlay = observer(function LineEndChipOverlay({ appHost
         const machineName = t(registry.findEntityDefinition(consumer.target.deviceId)?.nameKey ?? consumer.target.deviceId);
         const outputId = consumer.recipe?.outputs[0]?.itemId;
         const outputName = outputId === undefined ? null : resolveProductionPlanningItemName(outputId, index, t);
+        const name = outputName === null
+          ? machineName
+          : t("lineEndChip.consumer").replace("{item}", outputName).replace("{machine}", machineName);
+        const planned = consumer.todo === null
+          ? null
+          : t("lineEndChip.planned").replace("{name}", name)
+            .replace("{placed}", String(consumer.todo.placed)).replace("{needed}", String(consumer.todo.needed));
         return (
           <button
-            aria-label={outputName === null
-              ? machineName
-              : t("lineEndChip.consumer").replace("{item}", outputName).replace("{machine}", machineName)}
+            aria-label={planned ?? name}
             className={cm(styles, "line-end-chip-consumer")}
             key={consumer.key}
             onClick={(event) => choose(consumer, event)}
@@ -206,6 +220,14 @@ export const LineEndChipOverlay = observer(function LineEndChipOverlay({ appHost
               {outputName === null ? null : <strong>{outputName}</strong>}
               <span>{machineName}</span>
             </span>
+            {consumer.todo === null ? null : (
+              <span
+                className={cm(styles, consumer.todo.placed >= consumer.todo.needed ? "line-end-chip-count is-done" : "line-end-chip-count")}
+                title={planned ?? undefined}
+              >
+                {consumer.todo.placed}/{consumer.todo.needed}
+              </span>
+            )}
           </button>
         );
       })}

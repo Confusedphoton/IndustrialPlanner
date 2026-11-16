@@ -1,7 +1,7 @@
 import { runInAction } from "mobx";
 
 import type { CanvasInteractionController } from "@/app/canvas";
-import { resolveLineEndSnapPlacements } from "@/app/canvas/line-end-chip";
+import { resolveLineEndOutputStub, resolveLineEndSnapPlacements } from "@/app/canvas/line-end-chip";
 import type { AppHost } from "@/app/host/app-host";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { EditorContract } from "@/domain/editor/editor-contract";
@@ -84,7 +84,8 @@ export function offerLineEndChip(
 }
 
 /**
- * 把选中的设备接到提示所在的线末端：按端口朝向找一个不冲突的摆法直接放下（一步撤销）；
+ * 把选中的设备接到提示所在的线末端：按端口朝向找一个不冲突的摆法直接放下（一步撤销），
+ * 连同它产物输出口外伸出的一格线，提示随即移到那里，可以一台接一台地把产线铺下去；
  * 末端周围放不下时提示原因，并把设备交到手上（朝向已对准），由用户自己找位置。
  */
 export function placeConsumerAtLineEnd(
@@ -114,12 +115,25 @@ export function placeConsumerAtLineEnd(
   }
   const config = device.config === null ? undefined : structuredClone(device.config) as Record<string, unknown>;
   for (const placement of placements) {
-    editor.actions.createPositionedPlacementDraft([{ definitionId: definition.id, ...placement, config }]);
-    const previewId = editor.state.collections[EntityCollectionType.preview][0];
-    if (previewId !== undefined && editor.queries.getEntityPlacementValidation(previewId).canPlace && editor.actions.applyPlacementDraft()) {
-      return;
+    const stub = resolveLineEndOutputStub({ registry: canvas.registry, definition, placement, config, flowEdge: chip.flowEdge });
+    // 先连同产物输出口外的一格线一起放；那一格放不下时只放设备。
+    for (const withStub of stub === null ? [false] : [true, false]) {
+      editor.actions.createPositionedPlacementDraft([
+        { definitionId: definition.id, ...placement, config },
+        ...(withStub && stub !== null ? [{ definitionId: stub.definitionId, position: stub.cell, rotation: stub.rotation }] : []),
+      ]);
+      const previewIds = editor.state.collections[EntityCollectionType.preview];
+      if (
+        previewIds.length > 0
+        && previewIds.every((previewId) => editor.queries.getEntityPlacementValidation(previewId).canPlace)
+        && editor.actions.applyPlacementDraft()
+      ) {
+        // 接着往下：提示移到新设备伸出的线端，列出消费它产物的设备。
+        if (withStub && stub !== null) offerLineEndChip(canvas, editor, stub.kind, stub.cell);
+        return;
+      }
+      editor.actions.cancelPlacementDraft();
     }
-    editor.actions.cancelPlacementDraft();
   }
   canvas.actions.showCanvasToast("lineEndChip.noRoom");
   const targetRect = canvas.view.queries.findClientRectForGridCell(chip.targetCell);

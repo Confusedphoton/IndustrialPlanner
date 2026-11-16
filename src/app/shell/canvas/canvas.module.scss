@@ -1342,6 +1342,20 @@
   color: var(--text-1);
 }
 
+// 钉住的规划里该设备“已放 / 需要”的数量，排在行尾。
+.line-end-chip-count {
+  flex: none;
+  margin-left: auto;
+  color: var(--accent);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.line-end-chip-count.is-done {
+  color: var(--text-2);
+}
+
 // 暂存托盘：快捷栏里以分隔线隔开的一段，每项是一整组设备，右下角为设备数。
 .canvas-hotbar-tray {
   display: flex;

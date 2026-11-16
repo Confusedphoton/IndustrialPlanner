@@ -1,8 +1,10 @@
 import type { EntityDefinition, ItemDomain, PortGroupDefinition } from "@/domain/registry/types/entity-definition";
 import type { GridEdge, GridPoint, GridRotation } from "@/domain/shared/grid";
 import type { LogisticsKind } from "@/domain/shared/logistics";
+import type { RegistryContract } from "@/domain/registry/registry-contract";
+import { outputPortItemIds } from "@/shared/device-item-labels";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
-import { oppositeGridEdge, resolveRotatedPortGeometry } from "@/shared/geometry/port";
+import { oppositeGridEdge, resolveRotatedPortGeometry, rotateGridEdge } from "@/shared/geometry/port";
 import { matchesItemAcceptRule } from "@/shared/registry/item-accept-rule";
 
 /**
@@ -82,4 +84,72 @@ function isFeedingInputGroup(definition: SnapDefinition, group: PortGroupDefinit
   return storageGroupIds.length === 0 || definition.recipeChannels.some((channel) => (
     channel.ingredientStorageGroupIds.some((id) => storageGroupIds.includes(id))
   ));
+}
+
+/** 接上设备后从它的产物输出口伸出的一格线：线末端提示随即移到这里，选下一台设备即可接着往下铺。 */
+export interface LineEndOutputStub {
+  readonly kind: LogisticsKind;
+  readonly definitionId: string;
+  readonly cell: GridPoint;
+  readonly rotation: GridRotation;
+}
+
+/**
+ * 摆好的设备（按配方或输出设定）有产物的输出口外侧伸出一格直线；优先沿原来的流向继续，其次靠近该边中线。
+ * 没有产物输出口、或找不到对应族的直线段定义时为 null。
+ */
+export function resolveLineEndOutputStub(options: {
+  readonly registry: RegistryContract;
+  readonly definition: EntityDefinition;
+  readonly placement: LineEndSnapPlacement;
+  readonly config: Readonly<Record<string, unknown>> | undefined;
+  readonly flowEdge: GridEdge;
+}): LineEndOutputStub | null {
+  const { definition, placement } = options;
+  const rotated = getRotatedGridFootprint(definition.footprint, placement.rotation);
+  const candidates: Array<LineEndOutputStub & { readonly score: number }> = [];
+  for (const group of definition.portGroups) {
+    if (group.direction !== "output") continue;
+    if (outputPortItemIds(definition, { config: options.config ?? {} }, group.id, options.registry).length === 0) continue;
+    const kind: LogisticsKind = group.isPipe ? "pipe" : "belt";
+    const line = resolveStraightLineDefinition(options.registry, kind);
+    if (line === null) continue;
+    for (const port of group.ports) {
+      const geometry = resolveRotatedPortGeometry({ footprint: definition.footprint, port, rotation: placement.rotation });
+      const rotation = ROTATIONS.find((candidate) => rotateGridEdge(line.outputEdge, candidate) === geometry.edge);
+      if (rotation === undefined) continue;
+      const alongX = geometry.edge === "NORTH" || geometry.edge === "SOUTH";
+      const offCenter = alongX
+        ? Math.abs(geometry.cell.x + 0.5 - rotated.width / 2)
+        : Math.abs(geometry.cell.y + 0.5 - rotated.height / 2);
+      candidates.push({
+        kind,
+        definitionId: line.definitionId,
+        cell: {
+          x: placement.position.x + geometry.cell.x + geometry.delta.x,
+          y: placement.position.y + geometry.cell.y + geometry.delta.y,
+        },
+        rotation,
+        score: (geometry.edge === options.flowEdge ? 0 : 100) + offCenter,
+      });
+    }
+  }
+  const best = candidates.sort((left, right) => left.score - right.score)[0];
+  return best === undefined ? null : { kind: best.kind, definitionId: best.definitionId, cell: best.cell, rotation: best.rotation };
+}
+
+/** 该族的直线段定义（输入与输出在相对两边）及其未旋转时的输出边。 */
+function resolveStraightLineDefinition(
+  registry: RegistryContract,
+  kind: LogisticsKind,
+): { readonly definitionId: string; readonly outputEdge: GridEdge } | null {
+  for (const definition of registry.entityDefinitions) {
+    if (kind === "belt" ? !registry.queries.isBelt(definition.id) : !registry.queries.isPipe(definition.id)) continue;
+    const input = definition.portGroups.find((group) => group.direction === "input")?.ports[0];
+    const output = definition.portGroups.find((group) => group.direction === "output")?.ports[0];
+    if (input !== undefined && output !== undefined && oppositeGridEdge(input.edge) === output.edge) {
+      return { definitionId: definition.id, outputEdge: output.edge };
+    }
+  }
+  return null;
 }

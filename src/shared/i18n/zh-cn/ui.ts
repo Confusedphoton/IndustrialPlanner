@@ -1013,6 +1013,7 @@ const UI: Record<string, string> = {
     "lineEndChip.consumers": "使用该物品的设备",
     "lineEndChip.noRoom": "线末端放不下，请自行放置。",
     "lineEndChip.consumer": "{item} · {machine}",
+    "lineEndChip.planned": "{name}，规划需要 {needed} 台，已放 {placed} 台",
     "placement.todoEntry": "{item} · {machine} {placed}/{needed}",
     "canvasHotbar.trayFull": "暂存托盘已满，请先放下或丢弃一组。",
     "portHandle.output": "从此输出口拉线",

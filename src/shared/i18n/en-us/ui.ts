@@ -1020,6 +1020,7 @@ const UI: Record<string, string> = {
     "lineEndChip.consumers": "Machines that use this item",
     "lineEndChip.noRoom": "No room at the line end. Place it yourself.",
     "lineEndChip.consumer": "{item} · {machine}",
+    "lineEndChip.planned": "{name}, {placed} of {needed} placed in the plan",
     "placement.todoEntry": "{item} · {machine} {placed}/{needed}",
     "canvasHotbar.trayFull": "The holding tray is full. Place or discard a group first.",
     "portHandle.output": "Draw a line from this output",

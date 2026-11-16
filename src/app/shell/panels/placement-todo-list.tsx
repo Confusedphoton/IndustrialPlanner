@@ -1,5 +1,4 @@
 import { observer } from "mobx-react-lite";
-import { useCallback } from "react";
 
 import type { AppHost } from "@/app/host/app-host";
 import type { WorldDocument } from "@/domain/document/world-document";
@@ -80,6 +79,23 @@ function countPlacedMachines(document: WorldDocument): string {
   return JSON.stringify({ byRecipe, unsetByMachine } satisfies PlacedMachineCounts);
 }
 
+/** 配方树钉住的规划对应的待放条目（随画布上的设备更新）；没有钉住目标时为空。 */
+export function usePlacementTodoEntries(appHost: AppHost): PlacementTodoEntry[] {
+  const index = useRecipeTreePlanningIndex(appHost);
+  const plan = useCombinedRecipeTreePlan(index, recipeTreeOverlayState.pins.length > 0);
+  const counts = useEditorDocumentSnapshot(appHost.workspace.editor, countPlacedMachines, Object.is);
+  if (plan === null) {
+    return [];
+  }
+  const placed = counts === null
+    ? { byRecipe: {}, unsetByMachine: {} }
+    : JSON.parse(counts) as PlacedMachineCounts;
+  return resolvePlacementTodoEntries(plan, placed, (recipeId) => {
+    const recipe = index.recipeById.get(recipeId);
+    return recipe === undefined ? null : { machineId: recipe.machineId, outputItemId: recipe.outputs[0]?.itemId ?? null };
+  });
+}
+
 /**
  * 放置面板顶部（或窄设备架上方）的待放清单：点按把设备连同配方交到手上，拖到画布上放下一台，
  * 每放一台计数随之更新。没有钉住目标时不显示。
@@ -93,20 +109,8 @@ export const PlacementTodoList = observer(function PlacementTodoList({
 }) {
   const t = appHost.actions.translate;
   const index = useRecipeTreePlanningIndex(appHost);
-  const plan = useCombinedRecipeTreePlan(index, recipeTreeOverlayState.pins.length > 0);
-  const selectCounts = useCallback(countPlacedMachines, []);
-  const counts = useEditorDocumentSnapshot(appHost.workspace.editor, selectCounts, Object.is);
-  if (plan === null) {
-    return null;
-  }
+  const entries = usePlacementTodoEntries(appHost);
   const registry = appHost.workspace.registry;
-  const placed = counts === null
-    ? { byRecipe: {}, unsetByMachine: {} }
-    : JSON.parse(counts) as PlacedMachineCounts;
-  const entries = resolvePlacementTodoEntries(plan, placed, (recipeId) => {
-    const recipe = index.recipeById.get(recipeId);
-    return recipe === undefined ? null : { machineId: recipe.machineId, outputItemId: recipe.outputs[0]?.itemId ?? null };
-  });
   if (entries.length === 0) {
     return null;
   }
