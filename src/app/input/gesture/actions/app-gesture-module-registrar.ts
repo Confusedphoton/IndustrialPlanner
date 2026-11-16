@@ -43,6 +43,7 @@ import { createHypergryphPenEraserGestureModule } from "./hypergryph/hypergryph-
 import { createHypergryphPenTiltFacingModule } from "./hypergryph/hypergryph-pen-tilt-facing-module";
 import { createHypergryphHoldingTrayGestureModule } from "./hypergryph/hypergryph-holding-tray-gesture-module";
 import { createHypergryphPaintRowGestureModule } from "./hypergryph/hypergryph-paint-row-gesture-module";
+import { createHypergryphLineEndChipGestureModule } from "./hypergryph/hypergryph-line-end-chip-gesture-module";
 import { createHypergryphMarkingMenuGestureModule } from "./hypergryph/hypergryph-marking-menu-gesture-module";
 import { createHypergryphEyedropperGestureModule } from "./hypergryph/hypergryph-eyedropper-gesture-module";
 import { createHypergryphBusExtendGestureModule } from "./hypergryph/hypergryph-bus-extend-gesture-module";
@@ -91,6 +92,7 @@ export class AppGestureModuleRegistrar {
     register("blueprint-placement", createHypergryphBlueprintPlacementGestureModule());
     register("logistics-placement", createHypergryphLogisticsPlacementGestureModule());
     register("logistics-placement", createHypergryphPortDragLogisticsGestureModule());
+    register("logistics-placement", createHypergryphLineEndChipGestureModule());
     register("confirm-placement", createHypergryphBusExtendGestureModule());
     register("confirm-placement", createHypergryphEyedropperGestureModule());
     register("confirm-placement", createHypergryphMarkingMenuGestureModule());

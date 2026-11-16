@@ -1217,6 +1217,81 @@
   white-space: nowrap;
 }
 
+// 线末端提示：贴在开放末端外侧那一格的中心；展开后以同一点为中心列出消费设备。
+.line-end-chip {
+  position: fixed;
+  z-index: 30;
+  width: 0;
+  height: 0;
+}
+
+.line-end-chip-button,
+.line-end-chip-list {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+}
+
+.line-end-chip-button,
+.line-end-chip-consumer {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--in-canvas-toolbar-button-border);
+  background: var(--in-canvas-toolbar-button-bg);
+  box-shadow: 0 6px 18px var(--in-canvas-toolbar-shadow);
+  backdrop-filter: blur(8px);
+}
+
+.line-end-chip-button {
+  gap: 2px;
+  height: 44px;
+  padding: 0 10px 0 8px;
+  border-color: var(--accent);
+  border-radius: 999px;
+  color: var(--accent);
+}
+
+.line-end-chip-button img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.line-end-chip-list {
+  display: grid;
+  grid-template-columns: repeat(4, 52px);
+  gap: 6px;
+  padding: 8px;
+  border-radius: 14px;
+  background: var(--surface-1);
+  box-shadow: 0 8px 24px var(--in-canvas-toolbar-shadow);
+}
+
+.line-end-chip-consumer {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+}
+
+.line-end-chip-consumer img {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.line-end-chip-consumer .line-end-chip-output {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 20px;
+  height: 20px;
+}
+
 // 暂存托盘：快捷栏里以分隔线隔开的一段，每项是一整组设备，右下角为设备数。
 .canvas-hotbar-tray {
   display: flex;

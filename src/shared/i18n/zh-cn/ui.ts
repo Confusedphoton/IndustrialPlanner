@@ -1009,6 +1009,8 @@ const UI: Record<string, string> = {
     "tool.pipe": "管道",
     "tool.place": "放置",
     "tool.select": "选择",
+    "lineEndChip.add": "在线末端接上设备",
+    "lineEndChip.consumers": "使用该物品的设备",
     "canvasHotbar.label": "设备快捷栏",
     "placement.categoryFilter": "按分类显示",
     "placement.allCategories": "全部",

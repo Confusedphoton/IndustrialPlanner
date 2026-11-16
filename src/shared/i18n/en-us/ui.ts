@@ -1016,6 +1016,8 @@ const UI: Record<string, string> = {
     "tool.pipe": "Pipe",
     "tool.place": "Place",
     "tool.select": "Select",
+    "lineEndChip.add": "Add a machine at the line end",
+    "lineEndChip.consumers": "Machines that use this item",
     "canvasHotbar.label": "Device hotbar",
     "placement.categoryFilter": "Show one category",
     "placement.allCategories": "All",

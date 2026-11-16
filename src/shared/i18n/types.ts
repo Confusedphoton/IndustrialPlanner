@@ -1208,6 +1208,8 @@ export type UiKey =
   | "tool.pipe"
   | "tool.place"
   | "tool.select"
+  | "lineEndChip.add"
+  | "lineEndChip.consumers"
   | "canvasHotbar.label"
   | "placement.categoryFilter"
   | "placement.allCategories"

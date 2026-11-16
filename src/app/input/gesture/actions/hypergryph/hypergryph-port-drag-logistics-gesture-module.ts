@@ -8,6 +8,7 @@ import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 import type { CreateLogisticsDraftStartOptions, LogisticsKind } from "@/domain/shared/logistics";
 
 import type { GestureMappingModule } from "../types";
+import { isOpenBeyondLine, offerLineEndChip } from "./hypergryph-line-end-chip-gesture-module";
 
 /**
  * forward：固定起点，终点跟随指针（设备输出端口、物流线开放的输出端）。
@@ -46,13 +47,20 @@ type PortDragSession = {
 export function createHypergryphPortDragLogisticsGestureModule(): GestureMappingModule<AppHost> {
   let session: PortDragSession | null = null;
 
-  const finish = (editor: EditorContract | null, commit: boolean) => {
+  const finish = (canvas: CanvasInteractionController, editor: EditorContract | null, commit: boolean) => {
+    const finished = session;
     session = null;
     if (editor === null || editor.queries.resolveLogisticsDraftState() === null) {
       return;
     }
-    if (commit && editor.queries.resolveLogisticsDraftState()?.canApply === true) {
+    const draft = editor.queries.resolveLogisticsDraftState();
+    if (commit && draft?.canApply === true) {
+      const endCell = draft.cells.at(-1)?.gridPoint ?? null;
       editor.actions.applyLogisticDraft();
+      // 顺流铺出的线末端停在空地上时，提示可在末端接上消费该物品的设备。
+      if (finished?.mode === "forward" && endCell !== null) {
+        offerLineEndChip(canvas, editor, draft.kind, endCell);
+      }
       return;
     }
     editor.actions.cancelLogisticsDraft();
@@ -108,7 +116,7 @@ export function createHypergryphPortDragLogisticsGestureModule(): GestureMapping
           if (session === null || session.gestureId !== event.gestureId) {
             return { status: "ignored" };
           }
-          finish(editor, event.reason === "release");
+          finish(canvas, editor, event.reason === "release");
           return { status: "handled" };
 
         default:
@@ -215,16 +223,7 @@ function resolveLineEndSession(
     const delta = resolveGridEdgeDelta(edge);
     return { x: gridPoint.x + delta.x, y: gridPoint.y + delta.y };
   };
-  // 开放端：相邻格没有同族物流线，且除本线自身端口外侧格外不属于其他设备端口。
-  const isOpen = (edge: GridEdge) => {
-    const neighbor = neighborOf(edge);
-    if (editor.queries.findTransportLineAtGridPoint(neighbor, candidate.kind) !== null) {
-      return false;
-    }
-    const endpoint = editor.queries.findLogisticsDraftEndpointAtGridPoint(neighbor, candidate.kind);
-    return endpoint?.type === "empty-cell"
-      || (endpoint?.type === "device-port" && endpoint.entityId === candidate.entity.id);
-  };
+  const isOpen = (edge: GridEdge) => isOpenBeyondLine(editor, candidate.entity, candidate.kind, neighborOf(edge));
 
   if (isOpen(candidate.outputEdge)) {
     // 从本线末格起笔（该格可随拖动方向改为转角），延续原有物流线。

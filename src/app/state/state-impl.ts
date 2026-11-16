@@ -47,6 +47,7 @@ import {
   resolveScreenProfileFromWindow,
 } from "@/shared/browser/screen-profile";
 import { DEFAULT_APP_THEME_ID, resolveAppTheme } from "../theme";
+import type { LineEndChipState } from "@/app/canvas/line-end-chip";
 import type { MarkingMenuState } from "@/app/canvas/marking-menu";
 
 /** PC 布局下拖动左侧面板时的常规最窄宽度。 */
@@ -491,6 +492,8 @@ export interface CanvasRuntimeStateReadWrite {
   quickPlace: QuickPlaceRuntimeStateReadWrite;
   /** 笔尖处打开的环形标记菜单；未打开时为 null。 */
   markingMenu: MarkingMenuState | null;
+  /** 从端口拖出的物流线末端仍开放时的「+ 设备」提示；没有时为 null。 */
+  lineEndChip: LineEndChipState | null;
   moveAnchor: GridPoint | null;
   moveEnterFrom: ActiveTool | null;
   movePointerMode: "mouse" | "touch" | null;
@@ -747,6 +750,7 @@ class CanvasRuntimeStateReadWriteImpl implements CanvasRuntimeStateReadWrite {
 
   quickPlace: QuickPlaceRuntimeStateReadWrite = new QuickPlaceRuntimeStateReadWriteImpl();
   markingMenu: MarkingMenuState | null = null;
+  lineEndChip: LineEndChipState | null = null;
   moveAnchor: GridPoint | null = null;
   moveEnterFrom: ActiveTool | null = null;
   movePointerMode: "mouse" | "touch" | null = null;

@@ -54,6 +54,11 @@ export { createPanelToggleGestureModule } from "./panel-toggle-gesture-module";
 export { createQuickPlaceGestureModule, openQuickPlace } from "./quick-place-gesture-module";
 export { pullFromHoldingTray } from "./hypergryph/hypergryph-holding-tray-gesture-module";
 export {
+  closeLineEndChip,
+  expandLineEndChip,
+  placeConsumerAtLineEnd,
+} from "./hypergryph/hypergryph-line-end-chip-gesture-module";
+export {
   chooseMarkingMenuDevice,
   closeMarkingMenu,
   enterMarkingMenuGroup,
