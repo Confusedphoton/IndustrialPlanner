@@ -162,7 +162,10 @@ export function createEditorPlacementActions({
           definitionId: definition.id,
           position: { ...request.position },
           rotation: request.rotation,
-          config: definition.placementDefaults?.config === undefined ? {} : { ...definition.placementDefaults.config },
+          config: {
+            ...(definition.placementDefaults?.config ?? {}),
+            ...(request.config === undefined ? {} : cloneEntityConfig(request.config)),
+          },
           tags: [],
           originalEntityId: id,
           retainPlacementId: false,

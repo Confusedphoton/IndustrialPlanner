@@ -57,6 +57,27 @@ describe("eyedropper", () => {
   });
 });
 
+describe("painting a row", () => {
+  it("lays copies at footprint pitch along a pen drag and places them as one undo step", async () => {
+    const { appHost, recipeId } = await createAppHostWithGrinder();
+    const editor = appHost.workspace.editor!;
+    penTap(appHost, cellCenter(appHost, { x: 21, y: 21 }), { button: 2, pointerId: 1 });
+    const width = editor.queries.findEntityCollectionGridRect(EntityCollectionType.preview)!.width;
+
+    const start = cellCenter(appHost, { x: 31, y: 31 });
+    const end = cellCenter(appHost, { x: 31 + width * 3, y: 32 });
+    penDrag(appHost, start, end, 3);
+
+    const grinders = () => Object.values(editor.document.getSnapshot().entities).filter((entity) => entity.definitionId === "grinder_1");
+    expect(grinders()).toHaveLength(5);
+    expect(grinders().every((entity) => entity.rotation === 90
+      && Object.values(entity.config.channelRecipes as Record<string, string>).includes(recipeId))).toBe(true);
+    expect(appHost.mainCanvas.state.activeTool).toBe("single-placement");
+    expect(editor.actions.undoDocumentHistory()).toBe(true);
+    expect(grinders()).toHaveLength(1);
+  });
+});
+
 describe("multi-finger taps", () => {
   it("undoes with a two-finger tap and redoes with a three-finger tap", async () => {
     const { appHost } = await createAppHostWithGrinder();
@@ -120,4 +141,21 @@ function fingerTap(appHost: AppHost, fingers: number): void {
   });
   for (let index = 0; index < fingers; index += 1) appHost.gestureAdapter.handlePointerDown(touch(index));
   for (let index = 0; index < fingers; index += 1) appHost.gestureAdapter.handlePointerUp({ ...touch(index), buttons: 0 });
+}
+
+function penDrag(appHost: AppHost, from: { x: number; y: number }, to: { x: number; y: number }, pointerId: number): void {
+  const pointer = (at: { x: number; y: number }, buttons: number) => ({
+    pointerId, pointerType: "pen", clientX: at.x, clientY: at.y, button: 0, buttons,
+    altKey: false, ctrlKey: false, metaKey: false, shiftKey: false,
+  });
+  appHost.gestureAdapter.handlePointerMove(pointer(from, 0));
+  appHost.gestureAdapter.handlePointerDown(pointer(from, 1));
+  for (let step = 1; step <= 6; step += 1) {
+    appHost.gestureAdapter.handlePointerMove(pointer({
+      x: from.x + (to.x - from.x) * step / 6,
+      y: from.y + (to.y - from.y) * step / 6,
+    }, 1));
+    appHost.gestureAdapter.advanceFrame(step * 16);
+  }
+  appHost.gestureAdapter.handlePointerUp(pointer(to, 0));
 }

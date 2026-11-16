@@ -36,6 +36,8 @@ export interface PositionedPlacementRequest {
   readonly definitionId: string;
   readonly position: GridPoint;
   readonly rotation: GridRotation;
+  /** 覆盖在设备默认配置之上的初始配置（例如配方）。 */
+  readonly config?: Readonly<Record<string, unknown>>;
 }
 
 export type { CanvasOperationAvailability, CanvasOperationId } from "../../shared/canvas-operation";
