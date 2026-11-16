@@ -31,7 +31,6 @@ import type { AppHost } from "@/app/host/app-host";
 import { NumberInput } from "@/app/shell/shared/number-input";
 import { DEFAULT_RIGHT_DOCK_WIDTH } from "@/app/state/state-impl";
 import {
-  buildProductionPlanningIndex,
   computeProductionPlan,
   formatProductionDeviceCount,
   formatProductionFlow,
@@ -42,10 +41,8 @@ import {
   type ProductionPlanningIndex,
   type ProductionPlanningItemNode,
   type ProductionPlanningResult,
-  type ProductionPlanningSourceConfig,
 } from "@/app/shell/production-planning/production-planning-model";
 import type { ProductionPlanningCandidate } from "@/app/shell/production-planning/production-planning-candidate";
-import { resolveEffectiveActivityIds } from "@/shared/registry/activity-availability";
 import { sortRecipesByDefaultPriority } from "@/shared/registry/recipe-visibility";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import styles from "@/app/shell/app-shell.module.scss";
@@ -68,6 +65,14 @@ import {
   type RecipeActionTarget,
 } from "./recipe-action-menu";
 import { resolveOverlayBottomLimit } from "@/app/shell/layout/status-bar-bounds";
+import { canvasToolRailState } from "@/app/shell/canvas/canvas-tool-rail-state";
+import { resolveLeftDockWidthForScreenProfile } from "@/app/state/state-impl";
+import {
+  RECIPE_TREE_INFINITE_ITEM_IDS,
+  RECIPE_TREE_SOURCE_CONFIG,
+  useCombinedRecipeTreePlan,
+  useRecipeTreePlanningIndex,
+} from "./recipe-tree-plan";
 import { createFlowNodePlacementDrag, resolveRecipePlacementTarget } from "./recipe-quick-actions";
 import {
   didPanelPlacementDragJustEnd,
@@ -85,15 +90,6 @@ const RecipeTreePlacementPressContext = createContext<
 
 type Translate = (key: string) => string;
 
-/** 与产线规划器默认来源策略一致，保证两处数值可互相对照。 */
-const RECIPE_TREE_SOURCE_CONFIG: ProductionPlanningSourceConfig = {
-  waterPolicy: "use-byproduct",
-  acidPolicy: "use-byproduct",
-  sewagePolicy: "external-supply",
-  waterPurifierPolicy: "disabled",
-  includeDeviceMinimumConsumption: "fractional",
-};
-const RECIPE_TREE_INFINITE_ITEM_IDS: ReadonlySet<string> = new Set(["item_liquid_sewage"]);
 const SEARCH_RESULT_LIMIT = 8;
 const VIEWPORT_MARGIN_PX = 8;
 const TOP_BAR_CLEARANCE_PX = 56;
@@ -112,23 +108,18 @@ export const RecipeTreeOverlay = observer(function RecipeTreeOverlay({ appHost }
 const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const state = recipeTreeOverlayState;
-  const showAllActivityContent = appHost.internalState.settings.toolboxShowAllActivityContent;
-  const selectedActivityIds = appHost.internalState.settings.selectedActivityIds;
-  const registry = appHost.workspace.registry;
-  const index = useMemo(
-    () => buildProductionPlanningIndex(registry, {
-      includeInactiveActivityContent: showAllActivityContent,
-      activeActivityIds: resolveEffectiveActivityIds({ selectedActivityIds }),
-    }),
-    [registry, selectedActivityIds, showAllActivityContent],
-  );
+  const index = useRecipeTreePlanningIndex(appHost);
 
   // 读取可观察的屏幕尺寸：窗口缩放时重新渲染并把浮层夹回视口内。
   const inspectorDocked = appHost.state.settings.gameUseInspectorPanel && appHost.state.workbench.rightDockOpen;
   const viewport = {
     width: appHost.state.screenProfile.viewportWidth,
     height: appHost.state.screenProfile.viewportHeight,
-    rightInset: inspectorDocked ? DEFAULT_RIGHT_DOCK_WIDTH : 0,
+    // 放置面板跟随画布工具条停到右侧时同样避开它。
+    rightInset: (inspectorDocked ? DEFAULT_RIGHT_DOCK_WIDTH : 0)
+      + (canvasToolRailState.side === "right" && appHost.state.workbench.leftDockOpen
+        ? resolveLeftDockWidthForScreenProfile(appHost.state.workbench, appHost.state.screenProfile)
+        : 0),
   };
   const rect = resolveOnScreenRect(state.rect, viewport);
   const dragCleanupRef = useRef<(() => void) | null>(null);
@@ -1117,36 +1108,6 @@ function clampRectToViewport(rect: RecipeTreeOverlayRect, viewport: ViewportSize
  * 合并全部钉住目标的产线求解结果，由配方树卡片求解一次，流程图与节点菜单共用，
  * 保证菜单显示与操作始终对应当前方案。用不到时（树形视图且菜单未打开、卡片最小化）不求解。
  */
-function useCombinedRecipeTreePlan(index: ProductionPlanningIndex, needed: boolean): ProductionPlanningResult | null {
-  const state = recipeTreeOverlayState;
-  const pinsSignature = needed
-    ? JSON.stringify(state.pins.map((pin) => [pin.itemId, pin.perMinute, pin.recipeChoices]))
-    : null;
-  return useMemo<ProductionPlanningResult | null>(() => {
-    if (pinsSignature === null) {
-      return null;
-    }
-    const recipeChoices = new Map<string, string>();
-    for (const pin of state.pins) {
-      for (const [itemId, candidateId] of Object.entries(pin.recipeChoices)) {
-        if (!recipeChoices.has(itemId)) {
-          recipeChoices.set(itemId, candidateId);
-        }
-      }
-    }
-    return computeProductionPlan({
-      targets: state.pins.map((pin) => ({ id: pin.id, itemId: pin.itemId, perMinute: pin.perMinute })),
-      supplies: [],
-      infiniteItemIds: RECIPE_TREE_INFINITE_ITEM_IDS,
-      recipeChoices,
-      sourceConfig: RECIPE_TREE_SOURCE_CONFIG,
-      useModules: false,
-    }, index);
-    // pinsSignature 覆盖 pins 的全部求解输入。
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, pinsSignature]);
-}
-
 /**
  * 菜单打开后目标的配方、产量可能被就地编辑；方案变化时按当前方案重新解析被点的卡片，
  * 使明细与“按此配方放置”等操作始终对应编辑后的状态，并判断改配方能否作用于这张卡片。

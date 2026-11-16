@@ -2579,3 +2579,166 @@
   color: var(--danger);
   font-size: 0.75rem;
 }
+
+.placement-category-chip.is-shelf-toggle {
+  margin-right: 6px;
+}
+
+// 窄设备架：一列图标；分类图标点按展开其设备，设备磁贴缩进显示在分类下。
+.placement-shelf {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  margin: -10px -8px;
+  padding: 6px 0 12px;
+}
+
+.placement-shelf-group {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+
+.placement-shelf-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-1);
+  touch-action: pan-y;
+}
+
+.placement-shelf-button img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.placement-shelf-button svg {
+  width: 22px;
+  height: 22px;
+}
+
+.placement-shelf-button.is-category {
+  border-color: var(--line);
+  background: var(--surface-2);
+}
+
+.placement-shelf-button.is-category.is-open {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.placement-shelf-button:hover,
+.placement-shelf-button.is-active {
+  border-color: var(--accent);
+}
+
+.placement-shelf-button.is-active {
+  background: var(--accent-soft);
+}
+
+.placement-shelf-peek {
+  z-index: 50;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--surface-1);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 18%);
+  color: var(--text-0);
+  font-size: 12px;
+  white-space: nowrap;
+  transform: translate(-50%, -100%);
+  pointer-events: none;
+}
+
+// 待放清单：带“已放 / 需要”计数的设备磁贴；已放够的变淡排在最后。
+.placement-todo {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.placement-todo.is-shelf {
+  justify-items: center;
+  margin-bottom: 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+
+.placement-todo-title {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.placement-todo-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.placement-todo.is-shelf .placement-todo-list {
+  flex-direction: column;
+  align-items: center;
+}
+
+.placement-todo-tile {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  padding: 0 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  touch-action: pan-y;
+}
+
+.placement-todo-tile img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.placement-todo-tile.is-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.placement-todo-tile.is-done {
+  opacity: 0.5;
+}
+
+.placement-todo-badge {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  left: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  color: var(--text-0);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.placement-todo-badge img {
+  width: 12px;
+  height: 12px;
+}
+
+.placement-todo-badge.is-done {
+  color: var(--text-2);
+}

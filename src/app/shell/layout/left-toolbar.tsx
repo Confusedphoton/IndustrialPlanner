@@ -1,8 +1,7 @@
 import { observer } from "mobx-react-lite";
+import { useEffect, useRef, useState } from "react";
+import LucideEllipsis from "~icons/lucide/ellipsis";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
-import {
-  handleUiEvent,
-} from "@/app/shell/shared/ui-shell-null-handlers";
 import type { AppHost } from "@/app/host/app-host";
 import type { ActivePanel } from "@/app/state/state-impl";
 import { recipeTreeOverlayState } from "@/app/shell/recipe-tree/recipe-tree-state";
@@ -86,6 +85,10 @@ const UTILITY_TOOLBAR_ITEMS = [
   },
 ];
 
+/** 常驻在工具栏上的项；其余（历史、基地、帮助、反馈、设置等不常用的）收进「更多」。 */
+const PINNED_PANELS: ReadonlySet<LeftToolbarPanel> = new Set(["placement", "region", "blueprint"]);
+const PINNED_DIALOGS: ReadonlySet<string> = new Set(["toolbox"]);
+
 export const LeftToolbar = observer(function LeftToolbar({
   appHost,
   compact = false,
@@ -94,12 +97,27 @@ export const LeftToolbar = observer(function LeftToolbar({
   compact?: boolean;
 }) {
   const t = appHost.actions.translate;
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!moreOpen) return;
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (!(event.target instanceof Node) || moreRef.current?.contains(event.target) !== true) setMoreOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMoreOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsidePointer, true);
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer, true);
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [moreOpen]);
+
   const leftDockOpen = appHost.state.workbench.leftDockOpen;
   const activePanel = appHost.internalState.runtime.activePanel ?? "placement";
-  const toolboxDialogVisible = appHost.internalState.workbench.dialogState.toolbox.visible;
-  const helpDialogVisible = appHost.internalState.workbench.dialogState.help.visible;
-  const settingsDialogVisible = appHost.internalState.workbench.dialogState.settings.visible;
-  const debugLogDialogVisible = appHost.internalState.workbench.dialogState["debug-log"]?.visible ?? false;
+  const dialogState = appHost.internalState.workbench.dialogState;
   const primaryToolbarItems = PRIMARY_TOOLBAR_ITEMS.filter((item) => {
     if (item.panel === "region" && !appHost.state.settings.showRegionAnnotations) {
       return false;
@@ -109,39 +127,77 @@ export const LeftToolbar = observer(function LeftToolbar({
   const utilityToolbarItems = UTILITY_TOOLBAR_ITEMS.filter((item) => {
     return item.debugOnly !== true || appHost.state.settings.debugMode;
   });
+  const isPanelActive = (panel: LeftToolbarPanel) => leftDockOpen && activePanel === panel;
+  const isDialogActive = (dialogKey: string) =>
+    (dialogState as Record<string, { visible: boolean } | undefined>)[dialogKey]?.visible ?? false;
+  const togglePanel = (panel: LeftToolbarPanel) => {
+    if (isPanelActive(panel)) {
+      appHost.internalActions.toggleLeftDock();
+      return;
+    }
+    appHost.internalActions.setActivePanel(panel);
+  };
+
+  const panelButton = (item: typeof PRIMARY_TOOLBAR_ITEMS[number], inMenu: boolean) => {
+    const label = t(item.labelKey);
+    const isActive = isPanelActive(item.panel);
+    return (
+      <button
+        aria-label={label}
+        aria-pressed={isActive}
+        className={cm(styles, isActive ? "rail-button is-active" : "rail-button")}
+        key={item.id}
+        onClick={() => {
+          togglePanel(item.panel);
+          if (inMenu) setMoreOpen(false);
+        }}
+        role={inMenu ? "menuitem" : undefined}
+        title={label}
+        type="button"
+      >
+        <span className={cm(styles, "rail-button-short")}>
+          <WorkbenchIcon kind={item.icon} />
+        </span>
+        <span className={cm(styles, "rail-button-label")}>{label}</span>
+      </button>
+    );
+  };
+
+  const dialogButton = (item: typeof UTILITY_TOOLBAR_ITEMS[number], inMenu: boolean) => {
+    const label = t(item.labelKey);
+    const isActive = isDialogActive(item.dialogKey);
+    return (
+      <button
+        aria-label={label}
+        aria-pressed={isActive}
+        className={cm(styles, isActive ? "rail-button rail-button-utility is-active" : "rail-button rail-button-utility")}
+        key={item.id}
+        onClick={() => {
+          appHost.internalActions.openDialog(item.dialogKey);
+          if (inMenu) setMoreOpen(false);
+        }}
+        role={inMenu ? "menuitem" : undefined}
+        title={label}
+        type="button"
+      >
+        <span className={cm(styles, "rail-button-short")}>
+          <WorkbenchIcon kind={item.icon} />
+        </span>
+        <span className={cm(styles, "rail-button-label")}>{label}</span>
+      </button>
+    );
+  };
+
+  const overflowPanels = primaryToolbarItems.filter((item) => !PINNED_PANELS.has(item.panel));
+  const overflowDialogs = utilityToolbarItems.filter((item) => !PINNED_DIALOGS.has(item.dialogKey));
+  const overflowActive = overflowPanels.some((item) => isPanelActive(item.panel))
+    || overflowDialogs.some((item) => isDialogActive(item.dialogKey));
+  const moreLabel = t("workbench.leftRail.more");
 
   return (
     <aside className={cm(styles, compact ? "left-toolbar panel-surface is-compact" : "left-toolbar panel-surface")}>
       <div className={cm(styles, "toolbar-rail-group")}>
-        {primaryToolbarItems.map((item) => {
-          const label = t(item.labelKey);
-          const isActive = leftDockOpen && activePanel === item.panel;
-
-          return (
-            <button
-              aria-label={label}
-              aria-pressed={isActive}
-              className={cm(styles, isActive ? "rail-button is-active" : "rail-button")}
-              key={item.id}
-              onClick={() => {
-                if (leftDockOpen && isActive) {
-                  appHost.internalActions.toggleLeftDock();
-
-                  return;
-                }
-
-                appHost.internalActions.setActivePanel(item.panel);
-              }}
-              title={label}
-              type="button"
-            >
-              <span className={cm(styles, "rail-button-short")}>
-                <WorkbenchIcon kind={item.icon} />
-              </span>
-              <span className={cm(styles, "rail-button-label")}>{label}</span>
-            </button>
-          );
-        })}
+        {primaryToolbarItems.filter((item) => PINNED_PANELS.has(item.panel)).map((item) => panelButton(item, false))}
       </div>
       <div className={cm(styles, "toolbar-rail-group toolbar-rail-utility")}>
         {/* 配方树浮层开关；浮层常驻画布上方，不占用左侧面板。 */}
@@ -158,41 +214,27 @@ export const LeftToolbar = observer(function LeftToolbar({
           <span className={cm(styles, "rail-button-short")}><WorkbenchIcon kind="recipe-tree" /></span>
           <span className={cm(styles, "rail-button-label")}>{t("workbench.utility.recipeTree")}</span>
         </button>
-        {utilityToolbarItems.map((item) => {
-          const label = t(item.labelKey);
-          const isDebugLogButton = item.id === "utility-debug-log";
-          const isToolboxButton = item.id === "utility-toolbox";
-          const isHelpButton = item.id === "utility-help";
-          const isSettingsButton = item.id === "utility-settings";
-          const isActive = (isDebugLogButton && debugLogDialogVisible)
-            || (isToolboxButton && toolboxDialogVisible)
-            || (isHelpButton && helpDialogVisible)
-            || (isSettingsButton && settingsDialogVisible);
-          const handleClick = item.dialogKey === undefined
-            ? handleUiEvent
-            : () => {
-              appHost.internalActions.openDialog(item.dialogKey);
-            };
-
-          return (
-            <button
-              aria-label={label}
-              aria-pressed={isDebugLogButton || isToolboxButton || isHelpButton || isSettingsButton ? isActive : undefined}
-              className={cm(styles, isActive
-                ? "rail-button rail-button-utility is-active"
-                : "rail-button rail-button-utility")}
-              key={item.id}
-              onClick={handleClick}
-              title={label}
-              type="button"
-            >
-              <span className={cm(styles, "rail-button-short")}>
-                <WorkbenchIcon kind={item.icon} />
-              </span>
-              <span className={cm(styles, "rail-button-label")}>{label}</span>
-            </button>
-          );
-        })}
+        {utilityToolbarItems.filter((item) => PINNED_DIALOGS.has(item.dialogKey)).map((item) => dialogButton(item, false))}
+        <div className={cm(styles, "left-toolbar-more")} ref={moreRef}>
+          <button
+            aria-expanded={moreOpen}
+            aria-haspopup="menu"
+            aria-label={moreLabel}
+            className={cm(styles, moreOpen || overflowActive
+              ? "rail-button rail-button-utility is-active"
+              : "rail-button rail-button-utility")}
+            onClick={() => setMoreOpen((open) => !open)}
+            title={moreLabel}
+            type="button"
+          >
+            <span className={cm(styles, "rail-button-short")}><LucideEllipsis aria-hidden /></span>
+            <span className={cm(styles, "rail-button-label")}>{moreLabel}</span>
+          </button>
+          <div aria-label={moreLabel} className={cm(styles, "left-toolbar-more-menu")} hidden={!moreOpen} role="menu">
+            {overflowPanels.map((item) => panelButton(item, true))}
+            {overflowDialogs.map((item) => dialogButton(item, true))}
+          </div>
+        </div>
       </div>
     </aside>
   );

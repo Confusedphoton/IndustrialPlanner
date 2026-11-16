@@ -111,7 +111,7 @@
 .workbench-floating-top-bar-controls {
   position: absolute;
   top: 10px;
-  right: calc(var(--right-dock-width, 0px) + var(--recipe-dock-width, 0px) + 12px);
+  right: calc(var(--canvas-right-edge, 0px) + 12px);
   z-index: 5;
   display: inline-flex;
   align-items: center;
@@ -154,4 +154,52 @@
 
 .workbench.is-stack-inspector-only .recipe-tree-overlay.is-docked .recipe-tree-header {
   padding-top: 4px;
+}
+
+// 放置面板跟随画布工具条停靠在执笔手一侧：工具条拖到右缘时面板移到画布右侧，紧挨属性面板与配方树。
+.workbench.is-palette-right {
+  grid-template-columns:
+    var(--left-toolbar-width, 68px)
+    minmax(0, 1fr)
+    var(--left-dock-width, 320px)
+    var(--right-dock-width, 340px)
+    var(--recipe-dock-width, 0px);
+  grid-template-areas:
+    "toolbar toolbar toolbar toolbar toolbar"
+    "tools canvas left right recipe"
+    "tools toolbox-bottom left right recipe"
+    "bottom bottom bottom bottom bottom";
+}
+
+.workbench.is-palette-right.is-right-stacked {
+  grid-template-areas:
+    "toolbar toolbar toolbar toolbar toolbar"
+    "tools canvas left right right"
+    "tools canvas left recipe recipe"
+    "tools toolbox-bottom left recipe recipe"
+    "bottom bottom bottom bottom bottom";
+}
+
+.workbench.is-palette-right.is-stack-inspector-only {
+  grid-template-areas:
+    "toolbar toolbar toolbar toolbar toolbar"
+    "tools canvas left recipe recipe"
+    "tools canvas left right right"
+    "tools toolbox-bottom left right right"
+    "bottom bottom bottom bottom bottom";
+}
+
+.workbench.is-palette-right .dock-shell-left {
+  border-right: 0;
+  border-left: 1px solid var(--line);
+}
+
+.workbench.is-palette-right .dock-resize-handle {
+  right: auto;
+  left: -14px;
+}
+
+.workbench.is-palette-right .dock-resize-handle::after {
+  left: auto;
+  right: 2px;
 }

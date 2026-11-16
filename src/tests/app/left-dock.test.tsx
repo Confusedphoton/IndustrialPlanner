@@ -257,8 +257,9 @@ describe("Left dock panel switching", () => {
     const utilityButtons = toolbarGroups[1]?.querySelectorAll(".rail-button");
     const visiblePanel = queryVisibleLeftDockPanel(container);
 
-    expect(primaryButtons).toHaveLength(4);
-    expect(utilityButtons).toHaveLength(5);
+    // 常用的放置与蓝图常驻；历史、基地等不常用项收进「更多」。
+    expect(primaryButtons).toHaveLength(2);
+    expect(utilityButtons).toHaveLength(8);
     expect(container.textContent).toContain("放置模式");
     expect(toolbarGroups[0]?.textContent).not.toContain("区域");
     expect(visiblePanel).not.toBeNull();
@@ -559,7 +560,7 @@ describe("Left dock panel switching", () => {
       utilityGroup?.querySelectorAll(".rail-button") ?? [],
     ).map((button) => button.getAttribute("title"));
 
-    expect(utilityTitlesBefore).toEqual(["配方树", "工具箱", "帮助", "问题反馈", "设置"]);
+    expect(utilityTitlesBefore).toEqual(["配方树", "工具箱", "更多", "操作历史", "基地", "帮助", "问题反馈", "设置"]);
 
     act(() => {
       runInAction(() => {
@@ -571,7 +572,8 @@ describe("Left dock panel switching", () => {
       utilityGroup?.querySelectorAll(".rail-button") ?? [],
     ).map((button) => button.getAttribute("title"));
 
-    expect(utilityTitlesAfter).toEqual(["配方树", "调试日志", "工具箱", "帮助", "问题反馈", "设置"]);
+    // 调试日志只在调试模式下出现，与其他不常用项一起在「更多」里。
+    expect(utilityTitlesAfter).toEqual(["配方树", "工具箱", "更多", "操作历史", "基地", "仿真", "调试日志", "帮助", "问题反馈", "设置"]);
   });
 
   it("frames the selected placement group and shows number shortcuts only inside it", async () => {

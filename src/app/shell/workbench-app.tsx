@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 import { BottomStatusBar } from "@/app/shell/layout/bottom-status-bar";
 import { CanvasHotbar } from "@/app/shell/canvas/canvas-hotbar";
+import { PLACEMENT_SHELF_WIDTH_PX, placementShelfState } from "@/app/shell/panels/placement-shelf-state";
 import { MarkingMenuOverlay } from "@/app/shell/canvas/marking-menu-overlay";
 import { CanvasToolRail } from "@/app/shell/canvas/canvas-tool-rail";
 import { canvasToolRailState } from "@/app/shell/canvas/canvas-tool-rail-state";
@@ -735,7 +736,11 @@ export const WorkbenchApp = observer(function WorkbenchApp({
   const isTouchLandscape = isTouchLandscapeScreenProfile(screenProfile);
   const isTouchLayout = isMobileOrTabletScreenProfile(screenProfile);
   const isCompactLeftToolbar = isTouchLayout;
-  const effectiveLeftDockWidth = resolveLeftDockWidthForScreenProfile(appHost.state.workbench, screenProfile);
+  // 放置面板切到窄设备架时只占一列图标的宽度。
+  const effectiveLeftDockWidth = placementShelfState.enabled
+    && (appHost.internalState.runtime.activePanel ?? "placement") === "placement"
+    ? PLACEMENT_SHELF_WIDTH_PX
+    : resolveLeftDockWidthForScreenProfile(appHost.state.workbench, screenProfile);
   const showFloatingTopBarControls = isTouchLandscape && topBarCollapsed;
   const showBottomStatusBar = !showFloatingTopBarControls;
   const showMobilePortraitGate = isMobilePortraitScreenProfile(screenProfile);
@@ -1172,10 +1177,14 @@ export const WorkbenchApp = observer(function WorkbenchApp({
   ]);
 
 
+  const paletteOnRight = canvasToolRailState.side === "right";
   const workbenchStyle = {
     ...resolveInCanvasThemeCssVariables(effectiveCanvasTheme),
     "--left-toolbar-width": `${leftToolbarWidth}px`,
     "--left-dock-width": `${dockLayoutBudget.leftDockWidth}px`,
+    // 画布左右两侧被停靠栏占用的宽度；放置面板在哪一侧取决于画布工具条的位置。
+    "--canvas-left-edge": `${leftToolbarWidth + (paletteOnRight ? 0 : dockLayoutBudget.leftDockWidth)}px`,
+    "--canvas-right-edge": `${dockLayoutBudget.rightDockWidth + dockLayoutBudget.recipeDockWidth + (paletteOnRight ? dockLayoutBudget.leftDockWidth : 0)}px`,
     "--right-dock-width": `${dockLayoutBudget.rightDockWidth}px`,
     // 配方树停靠栏占用最右侧一列。
     "--recipe-dock-width": `${dockLayoutBudget.recipeDockWidth}px`,
@@ -1193,6 +1202,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     <div
       className={cm(styles, [
         "workbench",
+        paletteOnRight ? "is-palette-right" : "",
         stackedRightColumn === null ? "" : "is-right-stacked",
         stackedRightColumn?.mode === "single" ? `is-stack-${stackedRightColumn.expanded}-only` : "",
       ].filter(Boolean).join(" "))}
@@ -1209,7 +1219,13 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           onFullscreenActionFailure={pwaController.openFullscreenNotice}
         />
         <LeftToolbar appHost={appHost} compact={isCompactLeftToolbar} />
-        <LeftDock appHost={appHost} hidden={!leftDockOpen} maxWidth={leftDockMaxWidth} width={dockLayoutBudget.leftDockWidth} />
+        <LeftDock
+          appHost={appHost}
+          hidden={!leftDockOpen}
+          maxWidth={leftDockMaxWidth}
+          side={paletteOnRight ? "right" : "left"}
+          width={dockLayoutBudget.leftDockWidth}
+        />
         {leftDockOpen
           && (appHost.internalState.runtime.activePanel ?? "placement") === "blueprint"
           && appHost.workspace.sync !== null ? (

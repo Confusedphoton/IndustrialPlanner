@@ -19,6 +19,7 @@ import { OverlayStackLayer } from "@/app/shell/shared/overlay-stack";
 import { KeyboardShortcutPrompt, PlacementPaletteRow } from "@/app/shell/shared";
 import LucideChevronDown from "~icons/lucide/chevron-down";
 import LucideLayoutGrid from "~icons/lucide/layout-grid";
+import LucidePanelLeftClose from "~icons/lucide/panel-left-close";
 import { createEntityIconAssetUrl, createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 import { isMobileOrTabletScreenProfile } from "@/shared/browser/screen-profile";
 import { resolveEntityVariantName } from "@/shared/entity-variants";
@@ -29,6 +30,9 @@ import {
   type PlacementButtonDefinition,
   type PlacementSectionDefinition,
 } from "./placement-catalog";
+import { PlacementShelf } from "./placement-shelf";
+import { placementShelfState } from "./placement-shelf-state";
+import { PlacementTodoList } from "./placement-todo-list";
 import { resolvePlacementPointerSource } from "@/app/shell/shared/placement-pointer-source";
 import {
   didPanelPlacementDragJustEnd,
@@ -410,6 +414,19 @@ export const PlacementPanel = observer(function PlacementPanel({
   appHost: AppHost;
   active?: boolean;
 }) {
+  return placementShelfState.enabled
+    ? <PlacementShelf appHost={appHost} />
+    : <PlacementPalette active={active} appHost={appHost} />;
+});
+
+/** 完整放置面板：搜索、分类筛选、待放清单与按分类的设备磁贴。 */
+const PlacementPalette = observer(function PlacementPalette({
+  appHost,
+  active = true,
+}: {
+  appHost: AppHost;
+  active?: boolean;
+}) {
   const t = appHost.actions.translate;
   // 设备搜索。输入即过滤，Enter 放置首个匹配，Esc 清空；画布上按 “/” 聚焦。
   const [deviceQuery, setDeviceQuery] = useState("");
@@ -540,6 +557,15 @@ export const PlacementPanel = observer(function PlacementPanel({
       />
       {normalizedDeviceQuery.length === 0 && deviceSections.length > 1 ? (
         <nav aria-label={t("placement.categoryFilter")} className={cm(styles, "placement-category-chips")}>
+          <button
+            aria-label={t("placement.showShelf")}
+            className={cm(styles, "placement-category-chip is-shelf-toggle")}
+            onClick={() => placementShelfState.setEnabled(true)}
+            title={t("placement.showShelf")}
+            type="button"
+          >
+            <LucidePanelLeftClose aria-hidden />
+          </button>
           {[null, ...deviceSections].map((section) => {
             const titleKey = section?.titleKey ?? null;
             const label = t(titleKey ?? "placement.allCategories");
@@ -565,6 +591,7 @@ export const PlacementPanel = observer(function PlacementPanel({
         </nav>
       ) : null}
       </div>
+      {normalizedDeviceQuery.length === 0 && activeCategory === null ? <PlacementTodoList appHost={appHost} variant="panel" /> : null}
       {visibleSections.map((section, sectionIndex) => {
         const sectionTitleId = `placement-device-section-${sectionIndex}`;
         const isPlacementGroupActive = (

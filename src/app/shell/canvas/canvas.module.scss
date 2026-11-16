@@ -503,12 +503,12 @@
 .canvas-top-left-corner-toolbar {
   position: absolute;
   top: calc(var(--top-bar-height, 48px) + 12px);
-  left: calc(var(--left-toolbar-width, 68px) + var(--left-dock-width, 0px) + var(--canvas-tool-rail-width, 0px) + 14px);
+  left: calc(var(--canvas-left-edge, 68px) + var(--canvas-tool-rail-width, 0px) + 14px);
   z-index: 4;
   display: grid;
   justify-items: stretch;
   gap: 6px;
-  max-width: calc(100% - var(--left-toolbar-width, 68px) - var(--left-dock-width, 0px) - var(--right-dock-width, 0px) - var(--recipe-dock-width, 0px) - 28px);
+  max-width: calc(100% - var(--canvas-left-edge, 68px) - var(--canvas-right-edge, 0px) - 28px);
   pointer-events: auto;
 }
 
@@ -574,7 +574,7 @@
     var(--top-bar-height, 48px)
     + (100% - var(--top-bar-height, 48px) - var(--canvas-bottom-obstruction-height, var(--bottom-bar-height, 28px))) / 2
   );
-  right: calc(var(--right-dock-width, 0px) + var(--recipe-dock-width, 0px) + var(--canvas-tool-rail-right-width, 0px) + 12px);
+  right: calc(var(--canvas-right-edge, 0px) + var(--canvas-tool-rail-right-width, 0px) + 12px);
   z-index: 4;
   display: grid;
   justify-items: end;
@@ -1117,18 +1117,15 @@
 }
 
 .canvas-hotbar-peek {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  z-index: 1;
+  z-index: 50;
   padding: 3px 8px;
   border-radius: 6px;
   background: var(--surface-1);
-  box-shadow: 0 4px 12px var(--in-canvas-toolbar-shadow);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 18%);
   color: var(--text-0);
   font-size: 12px;
   white-space: nowrap;
-  transform: translateX(-50%);
+  transform: translate(-50%, -100%);
   pointer-events: none;
 }
 

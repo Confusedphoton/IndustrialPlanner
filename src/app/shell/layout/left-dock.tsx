@@ -15,6 +15,7 @@ import { MIN_SQUEEZED_LEFT_DOCK_WIDTH_PX } from "@/app/shell/layout/dock-layout-
 import { isMobileOrTabletScreenProfile } from "@/shared/browser/screen-profile";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
+import { placementShelfState } from "@/app/shell/panels/placement-shelf-state";
 
 
 type LeftDockPanelId = Exclude<ActivePanel, null>;
@@ -47,11 +48,13 @@ const PANEL_ORDER: LeftDockPanelId[] = ["placement", "region", "blueprint", "his
 const LeftDockView = observer(function LeftDockView({
   appHost,
   hidden,
+  side,
   width,
   maxWidth,
 }: {
   appHost: AppHost;
   hidden: boolean;
+  side: "left" | "right";
   width: number;
   maxWidth: number;
 }) {
@@ -64,7 +67,8 @@ const LeftDockView = observer(function LeftDockView({
   const regularMinWidth = resolveMinLeftDockWidthForScreenProfile(screenProfile);
   // 画布把面板挤到常规最窄宽度以下时，仍可在挤压下限与布局允许的最宽值之间拖动。
   const minWidth = maxWidth < regularMinWidth ? MIN_SQUEEZED_LEFT_DOCK_WIDTH_PX : regularMinWidth;
-  const resizable = !hidden && maxWidth > minWidth;
+  const shelf = placementShelfState.enabled && activePanel === "placement";
+  const resizable = !hidden && !shelf && maxWidth > minWidth;
 
   useEffect(() => {
     return () => {
@@ -100,7 +104,7 @@ const LeftDockView = observer(function LeftDockView({
       dragging = true;
 
       appHost.internalActions.setLeftDockWidth(
-        Math.min(maxWidth, Math.max(lowerBound, startWidth + moveEvent.clientX - startX)),
+        Math.min(maxWidth, Math.max(lowerBound, startWidth + (moveEvent.clientX - startX) * (side === "right" ? -1 : 1))),
       );
     };
 
@@ -130,7 +134,7 @@ const LeftDockView = observer(function LeftDockView({
     <div className={cm(styles, "dock-shell-left")} hidden={hidden}>
       <aside className={cm(styles, "dock dock-left panel-surface")}>
         <section className={cm(styles, "dock-section")}>
-          {isTouchLayout ? null : (
+          {isTouchLayout || shelf ? null : (
             <div className={cm(styles, "section-header")}>
               <div className={cm(styles, "section-header-copy")}>
                 <h2>{currentPanelLabel}</h2>
@@ -165,17 +169,20 @@ const LeftDockView = observer(function LeftDockView({
 export function LeftDock({
   appHost,
   hidden = false,
+  side = "left",
   width,
   maxWidth,
 }: {
   appHost: AppHost;
   hidden?: boolean;
+  /** 面板停靠在画布的哪一侧（跟随画布工具条）；右侧时抓手在面板左缘，向左拖变宽。 */
+  side?: "left" | "right";
   /** 布局实际给面板的宽度（可能被画布挤窄到保存的宽度以下）。 */
   width: number;
   /** 当前布局下面板最宽可拖到的宽度。 */
   maxWidth: number;
 }) {
-  return <LeftDockView appHost={appHost} hidden={hidden} maxWidth={maxWidth} width={width} />;
+  return <LeftDockView appHost={appHost} hidden={hidden} maxWidth={maxWidth} side={side} width={width} />;
 }
 
 export default LeftDock;
