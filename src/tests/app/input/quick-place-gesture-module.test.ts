@@ -41,6 +41,7 @@ describe("createQuickPlaceGestureModule", () => {
       searchQuery: "",
       openSource: "pointer",
       activeResultId: null,
+      category: null,
     });
 
     expect(touchModule.handle(touchDoubleTapEvent(333, 444), touchContext.context)).toEqual({
@@ -53,6 +54,7 @@ describe("createQuickPlaceGestureModule", () => {
       searchQuery: "",
       openSource: "pointer",
       activeResultId: null,
+      category: null,
     });
   });
 
@@ -98,6 +100,7 @@ describe("createQuickPlaceGestureModule", () => {
         searchQuery: "abc",
         openSource: "keyboard-shortcut",
         activeResultId: null,
+        category: null,
       },
     });
     const module = createQuickPlaceGestureModule();
@@ -114,6 +117,7 @@ describe("createQuickPlaceGestureModule", () => {
       searchQuery: "belt",
       openSource: "pointer",
       activeResultId: null,
+      category: "warehouse",
     };
 
     expect(module.handle(exitActiveToolEvent(), context)).toEqual({ status: "handled" });
@@ -123,6 +127,8 @@ describe("createQuickPlaceGestureModule", () => {
       searchQuery: "",
       openSource: null,
       activeResultId: null,
+      // 所选分类是用户的工作方式，关闭后保留，下次打开仍按它筛选。
+      category: "warehouse",
     });
   });
 });
@@ -130,7 +136,7 @@ describe("createQuickPlaceGestureModule", () => {
 function createContext(options: {
   activeTool?: "select" | "move"; quickPlaceEnabled?: boolean; gridCell?: { x: number; y: number } | null;
   quickPlace?: { visible: boolean; anchor: { x: number; y: number } | null; searchQuery: string;
-    openSource: "keyboard-shortcut" | "pointer" | null; activeResultId: string | null };
+    openSource: "keyboard-shortcut" | "pointer" | null; activeResultId: string | null; category: string | null };
 } = {}) {
   const test = createCanvasTestSession({ activeTool: options.activeTool }); cleanups.push(test.dispose);
   test.app.internalState.settings.quickPlaceEnabled = options.quickPlaceEnabled ?? true;

@@ -17,7 +17,9 @@ import LucideStarOff from "~icons/lucide/star-off";
 import { runInAction } from "mobx";
 
 import { canPlaceEntityDefinitionInBase } from "@/app/placement-zone-availability";
-import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
+import { createEntityIconAssetUrl, createPublicAssetUrl } from "@/shared/browser/public-asset-url";
+import LucideLayoutGrid from "~icons/lucide/layout-grid";
+import { PLACEMENT_CATEGORIES } from "@/app/shell/panels/placement-catalog";
 import { resolveEntityVariantName, resolveEntityCraftGroupKey } from "@/shared/entity-variants";
 import {
   QUICK_PLACE_FAVORITE_LIMIT,
@@ -83,6 +85,10 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
       canUseDefinition: (definition) => canPlaceEntityDefinitionInBase(appHost, definition, currentBaseId),
     }),
   [appHost, currentBaseId, t]);
+  const categories = useMemo(() => PLACEMENT_CATEGORIES.flatMap((category) => {
+    const first = entries.find((entry) => entry.definition.uiGroup === category.uiGroup);
+    return first === undefined ? [] : [{ ...category, iconDeviceId: first.id }];
+  }), [entries]);
   const availableEntityIds = useMemo(
     () => new Set(entries.map((entry) => entry.id)),
     [entries],
@@ -123,11 +129,11 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
     [anchor, viewportRevision, visible],
   );
   const filteredEntries = useMemo(
-    () => filterQuickPlaceDeviceEntries(entries, runtime.searchQuery),
-    [entries, runtime.searchQuery],
+    () => filterQuickPlaceDeviceEntries(entries, runtime.searchQuery, runtime.category),
+    [entries, runtime.searchQuery, runtime.category],
   );
   // 搜索为空时在设备列表顶部列出最近放置的设备，用笔在画布旁直接切换设备。
-  const recentEntries = runtime.searchQuery.trim() === ""
+  const recentEntries = runtime.searchQuery.trim() === "" && runtime.category === null
     ? recentPlacementDevices.deviceIds
       .flatMap((deviceId) => entryById.get(deviceId) ?? [])
       .slice(0, QUICK_PLACE_RECENT_LIMIT)
@@ -582,6 +588,32 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
             type="search"
             value={runtime.searchQuery}
           />
+          {runtime.searchQuery.trim() === "" ? (
+            <nav aria-label={t("placement.categoryFilter")} className={cm(styles, "quick-place-categories")}>
+              {[null, ...categories].map((category) => {
+                const key = category?.uiGroup ?? null;
+                const label = t(category?.titleKey ?? "placement.allCategories");
+                return (
+                  <button
+                    aria-label={label}
+                    aria-pressed={runtime.category === key}
+                    className={cm(styles, runtime.category === key ? "quick-place-category is-active" : "quick-place-category")}
+                    key={key ?? "all"}
+                    onClick={() => runInAction(() => {
+                      runtime.category = runtime.category === key ? null : key;
+                      runtime.activeResultId = null;
+                    })}
+                    title={label}
+                    type="button"
+                  >
+                    {category === null
+                      ? <LucideLayoutGrid aria-hidden />
+                      : <img alt="" src={createEntityIconAssetUrl(appHost.workspace.registry.queries.findEntityDefinition(category.iconDeviceId)?.iconPath)} />}
+                  </button>
+                );
+              })}
+            </nav>
+          ) : null}
         </header>
         <div className={cm(styles, "quick-place-device-scroll")}>
         {recentEntries.length === 0 ? null : (

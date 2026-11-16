@@ -71,13 +71,15 @@ export function resolveCanvasHotbarDeviceIds(options: {
   return result;
 }
 
+/** 按搜索词过滤；没有搜索词时按所选分类（uiGroup）过滤，不选分类时返回全部。 */
 export function filterQuickPlaceDeviceEntries(
   entries: readonly QuickPlaceDeviceEntry[],
   query: string,
+  category: string | null = null,
 ): QuickPlaceDeviceEntry[] {
   const normalizedQuery = query.trim().toLowerCase();
   if (normalizedQuery === "") {
-    return [...entries];
+    return category === null ? [...entries] : entries.filter((entry) => entry.definition.uiGroup === category);
   }
 
   return entries.filter((entry) =>

@@ -524,6 +524,8 @@ export interface QuickPlaceRuntimeStateReadWrite {
   searchQuery: string;
   openSource: "keyboard-shortcut" | "pointer" | null;
   activeResultId: string | null;
+  /** 只列出该放置分类（uiGroup）的设备；搜索时忽略。 */
+  category: string | null;
 }
 
 export interface LogisticsPlacementRuntimeStateReadWrite {
@@ -708,6 +710,7 @@ class QuickPlaceRuntimeStateReadWriteImpl implements QuickPlaceRuntimeStateReadW
   searchQuery = "";
   openSource: "keyboard-shortcut" | "pointer" | null = null;
   activeResultId: string | null = null;
+  category: string | null = null;
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });

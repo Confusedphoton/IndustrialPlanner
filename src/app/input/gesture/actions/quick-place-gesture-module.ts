@@ -210,6 +210,7 @@ function moveQuickPlaceActiveResult(
   const entries = filterQuickPlaceDeviceEntries(
     buildCurrentQuickPlaceEntries(context),
     context.canvas.state.runtime.quickPlace.searchQuery,
+    context.canvas.state.runtime.quickPlace.category,
   );
   if (entries.length === 0) {
     return { status: "ignored" as const };
@@ -239,6 +240,7 @@ function confirmQuickPlaceActiveResult(
   const entries = filterQuickPlaceDeviceEntries(
     buildCurrentQuickPlaceEntries(context),
     context.canvas.state.runtime.quickPlace.searchQuery,
+    context.canvas.state.runtime.quickPlace.category,
   );
   const activeResultId = context.canvas.state.runtime.quickPlace.activeResultId;
   const entry = activeResultId === null

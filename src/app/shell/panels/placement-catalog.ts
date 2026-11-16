@@ -163,4 +163,6 @@ export function buildPlacementDeviceSections(appHost: AppHost): readonly Placeme
   return deviceSections;
 }
 
-
+/** 放置分类（按面板顺序）及其标题，快速放置的分类筛选与面板共用。 */
+export const PLACEMENT_CATEGORIES: ReadonlyArray<{ readonly uiGroup: PlacementGroup; readonly titleKey: string }> =
+  DEVICE_SECTION_ORDER.map((uiGroup) => ({ uiGroup, titleKey: UI_GROUP_SECTION_CONFIG[uiGroup].titleKey }));

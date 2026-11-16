@@ -198,3 +198,17 @@ describe("canvas hotbar order", () => {
   });
 });
 
+describe("quick place category filter", () => {
+  const entry = (id: string, uiGroup: UiGroup) => ({
+    id, name: id, iconSrc: "", pinyinFull: id, pinyinInitial: id,
+    definition: { id, uiGroup, tags: [] } as unknown as EntityDefinition,
+  });
+  const entries = [entry("a", "warehouse"), entry("b", "agriculture"), entry("c", "warehouse")];
+
+  it("lists one category when nothing is typed and searches every category once something is", () => {
+    expect(filterQuickPlaceDeviceEntries(entries, "", "warehouse").map((item) => item.id)).toEqual(["a", "c"]);
+    expect(filterQuickPlaceDeviceEntries(entries, "b", "warehouse").map((item) => item.id)).toEqual(["b"]);
+    expect(filterQuickPlaceDeviceEntries(entries, "", null)).toHaveLength(3);
+  });
+});
+
