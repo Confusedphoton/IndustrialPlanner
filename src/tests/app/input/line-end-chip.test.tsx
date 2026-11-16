@@ -281,6 +281,25 @@ describe("drawing a line out of a port with a finger", () => {
   });
 });
 
+describe("routing a line around obstacles", () => {
+  it("finds a way around a wall when the pen reaches the target machine", async () => {
+    const target = { ...furnace({ recipe: false }), id: "target", position: { x: 30, y: 42 } };
+    // 两台设备挡在起点与目标之间，直着或一次转弯都过不去。
+    const walls = [26, 29, 32, 35].map((x, index) => ({ ...furnace({ recipe: false }), id: `wall-${index}`, position: { x, y: 36 } }));
+    const appHost = await createAppHost([furnace({ recipe: true }), target, ...walls]);
+    const { inside, delta } = furnaceBeltOutput(appHost);
+
+    penDrag(appHost, inside, [{ x: inside.x + delta.x * 2, y: inside.y + delta.y * 2 }, { x: 31, y: 43 }]);
+
+    const belts = entities(appHost).filter((entity) => entity.definitionId.startsWith("belt"));
+    expect(belts.length).toBeGreaterThan(9);
+    const wallCells = walls.flatMap((wall) => [0, 1, 2].flatMap((dx) => [0, 1, 2].map((dy) => `${wall.position.x + dx}:${wall.position.y + dy}`)));
+    expect(belts.some((belt) => wallCells.includes(`${belt.position.x}:${belt.position.y}`))).toBe(false);
+    expect(inputOutsideCells(appHost, target).some((cell) =>
+      belts.some((belt) => belt.position.x === cell.x && belt.position.y === cell.y))).toBe(true);
+  });
+});
+
 describe("drawing a line toward the canvas edge", () => {
   it("pans the map while the line head is held at the edge and keeps extending the line", async () => {
     const appHost = await createAppHost([furnace({ recipe: true })]);

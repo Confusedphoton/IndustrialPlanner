@@ -495,43 +495,42 @@ describe("物流布设模式完全测试集", () => {
     });
   });
 
-  it("管道从已有管道起笔分叉-开启自动分流器时穿过液燃炉应显示红色且拒绝落盘", async () => {
+  it("管道从已有管道起笔分叉-开启自动分流器时指向液燃炉会绕开它接进输入口", async () => {
     resetCanvasFromUserBlueprint(editorHost, USER_PROVIDED_BLUEPRINT_PIPE_BRANCH);
     runInAction(() => {
       appHost.internalState.settings.hypergryphAutoCreateSplittersAndConvergers = true;
     });
     enterPipeLogisticsPlacement(appHost);
 
-    // (51,3) 起笔，向 (51,2) 移动（液燃炉方向）
+    // (51,3) 起笔，指针移到 (51,2) 的液燃炉上：不穿过设备，而是自动绕到它的输入口。
     clickCell(appHost, editorHost, { x: 51, y: 3 }, nextPointerId++);
     await moveToCell(appHost, editorHost, { x: 51, y: 2 }, nextPointerId++);
+    const draft = editorHost.queries.resolveLogisticsDraftState();
+    expect(draft?.canApply).toBe(true);
+    expect(draft?.target?.type).toBe("device-port");
+    expect(draft?.cells.some((cell) => cell.gridPoint.x === 51 && cell.gridPoint.y === 2)).toBe(false);
     const entitiesBeforeConfirm = editorHost.document.getSnapshot().entities;
-    expect(editorHost.queries.resolveLogisticsDraftState()?.canApply).toBe(false);
-    expect(editorHost.state.collections["preview"].some((entityId) =>
-      editorHost.state.collections["invalid-placement"].includes(entityId)
-    )).toBe(true);
     clickCell(appHost, editorHost, { x: 51, y: 2 }, nextPointerId++);
-    expect(editorHost.document.getSnapshot().entities).toEqual(entitiesBeforeConfirm);
-
+    expect(editorHost.document.getSnapshot().entities).not.toEqual(entitiesBeforeConfirm);
   });
 
-  it("管道从已有管道起笔分叉-关闭自动分流器时穿过液燃炉应显示红色且拒绝落盘", async () => {
+  it("管道从已有管道起笔分叉-关闭自动分流器时指向液燃炉会绕开它接进输入口", async () => {
     resetCanvasFromUserBlueprint(editorHost, USER_PROVIDED_BLUEPRINT_PIPE_BRANCH);
     runInAction(() => {
       appHost.internalState.settings.hypergryphAutoCreateSplittersAndConvergers = false;
     });
     enterPipeLogisticsPlacement(appHost);
 
+    // (51,3) 起笔，指针移到 (51,2) 的液燃炉上：不穿过设备，而是自动绕到它的输入口。
     clickCell(appHost, editorHost, { x: 51, y: 3 }, nextPointerId++);
     await moveToCell(appHost, editorHost, { x: 51, y: 2 }, nextPointerId++);
+    const draft = editorHost.queries.resolveLogisticsDraftState();
+    expect(draft?.canApply).toBe(true);
+    expect(draft?.target?.type).toBe("device-port");
+    expect(draft?.cells.some((cell) => cell.gridPoint.x === 51 && cell.gridPoint.y === 2)).toBe(false);
     const entitiesBeforeConfirm = editorHost.document.getSnapshot().entities;
-    expect(editorHost.queries.resolveLogisticsDraftState()?.canApply).toBe(false);
-    expect(editorHost.state.collections["preview"].some((entityId) =>
-      editorHost.state.collections["invalid-placement"].includes(entityId)
-    )).toBe(true);
     clickCell(appHost, editorHost, { x: 51, y: 2 }, nextPointerId++);
-    expect(editorHost.document.getSnapshot().entities).toEqual(entitiesBeforeConfirm);
-
+    expect(editorHost.document.getSnapshot().entities).not.toEqual(entitiesBeforeConfirm);
   });
 
   it("连续布设管道绕回穿越已有直管时(2,2)应生成管道桥接器", async () => {

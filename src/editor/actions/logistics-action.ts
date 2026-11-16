@@ -19,7 +19,8 @@ import { isGridPointInBaseAreas, resolveBaseAreas } from "@/shared/geometry/base
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { DraftEntity } from "../draft-entity";
 import { cloneEntityConfig } from "../entity-config-clone";
-import { resolvePlacementValidations, syncPlacementValidationState } from "../placement-validation";
+import { canDefinitionsOverlap, resolvePlacementValidations, syncPlacementValidationState } from "../placement-validation";
+import { findAutoRoute, type AutoRouteCell } from "../logistics/auto-route";
 import { action } from "mobx";
 import type { EditorActionsContext } from "./types";
 import {
@@ -31,6 +32,7 @@ import {
   findTopEntityAtGridPoint,
   generateSingleBendPathPoints,
   gridPointKey,
+  isAnyOrdinaryLogisticsDefinitionId,
   isGridPointInsideRect,
   isOrdinaryLogisticsDefinitionId,
   oppositeEdge,
@@ -84,6 +86,11 @@ interface OrdinaryLogisticsConnectionInfo {
   readonly inputConnected: boolean;
   readonly outputConnected: boolean;
 }
+
+/** 自动寻路在起终点外接矩形之外再搜索的格数，给绕行留空间。 */
+const AUTO_ROUTE_SEARCH_MARGIN = 16;
+const AUTO_ROUTE_FREE: AutoRouteCell = { type: "free" };
+const AUTO_ROUTE_BLOCKED: AutoRouteCell = { type: "blocked" };
 
 interface DeviceRouteCandidate {
   readonly source: LogisticsDraftEndpoint;
@@ -252,7 +259,7 @@ export function createEditorLogisticsActions(
           sourceEndpoint: draft.source,
           targetEntityId: targetEntity?.id ?? null,
           pointerGridPoint: options.pointerGridPoint,
-          preferredRouteOrder: options.routeMode.routeOrder,
+          strategy: { type: "single-bend", preferredRouteOrder: options.routeMode.routeOrder },
           autoCreateSplittersAndConvergers:
             options.autoCreateSplittersAndConvergers ?? true,
         });
@@ -287,6 +294,29 @@ export function createEditorLogisticsActions(
       logisticsContext.state.internalTransientState.logisticsDeviceRouteCycleIndex = 0;
 
       if (options.routeMode.type === "freehand") {
+        // 笔画到达目标设备：不再照着笔迹铺，而是贴着笔画走过的走廊自动绕开障碍接进它的输入口。
+        const autoRoute = resolveFreehandAutoRoute({
+          context: logisticsContext,
+          draft,
+          source,
+          pointerGridPoint: options.pointerGridPoint,
+          autoCreateSplittersAndConvergers: options.autoCreateSplittersAndConvergers ?? true,
+        });
+        if (autoRoute !== null) {
+          return rebuildLogisticsDraft({
+            context: logisticsContext,
+            kind: draft.kind,
+            source: autoRoute.source,
+            target: autoRoute.target,
+            routeOrder: draft.routeOrder,
+            points: autoRoute.points,
+            replacingEntityId: draft.replacingEntityId,
+            allowEmptyTarget: options.allowEmptyTarget ?? true,
+            autoCreateSplittersAndConvergers: options.autoCreateSplittersAndConvergers ?? true,
+            status: "updated",
+          });
+        }
+
         if (shouldKeepSelfOverlapConvergerHeadWhenRetracingOwnSegment({
           draft,
           pointerGridPoint: options.pointerGridPoint,
@@ -1336,13 +1366,21 @@ function flipRouteOrder(routeOrder: LogisticsRouteOrder): LogisticsRouteOrder {
   return routeOrder === "vertical-first" ? "horizontal-first" : "vertical-first";
 }
 
+/**
+ * 到目标设备的路线：single-bend 只试一次转弯的两种走法，都铺不下时改用自动寻路；
+ * auto 直接自动寻路，贴着 corridor（笔画经过的格）绕开障碍。
+ */
+type DeviceRouteStrategy =
+  | { readonly type: "single-bend"; readonly preferredRouteOrder: LogisticsRouteOrder }
+  | { readonly type: "auto"; readonly corridor: ReadonlySet<string>; readonly routeOrder: LogisticsRouteOrder };
+
 function resolveRouteToDevice(options: {
   context: LogisticsActionContext;
   draft: LogisticsDraftReadonlyState;
   sourceEndpoint: LogisticsDraftEndpoint;
   targetEntityId: string | null;
   pointerGridPoint: GridPoint;
-  preferredRouteOrder: LogisticsRouteOrder;
+  strategy: DeviceRouteStrategy;
   autoCreateSplittersAndConvergers: boolean;
 }): DeviceRouteCandidate | null {
   if (options.targetEntityId === null) {
@@ -1413,21 +1451,33 @@ function resolveRouteToDevice(options: {
     direction: "input",
     pointerGridPoint: options.pointerGridPoint,
   });
-  const routeOrders = [
-    options.preferredRouteOrder,
-    flipRouteOrder(options.preferredRouteOrder),
-  ] as const;
+  const strategy = options.strategy;
+  const preferredRouteOrder = strategy.type === "single-bend" ? strategy.preferredRouteOrder : strategy.routeOrder;
+  const autoRouteCells = strategy.type === "auto"
+    ? createAutoRouteCellResolver({ context: options.context, kind: options.draft.kind, document: currentDocument,
+        ignoredEntityIds: new Set(options.draft.replacingEntityId === null ? [] : [options.draft.replacingEntityId]) })
+    : null;
   const candidates: DeviceRouteCandidate[] = [];
   let fallbackCandidate: DeviceRouteCandidate | null = null;
 
   for (const sourceEndpoint of sourceEndpoints) {
     for (const targetEndpoint of targetEndpoints) {
-      for (const routeOrder of routeOrders) {
-        const points = generateSingleBendPathPoints({
-          start: resolveSourceStartGridPoint(sourceEndpoint),
-          target: targetEndpoint.outsideGridPoint,
-          routeOrder,
-        });
+      const routes = autoRouteCells === null
+        ? [preferredRouteOrder, flipRouteOrder(preferredRouteOrder)].map((routeOrder) => ({
+            routeOrder,
+            points: generateSingleBendPathPoints({
+              start: resolveSourceStartGridPoint(sourceEndpoint),
+              target: targetEndpoint.outsideGridPoint,
+              routeOrder,
+            }),
+          }))
+        : resolveAutoRoutePoints({
+            source: sourceEndpoint,
+            target: targetEndpoint,
+            cellAt: autoRouteCells,
+            corridor: strategy.type === "auto" ? strategy.corridor : new Set(),
+          }).map((points) => ({ routeOrder: preferredRouteOrder, points }));
+      for (const { routeOrder, points } of routes) {
         const cells = resolveLogisticsPathCells({
           kind: options.draft.kind,
           points,
@@ -1466,12 +1516,9 @@ function resolveRouteToDevice(options: {
           bendScore: countPathBends(points),
           targetDistanceScore: Math.abs(targetEndpoint.insideGridPoint.x - options.pointerGridPoint.x)
             + Math.abs(targetEndpoint.insideGridPoint.y - options.pointerGridPoint.y),
-          routeOrderPriority: routeOrder === options.preferredRouteOrder ? 0 : 1,
+          routeOrderPriority: routeOrder === preferredRouteOrder ? 0 : 1,
           signature: [
-            sourceEndpoint.type === "device-port"
-              ? [sourceEndpoint.entityId, sourceEndpoint.portGroupId, sourceEndpoint.portId].join(":")
-              : [sourceEndpoint.type, resolveSourceStartGridPoint(sourceEndpoint).x,
-                  resolveSourceStartGridPoint(sourceEndpoint).y].join(":"),
+            resolveEndpointSignature(sourceEndpoint),
             targetEndpoint.entityId,
             targetEndpoint.portGroupId,
             targetEndpoint.portId,
@@ -1501,11 +1548,172 @@ function resolveRouteToDevice(options: {
   }
 
   if (candidates.length === 0) {
-    return fallbackCandidate;
+    // 一次转弯铺不下（被设备或线挡住）时，改为绕开障碍的自动路线。
+    return strategy.type === "single-bend"
+      ? resolveRouteToDevice({ ...options, strategy: { type: "auto", corridor: new Set(), routeOrder: preferredRouteOrder } })
+        ?? fallbackCandidate
+      : null;
   }
 
   candidates.sort(compareDeviceRouteCandidates);
   return candidates[0] ?? fallbackCandidate;
+}
+
+/** 笔画进入一台可接收本族物流的设备（不是起点设备）时，按笔迹走廊自动寻路接到它的输入口；铺不下时为 null。 */
+function resolveFreehandAutoRoute(options: {
+  context: LogisticsActionContext;
+  draft: LogisticsDraftReadonlyState;
+  source: LogisticsDraftEndpoint;
+  pointerGridPoint: GridPoint;
+  autoCreateSplittersAndConvergers: boolean;
+}): DeviceRouteCandidate | null {
+  const document = options.context.document.getSnapshot();
+  const registryQueries = options.context.workspace.registry.queries;
+  const targetEntity = findTopEntityAtGridPoint({
+    gridPoint: options.pointerGridPoint,
+    document,
+    drafts: [],
+    entityDefinitionMap: options.context.entityDefinitionMap,
+    registryQueries,
+    baseDefinitions: options.context.workspace.registry.baseDefinitions,
+    skipLogisticsKind: options.draft.kind === LOGISTICS_KIND.belt ? LOGISTICS_KIND.pipe : LOGISTICS_KIND.belt,
+  });
+  if (
+    targetEntity === null
+    || isAnyOrdinaryLogisticsDefinitionId(targetEntity.definitionId, registryQueries)
+    || (options.source.type === "device-port" && options.source.entityId === targetEntity.id)
+  ) {
+    return null;
+  }
+  // 能否接上与笔迹无关（走廊只影响代价），同一文档里同一起点到同一设备找不到就不再每次移动都重找。
+  const failureKey = `${resolveEndpointSignature(options.source)}>${targetEntity.id}`;
+  const failures = autoRouteFailures.get(document) ?? new Set<string>();
+  autoRouteFailures.set(document, failures);
+  if (failures.has(failureKey)) {
+    return null;
+  }
+  const corridor = new Set(options.draft.cells.map((cell) => gridPointKey(cell.gridPoint)));
+  corridor.add(gridPointKey(options.pointerGridPoint));
+  const route = resolveRouteToDevice({
+    context: options.context,
+    draft: options.draft,
+    sourceEndpoint: options.source.type === "device-port" ? { ...options.source, fixedSource: true } : options.source,
+    targetEntityId: targetEntity.id,
+    pointerGridPoint: options.pointerGridPoint,
+    strategy: { type: "auto", corridor, routeOrder: options.draft.routeOrder },
+    autoCreateSplittersAndConvergers: options.autoCreateSplittersAndConvergers,
+  });
+  if (route === null) failures.add(failureKey);
+  return route;
+}
+
+const autoRouteFailures = new WeakMap<WorldDocument, Set<string>>();
+
+function resolveEndpointSignature(endpoint: LogisticsDraftEndpoint): string {
+  if (endpoint.type === "device-port") {
+    return [endpoint.entityId, endpoint.portGroupId, endpoint.portId].join(":");
+  }
+  const start = resolveSourceStartGridPoint(endpoint);
+  return [endpoint.type, start.x, start.y].join(":");
+}
+
+/** 自动寻路：起点格接在源端口外侧（或续画的线端），终点格是目标端口外侧，走进端口。 */
+function resolveAutoRoutePoints(options: {
+  source: LogisticsDraftEndpoint;
+  target: DevicePortEndpoint;
+  cellAt: (point: GridPoint) => AutoRouteCell;
+  corridor: ReadonlySet<string>;
+}): GridPoint[][] {
+  const start = resolveSourceStartGridPoint(options.source);
+  const goal = options.target.outsideGridPoint;
+  const margin = AUTO_ROUTE_SEARCH_MARGIN;
+  const bounds = {
+    x: Math.min(start.x, goal.x) - margin,
+    y: Math.min(start.y, goal.y) - margin,
+    width: Math.abs(start.x - goal.x) + margin * 2 + 1,
+    height: Math.abs(start.y - goal.y) + margin * 2 + 1,
+  };
+  const points = findAutoRoute({
+    start,
+    startHeading: options.source.type === "device-port" ? options.source.edge : null,
+    goal,
+    goalExit: oppositeEdge(options.target.edge),
+    cellAt: options.cellAt,
+    bounds,
+    corridor: options.corridor,
+  });
+  return points === null ? [] : [points];
+}
+
+/**
+ * 自动寻路用的格子占用：设备与基地内建实体占的格不可走；同族直线段只能垂直穿过（铺设时自动生成桥接）；
+ * 允许上下交叠的另一族物流可以走；传送带不能出可建造区，任何物流都不能出外环。
+ */
+function createAutoRouteCellResolver(options: {
+  context: LogisticsActionContext;
+  kind: LogisticsKind;
+  document: WorldDocument;
+  ignoredEntityIds: ReadonlySet<string>;
+}): (point: GridPoint) => AutoRouteCell {
+  const registryQueries = options.context.workspace.registry.queries;
+  const ownDefinition = options.context.workspace.registry.entityDefinitions.find((definition) =>
+    isOrdinaryLogisticsDefinitionId(definition.id, options.kind, registryQueries)) ?? null;
+  const occupied = new Map<string, AutoRouteCell>();
+  const entities = [
+    ...options.document.entityOrder.map((entityId) => options.document.entities[entityId]),
+    ...resolveBaseBuiltinEntities({
+      baseDefinitions: options.context.workspace.registry.baseDefinitions,
+      baseId: options.document.baseId,
+    }),
+  ];
+  for (const entity of entities) {
+    if (entity === undefined || options.ignoredEntityIds.has(entity.id)) continue;
+    const definition = options.context.entityDefinitionMap.get(entity.definitionId);
+    if (definition === undefined) continue;
+    const cell = resolveAutoRouteOccupancy({ entity, definition, kind: options.kind, ownDefinition, registryQueries });
+    if (cell === null) continue;
+    const rect = resolveEntityGridRect({ entity, definition });
+    for (let x = rect.x; x < rect.x + rect.width; x += 1) {
+      for (let y = rect.y; y < rect.y + rect.height; y += 1) {
+        const key = gridPointKey({ x, y });
+        // 同一格有多个实体时以最严格的为准。
+        if (occupied.get(key)?.type !== "blocked") occupied.set(key, cell);
+      }
+    }
+  }
+  const baseDefinition = options.context.workspace.registry.baseDefinitions.find((base) => base.id === options.document.baseId);
+  const baseAreas = baseDefinition === undefined ? null : resolveBaseAreas(baseDefinition);
+  return (point) => {
+    if (baseAreas !== null && (
+      !isGridPointInBaseAreas(baseAreas, point, "outer")
+      || (options.kind === LOGISTICS_KIND.belt && !isGridPointInBaseAreas(baseAreas, point, "placeable"))
+    )) {
+      return AUTO_ROUTE_BLOCKED;
+    }
+    return occupied.get(gridPointKey(point)) ?? AUTO_ROUTE_FREE;
+  };
+}
+
+function resolveAutoRouteOccupancy(options: {
+  entity: WorldEntity;
+  definition: EntityDefinition;
+  kind: LogisticsKind;
+  ownDefinition: EntityDefinition | null;
+  registryQueries: LogisticsActionContext["workspace"]["registry"]["queries"];
+}): AutoRouteCell | null {
+  if (isOrdinaryLogisticsDefinitionId(options.definition.id, options.kind, options.registryQueries)) {
+    const input = options.definition.portGroups.find((group) => group.direction === "input")?.ports[0];
+    const output = options.definition.portGroups.find((group) => group.direction === "output")?.ports[0];
+    if (input === undefined || output === undefined || oppositeEdge(input.edge) !== output.edge) {
+      return AUTO_ROUTE_BLOCKED;
+    }
+    const lineEdge = rotateGridEdge(input.edge, options.entity.rotation);
+    return { type: "crossing", travelAxis: lineEdge === "NORTH" || lineEdge === "SOUTH" ? "horizontal" : "vertical" };
+  }
+  if (options.ownDefinition !== null && canDefinitionsOverlap(options.ownDefinition, options.definition)) {
+    return null;
+  }
+  return AUTO_ROUTE_BLOCKED;
 }
 
 function compareDeviceRouteCandidates(left: DeviceRouteCandidate, right: DeviceRouteCandidate): number {

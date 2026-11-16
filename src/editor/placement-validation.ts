@@ -650,12 +650,17 @@ function isAllowedPipeOverlapPair(options: {
   left: PlacementValidationEntry;
   right: PlacementValidationEntry;
 }): boolean {
+  return canDefinitionsOverlap(options.left.definition, options.right.definition);
+}
+
+/** 两种设备能否占同一格（管道与传送带等允许上下交叠的组合）。 */
+export function canDefinitionsOverlap(left: EntityDefinition, right: EntityDefinition): boolean {
   return (
-    hasPlacementBehavior(options.left.definition, PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap)
-    && hasPlacementBehavior(options.right.definition, PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap)
+    hasPlacementBehavior(left, PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap)
+    && hasPlacementBehavior(right, PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap)
   ) || (
-    hasPlacementBehavior(options.right.definition, PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap)
-    && hasPlacementBehavior(options.left.definition, PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap)
+    hasPlacementBehavior(right, PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap)
+    && hasPlacementBehavior(left, PLACEMENT_BEHAVIOR_TYPE.allowBeltOverlap)
   );
 }
 
