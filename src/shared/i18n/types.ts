@@ -1209,6 +1209,7 @@ export type UiKey =
   | "tool.place"
   | "tool.select"
   | "lineEndChip.add"
+  | "lineEndChip.addThis"
   | "lineEndChip.consumers"
   | "lineEndChip.noRoom"
   | "lineEndChip.consumer"

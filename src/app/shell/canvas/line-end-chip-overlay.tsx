@@ -1,5 +1,6 @@
 import { observer } from "mobx-react-lite";
 import { useEffect, useMemo, type MouseEvent } from "react";
+import LucideChevronDown from "~icons/lucide/chevron-down";
 import LucidePlus from "~icons/lucide/plus";
 
 import { resolveLineEndSnapPlacements, type LineEndChipState } from "@/app/canvas/line-end-chip";
@@ -27,6 +28,8 @@ import { useEditorDocumentSnapshot } from "../hooks";
 const CHIP_WIDTH_PX = 68;
 const CHIP_HEIGHT_PX = 44;
 const CHIP_GAP_PX = 6;
+/** 一键接上时旁边“其余选择”小箭头的宽度。 */
+const CHIP_MORE_WIDTH_PX = 30;
 /** 展开列表：每行一台设备（图标与名称），超出时滚动。 */
 const LIST_WIDTH_PX = 248;
 const LIST_ROW_PX = 52;
@@ -77,6 +80,17 @@ export function resolveLineEndConsumers(
     consumers.push({ key, target, recipe: withRecipe === null ? null : recipe });
   }
   return consumers;
+}
+
+/**
+ * 不必选的情况：钉住的规划里恰好一台还缺的设备消费线上物品，或能接的设备只有一台。其余情况为 null，照常列出。
+ */
+export function resolveObviousConsumer<T extends { readonly todo: { readonly placed: number; readonly needed: number } | null }>(
+  consumers: readonly T[],
+): T | null {
+  const unfinished = consumers.filter((consumer) => consumer.todo !== null && consumer.todo.placed < consumer.todo.needed);
+  if (unfinished.length === 1) return unfinished[0]!;
+  return consumers.length === 1 ? consumers[0]! : null;
 }
 
 const selectEntities = (document: WorldDocument) => document.entities;
@@ -152,25 +166,68 @@ export const LineEndChipOverlay = observer(function LineEndChipOverlay({ appHost
 
   const t = appHost.actions.translate;
   const registry = appHost.workspace.registry.queries;
+  const consumerName = (consumer: LineEndConsumer) => {
+    const machineName = t(registry.findEntityDefinition(consumer.target.deviceId)?.nameKey ?? consumer.target.deviceId);
+    const outputId = consumer.recipe?.outputs[0]?.itemId;
+    return outputId === undefined
+      ? machineName
+      : t("lineEndChip.consumer").replace("{item}", resolveProductionPlanningItemName(outputId, index, t)).replace("{machine}", machineName);
+  };
   const choose = (consumer: LineEndConsumer, event: MouseEvent) => {
     const pointerType = (event.nativeEvent as PointerEvent).pointerType || "mouse";
     placeConsumerAtLineEnd(canvas, consumer.target, resolvePlacementPointerSource(appHost, pointerType));
   };
 
   if (!chip.expanded) {
+    const chipStyle = { left: anchor.x - CHIP_WIDTH_PX / 2, top: anchor.y - CHIP_HEIGHT_PX / 2, width: CHIP_WIDTH_PX, height: CHIP_HEIGHT_PX };
+    const obvious = resolveObviousConsumer(consumers);
+    if (obvious === null) {
+      return (
+        <button
+          aria-label={t("lineEndChip.add")}
+          className={cm(styles, "line-end-chip-button")}
+          onClick={() => expandLineEndChip(canvas)}
+          onPointerDown={(event) => event.stopPropagation()}
+          style={chipStyle}
+          title={t("lineEndChip.add")}
+          type="button"
+        >
+          <LucidePlus aria-hidden="true" />
+          <img alt="" src={resolveProductionPlanningItemIconSrc(chip.itemIds[0]!, index)} />
+        </button>
+      );
+    }
+    // 只有一个合理的去处（规划里唯一还缺的消费设备，或唯一能接的设备）时，提示就是那台设备，点一下直接接上；
+    // 其余选择收在旁边的小箭头里。
+    const label = t("lineEndChip.addThis").replace("{name}", consumerName(obvious));
     return (
-      <button
-        aria-label={t("lineEndChip.add")}
-        className={cm(styles, "line-end-chip-button")}
-        onClick={() => expandLineEndChip(canvas)}
-        onPointerDown={(event) => event.stopPropagation()}
-        style={{ left: anchor.x - CHIP_WIDTH_PX / 2, top: anchor.y - CHIP_HEIGHT_PX / 2, width: CHIP_WIDTH_PX, height: CHIP_HEIGHT_PX }}
-        title={t("lineEndChip.add")}
-        type="button"
-      >
-        <LucidePlus aria-hidden="true" />
-        <img alt="" src={resolveProductionPlanningItemIconSrc(chip.itemIds[0]!, index)} />
-      </button>
+      <>
+        <button
+          aria-label={label}
+          className={cm(styles, "line-end-chip-button")}
+          onClick={(event) => choose(obvious, event)}
+          onPointerDown={(event) => event.stopPropagation()}
+          style={chipStyle}
+          title={label}
+          type="button"
+        >
+          <LucidePlus aria-hidden="true" />
+          <img alt="" src={obvious.target.iconSrc ?? resolveProductionPlanningItemIconSrc(chip.itemIds[0]!, index)} />
+        </button>
+        {consumers.length > 1 ? (
+          <button
+            aria-label={t("lineEndChip.consumers")}
+            className={cm(styles, "line-end-chip-button is-more")}
+            onClick={() => expandLineEndChip(canvas)}
+            onPointerDown={(event) => event.stopPropagation()}
+            style={{ left: chipStyle.left + CHIP_WIDTH_PX + CHIP_GAP_PX, top: chipStyle.top, width: CHIP_MORE_WIDTH_PX, height: CHIP_HEIGHT_PX }}
+            title={t("lineEndChip.consumers")}
+            type="button"
+          >
+            <LucideChevronDown aria-hidden="true" />
+          </button>
+        ) : null}
+      </>
     );
   }
 
@@ -194,9 +251,7 @@ export const LineEndChipOverlay = observer(function LineEndChipOverlay({ appHost
         const machineName = t(registry.findEntityDefinition(consumer.target.deviceId)?.nameKey ?? consumer.target.deviceId);
         const outputId = consumer.recipe?.outputs[0]?.itemId;
         const outputName = outputId === undefined ? null : resolveProductionPlanningItemName(outputId, index, t);
-        const name = outputName === null
-          ? machineName
-          : t("lineEndChip.consumer").replace("{item}", outputName).replace("{machine}", machineName);
+        const name = consumerName(consumer);
         const planned = consumer.todo === null
           ? null
           : t("lineEndChip.planned").replace("{name}", name)

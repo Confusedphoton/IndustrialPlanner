@@ -14,7 +14,7 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createWorldDocument, type WorldEntity } from "@/domain/document/world-document";
 import type { GridPoint } from "@/domain/shared/grid";
-import { LineEndChipOverlay } from "@/app/shell/canvas/line-end-chip-overlay";
+import { LineEndChipOverlay, resolveObviousConsumer } from "@/app/shell/canvas/line-end-chip-overlay";
 import { createRegistryContract } from "@/registry";
 import { resolveRotatedPortGeometry } from "@/shared/geometry/port";
 import { createAppTestHost, createEditorTestHost } from "@/tests/helpers/app-test-workspace";
@@ -188,6 +188,21 @@ describe("offering a consumer at the open end of a line dragged from a port", ()
 
     expect(entities(appHost).length).toBeGreaterThan(1);
     expect(appHost.mainCanvas.state.runtime.lineEndChip).toBeNull();
+  });
+});
+
+describe("offering the obvious machine in one tap", () => {
+  const consumer = (key: string, todo: { placed: number; needed: number } | null) => ({ key, todo });
+
+  it("picks the single machine the pinned plan still needs, or the only machine there is", () => {
+    expect(resolveObviousConsumer([consumer("forge", { placed: 0, needed: 1 }), consumer("shredder", null)])?.key).toBe("forge");
+    expect(resolveObviousConsumer([consumer("only", null)])?.key).toBe("only");
+  });
+
+  it("asks when there is a real choice", () => {
+    expect(resolveObviousConsumer([consumer("a", null), consumer("b", null)])).toBeNull();
+    expect(resolveObviousConsumer([consumer("a", { placed: 0, needed: 1 }), consumer("b", { placed: 1, needed: 3 })])).toBeNull();
+    expect(resolveObviousConsumer([consumer("done", { placed: 1, needed: 1 }), consumer("other", null)])).toBeNull();
   });
 });
 

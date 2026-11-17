@@ -1238,6 +1238,15 @@
   color: var(--accent);
 }
 
+.line-end-chip-button.is-more {
+  padding: 0;
+}
+
+.line-end-chip-button.is-more svg {
+  width: 18px;
+  height: 18px;
+}
+
 .line-end-chip-button img {
   width: 28px;
   height: 28px;

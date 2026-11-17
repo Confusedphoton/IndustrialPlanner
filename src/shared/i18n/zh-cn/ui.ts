@@ -1010,6 +1010,7 @@ const UI: Record<string, string> = {
     "tool.place": "放置",
     "tool.select": "选择",
     "lineEndChip.add": "在线末端接上设备",
+    "lineEndChip.addThis": "在这里接上{name}",
     "lineEndChip.consumers": "使用该物品的设备",
     "lineEndChip.noRoom": "线末端放不下，请自行放置。",
     "lineEndChip.consumer": "{item} · {machine}",

@@ -1017,6 +1017,7 @@ const UI: Record<string, string> = {
     "tool.place": "Place",
     "tool.select": "Select",
     "lineEndChip.add": "Add a machine at the line end",
+    "lineEndChip.addThis": "Add {name} here",
     "lineEndChip.consumers": "Machines that use this item",
     "lineEndChip.noRoom": "No room at the line end. Place it yourself.",
     "lineEndChip.consumer": "{item} · {machine}",
