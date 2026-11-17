@@ -371,7 +371,7 @@ export const CanvasToolRail = observer(function CanvasToolRail({ appHost }: { ap
         <RailButton
           active={isActive}
           hint={hotkey}
-          label={t(button.labelKey)}
+          label={t(typeof button.labelKey === "function" ? button.labelKey(appHost) : button.labelKey)}
           onKeyboardActivate={() => dispatchUiButtonKeyboardActivate(button.uiButtonId)}
           onPointerUp={(event) => dispatchUiButtonPointerUp(event, button.uiButtonId)}
           pressed={button.activeWhen ? isActive : undefined}
@@ -380,7 +380,11 @@ export const CanvasToolRail = observer(function CanvasToolRail({ appHost }: { ap
           {button.icon ? (
             <WorkbenchIcon className={iconClassName} kind={button.icon} />
           ) : button.iconSrc ? (
-            <img alt="" className={cm(styles, "canvas-tool-rail-image")} src={button.iconSrc} />
+            <img
+              alt=""
+              className={cm(styles, "canvas-tool-rail-image")}
+              src={typeof button.iconSrc === "function" ? button.iconSrc(appHost) : button.iconSrc}
+            />
           ) : null}
         </RailButton>
       ),

@@ -76,8 +76,8 @@ const PIPE_END_RIGHT_DOCK_TOOLBAR_ITEMS = [
 export const LOGISTICS_ROUTE_ORDER_BUTTON_ID = "canvas-tool-rail-logistics-route-order";
 export const LOGISTICS_CANCEL_ROUTE_BUTTON_ID = "canvas-tool-rail-logistics-cancel-route";
 
-const BELT_DRAW_BUTTON_ID = "placement-action-belt-draw";
-const PIPE_DRAW_BUTTON_ID = "placement-action-pipe-draw";
+/** 画布工具条上唯一的铺线工具；传送带还是管道跟着起笔的端口或线走。 */
+export const LINE_DRAW_BUTTON_ID = "placement-action-line-draw";
 
 const logisticsLogger = createLogger("logistics-placement");
 const GRID_EDGE_ORDER: readonly GridEdge[] = ["NORTH", "EAST", "SOUTH", "WEST"];
@@ -226,7 +226,7 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
       }
 
       if (event.type === "ui-button-mouse-tap" && event.button === 0) {
-        const kind = resolveKindFromOperationButton(event.uiButtonId);
+        const kind = resolveKindFromOperationButton(context.canvas, event.uiButtonId);
         if (kind !== null) {
           if (
             kind === LOGISTICS_KIND.pipe
@@ -246,7 +246,7 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
       }
 
       if (event.type === "ui-button-touch-tap") {
-        const kind = resolveKindFromOperationButton(event.uiButtonId);
+        const kind = resolveKindFromOperationButton(context.canvas, event.uiButtonId);
         if (kind !== null) {
           if (
             kind === LOGISTICS_KIND.pipe
@@ -446,6 +446,26 @@ export function cleanupLogisticsPlacement(canvas: CanvasInteractionController): 
   canvas.actions.hideCanvasRightDockToolbar();
 }
 
+/** 切换正在铺的线的种类：设备快捷键分组、另一种线的淡化与左上角开关都跟着换。 */
+function applyLogisticsKind(canvas: CanvasInteractionController, kind: LogisticsKind): void {
+  const runtime = canvas.state.runtime.logisticsPlacement;
+  if (runtime.kind !== null && runtime.kind !== kind) {
+    canvas.editor?.actions.setLogisticsSuppression(kind, false);
+  }
+  runtime.kind = kind;
+  runtime.shortcutPlacementGroup = kind === LOGISTICS_KIND.belt ? "beltLogistics" : "pipeLogistics";
+  canvas.state.runtime.selectingPlacementGroup = runtime.shortcutPlacementGroup;
+  canvas.editor?.actions.setLogisticsSuppression(
+    kind === LOGISTICS_KIND.belt ? LOGISTICS_KIND.pipe : LOGISTICS_KIND.belt,
+    true,
+  );
+  canvas.actions.showCanvasTopLeftCornerToolbar(
+    kind === LOGISTICS_KIND.belt
+      ? ["canvas-top-left-corner-toolbar-button-toggle-pipe-off"]
+      : ["canvas-top-left-corner-toolbar-button-toggle-belt-off"],
+  );
+}
+
 function enterLogisticsPlacementMode(options: {
   canvas: CanvasInteractionController;
   editor: NonNullable<AppHost["workspace"]["editor"]>;
@@ -459,25 +479,10 @@ function enterLogisticsPlacementMode(options: {
 
   resetLogisticsRuntime(options.canvas);
   const runtime = options.canvas.state.runtime.logisticsPlacement;
-  runtime.kind = options.kind;
-  runtime.shortcutPlacementGroup = options.kind === LOGISTICS_KIND.belt
-    ? "beltLogistics"
-    : "pipeLogistics";
   runtime.pointerMode = options.pointerMode;
   runtime.phase = "idle";
   runtime.routeOrder = "vertical-first";
-  options.canvas.state.runtime.selectingPlacementGroup = runtime.shortcutPlacementGroup;
-  options.canvas.editor?.actions.setLogisticsSuppression(
-    options.kind === LOGISTICS_KIND.belt
-      ? LOGISTICS_KIND.pipe
-      : LOGISTICS_KIND.belt,
-    true,
-  );
-  options.canvas.actions.showCanvasTopLeftCornerToolbar(
-    options.kind === LOGISTICS_KIND.belt
-      ? ["canvas-top-left-corner-toolbar-button-toggle-pipe-off"]
-      : ["canvas-top-left-corner-toolbar-button-toggle-belt-off"],
-  );
+  applyLogisticsKind(options.canvas, options.kind);
   options.canvas.actions.setActiveTool("logistics-placement");
   options.editor.actions.clearCollection(EntityCollectionType.selection);
 
@@ -492,6 +497,7 @@ function handleTouchTap(options: {
   position: GesturePosition;
   pointerEntityId: string | null;
 }): GestureHandleResult {
+  adoptLogisticsKindAtStart(options.canvas, options.editor, options.position);
   const kind = options.canvas.state.runtime.logisticsPlacement.kind;
   const gridPoint = resolveGridPointFromGesturePosition(options.canvas.view, options.position);
   if (kind !== null && gridPoint !== null && options.pointerEntityId === null
@@ -545,6 +551,7 @@ function handleTouchDragStart(options: {
   position: GesturePosition;
   startPosition: GesturePosition;
 }): GestureHandleResult {
+  adoptLogisticsKindAtStart(options.canvas, options.editor, options.startPosition);
   const kind = options.canvas.state.runtime.logisticsPlacement.kind;
   const startGridPoint = resolveGridPointFromGesturePosition(options.canvas.view, options.startPosition);
   const pointerGridPoint = resolveGridPointFromGesturePosition(options.canvas.view, options.position);
@@ -728,6 +735,7 @@ function driveMouseLogisticsPreview(options: {
   editor: NonNullable<AppHost["workspace"]["editor"]>;
   position: GesturePosition;
 }): GestureHandleResult {
+  adoptLogisticsKindAtStart(options.canvas, options.editor, options.position);
   const runtime = options.canvas.state.runtime.logisticsPlacement;
   const kind = runtime.kind;
   const gridPoint = resolveGridPointFromGesturePosition(options.canvas.view, options.position);
@@ -825,6 +833,7 @@ function handleMouseLeftTap(options: {
   position: GesturePosition;
   pointerEntityId: string | null;
 }): GestureHandleResult {
+  adoptLogisticsKindAtStart(options.canvas, options.editor, options.position);
   const runtime = options.canvas.state.runtime.logisticsPlacement;
   const kind = runtime.kind;
   const gridPoint = resolveGridPointFromGesturePosition(options.canvas.view, options.position);
@@ -1052,6 +1061,7 @@ function startMouseLogisticsDrag(options: {
   position: GesturePosition;
   startPosition: GesturePosition;
 }): boolean {
+  adoptLogisticsKindAtStart(options.canvas, options.editor, options.startPosition);
   const runtime = options.canvas.state.runtime.logisticsPlacement;
   const kind = runtime.kind;
   const startGridPoint = resolveGridPointFromGesturePosition(options.canvas.view, options.startPosition);
@@ -1538,15 +1548,49 @@ function softResetLogisticsRuntime(canvas: CanvasInteractionController): void {
   }
 }
 
-function resolveKindFromOperationButton(uiButtonId: string): LogisticsKind | null {
-  if (uiButtonId === BELT_DRAW_BUTTON_ID) {
-    return LOGISTICS_KIND.belt;
+/** 铺线工具：未在铺线时进入传送带；已在铺线时再点一下在传送带与管道间切换。 */
+function resolveKindFromOperationButton(canvas: CanvasInteractionController, uiButtonId: string): LogisticsKind | null {
+  if (uiButtonId !== LINE_DRAW_BUTTON_ID) {
+    return null;
   }
-  if (uiButtonId === PIPE_DRAW_BUTTON_ID) {
-    return LOGISTICS_KIND.pipe;
-  }
+  const current = canvas.state.activeTool === "logistics-placement" ? canvas.state.runtime.logisticsPlacement.kind : null;
+  return current === LOGISTICS_KIND.belt ? LOGISTICS_KIND.pipe : LOGISTICS_KIND.belt;
+}
 
-  return null;
+function isLogisticsStartEndpoint(endpoint: LogisticsDraftEndpoint | null): boolean {
+  return endpoint !== null && (endpoint.type === "logistics-entity"
+    || (endpoint.type === "device-port" && endpoint.portDirection === "output"));
+}
+
+/**
+ * 起笔处是另一种线的输出口（例如在铺传送带时点在管道出口）时换成那一种，免得先去工具条上切换。
+ * 只看端口：传送带可以从管道上方跨过，起笔格下面压着的线不算。已在画一条线时不换。
+ */
+function adoptLogisticsKindAtStart(
+  canvas: CanvasInteractionController,
+  editor: NonNullable<AppHost["workspace"]["editor"]>,
+  position: GesturePosition,
+): void {
+  const runtime = canvas.state.runtime.logisticsPlacement;
+  const gridPoint = resolveGridPointFromGesturePosition(canvas.view, position);
+  if (runtime.kind === null || gridPoint === null
+    || (editor.queries.resolveLogisticsDraftState() !== null && !runtime.isHoverPreview)
+    || isLogisticsStartEndpoint(editor.queries.findLogisticsDraftEndpointAtGridPoint(gridPoint, runtime.kind))) {
+    return;
+  }
+  const other = runtime.kind === LOGISTICS_KIND.belt ? LOGISTICS_KIND.pipe : LOGISTICS_KIND.belt;
+  if (other === LOGISTICS_KIND.pipe && !hasPlaceableEntityDefinitionInCurrentBase(canvas, "pipeLogistics")) {
+    return;
+  }
+  const endpoint = editor.queries.findLogisticsDraftEndpointAtGridPoint(gridPoint, other);
+  if (endpoint?.type !== "device-port" || endpoint.portDirection !== "output") {
+    return;
+  }
+  if (runtime.isHoverPreview) {
+    safelyCancelLogisticsDraft(editor);
+    softResetLogisticsRuntime(canvas);
+  }
+  applyLogisticsKind(canvas, other);
 }
 
 function safelyCancelLogisticsDraft(editor: NonNullable<AppHost["workspace"]["editor"]>): void {

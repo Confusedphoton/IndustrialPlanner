@@ -57,11 +57,22 @@ describe("canvas tool rail", () => {
     renderRail(appHost);
     const before = mainRailButtonIds();
 
-    penTap(button("placement-action-belt-draw"));
+    penTap(button("placement-action-line-draw"));
 
     expect(appHost.mainCanvas.state.activeTool).toBe("logistics-placement");
     expect(mainRailButtonIds()).toEqual(before);
     expect(contextualButtonIds()).toEqual([LOGISTICS_ROUTE_ORDER_BUTTON_ID, LOGISTICS_CANCEL_ROUTE_BUTTON_ID]);
+  });
+
+  it("switches the line tool between belt and pipe with a second tap", async () => {
+    const appHost = await createAppHost();
+    renderRail(appHost);
+
+    penTap(button("placement-action-line-draw"));
+    expect(appHost.mainCanvas.state.runtime.logisticsPlacement.kind).toBe("belt");
+    penTap(button("placement-action-line-draw"));
+    expect(appHost.mainCanvas.state.activeTool).toBe("logistics-placement");
+    expect(appHost.mainCanvas.state.runtime.logisticsPlacement.kind).toBe("pipe");
   });
 
   it("rotates the placement preview from the rail and cancels back to Select", async () => {

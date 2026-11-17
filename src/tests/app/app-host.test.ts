@@ -2914,7 +2914,7 @@ describe("createAppTestHost", () => {
     const endPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 2 });
 
     appHost.gestureAdapter.handleUiButtonTouchTap({
-      uiButtonId: "placement-action-belt-draw",
+      uiButtonId: "placement-action-line-draw",
       altKey: false,
       ctrlKey: false,
       metaKey: false,
@@ -3201,7 +3201,7 @@ describe("createAppTestHost", () => {
     const endPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 2 });
 
     appHost.gestureAdapter.handleUiButtonTouchTap({
-      uiButtonId: "placement-action-belt-draw",
+      uiButtonId: "placement-action-line-draw",
       altKey: false,
       ctrlKey: false,
       metaKey: false,
@@ -3309,7 +3309,7 @@ describe("createAppTestHost", () => {
     const startPoint = resolveClientPixelPointForGridCell(editorHost, { x: 7, y: 5 });
     const endPoint = resolveClientPixelPointForGridCell(editorHost, { x: 7, y: 3 });
     appHost.gestureAdapter.handleUiButtonTouchTap({
-      uiButtonId: "placement-action-belt-draw",
+      uiButtonId: "placement-action-line-draw",
       altKey: false,
       ctrlKey: false,
       metaKey: false,
@@ -3353,7 +3353,7 @@ describe("createAppTestHost", () => {
 
     // 进入传送带物流模式（touch 按钮）
     appHost.gestureAdapter.handleUiButtonTouchTap({
-      uiButtonId: "placement-action-belt-draw",
+      uiButtonId: "placement-action-line-draw",
       altKey: false,
       ctrlKey: false,
       metaKey: false,
@@ -3411,7 +3411,7 @@ describe("createAppTestHost", () => {
 
     // 进入传送带物流模式（touch 按钮）
     appHost.gestureAdapter.handleUiButtonTouchTap({
-      uiButtonId: "placement-action-belt-draw",
+      uiButtonId: "placement-action-line-draw",
       altKey: false,
       ctrlKey: false,
       metaKey: false,
@@ -3466,7 +3466,7 @@ describe("createAppTestHost", () => {
     };
 
     appHost.gestureAdapter.handleUiButtonTouchTap({
-      uiButtonId: "placement-action-belt-draw",
+      uiButtonId: "placement-action-line-draw",
       altKey: false,
       ctrlKey: false,
       metaKey: false,
@@ -3525,7 +3525,7 @@ describe("createAppTestHost", () => {
     const secondNextHeadPoint = resolveClientPixelPointForGridCell(editorHost, { x: 2, y: 2 });
 
     appHost.gestureAdapter.handleUiButtonTouchTap({
-      uiButtonId: "placement-action-belt-draw",
+      uiButtonId: "placement-action-line-draw",
       altKey: false,
       ctrlKey: false,
       metaKey: false,

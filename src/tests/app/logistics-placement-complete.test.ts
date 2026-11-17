@@ -480,6 +480,19 @@ describe("物流布设模式完全测试集", () => {
     });
   });
 
+  it("铺传送带时从管道输出口起笔改铺管道", () => {
+    resetCanvasFromUserBlueprint(editorHost, USER_PROVIDED_BLUEPRINT_PIPE_ROUTE_PRIORITY_REACTOR_POOLS);
+    enterBeltLogisticsPlacement(appHost);
+
+    clickCell(appHost, editorHost, { x: 8, y: 6 }, nextPointerId++);
+
+    expect(appHost.mainCanvas.state.runtime.logisticsPlacement.kind).toBe("pipe");
+    expect(editorHost.queries.resolveLogisticsDraftState()).toMatchObject({
+      kind: "pipe",
+      source: { type: "device-port", portGroupId: "fluid_output_a" },
+    });
+  });
+
   it("反应池外侧端口(8,6)布设到(6,9)时自动选合法管道线序", async () => {
     resetCanvasFromUserBlueprint(editorHost, USER_PROVIDED_BLUEPRINT_PIPE_ROUTE_PRIORITY_REACTOR_POOLS);
     enterPipeLogisticsPlacement(appHost);
@@ -728,14 +741,6 @@ function enterPipeLogisticsPlacement(appHost: AppHost): void {
     appHost.mainCanvas.state.runtime.selectingPlacementGroup = "pipeLogistics";
   });
   appHost.internalActions.setActiveTool("logistics-placement");
-  appHost.gestureAdapter.handleUiButtonMouseTap({
-    uiButtonId: "placement-action-pipe-draw",
-    button: 0,
-    altKey: false,
-    ctrlKey: false,
-    metaKey: false,
-    shiftKey: false,
-  });
 }
 
 function pressRouteOrderShortcut(appHost: AppHost): void {
