@@ -63,7 +63,8 @@ export function resolvePlacementTodoEntries(
   ];
 }
 
-function countPlacedMachines(document: WorldDocument): string {
+/** 画布上已放的生产设备计数。 */
+export function countPlacedMachines(document: WorldDocument): PlacedMachineCounts {
   const byRecipe: Record<string, number> = {};
   const unsetByMachine: Record<string, number> = {};
   for (const entityId of document.entityOrder) {
@@ -76,14 +77,17 @@ function countPlacedMachines(document: WorldDocument): string {
     for (const recipeId of recipeIds) byRecipe[recipeId] = (byRecipe[recipeId] ?? 0) + 1;
     if (recipeIds.length === 0) unsetByMachine[entity.definitionId] = (unsetByMachine[entity.definitionId] ?? 0) + 1;
   }
-  return JSON.stringify({ byRecipe, unsetByMachine } satisfies PlacedMachineCounts);
+  return { byRecipe, unsetByMachine };
 }
+
+/** 文档快照比较用：计数变了才重新渲染。 */
+const selectPlacedMachineCounts = (document: WorldDocument) => JSON.stringify(countPlacedMachines(document));
 
 /** 配方树钉住的规划对应的待放条目（随画布上的设备更新）；没有钉住目标时为空。 */
 export function usePlacementTodoEntries(appHost: AppHost): PlacementTodoEntry[] {
   const index = useRecipeTreePlanningIndex(appHost);
   const plan = useCombinedRecipeTreePlan(index, recipeTreeOverlayState.pins.length > 0);
-  const counts = useEditorDocumentSnapshot(appHost.workspace.editor, countPlacedMachines, Object.is);
+  const counts = useEditorDocumentSnapshot(appHost.workspace.editor, selectPlacedMachineCounts, Object.is);
   if (plan === null) {
     return [];
   }

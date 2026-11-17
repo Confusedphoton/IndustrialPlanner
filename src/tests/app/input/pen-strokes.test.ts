@@ -1,6 +1,8 @@
+import { runInAction } from "mobx";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { isScratchOutStroke, type ScratchPoint } from "@/app/canvas/scratch-out";
+import { isLassoStroke, isScratchOutStroke, type StrokePoint } from "@/app/canvas/pen-strokes";
+import { recipeTreeOverlayState } from "@/app/shell/recipe-tree/recipe-tree-state";
 import type { AppHost } from "@/app/host/app-host";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
@@ -31,7 +33,7 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
-function stroke(xs: readonly number[], stepMs = 30): ScratchPoint[] {
+function stroke(xs: readonly number[], stepMs = 30): StrokePoint[] {
   return xs.map((x, index) => ({ x, y: 100 + (index % 2) * 3, timeMs: index * stepMs }));
 }
 
@@ -44,6 +46,45 @@ describe("scratch-out stroke", () => {
   it("ignores hand tremor and slow panning back and forth", () => {
     expect(isScratchOutStroke(stroke([0, 6, 0, 6, 0, 6, 0]))).toBe(false);
     expect(isScratchOutStroke(stroke([0, 200, 0, 200, 0], 600))).toBe(false);
+  });
+});
+
+describe("lasso stroke", () => {
+  const loop = (points: [number, number][]): StrokePoint[] => points.map(([x, y], index) => ({ x, y, timeMs: index * 40 }));
+
+  it("is a stroke that comes back near where it started around a real area", () => {
+    expect(isLassoStroke(loop([[0, 0], [100, 0], [100, 100], [0, 100], [5, 8]]))).toBe(true);
+  });
+
+  it("is not an open curve or a back-and-forth pan", () => {
+    expect(isLassoStroke(loop([[0, 0], [100, 0], [100, 100], [0, 100]]))).toBe(false);
+    expect(isLassoStroke(loop([[0, 0], [200, 0], [0, 0]]))).toBe(false);
+  });
+});
+
+describe("pouring the pinned plan into a loop", () => {
+  it("lays the plan's machines out inside the loop, stage by stage, without moving the view", async () => {
+    runInAction(() => recipeTreeOverlayState.addPin("item_iron_powder"));
+    try {
+      const appHost = await createAppHost([]);
+      const center = { ...appHost.mainCanvas.view.state.center };
+      const corner = (x: number, y: number) => clientCenter(appHost, { x, y });
+
+      penDrag(appHost, [corner(12, 40), corner(36, 40), corner(36, 60), corner(12, 60), corner(12, 41)]);
+
+      const placed = entities(appHost);
+      const furnaceAt = placed.find((entity) => entity.definitionId === "furnance_1");
+      const grinderAt = placed.find((entity) => entity.definitionId === "grinder_1");
+      expect(furnaceAt).toBeDefined();
+      expect(grinderAt).toBeDefined();
+      expect(furnaceAt!.position.x).toBeLessThan(grinderAt!.position.x);
+      expect(placed.every((entity) => entity.position.x > 12 && entity.position.x < 36 && entity.position.y > 40 && entity.position.y < 60)).toBe(true);
+      expect(appHost.mainCanvas.view.state.center).toEqual(center);
+      expect(appHost.workspace.editor!.actions.undoDocumentHistory()).toBe(true);
+      expect(entities(appHost)).toHaveLength(0);
+    } finally {
+      runInAction(() => recipeTreeOverlayState.pins.forEach((pin) => recipeTreeOverlayState.removePin(pin.id)));
+    }
   });
 });
 

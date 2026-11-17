@@ -1,21 +1,26 @@
 import type { CanvasInteractionController } from "@/app/canvas";
-import { isScratchOutStroke, type ScratchPoint } from "@/app/canvas/scratch-out";
+import { isLassoStroke, isScratchOutStroke, type StrokePoint } from "@/app/canvas/pen-strokes";
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 
-import type { GestureMappingModule } from "../types";
+import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { deleteErasedSelection, markEntityForErase } from "./hypergryph-pen-eraser-gesture-module";
+import { pourPlanIntoLasso, resolvePlanMachinesToPlace } from "./plan-lasso";
 
-interface ScratchTracker {
+interface StrokeTracker {
   readonly gestureId: string;
   readonly start: GesturePosition;
-  readonly points: ScratchPoint[];
+  readonly points: StrokePoint[];
   erasing: boolean;
   last: GesturePosition;
 }
 
 /**
+ * 笔在画布空白处的整笔手势（这类拖动本是平移视图，这里只旁观笔迹）：
+ *
+ * 圈出一块空地：钉了配方树规划时，把规划里还缺的设备按阶段摆进圈里（见 plan-lasso）。
+ *
  * 涂抹删除：选择工具下用笔尖在画布上来回快速划几下，划过的设备被删除（与橡皮擦端拖动相同，一条撤销记录）。
  *
  * 笔尖在空白处拖动本是平移视图，所以这里只旁观笔迹：识别出涂抹的那一刻，把这一笔已平移的视图挪回原处，
@@ -23,11 +28,11 @@ interface ScratchTracker {
  * 不是涂抹的拖动照常平移；被其他模块认领的拖动（从设备上起笔是移动设备、从端口起笔是拉线）收不到后续移动，
  * 所以涂抹要从设备旁的空地起笔，再来回划过设备。
  */
-export function createHypergryphScratchOutGestureModule(): GestureMappingModule<AppHost> {
-  let tracker: ScratchTracker | null = null;
+export function createHypergryphPenStrokeGestureModule(): GestureMappingModule<AppHost> {
+  let tracker: StrokeTracker | null = null;
 
   return {
-    id: "hypergryph-scratch-out-gesture",
+    id: "hypergryph-pen-stroke-gesture",
     // 高于平移，以便识别后截住后续移动；低于橡皮擦、标记菜单等明确的笔操作。
     priority: 190,
     cancel() {
@@ -89,7 +94,10 @@ export function createHypergryphScratchOutGestureModule(): GestureMappingModule<
           const finished = tracker;
           tracker = null;
           if (!finished.erasing) {
-            return { status: "ignored" };
+            finished.points.push(stamp(canvas, event.position));
+            return event.reason === "release" && canvas.isOperationEnabled("confirm-placement") && isLassoStroke(finished.points)
+              ? pourPlanIfPinned(canvas, finished)
+              : { status: "ignored" };
           }
           if (event.reason !== "release") {
             editor.actions.clearCollection(EntityCollectionType.selection);
@@ -106,7 +114,18 @@ export function createHypergryphScratchOutGestureModule(): GestureMappingModule<
   };
 }
 
-function stamp(canvas: CanvasInteractionController, position: GesturePosition): ScratchPoint {
+/** 钉了规划时把圈当作“倒进这里”：先把这一笔平移的视图挪回原处，再按落笔时的视图找出圈住的区域。 */
+function pourPlanIfPinned(canvas: CanvasInteractionController, stroke: StrokeTracker): GestureHandleResult {
+  const machines = resolvePlanMachinesToPlace(canvas.workbench);
+  if (machines === null) {
+    return { status: "ignored" };
+  }
+  canvas.view.actions.moveViewportByClientPixelVector({ startClientPixel: stroke.last, endClientPixel: stroke.start });
+  pourPlanIntoLasso(canvas, machines, stroke.points);
+  return { status: "handled" };
+}
+
+function stamp(canvas: CanvasInteractionController, position: GesturePosition): StrokePoint {
   return { x: position.x, y: position.y, timeMs: canvas.gestureAdapter.tapTimeMs() };
 }
 

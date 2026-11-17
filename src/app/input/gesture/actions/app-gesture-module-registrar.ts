@@ -40,7 +40,7 @@ import {
 } from "./hypergryph/hypergryph-single-placement-gesture-module";
 import { createHypergryphRotateSelectionGestureModule } from "./hypergryph/hypergryph-rotate-selection-gesture-module";
 import { createHypergryphPenEraserGestureModule } from "./hypergryph/hypergryph-pen-eraser-gesture-module";
-import { createHypergryphScratchOutGestureModule } from "./hypergryph/hypergryph-scratch-out-gesture-module";
+import { createHypergryphPenStrokeGestureModule } from "./hypergryph/hypergryph-pen-stroke-gesture-module";
 import { createHypergryphLineProbeGestureModule } from "./hypergryph/hypergryph-line-probe-gesture-module";
 import { createHypergryphPenTiltFacingModule } from "./hypergryph/hypergryph-pen-tilt-facing-module";
 import { createHypergryphHoldingTrayGestureModule } from "./hypergryph/hypergryph-holding-tray-gesture-module";
@@ -117,7 +117,7 @@ export class AppGestureModuleRegistrar {
     register("delete", createHypergryphDeleteSelectionGestureModule());
     register("rotate-placement", createHypergryphRotateSelectionGestureModule());
     register("delete", createHypergryphPenEraserGestureModule());
-    register("delete", createHypergryphScratchOutGestureModule());
+    register("delete", createHypergryphPenStrokeGestureModule());
     register("pan-viewport", createHypergryphMouseViewportPanModule());
     register("pan-viewport", createHypergryphKeyboardViewportPanModule());
     register("zoom-viewport", createHypergryphViewportZoomModule());
