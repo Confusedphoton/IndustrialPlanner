@@ -62,6 +62,29 @@ describe("dragging a device out of a panel onto the canvas", () => {
     expect(session.app.mainCanvas.state.activeTool).toBe("select");
   });
 
+  it("sets the recipe of a machine of the same type when the card is dropped on it", () => {
+    const recipes = session.workspace.registry.queries.findRecipeDefinitionsByMachine("grinder_1");
+    const first = resolveRecipePlacementTarget(session.app, recipes[0]!)!;
+    const placeFirst = new PanelPlacementDrag(session.app, first);
+    placeFirst.move(500, 350);
+    placeFirst.move(520, 360);
+    placeFirst.drop(520, 360, "mouse");
+    const placed = editor.queries.listEntities().find((entity) => entity.definitionId === "grinder_1")!;
+
+    const second = resolveRecipePlacementTarget(session.app, recipes[1]!)!;
+    const retarget = new PanelPlacementDrag(session.app, second);
+    retarget.move(500, 350);
+    retarget.move(520, 360);
+    retarget.drop(520, 360, "mouse");
+
+    const grinders = editor.queries.listEntities().filter((entity) => entity.definitionId === "grinder_1");
+    expect(grinders).toHaveLength(1);
+    expect(Object.values(grinders[0]!.config.channelRecipes as Record<string, string>)).toContain(recipes[1]!.id);
+    expect(grinders[0]!.id).toBe(placed.id);
+    expect(editor.actions.undoDocumentHistory()).toBe(true);
+    expect(Object.values(editor.queries.getEntityById(placed.id)!.config.channelRecipes as Record<string, string>)).toContain(recipes[0]!.id);
+  });
+
   it("cancels when released off the canvas", () => {
     const { target } = recipeTarget();
     const drag = new PanelPlacementDrag(session.app, target);

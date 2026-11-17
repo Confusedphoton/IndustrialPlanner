@@ -2,6 +2,7 @@ import { runInAction } from "mobx";
 import type { PointerEvent as ReactPointerEvent } from "react";
 
 import type { AppHost } from "@/app/host/app-host";
+import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 import { dragPlacementFromPanel, dropPlacementFromPanel } from "@/app/input/gesture/actions";
 import { createEntityIconAssetUrl } from "@/shared/browser/public-asset-url";
 
@@ -78,14 +79,53 @@ export class PanelPlacementDrag {
   public drop(x: number, y: number, pointerType: string): void {
     this.removeGhost();
     markDragEnded();
+    const overCanvas = isOverMainCanvas(this.appHost, x, y);
+    // 带配方的卡片落在同型号的设备上：改那台设备的配方，不再叠放一台新的。
+    if (overCanvas && this.applyRecipeToMachineAt(x, y)) {
+      if (this.placing) dropPlacementFromPanel(this.appHost.mainCanvas, null);
+      this.placing = false;
+      return;
+    }
     if (this.placing) {
       dropPlacementFromPanel(
         this.appHost.mainCanvas,
-        isOverMainCanvas(this.appHost, x, y) ? { x, y } : null,
+        overCanvas ? { x, y } : null,
         pointerType === "pen",
       );
     }
     this.placing = false;
+  }
+
+  /** 指针下是同型号设备且卡片带配方时，把配方（及其相关设定）写进那台设备，返回是否已处理。 */
+  private applyRecipeToMachineAt(x: number, y: number): boolean {
+    const config = this.target.config;
+    const channelRecipes = config?.channelRecipes;
+    const canvas = this.appHost.mainCanvas;
+    const editor = canvas.editor;
+    if (config === null || typeof channelRecipes !== "object" || channelRecipes === null || editor === null) {
+      return false;
+    }
+    // 拖动时手上的预览盖在设备上，所以按格子在正式文档里找同型号设备。
+    const cell = canvas.view.queries.findGridCellForClientPixelPoint({ x, y });
+    const definition = this.appHost.workspace.registry.queries.findEntityDefinition(this.target.deviceId);
+    const entity = cell === null || definition === null ? undefined : Object.values(editor.document.getSnapshot().entities).find((candidate) => {
+      if (candidate.definitionId !== this.target.deviceId) return false;
+      const footprint = getRotatedGridFootprint(definition.footprint, candidate.rotation);
+      return cell.x >= candidate.position.x && cell.x < candidate.position.x + footprint.width
+        && cell.y >= candidate.position.y && cell.y < candidate.position.y + footprint.height;
+    });
+    if (entity === undefined) {
+      return false;
+    }
+    const existing = entity.config.channelRecipes;
+    editor.actions.patchEntityConfig(entity.id, {
+      ...config,
+      channelRecipes: {
+        ...(typeof existing === "object" && existing !== null ? existing as Record<string, unknown> : {}),
+        ...(channelRecipes as Record<string, unknown>),
+      },
+    });
+    return true;
   }
 
   public cancel(): void {
