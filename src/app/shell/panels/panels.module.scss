@@ -2019,6 +2019,23 @@
   }
 }
 
+.selection-inspector-action-group.is-inline.is-icons .selection-inspector-action-button-list {
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  gap: 4px;
+
+  > * {
+    flex: none;
+    max-width: none;
+  }
+}
+
+.selection-inspector-action-group.is-inline.is-icons .selection-inspector-action-button {
+  width: var(--pen-target);
+  min-height: var(--pen-target);
+  padding: 0;
+}
+
 .selection-inspector-action-button {
   display: inline-flex;
   align-items: center;

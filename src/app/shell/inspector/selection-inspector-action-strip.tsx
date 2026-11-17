@@ -24,7 +24,8 @@ export const SelectionInspectorActionStrip = observer(function SelectionInspecto
   variant = "sticky",
 }: {
   appHost: AppHost;
-  variant?: "sticky" | "inline";
+  /** icons：只有图标的一行（设备浮卡），名称留给读屏与悬停提示。 */
+  variant?: "sticky" | "inline" | "icons";
 }) {
   const editor = appHost.workspace.editor;
   const selectedIds = JSON.stringify(editor?.state.collections.selection ?? []);
@@ -65,14 +66,14 @@ export const SelectionInspectorActionStrip = observer(function SelectionInspecto
   return (
     <section
       aria-label={appHost.actions.translate("inspectorText.selectionActions")}
-      className={cm(styles, variant === "inline"
-        ? "selection-inspector-action-group is-inline"
-        : "selection-inspector-action-group")}
+      className={cm(styles, variant === "sticky"
+        ? "selection-inspector-action-group"
+        : `selection-inspector-action-group is-inline${variant === "icons" ? " is-icons" : ""}`)}
       data-selection-action-strip
     >
       <div
         className={cm(styles, "selection-inspector-action-button-list")}
-        style={{
+        style={variant === "icons" ? undefined : {
           gridTemplateColumns: `repeat(${generalButtonIds.length}, minmax(0, 1fr))`,
         }}
       >
@@ -82,7 +83,7 @@ export const SelectionInspectorActionStrip = observer(function SelectionInspecto
           buttonIds={generalButtonIds}
           iconClassName={cm(styles, "selection-inspector-action-icon")}
           labelClassName={cm(styles, "selection-inspector-action-label")}
-          showLabels
+          showLabels={variant !== "icons"}
         />
       </div>
     </section>

@@ -155,7 +155,7 @@ export const DevicePopup = observer(function DevicePopup({ appHost }: { appHost:
           <LucidePanelRightOpen aria-hidden />
         </button>
       </div>
-      <SelectionInspectorActionStrip appHost={appHost} variant="inline" />
+      <SelectionInspectorActionStrip appHost={appHost} variant="icons" />
       {problems.length > 0 ? (
         <p className={cm(styles, "device-popup-problem")}>{problems.join(" · ")}</p>
       ) : null}
