@@ -396,6 +396,19 @@ describe("reading a line under the pen", () => {
   });
 });
 
+describe("choosing the recipe of the machine a line feeds", () => {
+  it("sets a recipe-less machine to the only recipe that uses the item on the line", async () => {
+    const grinder: WorldEntity = { id: "grinder", definitionId: GRINDER_ID, position: { x: 30, y: 40 }, rotation: 0, config: {}, tags: [] };
+    const appHost = await createAppHost([furnace({ recipe: true }), grinder]);
+    const { inside, delta } = furnaceBeltOutput(appHost);
+
+    penDrag(appHost, inside, [{ x: inside.x + delta.x * 3, y: inside.y + delta.y * 3 }, { x: 31, y: 41 }]);
+
+    const fed = appHost.workspace.editor!.queries.getEntityById("grinder")!;
+    expect(Object.values(fed.config.channelRecipes as Record<string, string>)).toEqual(["r_crusher_iron_powder_from_iron_nugget_basic"]);
+  });
+});
+
 describe("routing a line around obstacles", () => {
   it("finds a way around a wall when the pen reaches the target machine", async () => {
     const target = { ...furnace({ recipe: false }), id: "target", position: { x: 30, y: 42 } };

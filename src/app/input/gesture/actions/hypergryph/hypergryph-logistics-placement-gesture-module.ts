@@ -27,7 +27,7 @@ import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 import { createLogger } from "@/shared/logging/logger";
 
 import type { GestureHandleResult, GestureMappingModule, ShortcutActionRoute } from "../types";
-import { offerLineEndChip } from "./hypergryph-line-end-chip-gesture-module";
+import { afterLineLaid } from "./hypergryph-line-end-chip-gesture-module";
 import {
   PLACEMENT_DEVICE_SHORTCUT_KEYS,
   resolveDeviceIdForPlacementGroupShortcut,
@@ -1144,7 +1144,7 @@ function finishMouseLogisticsDrag(
   }
   softResetLogisticsRuntime(canvas);
   if (applied && endCell !== null) {
-    offerLineEndChip(canvas, editor, draftState.kind, endCell);
+    afterLineLaid(canvas, editor, draftState.kind, endCell);
   }
 }
 
@@ -1178,7 +1178,7 @@ function applyTouchLogisticsPlacement(
   canvas.actions.hideCanvasFloatingToolbar();
   const endCell = draftState?.cells.at(-1)?.gridPoint ?? null;
   if (draftState !== null && endCell !== null) {
-    offerLineEndChip(canvas, editor, draftState.kind, endCell);
+    afterLineLaid(canvas, editor, draftState.kind, endCell);
   }
 }
 

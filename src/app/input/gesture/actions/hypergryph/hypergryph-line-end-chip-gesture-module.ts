@@ -2,7 +2,11 @@ import { runInAction } from "mobx";
 
 import type { CanvasInteractionController } from "@/app/canvas";
 import { resolveLineEndOutputStub, resolveLineEndSnapPlacements } from "@/app/canvas/line-end-chip";
-import { resolveLineEdge, traceLine } from "@/app/canvas/line-trace";
+import { configuredRecipeIds, resolveLineEdge, traceLine } from "@/app/canvas/line-trace";
+import { resolveRecipePlacementTarget } from "@/app/shell/recipe-tree/recipe-quick-actions";
+import { buildRecipeTreePlanningIndex, computeCombinedRecipeTreePlan } from "@/app/shell/recipe-tree/recipe-tree-plan";
+import { isRecipeAvailableByActivity, resolveEffectiveActivityIds } from "@/shared/registry/activity-availability";
+import { isRecipeVisibleInToolbox } from "@/shared/registry/recipe-visibility";
 import type { AppHost } from "@/app/host/app-host";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { EditorContract } from "@/domain/editor/editor-contract";
@@ -62,6 +66,54 @@ export function expandLineEndChip(canvas: CanvasInteractionController): void {
   runInAction(() => {
     canvas.state.runtime.lineEndChip = { ...chip, expanded: true };
   });
+}
+
+/**
+ * 一条线刚铺好之后：末端还空着时给出「+ 设备」提示；末端接进一台还没设配方的设备时，按线上物品替它选配方
+ * （钉住的规划里只有一种用到该物品的配方时用它，否则只有这台设备只有一种这样的配方时才选），不必再开菜单。
+ */
+export function afterLineLaid(
+  canvas: CanvasInteractionController,
+  editor: EditorContract,
+  kind: LogisticsKind,
+  endCell: GridPoint,
+): void {
+  offerLineEndChip(canvas, editor, kind, endCell);
+  inferRecipeForFedMachine(canvas, editor, kind, endCell);
+}
+
+function inferRecipeForFedMachine(
+  canvas: CanvasInteractionController,
+  editor: EditorContract,
+  kind: LogisticsKind,
+  endCell: GridPoint,
+): void {
+  const registry = canvas.registry.queries;
+  const trace = traceLine(editor, registry, kind, endCell);
+  const sink = trace?.sink ?? null;
+  if (trace === null || sink === null || configuredRecipeIds(sink.entity).length > 0) {
+    return;
+  }
+  const itemIds = traceLineItemIds(canvas, editor, kind, endCell);
+  if (itemIds.length === 0) {
+    return;
+  }
+  const appHost = canvas.workbench;
+  const activityIds = resolveEffectiveActivityIds({ selectedActivityIds: appHost.internalState.settings.selectedActivityIds });
+  const candidates = registry.findRecipeDefinitionsByMachine(sink.entity.definitionId).filter((recipe) => (
+    isRecipeVisibleInToolbox(recipe)
+    && (appHost.internalState.settings.toolboxShowAllActivityContent || isRecipeAvailableByActivity(recipe, activityIds))
+    && recipe.inputs.some((input) => itemIds.includes(input.itemId))
+  ));
+  const plannedRecipeIds = new Set(
+    computeCombinedRecipeTreePlan(buildRecipeTreePlanningIndex(appHost))?.recipeTotals.flatMap((total) => total.recipeId === null ? [] : [total.recipeId]) ?? [],
+  );
+  const planned = candidates.filter((recipe) => plannedRecipeIds.has(recipe.id));
+  const choice = planned.length === 1 ? planned[0]! : candidates.length === 1 ? candidates[0]! : null;
+  const config = choice === null ? null : resolveRecipePlacementTarget(appHost, choice)?.config ?? null;
+  if (config !== null) {
+    editor.actions.patchEntityConfig(sink.entity.id, config);
+  }
 }
 
 /** 刚铺好的线末端仍开放且能追溯到线上物品时，在末端外侧给出「+ 设备」提示。 */

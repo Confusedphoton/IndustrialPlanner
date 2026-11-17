@@ -12,7 +12,7 @@ import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 import type { CreateLogisticsDraftStartOptions, LogisticsDraftEndpoint, LogisticsKind } from "@/domain/shared/logistics";
 
 import type { GestureMappingModule } from "../types";
-import { isOpenBeyondLine, offerLineEndChip } from "./hypergryph-line-end-chip-gesture-module";
+import { isOpenBeyondLine, afterLineLaid } from "./hypergryph-line-end-chip-gesture-module";
 
 type DevicePortEndpoint = Extract<LogisticsDraftEndpoint, { readonly type: "device-port" }>;
 
@@ -203,9 +203,9 @@ function finishPortLine(
     if (session.mode === "forward" && session.comb !== undefined) {
       layCombLanes(canvas, editor, session.kind, session.comb, mainCells, draft.target);
     }
-    // 顺流铺出的线末端停在空地上时，提示可在末端接上消费该物品的设备。
-    if (session.mode === "forward" && endCell !== null) {
-      offerLineEndChip(canvas, editor, draft.kind, endCell);
+    // 线末端停在空地上时提示可接的设备；接进了没设配方的设备时按线上物品替它选配方。
+    if (endCell !== null) {
+      afterLineLaid(canvas, editor, draft.kind, endCell);
     }
     return;
   }
