@@ -74,7 +74,6 @@ export const KEYBOARD_SHORTCUT_SETTINGS: readonly KeyboardShortcutSettingDefinit
   { id: SHORTCUT_KEY.REDO, labelKey: "settingsField.shortcut-redo" },
   { id: SHORTCUT_KEY.TOGGLE_PLACEMENT_PANEL, labelKey: "settingsField.shortcut-toggle-placement-panel" },
   { id: SHORTCUT_KEY.TOGGLE_BLUEPRINT_PANEL, labelKey: "settingsField.shortcut-toggle-blueprint-panel" },
-  { id: SHORTCUT_KEY.TOGGLE_HISTORY_PANEL, labelKey: "settingsField.shortcut-toggle-history-panel" },
   { id: SHORTCUT_KEY.TOGGLE_BASE_PANEL, labelKey: "settingsField.shortcut-toggle-base-panel" },
 ];
 */

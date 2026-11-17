@@ -31,12 +31,6 @@ const PRIMARY_TOOLBAR_ITEMS = [
     panel: "blueprint" as LeftToolbarPanel,
   },
   {
-    id: "primary-history",
-    icon: "history" as const,
-    labelKey: "workbench.leftRail.history",
-    panel: "history" as LeftToolbarPanel,
-  },
-  {
     id: "primary-base",
     icon: "base" as const,
     labelKey: "workbench.leftRail.base",

@@ -1066,7 +1066,7 @@ describe("createAppTestHost", () => {
 
     expect(appHost.internalState.runtime.activePanel).toBeNull();
 
-    appHost.internalActions.setActivePanel("history");
+    appHost.internalActions.setActivePanel("blueprint");
     appHost.internalActions.setScreenProfile({
       viewportWidth: 820,
       viewportHeight: 1180,
@@ -1077,7 +1077,7 @@ describe("createAppTestHost", () => {
       hasTouch: true,
     });
 
-    expect(appHost.internalState.runtime.activePanel).toBe("history");
+    expect(appHost.internalState.runtime.activePanel).toBe("blueprint");
     expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBeNull();
 
     const nextWorkspace = createWorkspace();
@@ -1126,9 +1126,9 @@ describe("createAppTestHost", () => {
     appHost.internalActions.toggleLeftDock();
     expect(appHost.state.workbench.leftDockOpen).toBe(false);
 
-    appHost.internalActions.setActivePanel("history");
+    appHost.internalActions.setActivePanel("blueprint");
 
-    expect(appHost.internalState.runtime.activePanel).toBe("history");
+    expect(appHost.internalState.runtime.activePanel).toBe("blueprint");
     expect(appHost.state.workbench.leftDockOpen).toBe(true);
   });
 

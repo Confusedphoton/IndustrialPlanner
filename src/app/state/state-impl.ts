@@ -548,7 +548,6 @@ export type ActivePanel =
   | "placement"
   | "region"
   | "blueprint"
-  | "history"
   | "base"
   | "simulation"
   | null;

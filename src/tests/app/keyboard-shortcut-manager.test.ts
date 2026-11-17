@@ -179,7 +179,6 @@ describe("KeyboardShortcutManager", () => {
       [SHORTCUT_KEY.REDO]: "Ctrl+Y;Meta+Y",
       [SHORTCUT_KEY.TOGGLE_PLACEMENT_PANEL]: "P;Ctrl+P",
       [SHORTCUT_KEY.TOGGLE_BLUEPRINT_PANEL]: "L;Ctrl+L",
-      [SHORTCUT_KEY.TOGGLE_HISTORY_PANEL]: "H;Ctrl+H",
       [SHORTCUT_KEY.TOGGLE_BASE_PANEL]: "K;Ctrl+K",
       [SHORTCUT_KEY.OPEN_TOOLBOX]: "T;Ctrl+T",
       [SHORTCUT_KEY.PAN_VIEWPORT_UP]: "W;ArrowUp",
@@ -200,7 +199,7 @@ describe("KeyboardShortcutManager", () => {
 
     const manager = createManager();
 
-    expect(Object.values(SHORTCUT_KEY)).toHaveLength(32);
+    expect(Object.values(SHORTCUT_KEY)).toHaveLength(31);
     for (const shortcutId of Object.values(SHORTCUT_KEY)) {
       expect(manager.getKeyboardShortcutFor(shortcutId)).toBe(persistedShortcuts[shortcutId]);
     }
@@ -214,7 +213,7 @@ describe("KeyboardShortcutManager", () => {
 
     manager.resetAllShortcutsToDefaults();
 
-    expect(CONFIGURABLE_SHORTCUT_ACTION_SPECS).toHaveLength(32);
+    expect(CONFIGURABLE_SHORTCUT_ACTION_SPECS).toHaveLength(31);
     for (const spec of CONFIGURABLE_SHORTCUT_ACTION_SPECS) {
       expect(manager.getKeyboardShortcutFor(spec.id)).toBe(spec.defaultBindings.join(";"));
     }

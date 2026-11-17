@@ -2,7 +2,6 @@ import { useEffect, useRef, type ComponentType, type PointerEvent as ReactPointe
 import { observer } from "mobx-react-lite";
 import { BasePanel } from "@/app/shell/panels/base-panel";
 import { BlueprintPanel } from "@/app/shell/panels/blueprint-panel";
-import { HistoryPanel } from "@/app/shell/panels/history-panel";
 import { PlacementPanel } from "@/app/shell/panels/placement-panel";
 import { RegionPanel } from "@/app/shell/panels/region-panel";
 import { SimulationPanel } from "@/app/shell/panels/simulation-panel";
@@ -26,7 +25,6 @@ const PANEL_TITLE_KEYS: Record<LeftDockPanelId, string> = {
   placement: "workbench.panel.placement.title",
   region: "workbench.panel.region.title",
   blueprint: "workbench.panel.blueprint.title",
-  history: "workbench.panel.history.title",
   base: "workbench.panel.base.title",
   simulation: "workbench.panel.simulation.title",
 };
@@ -35,7 +33,6 @@ const PANEL_COMPONENTS: Record<LeftDockPanelId, ComponentType<{ appHost: AppHost
   placement: PlacementPanel,
   region: RegionPanel,
   blueprint: BlueprintPanel,
-  history: HistoryPanel,
   base: BasePanel,
   simulation: SimulationPanel,
 };
@@ -43,7 +40,7 @@ const PANEL_COMPONENTS: Record<LeftDockPanelId, ComponentType<{ appHost: AppHost
 /** 拖动抓手超过该距离才开始改变宽度。 */
 const RESIZE_DRAG_SLOP_PX = 6;
 
-const PANEL_ORDER: LeftDockPanelId[] = ["placement", "region", "blueprint", "history", "base", "simulation"];
+const PANEL_ORDER: LeftDockPanelId[] = ["placement", "region", "blueprint", "base", "simulation"];
 
 const LeftDockView = observer(function LeftDockView({
   appHost,

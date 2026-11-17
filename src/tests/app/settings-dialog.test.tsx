@@ -227,10 +227,10 @@ describe("SettingsDialog", () => {
     expect(shortcutDialog).not.toBeNull();
     const shortcutGroups = shortcutDialog?.querySelectorAll<HTMLElement>("[data-shortcut-group]");
     expect(shortcutGroups).toHaveLength(5);
-    expect(shortcutDialog?.querySelectorAll("[data-shortcut-group] > article")).toHaveLength(32);
+    expect(shortcutDialog?.querySelectorAll("[data-shortcut-group] > article")).toHaveLength(31);
 
     const expectedGroups = new Map([
-      ["quick-access", { title: "快速访问与面板", actionCount: 5 }],
+      ["quick-access", { title: "快速访问与面板", actionCount: 4 }],
       ["placement", { title: "放置入口", actionCount: 11 }],
       ["operation", { title: "当前操作与选区", actionCount: 9 }],
       ["viewport", { title: "视口", actionCount: 5 }],

@@ -18,7 +18,7 @@ describe("createPanelToggleGestureModule", () => {
   it("opens and switches to the target panel when left dock is closed", () => {
     const { context, internalActions } = createContext({
       leftDockOpen: false,
-      activePanel: "history",
+      activePanel: "placement",
     });
     const module = createPanelToggleGestureModule();
 
@@ -36,7 +36,7 @@ describe("createPanelToggleGestureModule", () => {
   it("switches panel without collapsing when left dock is open and target differs", () => {
     const { context, internalActions } = createContext({
       leftDockOpen: true,
-      activePanel: "history",
+      activePanel: "placement",
     });
     const module = createPanelToggleGestureModule();
 
@@ -97,11 +97,11 @@ describe("createPanelToggleGestureModule", () => {
     const result = handleKeyboardShortcutThroughRouter({
       module,
       context,
-      event: keyDownEvent({ code: null, key: "H" }),
+      event: keyDownEvent({ code: null, key: "L" }),
     });
 
     expect(result).toEqual({ status: "handled", consume: true });
-    expect(internalActions.setActivePanel).toHaveBeenCalledWith("history");
+    expect(internalActions.setActivePanel).toHaveBeenCalledWith("blueprint");
   });
 
   it("ignores non-target keys, modifier keys, and non-keydown events", () => {
@@ -138,7 +138,7 @@ describe("createPanelToggleGestureModule", () => {
   });
 });
 
-function createContext(options: { leftDockOpen: boolean; activePanel: "placement" | "blueprint" | "history" | "base" | "simulation" | null }) {
+function createContext(options: { leftDockOpen: boolean; activePanel: "placement" | "blueprint" | "base" | "simulation" | null }) {
   const test = createCanvasTestSession(); cleanups.push(test.dispose);
   test.app.internalState.workbench.leftDockOpen = options.leftDockOpen;
   test.app.internalState.runtime.activePanel = options.activePanel;

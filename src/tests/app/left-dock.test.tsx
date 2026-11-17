@@ -257,9 +257,9 @@ describe("Left dock panel switching", () => {
     const utilityButtons = toolbarGroups[1]?.querySelectorAll(".rail-button");
     const visiblePanel = queryVisibleLeftDockPanel(container);
 
-    // 常用的放置与蓝图常驻；历史、基地等不常用项收进「更多」。
+    // 常用的放置与蓝图常驻；基地等不常用项收进「更多」。
     expect(primaryButtons).toHaveLength(2);
-    expect(utilityButtons).toHaveLength(8);
+    expect(utilityButtons).toHaveLength(7);
     expect(container.textContent).toContain("放置模式");
     expect(toolbarGroups[0]?.textContent).not.toContain("区域");
     expect(visiblePanel).not.toBeNull();
@@ -560,7 +560,7 @@ describe("Left dock panel switching", () => {
       utilityGroup?.querySelectorAll(".rail-button") ?? [],
     ).map((button) => button.getAttribute("title"));
 
-    expect(utilityTitlesBefore).toEqual(["配方树", "工具箱", "更多", "操作历史", "基地", "帮助", "问题反馈", "设置"]);
+    expect(utilityTitlesBefore).toEqual(["配方树", "工具箱", "更多", "基地", "帮助", "问题反馈", "设置"]);
 
     act(() => {
       runInAction(() => {
@@ -573,7 +573,7 @@ describe("Left dock panel switching", () => {
     ).map((button) => button.getAttribute("title"));
 
     // 调试日志只在调试模式下出现，与其他不常用项一起在「更多」里。
-    expect(utilityTitlesAfter).toEqual(["配方树", "工具箱", "更多", "操作历史", "基地", "仿真", "调试日志", "帮助", "问题反馈", "设置"]);
+    expect(utilityTitlesAfter).toEqual(["配方树", "工具箱", "更多", "基地", "仿真", "调试日志", "帮助", "问题反馈", "设置"]);
   });
 
   it("frames the selected placement group and shows number shortcuts only inside it", async () => {
@@ -788,22 +788,11 @@ describe("Left dock panel switching", () => {
       return button;
     };
 
-    const historyButton = clickTab("操作历史");
-    const historyPanel = queryVisibleLeftDockPanel(container);
-
-    expect(appHost.internalState.runtime.activePanel).toBe("history");
-    expect(historyButton.getAttribute("aria-pressed")).toBe("true");
-    expect(placementPanelBeforeSwitch?.hidden).toBe(true);
-    expect(historyPanel?.getAttribute("data-panel-id")).toBe("history");
-    expect(historyPanel?.textContent).toContain("撤销");
-    expect(historyPanel?.textContent).toContain("重做");
-    expect(historyPanel?.textContent).toContain("历史记录");
-    expect(historyPanel?.textContent).toContain("暂无历史记录");
-
     const blueprintButton = clickTab("蓝图模式");
     const blueprintPanel = queryVisibleLeftDockPanel(container);
 
     expect(appHost.internalState.runtime.activePanel).toBe("blueprint");
+    expect(placementPanelBeforeSwitch?.hidden).toBe(true);
     expect(blueprintButton.getAttribute("aria-pressed")).toBe("true");
     expect(blueprintPanel?.getAttribute("data-panel-id")).toBe("blueprint");
     expect(blueprintPanel?.querySelector('[data-ui-button-id="blueprint-action-import-file"]')).not.toBeNull();
@@ -915,22 +904,22 @@ describe("Left dock panel switching", () => {
     expect(appHost.state.workbench.leftDockOpen).toBe(false);
     expect(appHost.internalState.runtime.activePanel).toBeNull();
 
-    const historyButton = container.querySelector(
-      'button[title="操作历史"]',
+    const baseButton = container.querySelector(
+      'button[title="基地"]',
     ) as HTMLButtonElement | null;
 
-    expect(historyButton).not.toBeNull();
-    expect(historyButton?.classList.contains("is-active")).toBe(false);
-    expect(historyButton?.getAttribute("aria-pressed")).toBe("false");
+    expect(baseButton).not.toBeNull();
+    expect(baseButton?.classList.contains("is-active")).toBe(false);
+    expect(baseButton?.getAttribute("aria-pressed")).toBe("false");
 
     act(() => {
-      historyButton?.click();
+      baseButton?.click();
     });
 
     expect(appHost.state.workbench.leftDockOpen).toBe(true);
-    expect(appHost.internalState.runtime.activePanel).toBe("history");
-    expect(historyButton?.classList.contains("is-active")).toBe(true);
-    expect(historyButton?.getAttribute("aria-pressed")).toBe("true");
+    expect(appHost.internalState.runtime.activePanel).toBe("base");
+    expect(baseButton?.classList.contains("is-active")).toBe(true);
+    expect(baseButton?.getAttribute("aria-pressed")).toBe("true");
 
     act(() => {
       root.render(
@@ -941,11 +930,9 @@ describe("Left dock panel switching", () => {
       );
     });
 
-    const historyPanel = queryVisibleLeftDockPanel(container);
+    const basePanel = queryVisibleLeftDockPanel(container);
 
-    expect(historyPanel?.getAttribute("data-panel-id")).toBe("history");
-    expect(historyPanel?.textContent).toContain("撤销");
-    expect(historyPanel?.textContent).toContain("重做");
+    expect(basePanel?.getAttribute("data-panel-id")).toBe("base");
   });
 
   it("collapses the left dock when clicking the currently visible panel button", () => {

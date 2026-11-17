@@ -77,7 +77,6 @@ type WorkbenchIconKind =
   | "delete"
   | "delete-sweep"
   | "blueprint"
-  | "history"
   | "base"
   | "simulation"
   | "timeline"
@@ -155,7 +154,6 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   delete: LucideTrash2,
   "delete-sweep": MaterialSymbolsDeleteSweep,
   blueprint: LucideDraftingCompass,
-  history: LucideHistory,
   base: LucideBuilding2,
   simulation: LucideActivity,
   timeline: LucideHistory,
