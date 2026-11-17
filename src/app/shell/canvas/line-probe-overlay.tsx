@@ -165,7 +165,7 @@ function splitRate(
   return total / Math.max(1, connected);
 }
 
-/** 仿真运行时每帧读当前 tick 的交接，统计进入这一格的物品数（换算成每分钟）与物品种类。 */
+/** 仿真运行时每帧读最新公开的交接，统计进入这一格的物品数（换算成每分钟）与物品种类。 */
 function useMeasuredFlow(appHost: AppHost, entityId: string | null): { readonly rate: number; readonly itemIds: string[] } | null {
   // 读数带着它所属的格，换了格时旧读数自然作废，不必在副作用里清空。
   const [measured, setMeasured] = useState<{ readonly entityId: string; readonly rate: number; readonly itemIds: string[] } | null>(null);
@@ -203,10 +203,11 @@ function useMeasuredFlow(appHost: AppHost, entityId: string | null): { readonly 
       }
       if (now - lastPublish < FLOW_REFRESH_MS) return;
       lastPublish = now;
-      const span = (samples.at(-1)!.tick - samples[0]!.tick + 1) / status.standardTickRate;
-      // 高倍速时并非每个 tick 都能读到：按读到的 tick 平均，再乘每秒 tick 数。
+      const span = (samples.at(-1)!.tick - samples[0]!.tick) / status.standardTickRate;
+      // 每次读到的交接涵盖自上次公开以来的全部 tick（高倍速时一帧跨好几个 tick），
+      // 所以按窗口内的总数除以经过的仿真时间；第一份的起点在窗口之前，不计入。
       setFlow(span < FLOW_MIN_SECONDS ? null : {
-        rate: samples.reduce((sum, sample) => sum + sample.amount, 0) / samples.length * status.standardTickRate * 60,
+        rate: samples.slice(1).reduce((sum, sample) => sum + sample.amount, 0) / span * 60,
         itemIds: [...new Set(samples.flatMap((sample) => sample.itemIds))],
       });
     };
