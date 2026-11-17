@@ -513,14 +513,17 @@ const RecipeTreeSearch = observer(function RecipeTreeSearch({
       return [];
     }
 
+    // 名称完全一致的排最前，其次是名称以输入开头的，名称较长的同类物品不会把它挤出结果。
+    const rank = (name: string) => name === normalized ? 0 : name.startsWith(normalized) ? 1 : 2;
     return index.allItems
       .filter((item) => (index.candidatesByOutputItem.get(item.id)?.length ?? 0) > 0)
-      .filter((item) => (
-        t(item.nameKey).toLowerCase().includes(normalized)
-        || item.id.toLowerCase().includes(normalized)
-      ))
-      .sort((left, right) => left.displayOrder - right.displayOrder || left.id.localeCompare(right.id))
-      .slice(0, SEARCH_RESULT_LIMIT);
+      .map((item) => ({ item, name: t(item.nameKey).toLowerCase() }))
+      .filter(({ item, name }) => name.includes(normalized) || item.id.toLowerCase().includes(normalized))
+      .sort((left, right) => rank(left.name) - rank(right.name)
+        || left.item.displayOrder - right.item.displayOrder
+        || left.item.id.localeCompare(right.item.id))
+      .slice(0, SEARCH_RESULT_LIMIT)
+      .map(({ item }) => item);
   }, [index, query, t]);
 
   const pinItem = (itemId: string) => {
