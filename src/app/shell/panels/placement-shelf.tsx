@@ -1,5 +1,4 @@
 import { observer } from "mobx-react-lite";
-import LucidePanelLeftOpen from "~icons/lucide/panel-left-open";
 
 import type { AppHost } from "@/app/host/app-host";
 import { createEntityIconAssetUrl } from "@/shared/browser/public-asset-url";
@@ -23,19 +22,9 @@ export const PlacementShelf = observer(function PlacementShelf({ appHost }: { ap
   const canvas = appHost.mainCanvas;
   const heldId = canvas.state.activeTool === "single-placement" ? canvas.state.runtime.singlePlacementDeviceId : null;
   const registry = appHost.workspace.registry;
-  const expandLabel = t("placement.showFullPalette");
 
   return (
     <div className={cm(styles, "placement-shelf")}>
-      <button
-        aria-label={expandLabel}
-        className={cm(styles, "placement-shelf-button")}
-        onClick={() => placementShelfState.setEnabled(false)}
-        title={expandLabel}
-        type="button"
-      >
-        <LucidePanelLeftOpen aria-hidden />
-      </button>
       <PlacementTodoList appHost={appHost} variant="shelf" />
       {sections.map((section) => {
         const open = placementShelfState.openGroupKey === section.titleKey;

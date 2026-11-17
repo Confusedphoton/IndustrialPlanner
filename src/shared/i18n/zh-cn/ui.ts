@@ -1020,8 +1020,6 @@ const UI: Record<string, string> = {
     "placement.allCategories": "全部",
     "workbench.leftRail.more": "更多",
     "placement.todo": "待放置",
-    "placement.showShelf": "窄设备架",
-    "placement.showFullPalette": "完整面板",
     "canvasHotbar.tray": "暂存托盘",
     "canvasHotbar.discard": "丢弃",
     "toolbar.canvasTools": "画布工具",

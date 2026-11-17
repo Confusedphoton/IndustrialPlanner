@@ -1027,8 +1027,6 @@ const UI: Record<string, string> = {
     "placement.allCategories": "All",
     "workbench.leftRail.more": "More",
     "placement.todo": "To place",
-    "placement.showShelf": "Narrow shelf",
-    "placement.showFullPalette": "Full palette",
     "canvasHotbar.tray": "Holding tray",
     "canvasHotbar.discard": "Discard",
     "toolbar.canvasTools": "Canvas Tools",

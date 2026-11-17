@@ -5,7 +5,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 import { BottomStatusBar } from "@/app/shell/layout/bottom-status-bar";
 import { CanvasHotbar } from "@/app/shell/canvas/canvas-hotbar";
-import { PLACEMENT_SHELF_WIDTH_PX, placementShelfState } from "@/app/shell/panels/placement-shelf-state";
+import { PLACEMENT_SHELF_BELOW_PX, PLACEMENT_SHELF_WIDTH_PX, placementShelfState } from "@/app/shell/panels/placement-shelf-state";
 import { MarkingMenuOverlay } from "@/app/shell/canvas/marking-menu-overlay";
 import { LineEndChipOverlay } from "@/app/shell/canvas/line-end-chip-overlay";
 import { LineProbeOverlay } from "@/app/shell/canvas/line-probe-overlay";
@@ -671,26 +671,34 @@ export const WorkbenchApp = observer(function WorkbenchApp({
   const isTouchLandscape = isTouchLandscapeScreenProfile(screenProfile);
   const isTouchLayout = isMobileOrTabletScreenProfile(screenProfile);
   const isCompactLeftToolbar = isTouchLayout;
-  // 放置面板切到窄设备架时只占一列图标的宽度。
-  const effectiveLeftDockWidth = placementShelfState.enabled
-    && (appHost.internalState.runtime.activePanel ?? "placement") === "placement"
-    ? PLACEMENT_SHELF_WIDTH_PX
-    : resolveLeftDockWidthForScreenProfile(appHost.state.workbench, screenProfile);
+  const fullLeftDockWidth = resolveLeftDockWidthForScreenProfile(appHost.state.workbench, screenProfile);
   const showFloatingTopBarControls = isTouchLandscape && topBarCollapsed;
   const showBottomStatusBar = !showFloatingTopBarControls;
   const showMobilePortraitGate = isMobilePortraitScreenProfile(screenProfile);
   const showRightDock = rightDockOpen;
   const leftToolbarWidth = isCompactLeftToolbar ? 51 : 68;
-  const dockLayoutBudgetInput = {
+  const placementPanelActive = (appHost.internalState.runtime.activePanel ?? "placement") === "placement";
+  const baseDockLayoutBudgetInput = {
     viewportWidth: screenProfile.viewportWidth,
     leftToolbarWidth,
-    leftDockWidth: leftDockOpen ? effectiveLeftDockWidth : 0,
+    leftDockWidth: leftDockOpen ? fullLeftDockWidth : 0,
     rightDockWidth: showRightDock ? DEFAULT_RIGHT_DOCK_WIDTH : 0,
     recipeDockWidth: recipeTreeOverlayState.dockLayoutWidth === 0 ? 0 : recipeTreeOverlayState.dockWidth,
     recipeDockMinWidth: RECIPE_TREE_DOCK_MIN_WIDTH,
     canvasReservedWidth: canvasToolRailState.baseWidth,
   };
+  // 别的停靠栏把放置面板挤到它自己的宽度、也挤到 PLACEMENT_SHELF_BELOW_PX 以下时，自动收成一列图标的窄设备架；
+  // 空间够时恢复。用户自己把面板调窄不算被挤。
+  const squeezedLeftDockWidth = resolveDockLayoutBudget(baseDockLayoutBudgetInput).leftDockWidth;
+  const placementShelf = leftDockOpen && placementPanelActive
+    && squeezedLeftDockWidth < fullLeftDockWidth && squeezedLeftDockWidth < PLACEMENT_SHELF_BELOW_PX;
+  const dockLayoutBudgetInput = placementShelf
+    ? { ...baseDockLayoutBudgetInput, leftDockWidth: PLACEMENT_SHELF_WIDTH_PX }
+    : baseDockLayoutBudgetInput;
   const dockLayoutBudget = resolveDockLayoutBudget(dockLayoutBudgetInput);
+  useEffect(() => {
+    placementShelfState.setNarrow(placementShelf);
+  }, [placementShelf]);
   const leftDockMaxWidth = Math.min(MAX_LEFT_DOCK_WIDTH, dockLayoutBudget.leftDockMaxWidth);
   useEffect(() => {
     recipeTreeOverlayState.setDockWidthLimit(dockLayoutBudget.recipeDockMaxWidth);

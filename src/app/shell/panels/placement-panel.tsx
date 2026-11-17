@@ -21,7 +21,6 @@ import { OverlayStackLayer } from "@/app/shell/shared/overlay-stack";
 import { KeyboardShortcutPrompt, PlacementPaletteRow } from "@/app/shell/shared";
 import LucideChevronDown from "~icons/lucide/chevron-down";
 import LucideLayoutGrid from "~icons/lucide/layout-grid";
-import LucidePanelLeftClose from "~icons/lucide/panel-left-close";
 import { createEntityIconAssetUrl, createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 import { isMobileOrTabletScreenProfile } from "@/shared/browser/screen-profile";
 import { resolveEntityVariantName } from "@/shared/entity-variants";
@@ -416,7 +415,7 @@ export const PlacementPanel = observer(function PlacementPanel({
   appHost: AppHost;
   active?: boolean;
 }) {
-  return placementShelfState.enabled
+  return placementShelfState.narrow
     ? <PlacementShelf appHost={appHost} />
     : <PlacementPalette active={active} appHost={appHost} />;
 });
@@ -559,15 +558,6 @@ const PlacementPalette = observer(function PlacementPalette({
       />
       {normalizedDeviceQuery.length === 0 && deviceSections.length > 1 ? (
         <nav aria-label={t("placement.categoryFilter")} className={cm(styles, "placement-category-chips")}>
-          <button
-            aria-label={t("placement.showShelf")}
-            className={cm(styles, "placement-category-chip is-shelf-toggle")}
-            onClick={() => placementShelfState.setEnabled(true)}
-            title={t("placement.showShelf")}
-            type="button"
-          >
-            <LucidePanelLeftClose aria-hidden />
-          </button>
           {[null, ...deviceSections].map((section) => {
             const titleKey = section?.titleKey ?? null;
             const label = t(titleKey ?? "placement.allCategories");

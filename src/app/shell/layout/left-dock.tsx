@@ -67,7 +67,7 @@ const LeftDockView = observer(function LeftDockView({
   const regularMinWidth = resolveMinLeftDockWidthForScreenProfile(screenProfile);
   // 画布把面板挤到常规最窄宽度以下时，仍可在挤压下限与布局允许的最宽值之间拖动。
   const minWidth = maxWidth < regularMinWidth ? MIN_SQUEEZED_LEFT_DOCK_WIDTH_PX : regularMinWidth;
-  const shelf = placementShelfState.enabled && activePanel === "placement";
+  const shelf = placementShelfState.narrow && activePanel === "placement";
   const resizable = !hidden && !shelf && maxWidth > minWidth;
 
   useEffect(() => {

@@ -1218,8 +1218,6 @@ export type UiKey =
   | "placement.allCategories"
   | "workbench.leftRail.more"
   | "placement.todo"
-  | "placement.showShelf"
-  | "placement.showFullPalette"
   | "canvasHotbar.tray"
   | "canvasHotbar.discard"
   | "toolbar.canvasTools"
