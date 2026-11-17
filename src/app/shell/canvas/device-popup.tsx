@@ -1,5 +1,5 @@
 import { observer } from "mobx-react-lite";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import LucideChevronDown from "~icons/lucide/chevron-down";
 import LucideChevronUp from "~icons/lucide/chevron-up";
 import LucidePanelRightOpen from "~icons/lucide/panel-right-open";
@@ -39,12 +39,8 @@ const POPUP_MARGIN = 8;
  */
 export const DevicePopup = observer(function DevicePopup({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
-  // 配方磁贴默认收起为一行摘要，避免卡片遮挡相邻设备与端口；切换选中设备时重新收起。
-  const [recipesExpanded, setRecipesExpanded] = useState(false);
-  const selectedId = appHost.workspace.editor?.state.collections.selection[0] ?? null;
-  useEffect(() => {
-    setRecipesExpanded(false);
-  }, [selectedId]);
+  // 配方磁贴：还没选配方时直接展开（选配方就是下一步），已选时收起为一行摘要；用户点过之后以用户为准，换设备时复位。
+  const [recipesToggle, setRecipesToggle] = useState<{ readonly entityId: string; readonly expanded: boolean } | null>(null);
   const canvas = appHost.mainCanvas;
   const editor = appHost.workspace.editor;
 
@@ -69,6 +65,17 @@ export const DevicePopup = observer(function DevicePopup({ appHost }: { appHost:
   if (entity === null || definition === null || registry.queries.isBelt(definition.id) || registry.queries.isPipe(definition.id)) {
     return null;
   }
+
+  const index = resolveCachedRecipeStatusIndex(registry, false);
+  const productionChannel = definition.recipeChannels.find((channel) => channel.type !== "consumption-channel");
+  const recipes = productionChannel === undefined ? [] : resolveMachineRecipes(index, definition.id);
+  const storedRecipes = (entity.config.channelRecipes as Record<string, string> | undefined) ?? {};
+  const selectedRecipeId = productionChannel === undefined ? undefined : storedRecipes[productionChannel.id];
+  const selectedRecipe = selectedRecipeId === undefined ? undefined : index.recipeById.get(selectedRecipeId);
+  const recipesExpanded = recipesToggle !== null && recipesToggle.entityId === entity.id
+    ? recipesToggle.expanded
+    : selectedRecipe === undefined;
+  const setRecipesExpanded = (expanded: boolean) => setRecipesToggle({ entityId: entity.id, expanded });
 
   const gridRect = editor.queries.findEntityCollectionGridRect(EntityCollectionType.selection);
   const view = canvas.view.state;
@@ -114,12 +121,6 @@ export const DevicePopup = observer(function DevicePopup({ appHost }: { appHost:
     ? { top: deviceRect.top - POPUP_GAP, transform: "translateY(-100%)", maxHeight: Math.max(120, spaceAbove) }
     : { top: deviceRect.top + deviceRect.height + POPUP_GAP, maxHeight: Math.max(120, spaceBelow) };
 
-  const index = resolveCachedRecipeStatusIndex(registry, false);
-  const productionChannel = definition.recipeChannels.find((channel) => channel.type !== "consumption-channel");
-  const recipes = productionChannel === undefined ? [] : resolveMachineRecipes(index, definition.id);
-  const storedRecipes = (entity.config.channelRecipes as Record<string, string> | undefined) ?? {};
-  const selectedRecipeId = productionChannel === undefined ? undefined : storedRecipes[productionChannel.id];
-  const selectedRecipe = selectedRecipeId === undefined ? undefined : index.recipeById.get(selectedRecipeId);
   const hasAdmission = definition.inspectors.some((declaration) => declaration.type === INSPECTOR_TYPE.admissionRule);
   const admissionItemId = hasAdmission ? resolveAdmissionItemId(entity.config) : null;
   const admissionItem = admissionItemId === null ? null : registry.queries.findItemDefinition(admissionItemId);
@@ -169,7 +170,7 @@ export const DevicePopup = observer(function DevicePopup({ appHost }: { appHost:
         <button
           aria-expanded={recipesExpanded}
           className={cm(styles, "device-popup-item")}
-          onClick={() => setRecipesExpanded((value) => !value)}
+          onClick={() => setRecipesExpanded(!recipesExpanded)}
           type="button"
         >
           {selectedRecipe === undefined
