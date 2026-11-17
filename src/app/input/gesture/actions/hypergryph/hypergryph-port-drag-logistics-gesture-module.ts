@@ -7,6 +7,7 @@ import type { EditorContract } from "@/domain/editor/editor-contract";
 import type { GridEdge, GridPoint, GridRect } from "@/domain/shared/grid";
 import { resolveGridEdgeDelta, resolveRotatedPortGeometry, rotateGridEdge } from "@/shared/geometry/port";
 import { offsetLanePath } from "@/app/canvas/line-comb";
+import { resolveLineEdge } from "@/app/canvas/line-trace";
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 import type { CreateLogisticsDraftStartOptions, LogisticsDraftEndpoint, LogisticsKind } from "@/domain/shared/logistics";
 
@@ -127,6 +128,10 @@ export function createHypergryphPortDragLogisticsGestureModule(): GestureMapping
           if (next === null) {
             return { status: "ignored" };
           }
+          // 手指在设备上拖动多半是平移：只有端口外侧空着、且一开始就朝外（或沿边划向相邻空闲口梳线）才拉线。
+          if (event.type === "touch dragstart" && !isFingerHeadingOut(canvas, editor, startGridPoint, next, event.startPosition, event.position)) {
+            return { status: "ignored" };
+          }
 
           session = next;
           sessionCanvas = canvas;
@@ -207,7 +212,68 @@ function finishPortLine(
   editor.actions.cancelLogisticsDraft();
 }
 
-/** 同组同边、外侧格空着的输出口（含起笔的口），沿边排序；不足两个时不能梳线。 */
+/** 手指起拖的方向与端口（或线端）朝外的方向夹角在此之内才算朝外拉线。 */
+const FINGER_OUTWARD_MAX_ANGLE_DEGREES = 60;
+
+/**
+ * 手指从端口格起拖时是否在拉线：端口外侧（或线端外侧）须空着，且起拖方向朝外；
+ * 梳线则是沿设备边朝相邻的空闲输出口。按屏幕方向判断，视图旋转后同样成立。
+ */
+function isFingerHeadingOut(
+  canvas: CanvasInteractionController,
+  editor: EditorContract,
+  startGridPoint: GridPoint,
+  session: PortDragSession,
+  startPosition: GesturePosition,
+  position: GesturePosition,
+): boolean {
+  const outward = resolveOutwardCell(canvas, editor, startGridPoint, session);
+  if (outward === null) {
+    return false;
+  }
+  const heading = { x: position.x - startPosition.x, y: position.y - startPosition.y };
+  const towards = (cell: GridPoint) => {
+    const from = canvas.view.queries.findClientRectForGridCell(startGridPoint);
+    const to = canvas.view.queries.findClientRectForGridCell(cell);
+    if (from === null || to === null) return false;
+    const direction = { x: to.left - from.left, y: to.top - from.top };
+    const lengths = Math.hypot(direction.x, direction.y) * Math.hypot(heading.x, heading.y);
+    return lengths > 0 && (direction.x * heading.x + direction.y * heading.y) / lengths >= Math.cos(FINGER_OUTWARD_MAX_ANGLE_DEGREES * Math.PI / 180);
+  };
+  if (towards(outward)) {
+    return true;
+  }
+  const comb = session.mode === "forward" ? session.comb : undefined;
+  const start = comb?.swept[0];
+  return comb !== undefined && start !== undefined
+    && [start - 1, start + 1].some((index) => comb.ports[index] !== undefined && towards(comb.ports[index]!.inside));
+}
+
+/** 拉线要伸向的那一格：设备端口的外侧格（须空着），或线开放的那一端外侧。 */
+function resolveOutwardCell(
+  canvas: CanvasInteractionController,
+  editor: EditorContract,
+  startGridPoint: GridPoint,
+  session: PortDragSession,
+): GridPoint | null {
+  const port = editor.queries.findDevicePortAtGridPoint(startGridPoint);
+  if (port !== null) {
+    const outside = port.endpoint.outsideGridPoint;
+    const beyond = editor.queries.findLogisticsDraftEndpointAtGridPoint(outside, port.kind);
+    const open = editor.queries.findTransportLineAtGridPoint(outside, port.kind) === null
+      && (beyond?.type === "empty-cell" || (beyond?.type === "device-port" && beyond.entityId === port.endpoint.entityId));
+    return open ? outside : null;
+  }
+  const line = editor.queries.findTransportLineAtGridPoint(startGridPoint, session.kind);
+  const edge = line === null ? null : resolveLineEdge(canvas.registry.queries, line, session.mode === "forward" ? "output" : "input");
+  if (edge === null) {
+    return null;
+  }
+  const delta = resolveGridEdgeDelta(edge);
+  return { x: startGridPoint.x + delta.x, y: startGridPoint.y + delta.y };
+}
+
+/** 同组同边、外侧格空着的输出口，沿边排序；起笔的口已接线或不足两个时不能梳线。 */
 function resolvePortComb(
   canvas: CanvasInteractionController,
   editor: EditorContract,
@@ -227,10 +293,8 @@ function resolvePortComb(
     const outside = { x: inside.x + geometry.delta.x, y: inside.y + geometry.delta.y };
     // 端口外侧的空格会被识别为这台设备自己的端口，所以“没有线、只属于本设备”即算空闲。
     const beyond = editor.queries.findLogisticsDraftEndpointAtGridPoint(outside, kind);
-    const free = port.id === endpoint.portId || (
-      editor.queries.findTransportLineAtGridPoint(outside, kind) === null
-      && (beyond?.type === "empty-cell" || (beyond?.type === "device-port" && beyond.entityId === entity.id))
-    );
+    const free = editor.queries.findTransportLineAtGridPoint(outside, kind) === null
+      && (beyond?.type === "empty-cell" || (beyond?.type === "device-port" && beyond.entityId === entity.id));
     return free ? [{ portId: port.id, inside, outside }] : [];
   }).sort((left, right) => left.inside.x - right.inside.x || left.inside.y - right.inside.y);
   const start = ports.findIndex((port) => port.portId === endpoint.portId);

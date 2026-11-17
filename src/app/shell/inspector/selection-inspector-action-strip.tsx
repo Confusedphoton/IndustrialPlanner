@@ -62,11 +62,9 @@ export const SelectionInspectorActionStrip = observer(function SelectionInspecto
     isDedicatedLogistics: isLogisticsSelection,
   });
 
-  const locale = appHost.state.settings.locale;
-
   return (
     <section
-      aria-label={locale === "zh-CN" ? appHost.actions.translate("inspectorText.selectionActions") : "Selection Actions"}
+      aria-label={appHost.actions.translate("inspectorText.selectionActions")}
       className={cm(styles, variant === "inline"
         ? "selection-inspector-action-group is-inline"
         : "selection-inspector-action-group")}

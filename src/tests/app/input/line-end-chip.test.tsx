@@ -241,6 +241,28 @@ describe("drawing a line out of a port with a finger", () => {
     expect(appHost.workspace.editor!.queries.resolveLogisticsDraftState()).toBeNull();
   });
 
+  it("pans instead of drawing when the finger starts on a port but heads into the machine", async () => {
+    const appHost = await createAppHost([furnace({ recipe: true })]);
+    const { inside, delta } = furnaceBeltOutput(appHost);
+    const center = { ...appHost.mainCanvas.view.state.center };
+
+    fingerDrag(appHost, inside, [{ x: inside.x - delta.x * 5, y: inside.y - delta.y * 5 }]);
+
+    expect(entities(appHost)).toHaveLength(1);
+    expect(appHost.mainCanvas.view.state.center).not.toEqual(center);
+  });
+
+  it("pans instead of drawing from a port that already has a line", async () => {
+    const appHost = await createAppHost([furnace({ recipe: true })]);
+    const { inside, delta } = furnaceBeltOutput(appHost);
+    fingerDrag(appHost, inside, [{ x: inside.x + delta.x * 3, y: inside.y + delta.y * 3 }]);
+    const before = entities(appHost).length;
+
+    fingerDrag(appHost, inside, [{ x: inside.x + delta.x * 6, y: inside.y + delta.y * 6 }]);
+
+    expect(entities(appHost)).toHaveLength(before);
+  });
+
   it("still pans when the drag starts inside the machine rather than on a port", async () => {
     const appHost = await createAppHost([furnace({ recipe: true })]);
     const center = { ...appHost.mainCanvas.view.state.center };
