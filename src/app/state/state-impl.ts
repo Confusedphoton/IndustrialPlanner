@@ -1,4 +1,3 @@
-import type { CanvasOperationId } from "@/domain/shared/canvas-operation";
 import type { UiKey } from "@/shared/i18n";
 import { makeAutoObservable } from "mobx";
 
@@ -226,24 +225,6 @@ export const CANVAS_FLOATING_TOOLBAR_BUTTON_IDS = [
 
 export type CanvasFloatingToolbarButtonId = typeof CANVAS_FLOATING_TOOLBAR_BUTTON_IDS[number];
 
-export const CANVAS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS = [
-  "canvas-right-dock-toolbar-button-exit",
-  "canvas-right-dock-toolbar-button-move",
-  "canvas-right-dock-toolbar-button-save-blueprint",
-  "canvas-right-dock-toolbar-button-copy",
-  "canvas-right-dock-toolbar-button-delete",
-] as const;
-
-export type CanvasRightDockToolbarButtonId = typeof CANVAS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS[number];
-
-
-export type CanvasRightDockToolbarPresentation = "button" | "shortcut" | "both";
-
-export interface CanvasRightDockToolbarItemRequest {
-  readonly operationId: CanvasOperationId;
-  readonly presentation: CanvasRightDockToolbarPresentation;
-}
-
 export const TOOLBOX_DIALOG_TAB_IDS = [
   "item-encyclopedia",
   "production-planning",
@@ -453,10 +434,6 @@ export interface CanvasFloatingToolbarStateReadWrite {
   measuredSize: CanvasFloatingToolbarSize | null;
 }
 
-export interface CanvasRightDockToolbarStateReadWrite {
-  visible: boolean;
-  items: CanvasRightDockToolbarItemRequest[];
-}
 
 
 
@@ -493,7 +470,6 @@ export interface CanvasRuntimeStateReadWrite {
   logisticsPlacement: LogisticsPlacementRuntimeStateReadWrite;
   marqueeAnchor: GridPoint | null;
   canvasFloatingToolbar: CanvasFloatingToolbarStateReadWrite;
-  canvasRightDockToolbar: CanvasRightDockToolbarStateReadWrite;
 }
 
 export interface RuntimeStateReadWrite {
@@ -655,15 +631,6 @@ class CanvasFloatingToolbarStateReadWriteImpl implements CanvasFloatingToolbarSt
   }
 }
 
-class CanvasRightDockToolbarStateReadWriteImpl implements CanvasRightDockToolbarStateReadWrite {
-  visible = false;
-  items: CanvasRightDockToolbarItemRequest[] = [];
-
-  public constructor() {
-    makeAutoObservable(this, {}, { autoBind: true });
-  }
-}
-
 class LogisticsPlacementRuntimeStateReadWriteImpl implements LogisticsPlacementRuntimeStateReadWrite {
   kind: LogisticsKind | null = null;
   shortcutPlacementGroup: "beltLogistics" | "pipeLogistics" | null = null;
@@ -713,7 +680,6 @@ class CanvasRuntimeStateReadWriteImpl implements CanvasRuntimeStateReadWrite {
   logisticsPlacement: LogisticsPlacementRuntimeStateReadWrite = new LogisticsPlacementRuntimeStateReadWriteImpl();
   marqueeAnchor: GridPoint | null = null;
   canvasFloatingToolbar: CanvasFloatingToolbarStateReadWrite = new CanvasFloatingToolbarStateReadWriteImpl();
-  canvasRightDockToolbar: CanvasRightDockToolbarStateReadWrite = new CanvasRightDockToolbarStateReadWriteImpl();
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });

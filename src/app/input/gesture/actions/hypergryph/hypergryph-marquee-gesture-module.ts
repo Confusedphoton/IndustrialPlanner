@@ -18,28 +18,8 @@ import {
   RAIL_TOGGLE_DIM_BELTS_BUTTON_ID,
   RAIL_TOGGLE_DIM_PIPES_BUTTON_ID,
   RAIL_TOGGLE_REVERSE_MARQUEE_BUTTON_ID,
-} from "../rail-toggle-buttons";
+} from "../rail-buttons";
 import { openOverlapEntityMenuIfNeeded } from "./overlap-entity-candidates";
-
-const MARQUEE_RIGHT_DOCK_OPERATION_IDS = [
-  "save-blueprint",
-  "copy",
-  "move",
-  "delete",
-  "toggle-marquee-selection",
-  "marquee-select",
-  "marquee-deselect",
-  "exit-marquee",
-] as const;
-
-const EMPTY_MARQUEE_RIGHT_DOCK_OPERATION_IDS = [
-  "toggle-marquee-selection",
-  "marquee-select",
-  "marquee-deselect",
-  "exit-marquee",
-] as const;
-
-
 
 export function createHypergryphMarqueeGestureModule(): GestureMappingModule<AppHost> {
   return {
@@ -149,7 +129,6 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
                     editor,
                     entity,
                   });
-                  showMarqueeRightDockToolbar(context.canvas, editor);
                 },
               })
             ) {
@@ -161,7 +140,6 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
               editor,
               entity: event.pointerEntity,
             });
-            showMarqueeRightDockToolbar(context.canvas, editor);
             return { status: "handled" };
           }
 
@@ -185,7 +163,6 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
                     editor,
                     entity,
                   });
-                  showMarqueeRightDockToolbar(context.canvas, editor);
                 },
               })
             ) {
@@ -197,7 +174,6 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
               editor,
               entity: event.pointerEntity,
             });
-            showMarqueeRightDockToolbar(context.canvas, editor);
             return { status: "handled" };
           }
 
@@ -293,7 +269,6 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
           editor.actions.applyMarquee();
           context.canvas.state.runtime.marqueeAnchor = null;
           editor.actions.setHoverPoint(event.position, context.canvas.view.state);
-          showMarqueeRightDockToolbar(context.canvas, editor);
           return { status: "handled" };
 
         default:
@@ -316,14 +291,6 @@ function handleUiButtonTap(options: {
         editor: options.editor,
         source: options.source,
       });
-      return { status: "handled" };
-
-    case "canvas-right-dock-toolbar-button-exit":
-      if (options.canvas.state.activeTool !== "marquee") {
-        return { status: "ignored" };
-      }
-
-      exitMarqueeToSelect(options.canvas);
       return { status: "handled" };
 
     case RAIL_TOGGLE_REVERSE_MARQUEE_BUTTON_ID:
@@ -360,13 +327,8 @@ export function enterMarqueeMode(options: {
     resetMarqueeLogisticsSuppression(options.editor);
   }
 
-  if (options.source === "touch") {
-    showMarqueeRightDockToolbar(options.canvas, options.editor, "button");
-    if (options.canvas.workbench.internalState.workbench.rightDockOpen) {
-      options.canvas.workbench.internalActions.toggleRightDock();
-    }
-  } else {
-    showMarqueeRightDockToolbar(options.canvas, options.editor, "shortcut");
+  if (options.source === "touch" && options.canvas.workbench.internalState.workbench.rightDockOpen) {
+    options.canvas.workbench.internalActions.toggleRightDock();
   }
 }
 
@@ -444,30 +406,12 @@ export function cleanupMarquee(canvas: CanvasInteractionController, editor: Edit
   resetMarqueeLogisticsSuppression(editor);
   canvas.state.runtime.marqueeAnchor = null;
   canvas.state.toolInfo.marqueeType = EntityCollectionType.marquee;
-  canvas.actions.hideCanvasRightDockToolbar();
 }
 
 function resetMarqueeLogisticsSuppression(editor: EditorContract | null): void {
   editor?.actions.setLogisticsSuppression(LOGISTICS_KIND.belt, false);
   editor?.actions.setLogisticsSuppression(LOGISTICS_KIND.pipe, false);
 }
-
-export function showMarqueeRightDockToolbar(
-  canvas: CanvasInteractionController,
-  editor: EditorContract | null,
-  presentation = canvas.state.runtime.canvasRightDockToolbar.items.find(
-    (item) => item.operationId === "exit-marquee",
-  )?.presentation ?? "button",
-): void {
-  const operationIds = (editor?.state.collections.selection?.length ?? 0) > 0
-    ? MARQUEE_RIGHT_DOCK_OPERATION_IDS
-    : EMPTY_MARQUEE_RIGHT_DOCK_OPERATION_IDS;
-
-  canvas.actions.showCanvasRightDockToolbar(
-    operationIds.map((operationId) => ({ operationId, presentation })),
-  );
-}
-
 
 function toggleEntityOrStrictLogisticsSegmentInSelection(options: {
   canvas: CanvasInteractionController;

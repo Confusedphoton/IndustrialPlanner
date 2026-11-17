@@ -2,11 +2,10 @@ import { action } from "mobx";
 import type { CanvasInteractionController } from "../canvas";
 import type { AppInternalAction } from "./action-impl";
 import type { ClientPixelPoint } from "@/domain/shared/client-pixel";
-import { CANVAS_OPERATION_IDS, type CanvasOperationId } from "@/domain/shared/canvas-operation";
 import { resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport-transform";
-import { CANVAS_FLOATING_TOOLBAR_BUTTON_IDS, type CanvasInteractionStateReadWriteImpl, type CanvasFloatingToolbarButtonId, type CanvasFloatingToolbarSize, type CanvasRightDockToolbarItemRequest, type CanvasRightDockToolbarPresentation } from "../state";
+import { CANVAS_FLOATING_TOOLBAR_BUTTON_IDS, type CanvasInteractionStateReadWriteImpl, type CanvasFloatingToolbarButtonId, type CanvasFloatingToolbarSize } from "../state";
 
-type CanvasInternalAction = Pick<AppInternalAction, "showCanvasToast" | "setCanvasAlert" | "setActiveTool" | "showCanvasFloatingToolbar" | "showCanvasFloatingToolbarForCollection" | "moveCanvasFloatingToolbar" | "alignCanvasFloatingToolbar" | "setCanvasFloatingToolbarSize" | "hideCanvasFloatingToolbar" | "showCanvasRightDockToolbar" | "hideCanvasRightDockToolbar">;
+type CanvasInternalAction = Pick<AppInternalAction, "showCanvasToast" | "setCanvasAlert" | "setActiveTool" | "showCanvasFloatingToolbar" | "showCanvasFloatingToolbarForCollection" | "moveCanvasFloatingToolbar" | "alignCanvasFloatingToolbar" | "setCanvasFloatingToolbarSize" | "hideCanvasFloatingToolbar">;
 const DEFAULT_CANVAS_FLOATING_TOOLBAR_HEIGHT = 44;
 const FLOATING_TOOLBAR_DEVICE_GAP_PX = 6;
 /** 悬停指针与浮动工具条的距离不超过此值时冻结工具条位置。 */
@@ -314,31 +313,6 @@ public readonly hideCanvasFloatingToolbar: CanvasInternalAction["hideCanvasFloat
     this.state.runtime.canvasFloatingToolbar.attachedCollection = null;
   });
 
-public readonly showCanvasRightDockToolbar: CanvasInternalAction["showCanvasRightDockToolbar"] = action((
-    items,
-  ) => {
-    const nextItems = normalizeCanvasRightDockToolbarItems(items).filter(item => this.canvas.getOperationAvailability(item.operationId).supported);
-
-    if (nextItems.length === 0) {
-      this.hideCanvasRightDockToolbar();
-      return;
-    }
-
-    this.state.runtime.canvasRightDockToolbar.visible = true;
-    this.state.runtime.canvasRightDockToolbar.items = nextItems;
-  });
-
-public readonly hideCanvasRightDockToolbar: CanvasInternalAction["hideCanvasRightDockToolbar"] = action(() => {
-    if (
-      !this.state.runtime.canvasRightDockToolbar.visible
-      && this.state.runtime.canvasRightDockToolbar.items.length === 0
-    ) {
-      return;
-    }
-
-    this.state.runtime.canvasRightDockToolbar.visible = false;
-    this.state.runtime.canvasRightDockToolbar.items = [];
-  });
 
 }
 
@@ -354,39 +328,6 @@ function normalizeCanvasFloatingToolbarButtonIds(
     }
 
     deduped.push(buttonId);
-  }
-
-  return deduped;
-}
-
-function normalizeCanvasRightDockToolbarItems(
-  items: readonly CanvasRightDockToolbarItemRequest[],
-): CanvasRightDockToolbarItemRequest[] {
-  const knownOperationIds = new Set<CanvasOperationId>(
-    CANVAS_OPERATION_IDS,
-  );
-  const knownPresentations = new Set<CanvasRightDockToolbarPresentation>([
-    "button",
-    "shortcut",
-    "both",
-  ]);
-  const seenOperationIds = new Set<CanvasOperationId>();
-  const deduped: CanvasRightDockToolbarItemRequest[] = [];
-
-  for (const item of items) {
-    if (
-      !knownOperationIds.has(item.operationId)
-      || !knownPresentations.has(item.presentation)
-      || seenOperationIds.has(item.operationId)
-    ) {
-      continue;
-    }
-
-    seenOperationIds.add(item.operationId);
-    deduped.push({
-      operationId: item.operationId,
-      presentation: item.presentation,
-    });
   }
 
   return deduped;

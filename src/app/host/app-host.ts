@@ -215,8 +215,6 @@ export function createAppHost(
     alignCanvasFloatingToolbar: actionImpl.alignCanvasFloatingToolbar,
     setCanvasFloatingToolbarSize: actionImpl.setCanvasFloatingToolbarSize,
     hideCanvasFloatingToolbar: actionImpl.hideCanvasFloatingToolbar,
-    showCanvasRightDockToolbar: actionImpl.showCanvasRightDockToolbar,
-    hideCanvasRightDockToolbar: actionImpl.hideCanvasRightDockToolbar,
     setLeftDockWidth: actionImpl.setLeftDockWidth,
     setScreenProfile: actionImpl.setScreenProfile,
     setLocale: actionImpl.setLocale,

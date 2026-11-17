@@ -15,7 +15,6 @@ import { canvasToolRailState } from "@/app/shell/canvas/canvas-tool-rail-state";
 import { fitCanvasViewportToBase } from "@/app/input/gesture/actions";
 import { CanvasPanel } from "@/app/shell/canvas/canvas-panel";
 import { CanvasFloatingToolbar } from "@/app/shell/canvas/canvas-floating-toolbar";
-import { CanvasRightDockToolbar } from "@/app/shell/canvas/canvas-right-dock-toolbar";
 import { OverlapEntityMenu } from "@/app/shell/canvas/overlap-entity-menu";
 import { cleanupPlacementDraft } from "@/app/input";
 import { canPlaceEntityDefinitionInCurrentBase } from "@/app/placement-zone-availability";
@@ -654,7 +653,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
   const topBarCollapsed = appHost.state.workbench.topBarCollapsed;
   const screenProfile = appHost.state.screenProfile;
   const canvasFloatingToolbar = appHost.mainCanvas.state.runtime.canvasFloatingToolbar;
-  const canvasRightDockToolbar = appHost.mainCanvas.state.runtime.canvasRightDockToolbar;
   const timelineBottomDockGridHeight = resolveTimelineBottomDockGridHeight(appHost);
   const showTimelineBottomDock = timelineBottomDockGridHeight > 0;
   const toolboxBottomDockGridHeight = showTimelineBottomDock
@@ -1199,12 +1197,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
             anchor={canvasFloatingToolbar.anchor}
             canvas={appHost.mainCanvas}
             buttonIds={canvasFloatingToolbar.buttonIds}
-          />
-        ) : null}
-        {canvasRightDockToolbar.visible && canvasRightDockToolbar.items.length > 0 ? (
-          <CanvasRightDockToolbar
-            canvas={appHost.mainCanvas}
-            items={canvasRightDockToolbar.items}
           />
         ) : null}
         {showRightDock ? <RightDock appHost={appHost} /> : null}

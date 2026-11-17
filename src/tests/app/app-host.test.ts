@@ -2028,7 +2028,7 @@ describe("createAppTestHost", () => {
     appHost.internalActions.setActiveTool("marquee");
 
     appHost.gestureAdapter.handleUiButtonTouchTap({
-      uiButtonId: "canvas-right-dock-toolbar-button-copy",
+      uiButtonId: "canvas-tool-rail-selection-copy",
       altKey: false,
       ctrlKey: false,
       metaKey: false,
@@ -2527,11 +2527,6 @@ describe("createAppTestHost", () => {
     const appHost = createAppTestHost(workspace);
 
     editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
-    appHost.internalActions.showCanvasRightDockToolbar([
-      { operationId: "exit", presentation: "button" },
-      { operationId: "move", presentation: "button" },
-      { operationId: "delete", presentation: "button" },
-    ]);
     appHost.internalActions.setActiveTool("marquee");
 
     appHost.gestureAdapter.handleKeyDown(keyEvent({
@@ -2543,13 +2538,6 @@ describe("createAppTestHost", () => {
     expect(editorHost.document.getSnapshot().entities["dummy-entity-1"]).toBeUndefined();
     expect(editorHost.state.collections.selection).toEqual([]);
     expect(appHost.mainCanvas.state.activeTool).toBe("marquee");
-    expect(appHost.mainCanvas.state.runtime.canvasRightDockToolbar.visible).toBe(true);
-    expect(appHost.mainCanvas.state.runtime.canvasRightDockToolbar.items).toEqual([
-      { operationId: "toggle-marquee-selection", presentation: "button" },
-      { operationId: "marquee-select", presentation: "button" },
-      { operationId: "marquee-deselect", presentation: "button" },
-      { operationId: "exit-marquee", presentation: "button" },
-    ]);
   });
 
   it("opens the save blueprint dialog from the save shortcut and selection action button for a non-empty selection", () => {

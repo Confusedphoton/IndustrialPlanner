@@ -7,8 +7,8 @@ import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 import { createDeviceIconAssetUrl } from "@/shared/browser/public-asset-url";
 import type { ComponentProps } from "react";
 
-const BELT_ICON_SRC = createDeviceIconAssetUrl("item_log_belt_01");
-const PIPE_ICON_SRC = createDeviceIconAssetUrl("item_log_pipe_01");
+export const BELT_ICON_SRC = createDeviceIconAssetUrl("item_log_belt_01");
+export const PIPE_ICON_SRC = createDeviceIconAssetUrl("item_log_pipe_01");
 
 type PlacementOperationIconKind = ComponentProps<typeof WorkbenchIcon>["kind"];
 

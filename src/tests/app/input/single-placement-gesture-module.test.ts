@@ -7,7 +7,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 
 
-import type { CanvasRightDockToolbarItemRequest } from "@/app/state/state-impl";
 import {
   createHypergryphSinglePlacementGestureModule,
 
@@ -46,9 +45,6 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     expect(context.canvas.state.runtime.placementAnchor).toBeNull();
     expect(context.canvas.state.runtime.singlePlacementDeviceId).toBe("log_splitter");
     expect(context.canvas.actions.hideCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
-    expect(context.canvas.actions.showCanvasRightDockToolbar).toHaveBeenCalledWith(
-      PLACEMENT_RIGHT_DOCK_TOOLBAR_ITEMS_FOR_TEST,
-    );
   });
 
   it("enters from a placement button even when the current tool is not select", () => {
@@ -106,11 +102,9 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       PLACEMENT_TOOLBAR_BUTTON_IDS_FOR_TEST,
       EntityCollectionType.preview,
     );
-    expect(context.canvas.actions.hideCanvasRightDockToolbar).toHaveBeenCalledTimes(1);
-    expect(context.canvas.actions.showCanvasRightDockToolbar).not.toHaveBeenCalled();
   });
 
-  it("toggles touch continuous placement from the top-left toolbar", () => {
+  it("toggles touch continuous placement from the rail", () => {
     const { context } = createContext({
       activeTool: "single-placement",
       initialPreview: true,
@@ -518,9 +512,6 @@ const missResult = module.handle(touchDragStartEvent({ position: { x: 32, y: 32 
     expect(module.handle(onEnterActiveToolEvent("select", "single-placement"), context)).toEqual({
       status: "handled",
     });
-    expect(context.canvas.actions.showCanvasRightDockToolbar).toHaveBeenCalledWith(
-      PLACEMENT_RIGHT_DOCK_TOOLBAR_ITEMS_WITH_VARIANT_FOR_TEST,
-    );
   });
 
   it("keeps mouse placement active when apply uses ctrl", () => {
@@ -685,7 +676,6 @@ const missResult = module.handle(touchDragStartEvent({ position: { x: 32, y: 32 
     expect(apply.context.canvas.state.activeTool).toBe("select");
     expect(apply.context.canvas.state.runtime.placementAnchor).toBeNull();
     expect(apply.context.canvas.state.runtime.singlePlacementDeviceId).toBeNull();
-    expect(apply.context.canvas.actions.hideCanvasRightDockToolbar).toHaveBeenCalledTimes(1);
 
     expect(
       module.handle(uiButtonTouchTapEvent("canvas-floating-toolbar-button-cancel"), cancel.context),
@@ -696,7 +686,6 @@ const missResult = module.handle(touchDragStartEvent({ position: { x: 32, y: 32 
     // 连续放置是用户的工作方式，退出放置后保留，下次拿起设备时仍生效。
     expect(cancel.context.canvas.state.runtime.singlePlacementContinuous).toBe(true);
     expect(cancel.context.canvas.state.runtime.singlePlacementDeviceId).toBeNull();
-    expect(cancel.context.canvas.actions.hideCanvasRightDockToolbar).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -750,8 +739,7 @@ function createContext(options: {
     "moveCollectionCenterPointTo", "rotateCollection", "rotateCollectionAroundCenterPoint", "rotateCollectionAroundPivotCell",
     "rotateCollectionToSnapOnBuilding", "replaceEntityDefinition"] as const) vi.spyOn(test.editor.actions, action);
   for (const action of ["setActiveTool", "showCanvasFloatingToolbarForCollection", "hideCanvasFloatingToolbar",
-    "showCanvasRightDockToolbar",
-    "hideCanvasRightDockToolbar", "alignCanvasFloatingToolbar"] as const) vi.spyOn(test.canvas.actions, action);
+    "alignCanvasFloatingToolbar"] as const) vi.spyOn(test.canvas.actions, action);
   vi.spyOn(test.app.internalActions, "isShortcutFor");
   return { context: test.context, editor: test.editor, appHost: test.app,
     preview: test.editor.state.collections.preview };
@@ -766,22 +754,7 @@ const PLACEMENT_TOOLBAR_BUTTON_IDS_FOR_TEST = [
 
 const CONTINUOUS_PLACEMENT_BUTTON_ID_FOR_TEST = "canvas-tool-rail-toggle-continuous-placement";
 
-const PLACEMENT_RIGHT_DOCK_TOOLBAR_ITEMS_FOR_TEST = [
-  { operationId: "pan-viewport", presentation: "shortcut" },
-  { operationId: "zoom-viewport", presentation: "shortcut" },
-  { operationId: "rotate-placement", presentation: "shortcut" },
-  { operationId: "confirm-placement", presentation: "shortcut" },
-  { operationId: "continuous-placement", presentation: "shortcut" },
-] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
 
-const PLACEMENT_RIGHT_DOCK_TOOLBAR_ITEMS_WITH_VARIANT_FOR_TEST = [
-  { operationId: "pan-viewport", presentation: "shortcut" },
-  { operationId: "zoom-viewport", presentation: "shortcut" },
-  { operationId: "switch-device-variant", presentation: "shortcut" },
-  { operationId: "rotate-placement", presentation: "shortcut" },
-  { operationId: "confirm-placement", presentation: "shortcut" },
-  { operationId: "continuous-placement", presentation: "shortcut" },
-] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
 
 
 

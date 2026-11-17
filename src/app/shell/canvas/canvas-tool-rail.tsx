@@ -32,6 +32,10 @@ import {
   LOGISTICS_ROUTE_ORDER_BUTTON_ID,
   PLACEMENT_RAIL_CANCEL_BUTTON_ID,
   PLACEMENT_RAIL_ROTATE_BUTTON_ID,
+  RAIL_SELECTION_COPY_BUTTON_ID,
+  RAIL_SELECTION_DELETE_BUTTON_ID,
+  RAIL_SELECTION_MOVE_BUTTON_ID,
+  RAIL_SELECTION_SAVE_BLUEPRINT_BUTTON_ID,
   RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID,
   RAIL_TOGGLE_DIM_BELTS_BUTTON_ID,
   RAIL_TOGGLE_DIM_PIPES_BUTTON_ID,
@@ -45,7 +49,9 @@ import { LOGISTICS_KIND, type LogisticsKind } from "@/domain/shared/logistics";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import { useEditorDocumentSnapshot } from "../hooks";
 import {
+  BELT_ICON_SRC,
   getVisiblePlacementOperationButtons,
+  PIPE_ICON_SRC,
   type PlacementOperationButtonDefinition,
 } from "@/app/shell/panels/placement-operation-buttons";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
@@ -504,7 +510,7 @@ export const CanvasToolRail = observer(function CanvasToolRail({ appHost }: { ap
       uiButtonId: kind === LOGISTICS_KIND.pipe ? RAIL_TOGGLE_DIM_PIPES_BUTTON_ID : RAIL_TOGGLE_DIM_BELTS_BUTTON_ID,
       pressed: dimmed,
       label: t(kind === LOGISTICS_KIND.pipe ? "action.deemphasizePipe" : "action.deemphasizeBelt"),
-      icon: <WorkbenchIcon className={iconClassName} kind="eye-off" />,
+      icon: <img alt="" className={cm(styles, "canvas-tool-rail-image")} src={kind === LOGISTICS_KIND.pipe ? PIPE_ICON_SRC : BELT_ICON_SRC} />,
     });
   };
   const hasPipes = hasPlaceableEntityDefinitionInCurrentBase(canvas, "pipeLogistics");
@@ -512,6 +518,18 @@ export const CanvasToolRail = observer(function CanvasToolRail({ appHost }: { ap
     ? canvas.state.runtime.blueprintPlacementContinuous
     : canvas.state.runtime.singlePlacementContinuous;
   const reverseMarquee = canvas.state.toolInfo.marqueeType === EntityCollectionType.reverseMarquee;
+  // 框选出选区后，选区操作跟在框选开关后面。
+  const selectionActions = (editor?.state.collections.selection.length ?? 0) === 0 ? [] : ([
+    [RAIL_SELECTION_SAVE_BLUEPRINT_BUTTON_ID, "save-blueprint", "action.saveBlueprint", "save-blueprint"],
+    [RAIL_SELECTION_COPY_BUTTON_ID, "copy", "action.copySelection", "copy"],
+    [RAIL_SELECTION_MOVE_BUTTON_ID, "move", "tool.move", "move"],
+    [RAIL_SELECTION_DELETE_BUTTON_ID, "delete", "action.deleteSelection", "delete"],
+  ] as const).map(([uiButtonId, operationId, labelKey, icon]) => gestureButton({
+    uiButtonId,
+    disabled: !canvas.isOperationEnabled(operationId),
+    label: t(labelKey),
+    icon: <WorkbenchIcon className={iconClassName} kind={icon} />,
+  }));
   const contextual = inLogisticsPlacement ? {
     triggerId: activeToolButtonId,
     nodes: [
@@ -545,6 +563,7 @@ export const CanvasToolRail = observer(function CanvasToolRail({ appHost }: { ap
       }),
       ...(hasPipes ? [dimToggle(LOGISTICS_KIND.pipe)] : []),
       dimToggle(LOGISTICS_KIND.belt),
+      ...selectionActions,
     ],
   } : inPlacement ? {
     triggerId: activeToolButtonId,

@@ -21,7 +21,6 @@ describe("createHypergryphDeleteSelectionGestureModule", () => {
       context,
       deleteCollection,
       hideCanvasFloatingToolbar,
-      hideCanvasRightDockToolbar,
       isShortcutFor,
     } = createContext();
     const module = createHypergryphDeleteSelectionGestureModule();
@@ -36,7 +35,6 @@ describe("createHypergryphDeleteSelectionGestureModule", () => {
     expect(isShortcutFor).not.toHaveBeenCalled();
     expect(deleteCollection).toHaveBeenCalledWith(EntityCollectionType.selection);
     expect(hideCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
-    expect(hideCanvasRightDockToolbar).toHaveBeenCalledTimes(1);
   });
 
   it("deletes the current selection from the floating delete button", () => {
@@ -55,7 +53,7 @@ describe("createHypergryphDeleteSelectionGestureModule", () => {
     expect(deleteCollection).toHaveBeenCalledWith(EntityCollectionType.selection);
   });
 
-  it("deletes the current selection from the right dock delete button", () => {
+  it("deletes the current selection from the rail delete button", () => {
     const {
       context,
       deleteCollection,
@@ -63,7 +61,7 @@ describe("createHypergryphDeleteSelectionGestureModule", () => {
     const module = createHypergryphDeleteSelectionGestureModule();
 
     const result = module.handle(
-      uiButtonMouseTapEvent("canvas-right-dock-toolbar-button-delete"),
+      uiButtonMouseTapEvent("canvas-tool-rail-selection-delete"),
       context,
     );
 
@@ -71,33 +69,22 @@ describe("createHypergryphDeleteSelectionGestureModule", () => {
     expect(deleteCollection).toHaveBeenCalledWith(EntityCollectionType.selection);
   });
 
-  it("deletes the current selection from the marquee right dock delete button without hiding marquee controls", () => {
+  it("deletes the current selection from the rail during marquee without hiding the floating toolbar", () => {
     const {
       context,
       deleteCollection,
       hideCanvasFloatingToolbar,
-      hideCanvasRightDockToolbar,
-      showCanvasRightDockToolbar,
     } = createContext({ activeTool: "marquee" });
     const module = createHypergryphDeleteSelectionGestureModule();
 
     const result = module.handle(
-      uiButtonTouchTapEvent("canvas-right-dock-toolbar-button-delete"),
+      uiButtonTouchTapEvent("canvas-tool-rail-selection-delete"),
       context,
     );
 
     expect(result).toEqual({ status: "handled" });
     expect(deleteCollection).toHaveBeenCalledWith(EntityCollectionType.selection);
     expect(hideCanvasFloatingToolbar).not.toHaveBeenCalled();
-    expect(hideCanvasRightDockToolbar).not.toHaveBeenCalled();
-    expect(showCanvasRightDockToolbar).toHaveBeenCalledWith(
-      [
-        { operationId: "toggle-marquee-selection", presentation: "button" },
-        { operationId: "marquee-select", presentation: "button" },
-        { operationId: "marquee-deselect", presentation: "button" },
-        { operationId: "exit-marquee", presentation: "button" },
-      ],
-    );
   });
 
   it("handles batch delete from the floating toolbar via removeTransportComponent", () => {
@@ -105,7 +92,6 @@ describe("createHypergryphDeleteSelectionGestureModule", () => {
       context,
       removeTransportComponent,
       hideCanvasFloatingToolbar,
-      hideCanvasRightDockToolbar,
     } = createContext();
     const module = createHypergryphDeleteSelectionGestureModule();
 
@@ -118,7 +104,6 @@ describe("createHypergryphDeleteSelectionGestureModule", () => {
     expect(removeTransportComponent).toHaveBeenCalledTimes(1);
     expect(removeTransportComponent).toHaveBeenCalledWith("entity-1");
     expect(hideCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
-    expect(hideCanvasRightDockToolbar).toHaveBeenCalledTimes(1);
   });
 
   it("handles batch delete from the floating toolbar for multiple selections", () => {
@@ -180,11 +165,10 @@ function createContext(options: { activeTool?: ActiveTool; selectedEntityIds?: r
   const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/req048/selection-belt.schema7.json");
   const test = createCanvasTestSession({ document: createWorldDocumentFromBlueprint(blueprint), activeTool: options.activeTool }); cleanups.push(test.dispose);
   for (const entityId of options.selectedEntityIds ?? ["entity-1"]) test.editor.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId });
-  test.canvas.state.runtime.canvasRightDockToolbar.items = [{ operationId: "exit-marquee", presentation: "button" }];
   return { context: test.context,
     deleteCollection: vi.spyOn(test.editor.actions, "deleteCollection"), removeTransportComponent: vi.spyOn(test.editor.actions, "removeTransportComponent"),
-    hideCanvasFloatingToolbar: vi.spyOn(test.canvas.actions, "hideCanvasFloatingToolbar"), hideCanvasRightDockToolbar: vi.spyOn(test.canvas.actions, "hideCanvasRightDockToolbar"),
-    showCanvasRightDockToolbar: vi.spyOn(test.canvas.actions, "showCanvasRightDockToolbar"), isShortcutFor: vi.spyOn(test.app.internalActions, "isShortcutFor") };
+    hideCanvasFloatingToolbar: vi.spyOn(test.canvas.actions, "hideCanvasFloatingToolbar"),
+    isShortcutFor: vi.spyOn(test.app.internalActions, "isShortcutFor") };
 }
 
 

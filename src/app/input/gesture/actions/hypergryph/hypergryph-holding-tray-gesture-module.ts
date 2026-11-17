@@ -44,7 +44,6 @@ function holdSelection(canvas: CanvasInteractionController): boolean {
   }
   editor.actions.deleteCollection(EntityCollectionType.selection);
   canvas.actions.hideCanvasFloatingToolbar();
-  canvas.actions.hideCanvasRightDockToolbar();
   return true;
 }
 

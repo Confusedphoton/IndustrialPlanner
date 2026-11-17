@@ -34,7 +34,6 @@ describe("resolveEffectiveCanvasTheme", () => {
 
     expect(theme.colors["renderer-port-chevron"]).toBe("#ffffff");
     expect(theme.colors["in-canvas-toolbar-button-text"]).toBe("#ffffff");
-    expect(theme.colors["in-canvas-toolbar-label-text"]).toBe("#ffffff");
     expect(theme.colors["in-canvas-toolbar-active-text"]).toBe("#ffffff");
     expect(theme.colors["in-canvas-toolbar-active-border"]).toBe("#82d4ff");
     expect(theme.colorScheme).toBe(baseTheme.colorScheme);
@@ -74,9 +73,6 @@ describe("resolveEffectiveCanvasTheme", () => {
     );
     expect(theme.colors["in-canvas-toolbar-button-bg"]).toBe(
       BLUEPRINT_CANVAS_THEME_COLOR_PATCH["in-canvas-toolbar-button-bg"],
-    );
-    expect(theme.colors["in-canvas-toolbar-label-text"]).toBe(
-      BLUEPRINT_CANVAS_THEME_COLOR_PATCH["in-canvas-toolbar-label-text"],
     );
     expect(theme.colors["in-canvas-gesture-panel-bg"]).toBe(
       BLUEPRINT_CANVAS_THEME_COLOR_PATCH["in-canvas-gesture-panel-bg"],

@@ -5,13 +5,12 @@ import type { EditorContract } from "@/domain/editor/editor-contract";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
-import { showMarqueeRightDockToolbar } from "./hypergryph-marquee-gesture-module";
+import { RAIL_SELECTION_DELETE_BUTTON_ID } from "../rail-buttons";
 
 const FLOATING_DELETE_BUTTON_ID = "canvas-floating-toolbar-button-delete";
 const FLOATING_DELETE_MANY_BUTTON_ID = "canvas-floating-toolbar-button-delete-many";
 const FLOATING_DELETE_UPSTREAM_BUTTON_ID = "canvas-floating-toolbar-button-delete-upstream-segment";
 const FLOATING_DELETE_DOWNSTREAM_BUTTON_ID = "canvas-floating-toolbar-button-delete-downstream-segment";
-const RIGHT_DOCK_DELETE_BUTTON_ID = "canvas-right-dock-toolbar-button-delete";
 
 export function createHypergryphDeleteSelectionGestureModule(): GestureMappingModule<AppHost> {
   return {
@@ -90,7 +89,7 @@ function canDeleteSelectionFromTool(activeTool: CanvasInteractionController["sta
 }
 
 function isDeleteSelectionButton(uiButtonId: string): boolean {
-  return uiButtonId === FLOATING_DELETE_BUTTON_ID || uiButtonId === RIGHT_DOCK_DELETE_BUTTON_ID;
+  return uiButtonId === FLOATING_DELETE_BUTTON_ID || uiButtonId === RAIL_SELECTION_DELETE_BUTTON_ID;
 }
 
 function deleteSelection(
@@ -106,9 +105,6 @@ function deleteSelection(
 
   if (activeTool === "select") {
     canvas.actions.hideCanvasFloatingToolbar();
-    canvas.actions.hideCanvasRightDockToolbar();
-  } else {
-    showMarqueeRightDockToolbar(canvas, editor);
   }
 
   return { status: "handled" };
@@ -131,7 +127,6 @@ function batchDeleteStrictLogistics(
 
   if (activeTool === "select") {
     canvas.actions.hideCanvasFloatingToolbar();
-    canvas.actions.hideCanvasRightDockToolbar();
   }
 
   return { status: "handled" };
@@ -159,7 +154,6 @@ function directionalDeleteStrictLogistics(
 
   if (activeTool === "select") {
     canvas.actions.hideCanvasFloatingToolbar();
-    canvas.actions.hideCanvasRightDockToolbar();
   }
 
   return { status: "handled" };

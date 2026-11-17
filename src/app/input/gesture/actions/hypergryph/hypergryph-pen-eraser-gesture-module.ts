@@ -46,7 +46,6 @@ export function createHypergryphPenEraserGestureModule(): GestureMappingModule<A
           }
           editor.actions.clearCollection(EntityCollectionType.selection);
           canvas.actions.hideCanvasFloatingToolbar();
-          canvas.actions.hideCanvasRightDockToolbar();
           markEntityForErase(canvas, event.position);
           return { status: "claimed" };
         }
@@ -112,6 +111,5 @@ export function deleteErasedSelection(canvas: CanvasInteractionController): Gest
     editor.actions.deleteCollection(EntityCollectionType.selection);
   }
   canvas.actions.hideCanvasFloatingToolbar();
-  canvas.actions.hideCanvasRightDockToolbar();
   return { status: "handled" };
 }

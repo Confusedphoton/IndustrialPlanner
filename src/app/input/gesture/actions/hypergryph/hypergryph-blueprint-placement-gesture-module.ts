@@ -6,7 +6,6 @@ import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import { createSelectionBlueprintDocument } from "@/app/blueprint/save-blueprint";
 import { canPlaceBlueprintDocumentInCurrentBase } from "@/app/placement-zone-availability";
 import { allowsFreeProtocolCorePlacement } from "@/shared/protocol-core";
-import type { CanvasRightDockToolbarItemRequest } from "@/app/state/state-impl";
 import type { EditorContract } from "@/domain/editor/editor-contract";
 import {
   EntityCollectionType,
@@ -16,7 +15,7 @@ import type { BlueprintLibraryRecord } from "@/shared/blueprints/blueprint-libra
 
 import type { GestureActionContext, GestureHandleResult, GestureMappingModule } from "../types";
 import { ALL_SHORTCUT_ACTIVE_TOOLS } from "../shortcut-route-matching";
-import { RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID } from "../rail-toggle-buttons";
+import { RAIL_SELECTION_COPY_BUTTON_ID, RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID } from "../rail-buttons";
 import { enterMarqueeMode } from "./hypergryph-marquee-gesture-module";
 import { TOUCH_PREVIEW_HIT_SLOP_PX } from "./mobile-preview-bounds";
 import {
@@ -34,20 +33,10 @@ import {
 import { holdingTrayState } from "@/app/shell/canvas/holding-tray-state";
 
 const BLUEPRINT_PREVIEW_PLACE_BUTTON_ID = "blueprint-preview-place-button";
-const RIGHT_DOCK_COPY_BUTTON_ID = "canvas-right-dock-toolbar-button-copy";
 const TEMP_BLUEPRINT_NAME = "Temp Blueprint";
-
-const BLUEPRINT_RIGHT_DOCK_TOOLBAR_ITEMS = [
-  { operationId: "pan-viewport", presentation: "shortcut" },
-  { operationId: "zoom-viewport", presentation: "shortcut" },
-  { operationId: "rotate-placement", presentation: "shortcut" },
-  { operationId: "confirm-placement", presentation: "shortcut" },
-  { operationId: "cancel-placement", presentation: "shortcut" },
-] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
 
 const BLUEPRINT_PLACEMENT_UI_OPTIONS = {
   floatingToolbarButtonIds: PLACEMENT_TOOLBAR_BUTTON_IDS,
-  rightDockToolbarItems: BLUEPRINT_RIGHT_DOCK_TOOLBAR_ITEMS,
 } as const;
 
 export function createHypergryphBlueprintPlacementGestureModule(): GestureMappingModule<AppHost> {
@@ -255,7 +244,7 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
 
       if (
         event.type === "ui-button-touch-tap"
-        && event.uiButtonId === RIGHT_DOCK_COPY_BUTTON_ID
+        && event.uiButtonId === RAIL_SELECTION_COPY_BUTTON_ID
       ) {
         if (editor === null) {
           return { status: "ignored" };
@@ -276,7 +265,7 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
       if (
         event.type === "ui-button-mouse-tap"
         && event.button === 0
-        && event.uiButtonId === RIGHT_DOCK_COPY_BUTTON_ID
+        && event.uiButtonId === RAIL_SELECTION_COPY_BUTTON_ID
       ) {
         if (editor === null) {
           return { status: "ignored" };
@@ -753,7 +742,6 @@ function clearBlueprintPlacementUi(canvas: CanvasInteractionController): void {
   canvas.state.runtime.blueprintPlacementContinuous = false;
   canvas.state.runtime.blueprintPlacementFromCopy = false;
   canvas.actions.hideCanvasFloatingToolbar();
-  canvas.actions.hideCanvasRightDockToolbar();
 }
 
 function restoreFailedBlueprintPlacementEnter(canvas: CanvasInteractionController, editor: EditorContract): void {

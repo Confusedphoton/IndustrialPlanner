@@ -17,7 +17,6 @@ import {
 } from "@/app/actions/keyboard-shortcut-manager";
 import type {
   CanvasFloatingToolbarButtonId,
-  CanvasRightDockToolbarItemRequest,
   PlacementGroup,
 } from "@/app/state/state-impl";
 import type { EditorContract } from "@/domain/editor/editor-contract";
@@ -37,7 +36,7 @@ import { recentPlacements } from "@/app/recent-placement-devices";
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 
 import type { GestureHandleResult, GestureMappingModule, ShortcutActionRoute } from "../types";
-import { RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID } from "../rail-toggle-buttons";
+import { RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID } from "../rail-buttons";
 import { recordEntityLandedBy, resolveRepeatTapEntityId, spinEntity } from "./entity-spin-tap";
 import {
   didPreviewRectChange,
@@ -108,23 +107,6 @@ export function isPlacementCancelButtonId(uiButtonId: string): boolean {
 
 const PLACEMENT_MODE_EVENT_PREFIX = "ui-left-dock-placement-mode-";
 export const PLACEMENT_DEVICE_SHORTCUT_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] as const;
-
-const PLACEMENT_RIGHT_DOCK_TOOLBAR_ITEMS = [
-  { operationId: "pan-viewport", presentation: "shortcut" },
-  { operationId: "zoom-viewport", presentation: "shortcut" },
-  { operationId: "rotate-placement", presentation: "shortcut" },
-  { operationId: "confirm-placement", presentation: "shortcut" },
-  { operationId: "continuous-placement", presentation: "shortcut" },
-] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
-
-const PLACEMENT_RIGHT_DOCK_TOOLBAR_ITEMS_WITH_VARIANT = [
-  { operationId: "pan-viewport", presentation: "shortcut" },
-  { operationId: "zoom-viewport", presentation: "shortcut" },
-  { operationId: "switch-device-variant", presentation: "shortcut" },
-  { operationId: "rotate-placement", presentation: "shortcut" },
-  { operationId: "confirm-placement", presentation: "shortcut" },
-  { operationId: "continuous-placement", presentation: "shortcut" },
-] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
 
 const PLACEMENT_GROUP_SHORTCUTS = {
   beltLogistics: SHORTCUT_KEY.PLACE_CONVEYOR,
@@ -1300,7 +1282,6 @@ function clearPlacementUi(canvas: CanvasInteractionController): void {
     canvas.state.runtime.singlePlacementPointerMode = null;
   });
   canvas.actions.hideCanvasFloatingToolbar();
-  canvas.actions.hideCanvasRightDockToolbar();
 }
 
 function restoreFailedPlacementEnter(canvas: CanvasInteractionController, editor: EditorContract): void {
@@ -1323,42 +1304,21 @@ export function syncPlacementEntryUi(
   pointerMode = canvas.state.runtime.singlePlacementPointerMode,
   options: {
     readonly floatingToolbarButtonIds?: readonly CanvasFloatingToolbarButtonId[];
-    readonly rightDockToolbarItems?: readonly CanvasRightDockToolbarItemRequest[];
   } = {},
 ): boolean {
   if (pointerMode === null) {
-    canvas.actions.hideCanvasRightDockToolbar();
     return true;
   }
 
   if (pointerMode !== "touch") {
     canvas.actions.hideCanvasFloatingToolbar();
-    canvas.actions.showCanvasRightDockToolbar(
-      options.rightDockToolbarItems ?? resolvePlacementRightDockToolbarItems(canvas),
-    );
     return true;
   }
-
-  canvas.actions.hideCanvasRightDockToolbar();
 
   return canvas.actions.showCanvasFloatingToolbarForCollection(
     options.floatingToolbarButtonIds ?? resolvePlacementToolbarButtonIds(canvas),
     EntityCollectionType.preview,
   );
-}
-
-function resolvePlacementRightDockToolbarItems(
-  canvas: CanvasInteractionController,
-): readonly CanvasRightDockToolbarItemRequest[] {
-  const deviceId = canvas.state.runtime.singlePlacementDeviceId;
-  if (
-    deviceId === null
-    || !canSwitchEntityVariantDefinition({ canvas, definitionId: deviceId })
-  ) {
-    return PLACEMENT_RIGHT_DOCK_TOOLBAR_ITEMS;
-  }
-
-  return PLACEMENT_RIGHT_DOCK_TOOLBAR_ITEMS_WITH_VARIANT;
 }
 
 function handleContinuousPlacementToggleTap(

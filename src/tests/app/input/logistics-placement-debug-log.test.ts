@@ -162,22 +162,10 @@ describe("logistics placement debug logging", () => {
     expect(module.handle(onEnterActiveToolEvent(), beltStart.context)).toEqual({
       status: "handled",
     });
-    expect(beltStart.context.canvas.actions.showCanvasRightDockToolbar).toHaveBeenCalledWith([
-      { operationId: "pan-viewport", presentation: "shortcut" },
-      { operationId: "zoom-viewport", presentation: "shortcut" },
-      { operationId: "confirm-logistics-start", presentation: "shortcut" },
-      { operationId: "change-belt-route-priority", presentation: "shortcut" },
-    ]);
 
     expect(module.handle(onEnterActiveToolEvent(), pipeEnd.context)).toEqual({
       status: "handled",
     });
-    expect(pipeEnd.context.canvas.actions.showCanvasRightDockToolbar).toHaveBeenCalledWith([
-      { operationId: "pan-viewport", presentation: "shortcut" },
-      { operationId: "zoom-viewport", presentation: "shortcut" },
-      { operationId: "confirm-logistics-end", presentation: "shortcut" },
-      { operationId: "change-pipe-route-priority", presentation: "shortcut" },
-    ]);
   });
 });
 
@@ -267,7 +255,6 @@ function createContext(options: { allowEmptySource: boolean; kind: LogisticsKind
   vi.spyOn(test.editor.actions, "applyLogisticDraft");
   vi.spyOn(test.editor.actions, "createLogisticsDraftStart");
   vi.spyOn(test.canvas.actions, "showCanvasToast");
-  vi.spyOn(test.canvas.actions, "showCanvasRightDockToolbar");
   vi.spyOn(test.app.internalActions, "isShortcutFor");
   return { context: test.context, editor: test.editor, appHost: test.app };
 }

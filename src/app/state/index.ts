@@ -1,4 +1,4 @@
 export { createDefaultDialogStateForKey, type DialogStateReadWrite } from "./state-impl";
 export { APP_SETTINGS_LOCAL_STORAGE_KEY } from "./storage-hook";
 
-export { CanvasInteractionStateReadWriteImpl, type CanvasRuntimeStateReadWrite, CANVAS_FLOATING_TOOLBAR_BUTTON_IDS, type CanvasFloatingToolbarButtonId, type CanvasFloatingToolbarSize, type CanvasRightDockToolbarItemRequest, type CanvasRightDockToolbarPresentation } from "./state-impl";
+export { CanvasInteractionStateReadWriteImpl, type CanvasRuntimeStateReadWrite, CANVAS_FLOATING_TOOLBAR_BUTTON_IDS, type CanvasFloatingToolbarButtonId, type CanvasFloatingToolbarSize } from "./state-impl";

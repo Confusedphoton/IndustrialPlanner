@@ -35,7 +35,6 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
           }
           editor.actions.clearCollection(EntityCollectionType.selection);
           context.canvas.actions.hideCanvasFloatingToolbar();
-          context.canvas.actions.hideCanvasRightDockToolbar();
           return { status: "handled" };
         }
         if (context.canvas.state.activeTool === "blueprint-placement" && context.canvas.editor !== null) {

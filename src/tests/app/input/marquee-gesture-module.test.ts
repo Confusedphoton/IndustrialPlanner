@@ -39,19 +39,6 @@ describe("createHypergryphMarqueeGestureModule", () => {
     })).toEqual({ status: "handled" });
     expect(appHost.internalActions.isShortcutFor).not.toHaveBeenCalled();
     expect(context.canvas.state.activeTool).toBe("marquee");
-    expect(context.canvas.actions.showCanvasRightDockToolbar).toHaveBeenCalledWith(
-      [
-        { operationId: "save-blueprint", presentation: "shortcut" },
-        { operationId: "copy", presentation: "shortcut" },
-        { operationId: "move", presentation: "shortcut" },
-        { operationId: "delete", presentation: "shortcut" },
-        { operationId: "toggle-marquee-selection", presentation: "shortcut" },
-        { operationId: "marquee-select", presentation: "shortcut" },
-        { operationId: "marquee-deselect", presentation: "shortcut" },
-        { operationId: "exit-marquee", presentation: "shortcut" },
-      ],
-    );
-    expect(context.canvas.state.runtime.canvasRightDockToolbar.items[0]?.presentation).toBe("shortcut");
 
     expect(handleKeyboardShortcutThroughRouter({
       module,
@@ -78,17 +65,6 @@ describe("createHypergryphMarqueeGestureModule", () => {
 
     expect(result).toEqual({ status: "handled" });
     expect(context.canvas.state.activeTool).toBe("marquee");
-    expect(context.canvas.actions.showCanvasRightDockToolbar).toHaveBeenCalledWith([
-      { operationId: "save-blueprint", presentation: "button" },
-      { operationId: "copy", presentation: "button" },
-      { operationId: "move", presentation: "button" },
-      { operationId: "delete", presentation: "button" },
-      { operationId: "toggle-marquee-selection", presentation: "button" },
-      { operationId: "marquee-select", presentation: "button" },
-      { operationId: "marquee-deselect", presentation: "button" },
-      { operationId: "exit-marquee", presentation: "button" },
-    ]);
-    expect(context.canvas.state.runtime.canvasRightDockToolbar.items[0]?.presentation).toBe("button");
     expect(appHost.internalState.workbench.rightDockOpen).toBe(false);
   });
 
@@ -105,19 +81,6 @@ describe("createHypergryphMarqueeGestureModule", () => {
 
     expect(result).toEqual({ status: "handled" });
     expect(context.canvas.state.activeTool).toBe("marquee");
-    expect(context.canvas.actions.showCanvasRightDockToolbar).toHaveBeenCalledWith(
-      [
-        { operationId: "save-blueprint", presentation: "shortcut" },
-        { operationId: "copy", presentation: "shortcut" },
-        { operationId: "move", presentation: "shortcut" },
-        { operationId: "delete", presentation: "shortcut" },
-        { operationId: "toggle-marquee-selection", presentation: "shortcut" },
-        { operationId: "marquee-select", presentation: "shortcut" },
-        { operationId: "marquee-deselect", presentation: "shortcut" },
-        { operationId: "exit-marquee", presentation: "shortcut" },
-      ],
-    );
-    expect(context.canvas.state.runtime.canvasRightDockToolbar.items[0]?.presentation).toBe("shortcut");
   });
 
   it("shows selection action buttons only while the marquee selection is non-empty", () => {
@@ -128,24 +91,8 @@ describe("createHypergryphMarqueeGestureModule", () => {
     const entity = { id: "entity-1" } as WorldEntity;
 
     expect(module.handle(mouseTapEvent(entity), context)).toEqual({ status: "handled" });
-    expect(context.canvas.state.runtime.canvasRightDockToolbar.items).toEqual([
-      { operationId: "save-blueprint", presentation: "button" },
-      { operationId: "copy", presentation: "button" },
-      { operationId: "move", presentation: "button" },
-      { operationId: "delete", presentation: "button" },
-      { operationId: "toggle-marquee-selection", presentation: "button" },
-      { operationId: "marquee-select", presentation: "button" },
-      { operationId: "marquee-deselect", presentation: "button" },
-      { operationId: "exit-marquee", presentation: "button" },
-    ]);
 
     expect(module.handle(mouseTapEvent(entity), context)).toEqual({ status: "handled" });
-    expect(context.canvas.state.runtime.canvasRightDockToolbar.items).toEqual([
-      { operationId: "toggle-marquee-selection", presentation: "button" },
-      { operationId: "marquee-select", presentation: "button" },
-      { operationId: "marquee-deselect", presentation: "button" },
-      { operationId: "exit-marquee", presentation: "button" },
-    ]);
   });
 
 
@@ -278,12 +225,6 @@ describe("createHypergryphMarqueeGestureModule", () => {
 
     expect(result).toEqual({ status: "handled" });
     expect(context.canvas.state.activeTool).toBe("marquee");
-    expect(context.canvas.actions.showCanvasRightDockToolbar).toHaveBeenCalledWith([
-      { operationId: "toggle-marquee-selection", presentation: "button" },
-      { operationId: "marquee-select", presentation: "button" },
-      { operationId: "marquee-deselect", presentation: "button" },
-      { operationId: "exit-marquee", presentation: "button" },
-    ]);
     expect(appHost.internalState.workbench.rightDockOpen).toBe(false);
     expect(context.canvas.state.runtime.marqueeAnchor).toEqual({ x: 6, y: 7 });
     expect(context.canvas.state.toolInfo.marqueeType).toBe(EntityCollectionType.marquee);
@@ -452,42 +393,13 @@ describe("createHypergryphMarqueeGestureModule", () => {
     ).toEqual({ status: "handled" });
     expect(setLogisticsSuppression).toHaveBeenLastCalledWith("belt", true);
 
-    expect(
-      module.handle(
-        uiButtonTouchTapEvent("canvas-right-dock-toolbar-button-exit"),
-        context,
-      ),
-    ).toEqual({ status: "handled" });
+    context.canvas.actions.setActiveTool("select");
     expect(setLogisticsSuppression.mock.calls.slice(-2)).toEqual([
       ["belt", false],
       ["pipe", false],
     ]);
   });
 
-  it("handles the exit right dock button without restoring the right dock", () => {
-    const exitContext = createContext({
-      activeTool: "marquee",
-      marqueeAnchor: { x: 1, y: 1 },
-      rightDockOpen: false,
-    });
-    const module = createHypergryphMarqueeGestureModule();
-    // 退出清理由 on-exit owner 执行，装配实际路由以接收工具状态变化。
-    const router = createGestureActionRouter({ gestureAdapter: exitContext.context.canvas.gestureAdapter,
-      workspace: exitContext.context.workspace, getAppHost: () => exitContext.context.appHost,
-      getCanvas: () => exitContext.context.canvas, modules: [module] });
-    cleanups.push(() => router.dispose());
-
-    expect(
-      module.handle(
-        uiButtonTouchTapEvent("canvas-right-dock-toolbar-button-exit"),
-        exitContext.context,
-      ),
-    ).toEqual({ status: "handled" });
-    expect(exitContext.editor.actions.cancelMarquee).toHaveBeenCalledTimes(1);
-    expect(exitContext.editor.actions.clearCollection).toHaveBeenCalledWith(EntityCollectionType.selection);
-    expect(exitContext.context.canvas.state.activeTool).toBe("select");
-    expect(exitContext.appHost.internalState.workbench.rightDockOpen).toBe(false);
-  });
 });
 
 function createContext(options: { activeTool?: "select" | "move" | "marquee" | "single-placement"; hypergryphImmediateMarquee?: boolean; marqueeAnchor?: GridPoint | null;
@@ -503,7 +415,7 @@ function createContext(options: { activeTool?: "select" | "move" | "marquee" | "
   test.canvas.state.runtime.marqueeAnchor = options.marqueeAnchor ?? null;
   for (const entityId of options.selectedEntityIds ?? []) test.editor.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId });
   for (const key of ["setMarqueeRange", "applyMarquee", "cancelMarquee", "clearCollection", "addToCollection", "removeFromCollection", "setLogisticsSuppression", "setHoverPoint", "clearHoverPoint"] as const) vi.spyOn(test.editor.actions, key);
-  for (const key of ["setActiveTool", "showCanvasRightDockToolbar", "hideCanvasRightDockToolbar"] as const) vi.spyOn(test.canvas.actions, key);
+  for (const key of ["setActiveTool"] as const) vi.spyOn(test.canvas.actions, key);
   for (const key of ["toggleRightDock", "isShortcutFor"] as const) vi.spyOn(test.app.internalActions, key);
   return { context: test.context, editor: test.editor, appHost: test.app };
 }

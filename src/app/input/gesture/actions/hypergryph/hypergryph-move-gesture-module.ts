@@ -9,10 +9,7 @@ import {
   canSwitchEntityVariantDefinition,
   resolveNextSwitchableEntityVariantDefinitionId,
 } from "@/app/entity-variant-availability";
-import type {
-  CanvasFloatingToolbarButtonId,
-  CanvasRightDockToolbarItemRequest,
-} from "@/app/state/state-impl";
+import type { CanvasFloatingToolbarButtonId } from "@/app/state/state-impl";
 import type { EditorContract } from "@/domain/editor/editor-contract";
 import type { WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
@@ -20,6 +17,7 @@ import type { GridPoint, GridRect } from "@/domain/shared/grid";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
+import { RAIL_SELECTION_MOVE_BUTTON_ID } from "../rail-buttons";
 import { placeBlueprintFromMoveAndContinue } from "./hypergryph-blueprint-placement-gesture-module";
 import { isPlacementCancelButtonId, isPlacementRotateButtonId } from "./hypergryph-single-placement-gesture-module";
 import { recordEntityLandedBy } from "./entity-spin-tap";
@@ -42,35 +40,10 @@ const MOVE_TOOLBAR_BUTTON_IDS = [
 ] as const satisfies readonly CanvasFloatingToolbarButtonId[];
 
 const MOVE_ENTRY_BUTTON_IDS = {
-  marquee: "canvas-right-dock-toolbar-button-move",
+  marquee: RAIL_SELECTION_MOVE_BUTTON_ID,
   select: "canvas-floating-toolbar-button-move",
 } as const;
 const PLACEMENT_MARQUEE_TOOL_BUTTON_ID = "placement-tool-marquee";
-
-const ORDINARY_MOVE_RIGHT_DOCK_TOOLBAR_ITEMS = [
-  { operationId: "pan-viewport", presentation: "shortcut" },
-  { operationId: "zoom-viewport", presentation: "shortcut" },
-  { operationId: "delete-device", presentation: "shortcut" },
-  { operationId: "rotate-placement", presentation: "shortcut" },
-  { operationId: "confirm-placement", presentation: "shortcut" },
-] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
-
-const ORDINARY_MOVE_RIGHT_DOCK_TOOLBAR_ITEMS_WITH_VARIANT = [
-  { operationId: "pan-viewport", presentation: "shortcut" },
-  { operationId: "zoom-viewport", presentation: "shortcut" },
-  { operationId: "delete-device", presentation: "shortcut" },
-  { operationId: "switch-device-variant", presentation: "shortcut" },
-  { operationId: "rotate-placement", presentation: "shortcut" },
-  { operationId: "confirm-placement", presentation: "shortcut" },
-] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
-
-const BATCH_MOVE_RIGHT_DOCK_TOOLBAR_ITEMS = [
-  { operationId: "pan-viewport", presentation: "shortcut" },
-  { operationId: "zoom-viewport", presentation: "shortcut" },
-  { operationId: "rotate-placement", presentation: "shortcut" },
-  { operationId: "confirm-placement", presentation: "shortcut" },
-  { operationId: "cancel-placement", presentation: "shortcut" },
-] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
 
 export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHost> {
   let lastMousePosition: GesturePosition | null = null;
@@ -1347,7 +1320,6 @@ function clearMoveUi(canvas: CanvasInteractionController): void {
   canvas.state.runtime.moveEnterFrom = null;
   canvas.state.runtime.movePointerMode = null;
   canvas.actions.hideCanvasFloatingToolbar();
-  canvas.actions.hideCanvasRightDockToolbar();
 }
 
 /**
@@ -1367,49 +1339,17 @@ function clearSingleSelectionIfNotInspectorMode(
 function syncMoveEntryUi(canvas: CanvasInteractionController): boolean {
   const pointerMode = canvas.state.runtime.movePointerMode;
   if (pointerMode === null) {
-    canvas.actions.hideCanvasRightDockToolbar();
     return true;
   }
-
   if (pointerMode !== "touch") {
     canvas.actions.hideCanvasFloatingToolbar();
-    canvas.actions.showCanvasRightDockToolbar(
-      resolveMoveRightDockToolbarItems(canvas),
-    );
     return true;
   }
 
-  canvas.actions.hideCanvasRightDockToolbar();
   return canvas.actions.showCanvasFloatingToolbarForCollection(
     resolveMoveToolbarButtonIds(canvas),
     EntityCollectionType.preview,
   );
-}
-
-function resolveMoveRightDockToolbarItems(
-  canvas: CanvasInteractionController,
-): readonly CanvasRightDockToolbarItemRequest[] {
-  if (canvas.state.moveKind !== "ordinary") {
-    return BATCH_MOVE_RIGHT_DOCK_TOOLBAR_ITEMS;
-  }
-
-  const editor = canvas.editor;
-  if (editor === null || editor === undefined) {
-    return ORDINARY_MOVE_RIGHT_DOCK_TOOLBAR_ITEMS;
-  }
-
-  const previewEntity = resolveSinglePreviewEntity(editor);
-  if (
-    previewEntity === null
-    || !canSwitchEntityVariantDefinition({
-      canvas,
-      definitionId: previewEntity.definitionId,
-    })
-  ) {
-    return ORDINARY_MOVE_RIGHT_DOCK_TOOLBAR_ITEMS;
-  }
-
-  return ORDINARY_MOVE_RIGHT_DOCK_TOOLBAR_ITEMS_WITH_VARIANT;
 }
 
 function resolveMoveToolbarButtonIds(

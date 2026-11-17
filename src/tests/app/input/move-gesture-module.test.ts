@@ -1,4 +1,3 @@
-import type { CanvasRightDockToolbarItemRequest } from "@/app/state";
 import { createCanvasTestSession } from "@/tests/helpers/canvas-test-session";
 const cleanups: Array<() => void> = [];
 afterEach(() => { for (const dispose of cleanups.splice(0).reverse()) dispose(); vi.restoreAllMocks(); });
@@ -213,14 +212,14 @@ describe("createHypergryphMoveGestureModule", () => {
     );
   });
 
-  it("enters move from the marquee right dock button and initializes the touch move ui", () => {
+  it("enters move from the rail during marquee and initializes the touch move ui", () => {
     const { context, editor } = createContext({
       activeTool: "marquee",
     });
     const module = createHypergryphMoveGestureModule();
 
     const result = module.handle(
-      uiButtonTouchTapEvent("canvas-right-dock-toolbar-button-move"),
+      uiButtonTouchTapEvent("canvas-tool-rail-selection-move"),
       context,
     );
 
@@ -356,7 +355,7 @@ describe("createHypergryphMoveGestureModule", () => {
     );
   });
 
-  it("moves the mouse preview center from drag start after entering move from the right dock button", () => {
+  it("moves the mouse preview center from drag start after entering move from the rail", () => {
     const { context, editor } = createContext({
       activeTool: "marquee",
     });
@@ -364,7 +363,7 @@ describe("createHypergryphMoveGestureModule", () => {
 
     expect(
       module.handle(
-        uiButtonMouseTapEvent("canvas-right-dock-toolbar-button-move"),
+        uiButtonMouseTapEvent("canvas-tool-rail-selection-move"),
         context,
       ),
     ).toEqual({ status: "handled" });
@@ -705,17 +704,11 @@ describe("createHypergryphMoveGestureModule", () => {
       onEnterActiveToolEvent("select", "move"),
       ordinary.context,
     )).toEqual({ status: "handled" });
-    expect(ordinary.context.canvas.actions.showCanvasRightDockToolbar).toHaveBeenCalledWith(
-      ORDINARY_MOVE_RIGHT_DOCK_TOOLBAR_ITEMS_WITH_VARIANT_FOR_TEST,
-    );
 
     expect(module.handle(
       onEnterActiveToolEvent("marquee", "move"),
       batch.context,
     )).toEqual({ status: "handled" });
-    expect(batch.context.canvas.actions.showCanvasRightDockToolbar).toHaveBeenCalledWith(
-      BATCH_MOVE_RIGHT_DOCK_TOOLBAR_ITEMS_FOR_TEST,
-    );
 
     expect(handleKeyboardShortcutThroughRouter({
       module,
@@ -1050,7 +1043,7 @@ function createContext(options: {
     "moveCollectionCenterPointTo", "rotateCollection", "rotateCollectionAroundCenterPoint", "rotateCollectionAroundPivotCell",
     "rotateCollectionToSnapOnBuilding", "replaceEntityDefinition", "clearCollection", "addToCollection"] as const) vi.spyOn(test.editor.actions, action);
   for (const action of ["setActiveTool", "showCanvasFloatingToolbarForCollection", "hideCanvasFloatingToolbar",
-    "showCanvasRightDockToolbar", "hideCanvasRightDockToolbar", "alignCanvasFloatingToolbar"] as const) vi.spyOn(test.canvas.actions, action);
+    "alignCanvasFloatingToolbar"] as const) vi.spyOn(test.canvas.actions, action);
   vi.spyOn(test.app.internalActions, "isShortcutFor");
   vi.spyOn(test.adapter, "handleUiButtonMouseTap");
   vi.spyOn(test.adapter, "handleUiButtonTouchTap");
@@ -1102,22 +1095,7 @@ const MOVE_TOOLBAR_BUTTON_IDS_FOR_TEST = [
   "canvas-floating-toolbar-button-ok",
 ] as const;
 
-const ORDINARY_MOVE_RIGHT_DOCK_TOOLBAR_ITEMS_WITH_VARIANT_FOR_TEST = [
-  { operationId: "pan-viewport", presentation: "shortcut" },
-  { operationId: "zoom-viewport", presentation: "shortcut" },
-  { operationId: "delete-device", presentation: "shortcut" },
-  { operationId: "switch-device-variant", presentation: "shortcut" },
-  { operationId: "rotate-placement", presentation: "shortcut" },
-  { operationId: "confirm-placement", presentation: "shortcut" },
-] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
 
-const BATCH_MOVE_RIGHT_DOCK_TOOLBAR_ITEMS_FOR_TEST = [
-  { operationId: "pan-viewport", presentation: "shortcut" },
-  { operationId: "zoom-viewport", presentation: "shortcut" },
-  { operationId: "rotate-placement", presentation: "shortcut" },
-  { operationId: "confirm-placement", presentation: "shortcut" },
-  { operationId: "cancel-placement", presentation: "shortcut" },
-] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
 
 function tapLongPressReadyEvent(options: {
   pointerEntity: WorldEntity | null;

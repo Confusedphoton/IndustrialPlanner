@@ -13,7 +13,7 @@ export {
   LOGISTICS_CANCEL_ROUTE_BUTTON_ID,
   LOGISTICS_ROUTE_ORDER_BUTTON_ID,
 } from "./hypergryph/hypergryph-logistics-placement-gesture-module";
-export * from "./rail-toggle-buttons";
+export * from "./rail-buttons";
 export { createHypergryphDeleteSelectionGestureModule } from "./hypergryph/hypergryph-delete-selection-gesture-module";
 export { createHypergryphEntityVariantSwitchGestureModule } from "./hypergryph/hypergryph-entity-variant-switch-gesture-module";
 export {

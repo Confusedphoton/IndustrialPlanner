@@ -17,7 +17,6 @@ import type { ActiveTool } from "@/domain/app/types/app-types";
 import {
   type CanvasFloatingToolbarButtonId,
   type CanvasFloatingToolbarSize,
-  type CanvasRightDockToolbarItemRequest,
   clampLeftDockWidth,
   clampTimelineBottomDockHeight,
   clampToolboxBottomDockHeight,
@@ -109,10 +108,6 @@ export interface AppInternalAction {
   alignCanvasFloatingToolbar: () => boolean;
   setCanvasFloatingToolbarSize: (size: CanvasFloatingToolbarSize | null) => void;
   hideCanvasFloatingToolbar: () => void;
-  showCanvasRightDockToolbar: (
-    items: readonly CanvasRightDockToolbarItemRequest[],
-  ) => void;
-  hideCanvasRightDockToolbar: () => void;
   setLeftDockWidth: (width: number) => void;
   setScreenProfile: (screenProfile: ScreenProfile) => void;
   setLocale: (locale: AppLocale) => void;
@@ -477,9 +472,7 @@ export class AppActionImpl implements AppAction, AppInternalAction {
 
   public readonly hideCanvasFloatingToolbar: AppInternalAction["hideCanvasFloatingToolbar"] = (...args: Parameters<AppInternalAction["hideCanvasFloatingToolbar"]>) => this.canvas.actions.hideCanvasFloatingToolbar(...args);
 
-  public readonly showCanvasRightDockToolbar: AppInternalAction["showCanvasRightDockToolbar"] = (...args: Parameters<AppInternalAction["showCanvasRightDockToolbar"]>) => this.canvas.actions.showCanvasRightDockToolbar(...args);
 
-  public readonly hideCanvasRightDockToolbar: AppInternalAction["hideCanvasRightDockToolbar"] = (...args: Parameters<AppInternalAction["hideCanvasRightDockToolbar"]>) => this.canvas.actions.hideCanvasRightDockToolbar(...args);
 
 
 

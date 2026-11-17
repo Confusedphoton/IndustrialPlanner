@@ -76,8 +76,6 @@ export const AYU_LIGHT_THEME: AppTheme = {
     "in-canvas-toolbar-active-border": "#1f7fb3",
     "in-canvas-toolbar-active-bg": "rgb(57 158 230 / 0.14)",
     "in-canvas-toolbar-active-text": "#334155",
-    "in-canvas-toolbar-label-text": "rgb(51 65 85)",
-    "in-canvas-toolbar-label-shadow": "rgb(255 255 255 / 0.72)",
     "in-canvas-touch-hold-track": "rgb(31 127 179 / 0.18)",
     "in-canvas-touch-hold-core-border": "rgb(31 127 179 / 0.34)",
     "in-canvas-touch-hold-core-bg": "rgb(255 255 255 / 0.96)",

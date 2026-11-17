@@ -4,9 +4,9 @@ import { canSaveSelectionAsBlueprint } from "@/app/blueprint/save-blueprint";
 import type { AppHost } from "@/app/host/app-host";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
+import { RAIL_SELECTION_SAVE_BLUEPRINT_BUTTON_ID } from "../rail-buttons";
 
 const FLOATING_SAVE_BUTTON_ID = "canvas-floating-toolbar-button-save-blueprint";
-const RIGHT_DOCK_SAVE_BUTTON_ID = "canvas-right-dock-toolbar-button-save-blueprint";
 
 export function createHypergryphSaveBlueprintGestureModule(): GestureMappingModule<AppHost> {
   return {
@@ -61,7 +61,7 @@ function canSaveBlueprintFromTool(activeTool: CanvasInteractionController["state
 }
 
 function isSaveBlueprintButton(uiButtonId: string): boolean {
-  return uiButtonId === FLOATING_SAVE_BUTTON_ID || uiButtonId === RIGHT_DOCK_SAVE_BUTTON_ID;
+  return uiButtonId === FLOATING_SAVE_BUTTON_ID || uiButtonId === RAIL_SELECTION_SAVE_BLUEPRINT_BUTTON_ID;
 }
 
 function openSaveBlueprintDialog(canvas: CanvasInteractionController): GestureHandleResult {

@@ -9,7 +9,6 @@ import {
   hasPlaceableEntityDefinitionInCurrentBase,
   canPlaceEntityDefinitionInCurrentBase,
 } from "@/app/placement-zone-availability";
-import type { CanvasRightDockToolbarItemRequest } from "@/app/state/state-impl";
 import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GridEdge, GridPoint, GridRotation } from "@/domain/shared/grid";
@@ -38,38 +37,6 @@ const LOGISTICS_TOOLBAR_BUTTON_IDS = [
   "canvas-floating-toolbar-button-cancel",
   "canvas-floating-toolbar-button-ok",
 ] as const;
-
-const LOGISTICS_RIGHT_DOCK_TOOLBAR_ITEMS = [
-  { operationId: "exit", presentation: "button" },
-] as const;
-
-const BELT_START_RIGHT_DOCK_TOOLBAR_ITEMS = [
-  { operationId: "pan-viewport", presentation: "shortcut" },
-  { operationId: "zoom-viewport", presentation: "shortcut" },
-  { operationId: "confirm-logistics-start", presentation: "shortcut" },
-  { operationId: "change-belt-route-priority", presentation: "shortcut" },
-] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
-
-const BELT_END_RIGHT_DOCK_TOOLBAR_ITEMS = [
-  { operationId: "pan-viewport", presentation: "shortcut" },
-  { operationId: "zoom-viewport", presentation: "shortcut" },
-  { operationId: "confirm-logistics-end", presentation: "shortcut" },
-  { operationId: "change-belt-route-priority", presentation: "shortcut" },
-] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
-
-const PIPE_START_RIGHT_DOCK_TOOLBAR_ITEMS = [
-  { operationId: "pan-viewport", presentation: "shortcut" },
-  { operationId: "zoom-viewport", presentation: "shortcut" },
-  { operationId: "confirm-logistics-start", presentation: "shortcut" },
-  { operationId: "change-pipe-route-priority", presentation: "shortcut" },
-] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
-
-const PIPE_END_RIGHT_DOCK_TOOLBAR_ITEMS = [
-  { operationId: "pan-viewport", presentation: "shortcut" },
-  { operationId: "zoom-viewport", presentation: "shortcut" },
-  { operationId: "confirm-logistics-end", presentation: "shortcut" },
-  { operationId: "change-pipe-route-priority", presentation: "shortcut" },
-] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
 
 
 /** 画布工具条在物流布设模式下的上下文按钮：切换优先方向、取消正在绘制的路线。 */
@@ -410,11 +377,6 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
             return { status: "handled" };
           }
 
-          if (event.uiButtonId === "canvas-right-dock-toolbar-button-exit") {
-            exitLogisticsPlacementToSelect(context.canvas, editor);
-            return { status: "handled" };
-          }
-
           if (event.uiButtonId === LOGISTICS_ROUTE_ORDER_BUTTON_ID) {
             handleRouteOrderChange(context.canvas, editor);
             return { status: "handled" };
@@ -442,7 +404,6 @@ export function cleanupLogisticsPlacement(canvas: CanvasInteractionController): 
 
   resetLogisticsRuntime(canvas);
   canvas.actions.hideCanvasFloatingToolbar();
-  canvas.actions.hideCanvasRightDockToolbar();
 }
 
 /** 切换正在铺的线的种类：设备快捷键分组与另一种线的淡化都跟着换。 */
@@ -817,7 +778,6 @@ function driveMouseLogisticsStartPreview(options: {
   runtime.phase = "idle";
   runtime.isHoverPreview = true;
   runtime.lastPreviewGridPoint = options.gridPoint;
-  showMouseLogisticsPlacementShortcuts(options.canvas);
   return { status: "handled" };
 }
 
@@ -868,7 +828,6 @@ function handleMouseLeftTap(options: {
     runtime.phase = "drawing";
     runtime.pointerMode = "mouse";
     runtime.lastPreviewGridPoint = gridPoint;
-    showMouseLogisticsPlacementShortcuts(options.canvas);
     return { status: "handled" };
   }
 
@@ -1378,9 +1337,6 @@ function updateRuntimeFromResult(options: {
   result: LogisticsDraftActionResult;
 }): void {
   const runtime = options.canvas.state.runtime.logisticsPlacement;
-  const previousConfirmationOperationId = resolveLogisticsConfirmationOperationId(
-    runtime.phase,
-  );
   runtime.pointerMode = options.pointerMode;
   runtime.phase = options.phase;
   runtime.sourceEntityId = options.result.sourceEntityId;
@@ -1392,13 +1348,6 @@ function updateRuntimeFromResult(options: {
     runtime.anchorGridPoint = options.result.headGridPoint;
   } else if (runtime.anchorGridPoint === null && options.result.headGridPoint !== null) {
     runtime.anchorGridPoint = options.result.headGridPoint;
-  }
-
-  if (
-    options.pointerMode === "mouse"
-    && previousConfirmationOperationId !== resolveLogisticsConfirmationOperationId(runtime.phase)
-  ) {
-    showMouseLogisticsPlacementShortcuts(options.canvas);
   }
 }
 
@@ -1451,62 +1400,11 @@ function showTouchToolbar(canvas: CanvasInteractionController): void {
 
 function syncLogisticsPlacementEntryUi(canvas: CanvasInteractionController): void {
   canvas.actions.hideCanvasFloatingToolbar();
-  canvas.actions.hideCanvasRightDockToolbar();
-
-  const pointerMode = canvas.state.runtime.logisticsPlacement.pointerMode;
-  if (pointerMode === "mouse") {
-    showMouseLogisticsPlacementShortcuts(canvas);
-    return;
-  }
-
-  if (pointerMode !== "touch") {
-    return;
-  }
-
-  canvas.actions.showCanvasRightDockToolbar(LOGISTICS_RIGHT_DOCK_TOOLBAR_ITEMS);
-  if (canvas.workbench.internalState.workbench.rightDockOpen) {
+  // 触控铺线时收起右侧属性面板，给画布让出地方。
+  if (canvas.state.runtime.logisticsPlacement.pointerMode === "touch"
+    && canvas.workbench.internalState.workbench.rightDockOpen) {
     canvas.workbench.internalActions.toggleRightDock();
   }
-}
-
-function showMouseLogisticsPlacementShortcuts(canvas: CanvasInteractionController): void {
-  const items = resolveLogisticsRightDockToolbarItems(canvas);
-  if (items.length === 0) {
-    canvas.actions.hideCanvasRightDockToolbar();
-    return;
-  }
-
-  canvas.actions.showCanvasRightDockToolbar(items);
-}
-
-function resolveLogisticsRightDockToolbarItems(
-  canvas: CanvasInteractionController,
-): readonly CanvasRightDockToolbarItemRequest[] {
-  const runtime = canvas.state.runtime.logisticsPlacement;
-  const confirmsStart = resolveLogisticsConfirmationOperationId(runtime.phase)
-    === "confirm-logistics-start";
-
-  if (runtime.kind === LOGISTICS_KIND.belt) {
-    return confirmsStart
-      ? BELT_START_RIGHT_DOCK_TOOLBAR_ITEMS
-      : BELT_END_RIGHT_DOCK_TOOLBAR_ITEMS;
-  }
-
-  if (runtime.kind === LOGISTICS_KIND.pipe) {
-    return confirmsStart
-      ? PIPE_START_RIGHT_DOCK_TOOLBAR_ITEMS
-      : PIPE_END_RIGHT_DOCK_TOOLBAR_ITEMS;
-  }
-
-  return [];
-}
-
-function resolveLogisticsConfirmationOperationId(
-  phase: CanvasInteractionController["state"]["runtime"]["logisticsPlacement"]["phase"],
-): "confirm-logistics-end" | "confirm-logistics-start" {
-  return phase === "idle"
-    ? "confirm-logistics-start"
-    : "confirm-logistics-end";
 }
 
 function resetLogisticsRuntime(canvas: CanvasInteractionController): void {
@@ -1537,9 +1435,6 @@ function softResetLogisticsRuntime(canvas: CanvasInteractionController): void {
   runtime.headGridPoint = null;
   runtime.lastPreviewGridPoint = null;
   runtime.statusMessageKey = null;
-  if (runtime.pointerMode === "mouse") {
-    showMouseLogisticsPlacementShortcuts(canvas);
-  }
 }
 
 /** 铺线工具：未在铺线时进入传送带；已在铺线时再点一下在传送带与管道间切换。 */

@@ -72,8 +72,6 @@ export const APP_THEME_COLOR_KEYS = [
   "in-canvas-toolbar-active-border",
   "in-canvas-toolbar-active-bg",
   "in-canvas-toolbar-active-text",
-  "in-canvas-toolbar-label-text",
-  "in-canvas-toolbar-label-shadow",
   "in-canvas-touch-hold-track",
   "in-canvas-touch-hold-core-border",
   "in-canvas-touch-hold-core-bg",

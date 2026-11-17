@@ -80,8 +80,6 @@ export const GRAPHITE_DARK_THEME: AppTheme = {
     "in-canvas-toolbar-active-border": "#d6a874",
     "in-canvas-toolbar-active-bg": "rgb(195 148 97 / 0.16)",
     "in-canvas-toolbar-active-text": "#e4ddd1",
-    "in-canvas-toolbar-label-text": "#e4ddd1",
-    "in-canvas-toolbar-label-shadow": "rgb(0 0 0 / 0.5)",
     "in-canvas-touch-hold-track": "rgb(195 148 97 / 0.16)",
     "in-canvas-touch-hold-core-border": "rgb(214 168 116 / 0.45)",
     "in-canvas-touch-hold-core-bg": "rgb(228 221 209 / 0.94)",

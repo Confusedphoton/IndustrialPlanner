@@ -79,7 +79,6 @@ export function createHypergryphPenStrokeGestureModule(): GestureMappingModule<A
           tracker.erasing = true;
           editor.actions.clearCollection(EntityCollectionType.selection);
           canvas.actions.hideCanvasFloatingToolbar();
-          canvas.actions.hideCanvasRightDockToolbar();
           tracker.points.forEach((point, index) => {
             if (index > 0) markAlong(canvas, tracker!.points[index - 1]!, point);
           });
