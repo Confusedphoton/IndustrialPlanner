@@ -245,14 +245,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           }
         }),
       },
-      "game-pen-tilt-facing": {
-        readValue: () => appHost.internalState.settings.penTiltFacing,
-        writeValue: action((value) => {
-          if (typeof value === "boolean") {
-            appHost.internalState.settings.penTiltFacing = value;
-          }
-        }),
-      },
       "game-arknights-copy-while-moving": {
         readValue: () => appHost.state.settings.hypergryphCopyWhileMoving,
         writeValue: action((value) => {

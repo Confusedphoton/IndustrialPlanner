@@ -252,9 +252,6 @@ export function normalizePersistedAppSettings(
     penPreciseInput: typeof persistedAppSettings.penPreciseInput === "boolean"
       ? persistedAppSettings.penPreciseInput
       : fallback.penPreciseInput,
-    penTiltFacing: typeof persistedAppSettings.penTiltFacing === "boolean"
-      ? persistedAppSettings.penTiltFacing
-      : fallback.penTiltFacing,
     hypergryphSelectionRightDockSync:
       typeof persistedAppSettings.hypergryphSelectionRightDockSync === "boolean"
         ? persistedAppSettings.hypergryphSelectionRightDockSync

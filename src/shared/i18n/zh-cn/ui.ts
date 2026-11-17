@@ -1030,8 +1030,6 @@ const UI: Record<string, string> = {
     "placement.showFullPalette": "完整面板",
     "canvasHotbar.tray": "暂存托盘",
     "canvasHotbar.discard": "丢弃",
-    "settingsField.game-pen-tilt-facing": "按笔的倾斜设定朝向（试验）",
-    "settingsField.game-pen-tilt-facingDescription": "放置时笔悬停在画布上，把笔朝四个方向之一倾斜，手上的设备就转向该方向；笔竖直时不改变朝向。",
     "toolbar.canvasTools": "画布工具",
     "toolbar.canvasToolsMove": "移动工具条（可拖到任一侧）",
     "toolbar.canvasToolsMore": "更多视图工具",

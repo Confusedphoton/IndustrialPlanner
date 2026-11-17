@@ -429,13 +429,6 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         options: SYNC_PROVIDER_OPTIONS,
       },
       {
-        id: "game-pen-tilt-facing",
-        kind: "switch",
-        labelKey: "settingsField.game-pen-tilt-facing",
-        descriptionKey: "settingsField.game-pen-tilt-facingDescription",
-        defaultValue: false,
-      },
-      {
         id: "experimental-virtual-mouse-pointer",
         kind: "switch",
         labelKey: "settingsField.experimental-virtual-mouse-pointer",

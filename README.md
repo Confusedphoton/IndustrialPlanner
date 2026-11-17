@@ -47,7 +47,6 @@ Desktop, tablets and landscape phones are supported; portrait phones show a rota
 | Undo / redo · 撤销 / 重做 | Rail buttons<br>工具条按钮 | Two-finger tap / three-finger tap<br>双指点按 / 三指点按 | Shortcuts or rail buttons<br>快捷键或工具条按钮 |
 
 - Dragging a preview, a belt or a pipe to the edge of the canvas pans the map. The tool rail counts as an edge.<br>拖动预览或传送带、管道到画布边缘时地图会跟着平移，工具条也算边缘。
-- *Experimental:* with **Pen tilt sets facing** on (Settings → Experimental), leaning a hovering pen up, right, down or left turns the device in hand to face that way.<br>*实验功能：* 开启“按笔的倾斜设定朝向”（设置 → 实验性功能）后，悬停的笔向上下左右倾斜即可让手上的设备转向对应方向。
 
 ### Connect · 连线
 

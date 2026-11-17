@@ -1229,8 +1229,6 @@ export type UiKey =
   | "placement.showFullPalette"
   | "canvasHotbar.tray"
   | "canvasHotbar.discard"
-  | "settingsField.game-pen-tilt-facing"
-  | "settingsField.game-pen-tilt-facingDescription"
   | "toolbar.canvasTools"
   | "toolbar.canvasToolsMove"
   | "toolbar.canvasToolsMore"
