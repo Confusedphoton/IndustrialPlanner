@@ -84,9 +84,6 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(resolveGroupSettingIds("interaction-mode")).toEqual([
       "game-invert-wheel-zoom",
       "game-pen-precise-input",
-      "game-use-inspector-panel",
-      "game-arknights-selection-right-dock-sync",
-      "game-arknights-inspector-open-on-second-click",
       "game-collapse-device-modes",
     ]);
     expect(resolveGroupSettingIds("auxiliary-display")).toEqual([
@@ -132,8 +129,6 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-arknights-auto-create-splitters-and-convergers": true,
         "game-invert-wheel-zoom": false,
         "game-pen-precise-input": true,
-        "game-arknights-selection-right-dock-sync": false,
-        "game-arknights-inspector-open-on-second-click": false,
         "game-show-device-names": true,
         "game-show-region-annotations": false,
         "game-show-device-icons": true,
@@ -144,7 +139,6 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-always-show-grid-lines": true,
         "game-always-show-power-range": false,
         "game-show-grass-background": false,
-        "game-use-inspector-panel": true,
         "game-use-blueprint-style-device-images": true,
         "game-play-device-animations": false,
         "game-play-device-audio": false,
@@ -176,8 +170,6 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(
       hydratedController.values["game-arknights-auto-create-splitters-and-convergers"],
     ).toBe(true);
-    expect(hydratedController.values["game-arknights-selection-right-dock-sync"]).toBe(false);
-    expect(hydratedController.values["game-arknights-inspector-open-on-second-click"]).toBe(false);
     expect(Object.keys(hydratedController.values).some((key) => key.startsWith("shortcut-"))).toBe(false);
     expect(hydratedController.values["game-show-device-names"]).toBe(true);
     expect(hydratedController.values["game-show-region-annotations"]).toBe(false);
@@ -431,8 +423,6 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-arknights-auto-create-splitters-and-convergers": true,
         "game-invert-wheel-zoom": false,
         "game-pen-precise-input": true,
-        "game-arknights-selection-right-dock-sync": false,
-        "game-arknights-inspector-open-on-second-click": false,
         "game-show-device-names": true,
         "game-show-region-annotations": false,
         "game-show-device-icons": false,
@@ -443,7 +433,6 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-always-show-grid-lines": true,
         "game-always-show-power-range": false,
         "game-show-grass-background": false,
-        "game-use-inspector-panel": true,
         "game-use-blueprint-style-device-images": false,
         "game-play-device-animations": false,
         "game-play-device-audio": false,

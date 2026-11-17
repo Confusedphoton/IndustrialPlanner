@@ -84,7 +84,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
         actionId: SHORTCUT_KEY.MOVE_SELECTION,
         binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.MOVE_SELECTION },
         scope: {
-          inputLayers: ["canvas", "inspector-dialog"],
+          inputLayers: ["canvas"],
           activeTools: ["select", "marquee"],
         },
         triggerPolicy: { kind: "exact" },
@@ -114,7 +114,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
         operation: "delete",
         actionId: SHORTCUT_KEY.DELETE_DEVICE,
         binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.DELETE_DEVICE },
-        scope: { inputLayers: ["canvas", "inspector-dialog"], activeTools: ["move"] },
+        scope: { inputLayers: ["canvas"], activeTools: ["move"] },
         triggerPolicy: { kind: "allow-any-additional-modifiers" },
         claimsBrowserDefault: true,
         handle(_event, context) {
@@ -1351,17 +1351,12 @@ function clearMoveUi(canvas: CanvasInteractionController): void {
 }
 
 /**
- * 从 Move 返回 Select 时，如果是单选且未开启"再次点击打开设备属性"，则取消选择。
- * 与 select gesture 中对已选中实体的二次点击行为保持一致。
+ * 从 Move 返回 Select 时，单选则取消选择，与 select gesture 中对已选中实体的二次点击行为保持一致。
  */
 function clearSingleSelectionIfNotInspectorMode(
   canvas: CanvasInteractionController,
   editor: EditorContract,
 ): void {
-  if (canvas.workbench.state.settings.hypergryphInspectorOpenOnSecondClick) {
-    return;
-  }
-
   const selection = editor.state.collections[EntityCollectionType.selection];
 
   if (selection.length === 1) {

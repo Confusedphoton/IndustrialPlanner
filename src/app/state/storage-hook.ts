@@ -252,14 +252,6 @@ export function normalizePersistedAppSettings(
     penPreciseInput: typeof persistedAppSettings.penPreciseInput === "boolean"
       ? persistedAppSettings.penPreciseInput
       : fallback.penPreciseInput,
-    hypergryphSelectionRightDockSync:
-      typeof persistedAppSettings.hypergryphSelectionRightDockSync === "boolean"
-        ? persistedAppSettings.hypergryphSelectionRightDockSync
-        : fallback.hypergryphSelectionRightDockSync,
-    hypergryphInspectorOpenOnSecondClick:
-      typeof persistedAppSettings.hypergryphInspectorOpenOnSecondClick === "boolean"
-        ? persistedAppSettings.hypergryphInspectorOpenOnSecondClick
-        : fallback.hypergryphInspectorOpenOnSecondClick,
     gameUseBlueprintStyleDeviceImages,
     gamePlayDeviceAnimations: typeof persistedAppSettings.gamePlayDeviceAnimations === "boolean"
       ? persistedAppSettings.gamePlayDeviceAnimations
@@ -269,9 +261,6 @@ export function normalizePersistedAppSettings(
       : fallback.gamePlayDeviceAudio,
     gameShowDeviceNames,
     gameShowDeviceIcons,
-    gameUseInspectorPanel: typeof persistedAppSettings.gameUseInspectorPanel === "boolean"
-      ? persistedAppSettings.gameUseInspectorPanel
-      : fallback.gameUseInspectorPanel,
     gameShowHotkeys: typeof persistedAppSettings.gameShowHotkeys === "boolean"
       ? persistedAppSettings.gameShowHotkeys
       : fallback.gameShowHotkeys,
@@ -1066,11 +1055,6 @@ function normalizePersistedDialogStateMap(
         fallback["debug-log"] ?? createDefaultDialogStateForKey("debug-log"),
       )
       : undefined,
-    inspector: normalizePersistedDialogState(
-      "inspector",
-      persistedDialogStateMap.inspector,
-      fallback.inspector,
-    ),
     "save-blueprint": normalizePersistedDialogState(
       "save-blueprint",
       persistedDialogStateMap["save-blueprint"],

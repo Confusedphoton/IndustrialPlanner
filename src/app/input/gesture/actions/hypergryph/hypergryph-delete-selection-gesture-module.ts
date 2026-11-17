@@ -22,7 +22,7 @@ export function createHypergryphDeleteSelectionGestureModule(): GestureMappingMo
       actionId: SHORTCUT_KEY.DELETE_DEVICE,
       binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.DELETE_DEVICE },
       scope: {
-        inputLayers: ["canvas", "inspector-dialog"],
+        inputLayers: ["canvas"],
         activeTools: ["select", "marquee"],
       },
       triggerPolicy: { kind: "exact" },

@@ -196,7 +196,7 @@ function replaceSelection(appHost: AppHost, entityIds: readonly string[]): void 
   for (const entityId of entityIds) {
     editor.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId });
   }
-  if (entityIds.length > 0 && appHost.state.settings.gameUseInspectorPanel && !appHost.state.workbench.rightDockOpen) {
+  if (entityIds.length > 0 && !appHost.state.workbench.rightDockOpen) {
     appHost.internalActions.setRightDockOpen(true, { preserveSingleSelection: true });
   }
 }

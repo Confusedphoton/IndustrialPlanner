@@ -5,7 +5,7 @@ export const CANVAS_OPERATION_IDS = [
   "change-belt-route-priority", "change-pipe-route-priority", "toggle-marquee-selection",
   "marquee-select", "marquee-deselect", "exit-marquee",
   "select", "paste", "cut", "undo", "redo", "blueprint-placement",
-  "logistics-placement", "region-edit", "configure-device", "open-inspector", "rotate-viewport", "session-intent",
+  "logistics-placement", "region-edit", "configure-device", "rotate-viewport", "session-intent",
 ] as const;
 
 export type CanvasOperationId = typeof CANVAS_OPERATION_IDS[number];

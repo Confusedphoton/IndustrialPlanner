@@ -167,7 +167,6 @@ export interface GestureAdapterOptions {
 
 export interface GestureAdapterCanvas {
  readonly isInputSuspended: boolean;
- readonly isCommandInputSuspended: boolean;
  readonly view: EditorViewContract;
  readonly editor: { readonly queries: { findEntityAtClientPixelPoint(position: GesturePosition, viewport: EditorViewState): WorldEntity | null; }; readonly actions: { clearHoverPoint(): void; }; } | null;
  readonly state: { readonly activeTool: ActiveTool };
@@ -546,7 +545,7 @@ export class GestureAdapter {
   }
 
   public handleKeyDown(event: GestureKeyboardEventLike): boolean {
-    if (this.canvas.isCommandInputSuspended) return false;
+    if (this.canvas.isInputSuspended) return false;
     this.adapterOptions.onAcquireInput?.();
     const code = getKeyboardCode(event);
     if (code !== null) {
@@ -560,7 +559,7 @@ export class GestureAdapter {
   }
 
   public handleKeyUp(event: GestureKeyboardEventLike): boolean {
-    if (this.canvas.isCommandInputSuspended) return false;
+    if (this.canvas.isInputSuspended) return false;
     const code = getKeyboardCode(event);
     if (code !== null) {
       this.pressedKeys.delete(code);
@@ -573,7 +572,7 @@ export class GestureAdapter {
   }
 
   public handleUiButtonTouchTap(event: GestureUiButtonTouchTapEventLike): void {
-    if (this.canvas.isCommandInputSuspended) return;
+    if (this.canvas.isInputSuspended) return;
     this.adapterOptions.onAcquireInput?.();
     this.dispatchGesture({
       type: "ui-button-touch-tap",
@@ -585,7 +584,7 @@ export class GestureAdapter {
   }
 
   public handleUiButtonMouseTap(event: GestureUiButtonMouseTapEventLike): void {
-    if (this.canvas.isCommandInputSuspended) return;
+    if (this.canvas.isInputSuspended) return;
     this.adapterOptions.onAcquireInput?.();
     this.dispatchGesture({
       type: "ui-button-mouse-tap",
@@ -1608,9 +1607,7 @@ export class GestureAdapter {
   }
 
   private dispatchGesture(event: GestureEvent): boolean {
-    const command = event.type === "key down" || event.type === "key up"
-      || event.type === "ui-button-touch-tap" || event.type === "ui-button-mouse-tap";
-    if (command ? this.canvas.isCommandInputSuspended : this.canvas.isInputSuspended) return false;
+    if (this.canvas.isInputSuspended) return false;
     if (MOVE_EVENT_TYPES.has(event.type)) {
       const key = getEventMergeKey(event);
       if (this.pendingMergedMove !== null && this.pendingMergedMove.key !== key) {

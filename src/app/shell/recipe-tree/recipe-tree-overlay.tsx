@@ -111,7 +111,7 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
   const index = useRecipeTreePlanningIndex(appHost);
 
   // 读取可观察的屏幕尺寸：窗口缩放时重新渲染并把浮层夹回视口内。
-  const inspectorDocked = appHost.state.settings.gameUseInspectorPanel && appHost.state.workbench.rightDockOpen;
+  const inspectorDocked = appHost.state.workbench.rightDockOpen;
   const viewport = {
     width: appHost.state.screenProfile.viewportWidth,
     height: appHost.state.screenProfile.viewportHeight,

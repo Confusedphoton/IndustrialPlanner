@@ -1,8 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { DefaultPortPriorityController } from "@/app/port-priority";
 import { resolvePortPriorityGroupRows } from "@/app/shell/inspector/port-priority-group-model";
-import { resolveInspectorPortOutputCallouts } from "@/app/shell/inspector/inspector-neighborhood-preview";
-import { resolveInspectorNeighborhoodPreviewModel } from "@/app/shell/inspector/inspector-neighborhood-preview-model";
 import { createRegistryContract } from "@/registry";
 import { createWorldDocumentFromBlueprint, loadBlueprintFromFile } from "@/tests/simulation/blueprint-test-helpers";
 
@@ -11,27 +9,6 @@ const load = (name: string) => createWorldDocumentFromBlueprint(loadBlueprintFro
 ));
 
 describe("编辑文档默认端口优先级缓存", () => {
-  it.each(["stash-splitter-last", "stash-rotated"])("%s 的预览优先级标签互不遮挡", (name) => {
-    const registry = createRegistryContract();
-    const controller = new DefaultPortPriorityController(registry);
-    const document = load(name);
-    controller.update(document);
-    const entityDefinitionMap = new Map(registry.entityDefinitions.map((definition) => [definition.id, definition]));
-    const model = resolveInspectorNeighborhoodPreviewModel({ document, entityDefinitionMap, selectedEntityId: "target" })!;
-    const labels = resolveInspectorPortOutputCallouts({
-      document, entityDefinitionMap, selectedEntityId: "target", bounds: model.bounds,
-      width: 196, height: 196, defaultPortPriorities: controller.get("target"),
-    });
-    expect(labels).toHaveLength(6);
-    for (let index = 0; index < labels.length; index += 1) {
-      for (const other of labels.slice(index + 1)) {
-        const label = labels[index]!;
-        expect(Math.abs(label.labelX - other.labelX) >= (label.labelWidth + other.labelWidth) / 2
-          || Math.abs(label.labelY - other.labelY) >= 22).toBe(true);
-      }
-    }
-    controller.dispose();
-  });
   it("只在布局或顺序变化时重算，Inspector 读取及用户覆盖不查询邻接", () => {
     const registry = createRegistryContract();
     const query = vi.spyOn(registry.queries, "resolveDefaultPortPriorityGroups");

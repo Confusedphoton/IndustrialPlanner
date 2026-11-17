@@ -75,8 +75,6 @@ export function createAppHost(
     workspace,
     internalState,
     mainCanvas: new CanvasInteractionController({ view: options.mainView, registry: workspace.registry, readEditor: () => workspace.editor, readWorkbench: () => host, workbenchActions: !embedded,
-      canHandleSuspendedCommands: owner => owner === "inspector" && !embedded
-        && document.visibilityState !== "hidden" && resolveShortcutInputLayer(host) === "inspector-dialog",
       readViewportObstruction: () => ({
         left: canvasToolRailState.side === "left" ? canvasToolRailState.width : 0,
         right: canvasToolRailState.side === "right" ? canvasToolRailState.width : 0,
@@ -287,11 +285,8 @@ function resolveShortcutInputLayer(appHost: AppHost): ShortcutInputLayer {
       && !(dialogId === "timeline" && timelineBottomDockActive)
     ))
     .map(([dialogId]) => dialogId);
-  if (visibleDialogIds.some((dialogId) => dialogId !== "inspector")) {
+  if (visibleDialogIds.length > 0) {
     return "dialog";
-  }
-  if (visibleDialogIds.includes("inspector")) {
-    return "inspector-dialog";
   }
   if (appHost.mainCanvas.overlapEntityMenu.visible) {
     return "overlap-entity-menu";

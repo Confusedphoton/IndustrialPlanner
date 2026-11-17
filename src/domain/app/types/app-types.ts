@@ -14,13 +14,10 @@ export interface AppSettings {
   readonly blueprintPlacementDefaultContinuous: boolean;
   readonly hypergryphAllowEmptyLogisticsEndpoints: boolean;
   readonly hypergryphAutoCreateSplittersAndConvergers: boolean;
-  readonly hypergryphSelectionRightDockSync: boolean;
-  readonly hypergryphInspectorOpenOnSecondClick: boolean;
   readonly gameUseBlueprintStyleDeviceImages: boolean;
   readonly gamePlayDeviceAnimations: boolean;
   readonly gameShowDeviceNames: boolean;
   readonly gameShowDeviceIcons: boolean;
-  readonly gameUseInspectorPanel: boolean;
   readonly gameShowHotkeys: boolean;
   readonly collapseDeviceModes: boolean;
   readonly gamePipeWallReflection: boolean;

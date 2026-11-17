@@ -84,37 +84,14 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
         return { status: "ignored" };
       }
 
-      const revealInspector = () => {
-        if (!context.canvas.canUseWorkbenchActions || !context.canvas.isOperationEnabled("open-inspector")) return;
-        const selection = editor.state.collections.selection;
-        if (selection.length === 1) {
-          context.canvas.workbench.workspace.audio?.actions.playDeviceInspector(selection[0]!);
-        }
-        if (context.canvas.workbench.state.settings.gameUseInspectorPanel) {
-          context.canvas.workbench.internalActions.setRightDockActiveTab("selection");
-          if (!context.canvas.workbench.internalState.workbench.rightDockOpen) {
-            context.canvas.workbench.internalActions.toggleRightDock();
-          }
-          return;
-        }
-
-        context.canvas.workbench.internalActions.openDialog("inspector");
-      };
-
       const selectEntity = (options: {
         entityId: string;
         definitionId: string;
       }) => {
         const selection = editor.state.collections.selection;
-        const openInspectorOnSecondClick =
-          context.canvas.workbench.state.settings.hypergryphInspectorOpenOnSecondClick;
 
+        // 再点一下已选中的设备即取消选择；完整属性从设备卡片的“更多”打开。
         if (selection.length === 1 && selection.contains(options.entityId)) {
-          if (openInspectorOnSecondClick) {
-            revealInspector();
-            return;
-          }
-
           clearSelection();
           return;
         }
@@ -127,27 +104,13 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
           collectionType: EntityCollectionType.selection,
           entityId: options.entityId,
         });
-
-        if (
-          context.canvas.canUseWorkbenchActions && context.canvas.workbench.state.settings.gameUseInspectorPanel
-          && context.canvas.workbench.state.settings.hypergryphSelectionRightDockSync
-          && !openInspectorOnSecondClick
-        ) {
-          context.canvas.workbench.internalActions.setRightDockActiveTab("selection");
-          if (!context.canvas.workbench.internalState.workbench.rightDockOpen) {
-            context.canvas.workbench.internalActions.toggleRightDock();
-          }
-        }
       };
 
       const clearSelection = () => {
         editor.actions.clearCollection(EntityCollectionType.selection);
         context.canvas.actions.hideCanvasFloatingToolbar();
 
-        if (
-          context.canvas.canUseWorkbenchActions && context.canvas.workbench.state.settings.gameUseInspectorPanel
-          && context.canvas.workbench.internalState.workbench.rightDockOpen
-        ) {
+        if (context.canvas.canUseWorkbenchActions && context.canvas.workbench.internalState.workbench.rightDockOpen) {
           context.canvas.workbench.internalActions.toggleRightDock();
         }
       };

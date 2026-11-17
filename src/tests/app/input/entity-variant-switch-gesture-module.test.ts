@@ -33,10 +33,9 @@ describe("createHypergryphEntityVariantSwitchGestureModule", () => {
     );
   });
 
-  it("switches from Tab only in select mode with the right Inspector panel", () => {
-    const panel = createContext({ useInspectorPanel: true });
-    const dialog = createContext({ useInspectorPanel: false });
-    const marquee = createContext({ activeTool: "marquee", useInspectorPanel: true });
+  it("switches from Tab only in select mode", () => {
+    const panel = createContext();
+    const marquee = createContext({ activeTool: "marquee" });
     const module = createHypergryphEntityVariantSwitchGestureModule();
 
     expect(handleKeyboardShortcutThroughRouter({
@@ -48,13 +47,6 @@ describe("createHypergryphEntityVariantSwitchGestureModule", () => {
       "selected-entity",
       "filling_pd_mc_1_liquid",
     );
-
-    expect(handleKeyboardShortcutThroughRouter({
-      module,
-      context: dialog.context,
-      event: keyDownEvent({ code: "Tab", key: "Tab" }),
-    })).toEqual({ status: "ignored" });
-    expect(dialog.editor.actions.replaceEntityDefinition).not.toHaveBeenCalled();
 
     expect(handleKeyboardShortcutThroughRouter({
       module,
@@ -92,11 +84,10 @@ describe("createHypergryphEntityVariantSwitchGestureModule", () => {
   });
 });
 
-function createContext(options: { activeTool?: "select" | "marquee" | "move"; selectedDefinitionId?: string; selectionIds?: readonly string[]; useInspectorPanel?: boolean } = {}) {
+function createContext(options: { activeTool?: "select" | "marquee" | "move"; selectedDefinitionId?: string; selectionIds?: readonly string[] } = {}) {
   const variant = options.selectedDefinitionId === "belt_straight_1x1" ? "belt" : "device";
   const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/req048/selection-" + variant + ".schema7.json");
   const test = createCanvasTestSession({ document: createWorldDocumentFromBlueprint(blueprint), activeTool: options.activeTool }); cleanups.push(test.dispose);
-  test.app.internalState.settings.gameUseInspectorPanel = options.useInspectorPanel ?? false;
   for (const entityId of options.selectionIds ?? ["selected-entity"]) test.editor.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId });
   vi.spyOn(test.editor.actions, "replaceEntityDefinition");
   return { context: test.context, editor: test.editor };

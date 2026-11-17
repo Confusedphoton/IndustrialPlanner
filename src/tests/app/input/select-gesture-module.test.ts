@@ -60,7 +60,7 @@ describe("createHypergryphSelectGestureModule", () => {
     });
   });
 
-  it("clears the selection collection before selecting a different clicked entity and syncs the right dock", () => {
+  it("clears the selection collection before selecting a different clicked entity, leaving the right dock alone", () => {
     const {
       context,
       addToCollection,
@@ -92,8 +92,8 @@ describe("createHypergryphSelectGestureModule", () => {
       collectionType: EntityCollectionType.selection,
       entityId: "entity-1",
     });
-    expect(setRightDockActiveTab).toHaveBeenCalledWith("selection");
-    expect(toggleRightDock).toHaveBeenCalledTimes(1);
+    expect(setRightDockActiveTab).not.toHaveBeenCalled();
+    expect(toggleRightDock).not.toHaveBeenCalled();
     expect(showCanvasFloatingToolbarForCollection).not.toHaveBeenCalled();
   });
 
@@ -133,104 +133,6 @@ describe("createHypergryphSelectGestureModule", () => {
     expect(toggleRightDock).not.toHaveBeenCalled();
   });
 
-  it("opens the inspector dialog on second click instead of clearing selection when the option is enabled", () => {
-    const {
-      context,
-      addToCollection,
-      clearCollection,
-      hideCanvasFloatingToolbar,
-      openDialog,
-      setRightDockActiveTab,
-      toggleRightDock,
-    } = createContext("select", ["entity-1"], false, true, false, true);
-    const module = createHypergryphSelectGestureModule();
-
-    const result = module.handle(
-      {
-        type: "mouse tap",
-        gestureId: "mouse-select-open-dialog-1",
-        button: 0,
-        buttons: 0,
-        position: { x: 48, y: 32 },
-        longPress: false,
-        pointerEntity: entity("entity-1"),
-        modifiers: emptyModifiers(),
-        sourceEvent: null,
-      },
-      context,
-    );
-
-    expect(result).toEqual({ status: "handled" });
-    expect(clearCollection).not.toHaveBeenCalled();
-    expect(addToCollection).not.toHaveBeenCalled();
-    expect(hideCanvasFloatingToolbar).not.toHaveBeenCalled();
-    expect(openDialog).toHaveBeenCalledWith("inspector");
-    expect(setRightDockActiveTab).not.toHaveBeenCalled();
-    expect(toggleRightDock).not.toHaveBeenCalled();
-  });
-
-  it("opens the right dock on second click instead of clearing selection when the option is enabled", () => {
-    const {
-      context,
-      addToCollection,
-      clearCollection,
-      openDialog,
-      setRightDockActiveTab,
-      toggleRightDock,
-    } = createContext("select", ["entity-1"], false, true, true, true);
-    const module = createHypergryphSelectGestureModule();
-
-    const result = module.handle(
-      {
-        type: "mouse tap",
-        gestureId: "mouse-select-open-right-dock-1",
-        button: 0,
-        buttons: 0,
-        position: { x: 48, y: 32 },
-        longPress: false,
-        pointerEntity: entity("entity-1"),
-        modifiers: emptyModifiers(),
-        sourceEvent: null,
-      },
-      context,
-    );
-
-    expect(result).toEqual({ status: "handled" });
-    expect(clearCollection).not.toHaveBeenCalled();
-    expect(addToCollection).not.toHaveBeenCalled();
-    expect(openDialog).not.toHaveBeenCalled();
-    expect(setRightDockActiveTab).toHaveBeenCalledWith("selection");
-    expect(toggleRightDock).toHaveBeenCalledTimes(1);
-  });
-
-  it("switches to the selection tab without reopening the right dock when it is already open", () => {
-    const {
-      context,
-      setRightDockActiveTab,
-      toggleRightDock,
-    } = createContext("select", [], true);
-    const module = createHypergryphSelectGestureModule();
-
-    const result = module.handle(
-      {
-        type: "mouse tap",
-        gestureId: "mouse-select-right-dock-open-1",
-        button: 0,
-        buttons: 0,
-        position: { x: 48, y: 32 },
-        longPress: false,
-        pointerEntity: entity("entity-1"),
-        modifiers: emptyModifiers(),
-        sourceEvent: null,
-      },
-      context,
-    );
-
-    expect(result).toEqual({ status: "handled" });
-    expect(setRightDockActiveTab).toHaveBeenCalledWith("selection");
-    expect(toggleRightDock).not.toHaveBeenCalled();
-  });
-
   it("closes the right dock when deselecting the only selected entity by clicking it again", () => {
     const {
       context,
@@ -261,105 +163,12 @@ describe("createHypergryphSelectGestureModule", () => {
     expect(toggleRightDock).toHaveBeenCalledTimes(1);
   });
 
-  it("does not auto-open the right dock when selection sync is disabled", () => {
-    const {
-      context,
-      setRightDockActiveTab,
-      toggleRightDock,
-    } = createContext("select", [], false, false);
-    const module = createHypergryphSelectGestureModule();
-
-    const selectResult = module.handle(
-      {
-        type: "mouse tap",
-        gestureId: "mouse-select-no-sync-1",
-        button: 0,
-        buttons: 0,
-        position: { x: 48, y: 32 },
-        longPress: false,
-        pointerEntity: entity("entity-1"),
-        modifiers: emptyModifiers(),
-        sourceEvent: null,
-      },
-      context,
-    );
-
-    expect(selectResult).toEqual({ status: "handled" });
-    expect(setRightDockActiveTab).not.toHaveBeenCalled();
-    expect(toggleRightDock).not.toHaveBeenCalled();
-  });
-
-  it("does not auto-open the right dock on first selection when the option requires a second click", () => {
-    const {
-      context,
-      addToCollection,
-      clearCollection,
-      openDialog,
-      setRightDockActiveTab,
-      toggleRightDock,
-    } = createContext("select", [], false, true, true, true);
-    const module = createHypergryphSelectGestureModule();
-
-    const selectResult = module.handle(
-      {
-        type: "mouse tap",
-        gestureId: "mouse-select-reclick-first-pass-1",
-        button: 0,
-        buttons: 0,
-        position: { x: 48, y: 32 },
-        longPress: false,
-        pointerEntity: entity("entity-1"),
-        modifiers: emptyModifiers(),
-        sourceEvent: null,
-      },
-      context,
-    );
-
-    expect(selectResult).toEqual({ status: "handled" });
-    expect(clearCollection).toHaveBeenCalledWith(EntityCollectionType.selection);
-    expect(addToCollection).toHaveBeenCalledWith({
-      collectionType: EntityCollectionType.selection,
-      entityId: "entity-1",
-    });
-    expect(openDialog).not.toHaveBeenCalled();
-    expect(setRightDockActiveTab).not.toHaveBeenCalled();
-    expect(toggleRightDock).not.toHaveBeenCalled();
-  });
-
-  it("does not open or close the right dock when inspector panel mode is disabled", () => {
-    const {
-      context,
-      setRightDockActiveTab,
-      toggleRightDock,
-    } = createContext("select", [], false, true, false);
-    const module = createHypergryphSelectGestureModule();
-
-    const selectResult = module.handle(
-      {
-        type: "mouse tap",
-        gestureId: "mouse-select-inspector-dialog-1",
-        button: 0,
-        buttons: 0,
-        position: { x: 48, y: 32 },
-        longPress: false,
-        pointerEntity: entity("entity-1"),
-        modifiers: emptyModifiers(),
-        sourceEvent: null,
-      },
-      context,
-    );
-
-    expect(selectResult).toEqual({ status: "handled" });
-    expect(setRightDockActiveTab).not.toHaveBeenCalled();
-    expect(toggleRightDock).not.toHaveBeenCalled();
-  });
-
-  it("closes the right dock on deselect even when selection sync is disabled", () => {
+  it("closes the right dock on deselect", () => {
     const {
       context,
       clearCollection,
       toggleRightDock,
-    } = createContext("select", ["entity-1"], true, false);
+    } = createContext("select", ["entity-1"], true);
     const module = createHypergryphSelectGestureModule();
 
     const clearResult = module.handle(
@@ -745,12 +554,8 @@ describe("createHypergryphSelectGestureModule", () => {
   });
 });
 
-function createContext(activeTool: ActiveTool = "select", selectedEntityIds: readonly string[] = [], rightDockOpen = false,
-  selectionRightDockSync = true, useInspectorPanel = true, inspectorOpenOnSecondClick = false) {
+function createContext(activeTool: ActiveTool = "select", selectedEntityIds: readonly string[] = [], rightDockOpen = false) {
   const test = createCanvasTestSession({ activeTool, document: createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/req048/select-input.schema7.json")) }); cleanups.push(test.dispose);
-  test.app.internalState.settings.hypergryphSelectionRightDockSync = selectionRightDockSync;
-  test.app.internalState.settings.hypergryphInspectorOpenOnSecondClick = inspectorOpenOnSecondClick;
-  test.app.internalState.settings.gameUseInspectorPanel = useInspectorPanel;
   test.app.internalState.workbench.rightDockOpen = rightDockOpen;
   for (const entityId of selectedEntityIds) test.editor.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId });
   return { context: test.context,
@@ -765,7 +570,6 @@ function createOverlapSelectContext() {
   const test = createCanvasTestSession({ document: createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/select-gesture-module/scene-02-variant-1.schema7.json")),
     viewport: { center: { x: 50, y: 50 }, gridSize: 1 / 16, displayRotation: 0 } }); cleanups.push(test.dispose);
   test.view.actions.setViewportClientRect({ left: 0, top: 0, width: 100, height: 100 });
-  test.app.internalState.settings.hypergryphInspectorOpenOnSecondClick = false;
   return { context: test.context, addToCollection: vi.spyOn(test.editor.actions, "addToCollection"),
     clearCollection: vi.spyOn(test.editor.actions, "clearCollection"), overlapEntityMenu: test.canvas.overlapEntityMenu };
 }

@@ -57,11 +57,6 @@ export class CanvasInteractionController {
     this.releaseRenderSuspension = this.isInputSuspended ? value?.suspend() ?? null : null;
   }
   public get isInputSuspended(): boolean { return this.disposed || this.suspensions.size > 0; }
-  /** 底图手势和窗口命令是两个输入通道；窗口仍由装配层及路由声明资格。 */
-  public get isCommandInputSuspended(): boolean {
-    return this.disposed || [...this.suspensions.values()].some(owner =>
-      owner === null || this.options.canHandleSuspendedCommands?.(owner) !== true);
-  }
 
   /** 遮挡者各持有一个租约；最后一个遮挡消失才恢复最新场景。 */
   public suspend = (commandOwner: string | null = null): (() => void) => {
@@ -88,7 +83,6 @@ export class CanvasInteractionController {
     readonly readPalette?: () => readonly PlacementPaletteEntry[];
     readonly preparePlacement?: () => Promise<void>;
     readonly workbenchActions?: boolean;
-    readonly canHandleSuspendedCommands?: (owner: string) => boolean;
     /** 画布左右两侧被常驻浮层（画布工具条）遮挡的宽度。 */
     readonly readViewportObstruction?: () => ViewportObstruction;
   }) {
@@ -283,7 +277,7 @@ export class CanvasInteractionController {
   public getOperationAvailability(operation: CanvasOperationId) {
     const availability = this.editor?.queries.getOperationAvailability(operation)
       ?? { supported: false, enabled: false, reason: null };
-    return this.isCommandInputSuspended ? { ...availability, enabled: false } : availability;
+    return this.isInputSuspended ? { ...availability, enabled: false } : availability;
   }
 
   public focusOnEntity(entityId: string, options?: { duration?: number }): void {

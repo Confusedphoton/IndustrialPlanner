@@ -173,7 +173,6 @@ function createWorkbenchStorageSnapshot(options: {
   timelineDialog?: ReturnType<typeof createDialogStateSnapshot>;
   helpDialog?: ReturnType<typeof createDialogStateSnapshot>;
   settingsDialog?: ReturnType<typeof createDialogStateSnapshot>;
-  inspectorDialog?: ReturnType<typeof createDialogStateSnapshot>;
   saveBlueprintDialog?: ReturnType<typeof createDialogStateSnapshot>;
   baseSelectDialog?: ReturnType<typeof createDialogStateSnapshot>;
   feedbackDialog?: ReturnType<typeof createDialogStateSnapshot>;
@@ -201,7 +200,6 @@ function createWorkbenchStorageSnapshot(options: {
       timeline: options.timelineDialog ?? createDialogStateSnapshot(),
       help: options.helpDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_HELP_DIALOG_TAB_ID }),
       settings: options.settingsDialog ?? createDialogStateSnapshot(),
-      inspector: options.inspectorDialog ?? createDialogStateSnapshot(),
       "save-blueprint": options.saveBlueprintDialog ?? createDialogStateSnapshot(),
       "base-select": options.baseSelectDialog ?? createDialogStateSnapshot(),
       "warehouse-stats": createDialogStateSnapshot(),
@@ -561,8 +559,6 @@ describe("createAppTestHost", () => {
     expect(appHost.state.settings.hypergryphImmediateMarquee).toBe(false);
     expect(appHost.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
     expect(appHost.state.settings.hypergryphAutoCreateSplittersAndConvergers).toBe(true);
-    expect(appHost.state.settings.hypergryphSelectionRightDockSync).toBe(false);
-    expect(appHost.state.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(appHost.state.settings.gamePlayDeviceAnimations).toBe(false);
     expect(appHost.state.settings.debugShowFps).toBe(false);
     expect(appHost.state.settings.debugShowGestureDiagnosticsWindow).toBe(false);
@@ -577,8 +573,6 @@ describe("createAppTestHost", () => {
     expect(
       appHost.internalState.settings.hypergryphAutoCreateSplittersAndConvergers,
     ).toBe(true);
-    expect(appHost.internalState.settings.hypergryphSelectionRightDockSync).toBe(false);
-    expect(appHost.internalState.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(appHost.internalState.settings.debugShowFps).toBe(false);
     expect(appHost.internalState.settings.debugShowGestureDiagnosticsWindow).toBe(false);
     expect(appHost.internalState.settings.debugSimulationWorkerDetailedReport).toBe(false);
@@ -588,8 +582,6 @@ describe("createAppTestHost", () => {
     expect(workspace.app?.state.settings.hypergryphImmediateMarquee).toBe(false);
     expect(workspace.app?.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
     expect(workspace.app?.state.settings.hypergryphAutoCreateSplittersAndConvergers).toBe(true);
-    expect(workspace.app?.state.settings.hypergryphSelectionRightDockSync).toBe(false);
-    expect(workspace.app?.state.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(workspace.app?.state.settings.debugShowFps).toBe(false);
     expect(workspace.app?.state.settings.debugShowGestureDiagnosticsWindow).toBe(false);
     expect(workspace.app?.state.theme.id).toBe("ayu-light");
@@ -635,8 +627,6 @@ describe("createAppTestHost", () => {
     expect(appHost.state.settings.hypergryphImmediateMarquee).toBe(false);
     expect(appHost.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
     expect(appHost.state.settings.hypergryphAutoCreateSplittersAndConvergers).toBe(true);
-    expect(appHost.state.settings.hypergryphSelectionRightDockSync).toBe(false);
-    expect(appHost.state.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(appHost.state.settings.debugShowFps).toBe(false);
     expect(appHost.state.settings.debugShowGestureDiagnosticsWindow).toBe(false);
     expect(appHost.state.theme.name).toBe("Ayu Light");
@@ -648,8 +638,6 @@ describe("createAppTestHost", () => {
     expect(
       appHost.internalState.settings.hypergryphAutoCreateSplittersAndConvergers,
     ).toBe(true);
-    expect(appHost.internalState.settings.hypergryphSelectionRightDockSync).toBe(false);
-    expect(appHost.internalState.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(appHost.internalState.settings.debugShowFps).toBe(false);
     expect(appHost.internalState.settings.debugShowGestureDiagnosticsWindow).toBe(false);
     expect(workspace.app?.state.settings.locale).toBe("en-US");
@@ -657,8 +645,6 @@ describe("createAppTestHost", () => {
     expect(workspace.app?.state.settings.hypergryphImmediateMarquee).toBe(false);
     expect(workspace.app?.state.settings.hypergryphAllowEmptyLogisticsEndpoints).toBe(false);
     expect(workspace.app?.state.settings.hypergryphAutoCreateSplittersAndConvergers).toBe(true);
-    expect(workspace.app?.state.settings.hypergryphSelectionRightDockSync).toBe(false);
-    expect(workspace.app?.state.settings.hypergryphInspectorOpenOnSecondClick).toBe(false);
     expect(workspace.app?.state.settings.debugShowFps).toBe(false);
     expect(workspace.app?.state.settings.debugShowGestureDiagnosticsWindow).toBe(false);
     expect(workspace.app?.state.theme.id).toBe("ayu-light");
@@ -1123,7 +1109,6 @@ describe("createAppTestHost", () => {
     appHost.internalActions.setRightDockOpen(true, { preserveSingleSelection: true });
 
     runInAction(() => {
-      appHost.internalState.settings.hypergryphSelectionRightDockSync = false;
     });
     editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
 

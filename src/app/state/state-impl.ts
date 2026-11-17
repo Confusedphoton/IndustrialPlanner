@@ -92,14 +92,11 @@ export interface AppSettingsReadWrite extends Omit<AppSettings, "regionalMultiBa
   /** 手写笔按鼠标精确输入处理（悬停预览、笔尖拖动、侧键右键、橡皮擦删除）；关闭时沿用触控手势。 */
   penPreciseInput: boolean;
   /** 试验：放置时按笔的倾斜方向设定手上设备的朝向。 */
-  hypergryphSelectionRightDockSync: boolean;
-  hypergryphInspectorOpenOnSecondClick: boolean;
   gameUseBlueprintStyleDeviceImages: boolean;
   gamePlayDeviceAnimations: boolean;
   gamePlayDeviceAudio: boolean;
   gameShowDeviceNames: boolean;
   gameShowDeviceIcons: boolean;
-  gameUseInspectorPanel: boolean;
   gameShowHotkeys: boolean;
   collapseDeviceModes: boolean;
   gamePipeWallReflection: boolean;
@@ -416,7 +413,7 @@ export function isRightDockTabId(value: unknown): value is RightDockTabId {
   return typeof value === "string" && RIGHT_DOCK_TAB_IDS.includes(value as RightDockTabId);
 }
 
-export const DIALOG_KEYS = ["toolbox", "timeline", "help", "settings", "debug-log", "inspector", "save-blueprint", "base-select", "warehouse-stats", "feedback"] as const;
+export const DIALOG_KEYS = ["toolbox", "timeline", "help", "settings", "debug-log", "save-blueprint", "base-select", "warehouse-stats", "feedback"] as const;
 export type DialogKey = typeof DIALOG_KEYS[number];
 
 export interface DialogStateReadWrite {
@@ -435,7 +432,6 @@ export interface DialogStateMapReadWrite extends Record<string, DialogStateReadW
   help: DialogStateReadWrite;
   settings: DialogStateReadWrite;
   "debug-log": DialogStateReadWrite | undefined;
-  inspector: DialogStateReadWrite;
   "save-blueprint": DialogStateReadWrite;
   "base-select": DialogStateReadWrite;
   "warehouse-stats": DialogStateReadWrite;
@@ -611,7 +607,6 @@ class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
     help: createDefaultDialogStateForKey("help"),
     settings: createDefaultDialogStateForKey("settings"),
     "debug-log": undefined,
-    inspector: createDefaultDialogStateForKey("inspector"),
     "save-blueprint": createDefaultDialogStateForKey("save-blueprint"),
     "base-select": createDefaultDialogStateForKey("base-select"),
     "warehouse-stats": createDefaultDialogStateForKey("warehouse-stats"),
@@ -783,14 +778,11 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     hypergryphAutoCreateSplittersAndConvergers: true,
     invertWheelZoom: false,
     penPreciseInput: true,
-    hypergryphSelectionRightDockSync: false,
-    hypergryphInspectorOpenOnSecondClick: false,
     gameUseBlueprintStyleDeviceImages: false,
     gamePlayDeviceAnimations: false,
     gamePlayDeviceAudio: false,
     gameShowDeviceNames: true,
     gameShowDeviceIcons: false,
-    gameUseInspectorPanel: true,
     gameShowHotkeys: false,
     collapseDeviceModes: true,
     gamePipeWallReflection: false,

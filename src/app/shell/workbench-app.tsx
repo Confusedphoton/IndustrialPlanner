@@ -1,7 +1,7 @@
 import { completeYituliuCallback } from "@/shared/storage/yituliu-session";
 import { CanvasNotices } from "./canvas/canvas-notices";
 import { action, reaction, runInAction } from "mobx";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { observer } from "mobx-react-lite";
 import { BottomStatusBar } from "@/app/shell/layout/bottom-status-bar";
 import { CanvasHotbar } from "@/app/shell/canvas/canvas-hotbar";
@@ -27,7 +27,6 @@ import { BaseSelectDialog } from "@/app/shell/dialogs/base-select-dialog";
 import { BlueprintFolderDialog } from "@/app/shell/dialogs/blueprint-folder-dialog";
 import { BlueprintPreviewDialog } from "@/app/shell/dialogs/blueprint-preview-dialog";
 import { HelpDialog } from "@/app/shell/dialogs/help-dialog";
-import { InspectorDialog } from "@/app/shell/dialogs/inspector-dialog";
 import { MobilePortraitGate } from "@/app/shell/layout/mobile-portrait-gate";
 import { RecipePickerDialog } from "@/app/shell/dialogs/recipe-picker-dialog";
 import { SaveBlueprintDialog } from "@/app/shell/dialogs/save-blueprint-dialog";
@@ -311,34 +310,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           appHost.internalState.settings.hypergryphAutoCreateSplittersAndConvergers = value;
         }),
       },
-      "game-arknights-selection-right-dock-sync": {
-        readValue: () => appHost.state.settings.hypergryphSelectionRightDockSync,
-        writeValue: action((value) => {
-          if (typeof value !== "boolean") {
-            return;
-          }
-
-          if (appHost.internalState.settings.hypergryphSelectionRightDockSync === value) {
-            return;
-          }
-
-          appHost.internalState.settings.hypergryphSelectionRightDockSync = value;
-        }),
-      },
-      "game-arknights-inspector-open-on-second-click": {
-        readValue: () => appHost.state.settings.hypergryphInspectorOpenOnSecondClick,
-        writeValue: action((value) => {
-          if (typeof value !== "boolean") {
-            return;
-          }
-
-          if (appHost.internalState.settings.hypergryphInspectorOpenOnSecondClick === value) {
-            return;
-          }
-
-          appHost.internalState.settings.hypergryphInspectorOpenOnSecondClick = value;
-        }),
-      },
       "game-show-hotkeys": {
         readValue: () => appHost.state.settings.gameShowHotkeys,
         writeValue: action((value) => {
@@ -465,20 +436,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
         readValue: () => appHost.internalState.settings.gamePlayDeviceAudio,
         writeValue: action((value) => {
           if (typeof value === "boolean") appHost.internalState.settings.gamePlayDeviceAudio = value;
-        }),
-      },
-      "game-use-inspector-panel": {
-        readValue: () => appHost.state.settings.gameUseInspectorPanel,
-        writeValue: action((value) => {
-          if (typeof value !== "boolean") {
-            return;
-          }
-
-          if (appHost.internalState.settings.gameUseInspectorPanel === value) {
-            return;
-          }
-
-          appHost.internalState.settings.gameUseInspectorPanel = value;
         }),
       },
       "game-always-show-grid-lines": {
@@ -695,15 +652,12 @@ export const WorkbenchApp = observer(function WorkbenchApp({
   }));
   const leftDockOpen = appHost.state.workbench.leftDockOpen;
   const rightDockOpen = appHost.state.workbench.rightDockOpen;
-  const useInspectorPanel = appHost.state.settings.gameUseInspectorPanel;
   const topBarCollapsed = appHost.state.workbench.topBarCollapsed;
   const screenProfile = appHost.state.screenProfile;
-  const activeTool = appHost.mainCanvas.state.activeTool;
   const canvasFloatingToolbar = appHost.mainCanvas.state.runtime.canvasFloatingToolbar;
   const canvasRightDockToolbar = appHost.mainCanvas.state.runtime.canvasRightDockToolbar;
   const canvasTopLeftCornerToolbar = appHost.mainCanvas.state.runtime.canvasTopLeftCornerToolbar;
   const canvasTopLeftCornerToolbarKey = `${canvasTopLeftCornerToolbar.buttonIds.join("|")}::${canvasTopLeftCornerToolbar.initialOffButtonIds.join("|")}`;
-  const inspectorDialogState = appHost.internalState.workbench.dialogState.inspector;
   const timelineBottomDockGridHeight = resolveTimelineBottomDockGridHeight(appHost);
   const showTimelineBottomDock = timelineBottomDockGridHeight > 0;
   const toolboxBottomDockGridHeight = showTimelineBottomDock
@@ -714,7 +668,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     ? timelineBottomDockGridHeight
     : toolboxBottomDockGridHeight;
   const selectionCount = appHost.workspace.editor?.state.collections.selection.length ?? 0;
-  const openInspectorOnSecondClick = appHost.state.settings.hypergryphInspectorOpenOnSecondClick;
   const isTouchLandscape = isTouchLandscapeScreenProfile(screenProfile);
   const isTouchLayout = isMobileOrTabletScreenProfile(screenProfile);
   const isCompactLeftToolbar = isTouchLayout;
@@ -726,7 +679,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
   const showFloatingTopBarControls = isTouchLandscape && topBarCollapsed;
   const showBottomStatusBar = !showFloatingTopBarControls;
   const showMobilePortraitGate = isMobilePortraitScreenProfile(screenProfile);
-  const showRightDock = useInspectorPanel && rightDockOpen;
+  const showRightDock = rightDockOpen;
   const leftToolbarWidth = isCompactLeftToolbar ? 51 : 68;
   const dockLayoutBudgetInput = {
     viewportWidth: screenProfile.viewportWidth,
@@ -813,13 +766,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
       recipeTreeOverlayState.setStackFocus("inspector");
     }
   }, [firstSelectedId]);
-  const canKeepInspectorDialogOpen = !useInspectorPanel
-    && (activeTool === "select" || activeTool === "dark-pipe-link")
-    && selectionCount === 1
-    && appHost.mainCanvas.state.toolInfo.darkPipeLink === null;
-  const shouldAutoOpenInspectorDialog = canKeepInspectorDialogOpen && !openInspectorOnSecondClick;
   const floatingOpenRightDockLabel = `${t("action.open")} ${t("topBar.rightPanel")}`;
-  const prevUseInspectorPanelRef = useRef(useInspectorPanel);
   const hasVisibleDialogShell =
     isAnyDialogShellVisible(appHost, { showTimelineBottomDock, showToolboxBottomDock })
     || migrationController.dialogState.visible;
@@ -1055,9 +1002,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
 
     const handleWindowKeyDown = (event: KeyboardEvent) => {
 
-      const inspectorDialogState = appHost.internalState.workbench.dialogState.inspector;
-      const isInspectorDialogVisible = inspectorDialogState?.visible === true;
-      if (hasVisibleDialogShell && !isInspectorDialogVisible) {
+      if (hasVisibleDialogShell) {
         return;
       }
 
@@ -1092,8 +1037,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     };
 
     const handleWindowKeyUp = (event: KeyboardEvent) => {
-      const inspectorDialogState = appHost.internalState.workbench.dialogState.inspector;
-      if (hasVisibleDialogShell && inspectorDialogState?.visible !== true) {
+      if (hasVisibleDialogShell) {
         return;
       }
 
@@ -1114,50 +1058,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
       window.removeEventListener("keyup", handleWindowKeyUp);
     };
   }, [appHost, hasVisibleDialogShell]);
-
-  useEffect(() => {
-    const prev = prevUseInspectorPanelRef.current;
-    prevUseInspectorPanelRef.current = useInspectorPanel;
-
-    if (useInspectorPanel) {
-      if (inspectorDialogState.visible) {
-        appHost.internalActions.closeDialog("inspector");
-      }
-
-      return;
-    }
-
-    if (rightDockOpen) {
-      // 初始渲染时 rightDockOpen 默认 true，此时应保留选中以允许 auto-open inspector。
-      // 用户主动关掉"使用面板"时，清除选中，避免"有选中但无 inspector"的中间态。
-      appHost.internalActions.setRightDockOpen(false, { preserveSingleSelection: !prev });
-    }
-  }, [appHost, inspectorDialogState.visible, rightDockOpen, useInspectorPanel]);
-
-  useEffect(() => {
-    if (useInspectorPanel) {
-      return;
-    }
-
-    if (shouldAutoOpenInspectorDialog) {
-      if (!inspectorDialogState.visible) {
-        appHost.internalActions.openDialog("inspector");
-      }
-
-      return;
-    }
-
-    if (!canKeepInspectorDialogOpen && inspectorDialogState.visible) {
-      appHost.internalActions.closeDialog("inspector");
-    }
-  }, [
-    appHost,
-    canKeepInspectorDialogOpen,
-    inspectorDialogState.visible,
-    shouldAutoOpenInspectorDialog,
-    useInspectorPanel,
-  ]);
-
 
   const paletteOnRight = canvasToolRailState.side === "right";
   const workbenchStyle = {
@@ -1243,7 +1143,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
               isStandalone={pwaController.standalone}
               onFullscreenActionFailure={pwaController.openFullscreenNotice}
             />
-            {useInspectorPanel && !rightDockOpen ? (
+            {!rightDockOpen ? (
               <button
                 aria-label={floatingOpenRightDockLabel}
                 className={cm(
@@ -1319,7 +1219,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
         <BaseSelectDialog appHost={appHost} />
         <BlueprintFolderDialog appHost={appHost} controller={appHost.blueprintFolderDialog} />
         <BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />
-        <InspectorDialog appHost={appHost} />
         <SaveBlueprintDialog appHost={appHost} />
         <ToolboxDialog appHost={appHost} />
         <TimelineDialog appHost={appHost} />

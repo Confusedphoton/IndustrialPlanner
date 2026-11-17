@@ -83,14 +83,11 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   hypergryphAutoCreateSplittersAndConvergers: true,
   invertWheelZoom: false,
   penPreciseInput: true,
-  hypergryphSelectionRightDockSync: false,
-  hypergryphInspectorOpenOnSecondClick: false,
   gameUseBlueprintStyleDeviceImages: false,
   gamePlayDeviceAnimations: false,
   gamePlayDeviceAudio: false,
   gameShowDeviceNames: true,
   gameShowDeviceIcons: false,
-  gameUseInspectorPanel: true,
   gameShowHotkeys: false,
   collapseDeviceModes: true,
   gamePipeWallReflection: false,
@@ -251,7 +248,6 @@ function createWorkbenchStorageSnapshot(options: {
   timelineDialog?: ReturnType<typeof createDialogStateSnapshot>;
   helpDialog?: ReturnType<typeof createDialogStateSnapshot>;
   settingsDialog?: ReturnType<typeof createDialogStateSnapshot>;
-  inspectorDialog?: ReturnType<typeof createDialogStateSnapshot>;
   saveBlueprintDialog?: ReturnType<typeof createDialogStateSnapshot>;
   baseSelectDialog?: ReturnType<typeof createDialogStateSnapshot>;
   feedbackDialog?: ReturnType<typeof createDialogStateSnapshot>;
@@ -279,7 +275,6 @@ function createWorkbenchStorageSnapshot(options: {
       timeline: options.timelineDialog ?? createDialogStateSnapshot(),
       help: options.helpDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_HELP_DIALOG_TAB_ID }),
       settings: options.settingsDialog ?? createDialogStateSnapshot(),
-      inspector: options.inspectorDialog ?? createDialogStateSnapshot(),
       "save-blueprint": options.saveBlueprintDialog ?? createDialogStateSnapshot(),
       "base-select": options.baseSelectDialog ?? createDialogStateSnapshot(),
       "warehouse-stats": createDialogStateSnapshot(),
@@ -1075,7 +1070,6 @@ describe("WorkbenchApp", () => {
     const appHost = createAppTestHost(workspace);
 
     runInAction(() => {
-      appHost.internalState.settings.gameUseInspectorPanel = true;
     });
 
     act(() => {
@@ -1121,7 +1115,6 @@ describe("WorkbenchApp", () => {
     const appHost = createAppTestHost(workspace);
 
     runInAction(() => {
-      appHost.internalState.settings.gameUseInspectorPanel = true;
     });
 
     act(() => {
@@ -1163,7 +1156,6 @@ describe("WorkbenchApp", () => {
     appHost.gestureAdapter.subscribe((event) => gestures.push(event));
 
     runInAction(() => {
-      appHost.internalState.settings.gameUseInspectorPanel = true;
     });
 
     act(() => {
@@ -1762,7 +1754,6 @@ describe("WorkbenchApp", () => {
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     const appHost = createAppTestHost(workspace);
     // 本用例验证可操作工具栏；选中设备使用侧栏，避免模态 Inspector 挂起底图。
-    appHost.internalState.settings.gameUseInspectorPanel = true;
     const gestures: GestureEvent[] = [];
     appHost.gestureAdapter.subscribe((event) => gestures.push(event));
 
@@ -1873,7 +1864,6 @@ describe("WorkbenchApp", () => {
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     const appHost = createAppTestHost(workspace);
     // 真实 Canvas 会拒绝模态遮挡后的按钮输入，工具栏场景使用侧栏 Inspector。
-    appHost.internalState.settings.gameUseInspectorPanel = true;
     const gestures: GestureEvent[] = [];
     appHost.gestureAdapter.subscribe((event) => gestures.push(event));
 
@@ -1926,7 +1916,6 @@ describe("WorkbenchApp", () => {
     const appHost = createAppTestHost(workspace);
 
     runInAction(() => {
-      appHost.internalState.settings.gameUseInspectorPanel = true;
     });
 
     act(() => {
@@ -1987,7 +1976,6 @@ describe("WorkbenchApp", () => {
     const appHost = createAppTestHost(workspace);
 
     runInAction(() => {
-      appHost.internalState.settings.gameUseInspectorPanel = true;
       appHost.internalActions.setShortcutFor(SHORTCUT_KEY.DELETE_DEVICE, "");
       appHost.internalActions.setShortcutFor(SHORTCUT_KEY.MOVE_SELECTION, "M;N");
     });
@@ -2098,7 +2086,6 @@ describe("WorkbenchApp", () => {
     const appHost = createAppTestHost(workspace);
 
     runInAction(() => {
-      appHost.internalState.settings.gameUseInspectorPanel = true;
       appHost.internalActions.setShortcutFor(SHORTCUT_KEY.MARQUEE, "X;Q");
     });
 
@@ -2129,7 +2116,6 @@ describe("WorkbenchApp", () => {
     const appHost = createAppTestHost(workspace);
 
     runInAction(() => {
-      appHost.internalState.settings.gameUseInspectorPanel = true;
       appHost.internalActions.setShortcutFor(SHORTCUT_KEY.MOVE_SELECTION, "");
     });
 
@@ -2160,151 +2146,6 @@ describe("WorkbenchApp", () => {
     expect(glowLabels?.length).toBe(0);
   });
 
-  it("switches from right dock to inspector dialog without clearing the current selection", () => {
-    localStorage.setItem(
-      WORKBENCH_STATE_LOCAL_STORAGE_KEY,
-      JSON.stringify(createWorkbenchStorageSnapshot({
-        rightDockOpen: true,
-      })),
-    );
-
-    const workspace = createWorkspace();
-    const editorHost = createEditorTestHost(workspace);
-    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
-    const appHost = createAppTestHost(workspace);
-
-    runInAction(() => {
-      appHost.internalState.settings.gameUseInspectorPanel = true;
-    });
-
-    act(() => {
-      root.render(<WorkbenchApp appHost={appHost} />);
-    });
-
-    expect(container.querySelector(".dock-right")).not.toBeNull();
-    expect(container.querySelector('[data-dialog-key="inspector"]')).toBeNull();
-
-    act(() => {
-      appHost.internalState.settings.gameUseInspectorPanel = false;
-    });
-
-    expect(appHost.state.workbench.rightDockOpen).toBe(false);
-    // 关闭"使用面板"时清除选择，避免"有选中但无 inspector"的中间态。
-    expect(editorHost.state.collections.selection).toEqual([]);
-    expect(container.querySelector(".dock-right")).toBeNull();
-    expect(container.querySelector('[data-dialog-key="inspector"]')).toBeNull();
-  });
-
-  it("does not auto-open the inspector dialog until it is explicitly requested when second-click opening is enabled", () => {
-    const workspace = createWorkspace();
-    const editorHost = createEditorTestHost(workspace);
-    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
-    const appHost = createAppTestHost(workspace);
-    // 属性面板默认停靠；本用例验证对话框模式，显式关闭停靠面板。
-    runInAction(() => { appHost.internalState.settings.gameUseInspectorPanel = false; });
-
-    runInAction(() => {
-      appHost.internalState.settings.hypergryphInspectorOpenOnSecondClick = true;
-    });
-
-    act(() => {
-      root.render(<WorkbenchApp appHost={appHost} />);
-    });
-
-    expect(container.querySelector('[data-dialog-key="inspector"]')).toBeNull();
-
-    act(() => {
-      appHost.internalActions.openDialog("inspector");
-    });
-
-    expect(container.querySelector('[data-dialog-key="inspector"]')).not.toBeNull();
-  });
-
-  it("renders the neighborhood preview beside the inspector for a single selection", () => {
-    const workspace = createWorkspace();
-    const editorHost = createEditorTestHost(workspace);
-    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
-    const appHost = createAppTestHost(workspace);
-    // 属性面板默认停靠；本用例验证对话框模式，显式关闭停靠面板。
-    runInAction(() => { appHost.internalState.settings.gameUseInspectorPanel = false; });
-
-    act(() => {
-      root.render(<WorkbenchApp appHost={appHost} />);
-    });
-
-    const dialogBody = container.querySelector(".inspector-dialog-body") as HTMLElement | null;
-
-    expect(dialogBody).not.toBeNull();
-    expect(dialogBody?.classList.contains("has-neighborhood-preview")).toBe(true);
-    expect(dialogBody?.querySelector(".inspector-neighborhood-preview")).not.toBeNull();
-    expect(dialogBody?.querySelector(".inspector-dialog-inspector-pane")).not.toBeNull();
-  });
-
-  it("clears the selection when the inspector dialog backdrop closes", () => {
-    const workspace = createWorkspace();
-    const editorHost = createEditorTestHost(workspace);
-    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
-    const appHost = createAppTestHost(workspace);
-    // 属性面板默认停靠；本用例验证对话框模式，显式关闭停靠面板。
-    runInAction(() => { appHost.internalState.settings.gameUseInspectorPanel = false; });
-
-    act(() => {
-      root.render(<WorkbenchApp appHost={appHost} />);
-    });
-
-    const backdrop = container.querySelector(".inspector-dialog-backdrop") as HTMLDivElement | null;
-
-    expect(backdrop).not.toBeNull();
-
-    if (!backdrop) {
-      throw new Error("Inspector dialog backdrop did not render.");
-    }
-
-    act(() => {
-      backdrop.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
-    });
-
-    expect(editorHost.state.collections.selection).toEqual([]);
-    expect(container.querySelector('[data-dialog-key="inspector"]')).toBeNull();
-  });
-
-  it("uses a fixed 90% inspector dialog without resize handles on phones", () => {
-    coarsePointer = true;
-    hoverNone = true;
-    setViewport({
-      width: 390,
-      height: 844,
-      userAgent:
-        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
-      maxTouchPoints: 5,
-    });
-
-    const workspace = createWorkspace();
-    const editorHost = createEditorTestHost(workspace);
-    editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
-    const appHost = createAppTestHost(workspace);
-    // 属性面板默认停靠；本用例验证对话框模式，显式关闭停靠面板。
-    runInAction(() => { appHost.internalState.settings.gameUseInspectorPanel = false; });
-
-    act(() => {
-      root.render(<WorkbenchApp appHost={appHost} />);
-    });
-
-    const dialog = container.querySelector('.inspector-dialog[data-dialog-key="inspector"]') as HTMLElement | null;
-
-    expect(appHost.state.screenProfile.deviceClass).toBe("mobile");
-    expect(dialog).not.toBeNull();
-    expect(dialog?.style.width).toBe("90%");
-    expect(dialog?.style.height).toBe("90%");
-    expect(dialog?.querySelector(".dialog-shell-resize-grip")).toBeNull();
-    expect(dialog?.querySelector('button[title="最大化"]')).toBeNull();
-  });
-
 
   it("emits ui-button events from the canvas right dock toolbar without leaking canvas gestures", () => {
     const workspace = createWorkspace();
@@ -2315,7 +2156,6 @@ describe("WorkbenchApp", () => {
     appHost.gestureAdapter.subscribe((event) => gestures.push(event));
 
     runInAction(() => {
-      appHost.internalState.settings.gameUseInspectorPanel = true;
     });
 
     act(() => {
@@ -2427,7 +2267,6 @@ describe("WorkbenchApp", () => {
     });
 
     runInAction(() => {
-      appHost.internalState.settings.gameUseInspectorPanel = true;
       appHost.mainCanvas.state.activeTool = "marquee";
       appHost.internalActions.showCanvasRightDockToolbar([
         { operationId: "exit", presentation: "button" },
@@ -2493,7 +2332,6 @@ describe("WorkbenchApp", () => {
     });
 
     runInAction(() => {
-      appHost.internalState.settings.gameUseInspectorPanel = true;
       appHost.mainCanvas.state.activeTool = "marquee";
       appHost.internalActions.showCanvasRightDockToolbar([
         { operationId: "exit", presentation: "button" },

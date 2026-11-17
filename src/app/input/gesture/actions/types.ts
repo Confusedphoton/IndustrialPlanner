@@ -29,7 +29,6 @@ export type ShortcutInputLayer =
   | "canvas"
   | "overlap-entity-menu"
   | "dialog"
-  | "inspector-dialog"
   | "editable";
 
 export interface ShortcutScope {

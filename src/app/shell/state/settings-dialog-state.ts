@@ -250,31 +250,6 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
         defaultValue: true,
       },
       {
-        id: "game-use-inspector-panel",
-        kind: "switch",
-        labelKey: "settingsField.game-use-inspector-panel",
-        descriptionKey: "settingsField.game-use-inspector-panelDescription",
-        defaultValue: true,
-      },
-      {
-        id: "game-arknights-selection-right-dock-sync",
-        kind: "switch",
-        labelKey: "settingsField.game-arknights-selection-right-dock-sync",
-        descriptionKey: "settingsField.game-arknights-selection-right-dock-syncDescription",
-        defaultValue: false,
-        editableWhen: {
-          settingId: "game-use-inspector-panel",
-          equals: true,
-        },
-      },
-      {
-        id: "game-arknights-inspector-open-on-second-click",
-        kind: "switch",
-        labelKey: "settingsField.game-arknights-inspector-open-on-second-click",
-        descriptionKey: "settingsField.game-arknights-inspector-open-on-second-clickDescription",
-        defaultValue: false,
-      },
-      {
         id: COLLAPSE_DEVICE_MODES_SETTING_ID,
         kind: "switch",
         labelKey: "settingsField.game-collapse-device-modes",

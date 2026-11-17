@@ -22,7 +22,7 @@ export function createHypergryphEntityVariantSwitchGestureModule(): GestureMappi
       triggerPolicy: { kind: "exact" },
       handle(_event, context) {
         const editor = context.canvas.editor;
-        if (editor === null || !context.canvas.workbench.state.settings.gameUseInspectorPanel) {
+        if (editor === null) {
           return { status: "ignored" };
         }
 
