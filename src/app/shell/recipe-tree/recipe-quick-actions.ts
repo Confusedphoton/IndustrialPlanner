@@ -1,6 +1,7 @@
 import { runInAction } from "mobx";
 
 import type { AppHost } from "@/app/host/app-host";
+import { canPlaceEntityDefinitionInCurrentBase } from "@/app/placement-zone-availability";
 import { applyAdmissionItemToEntity } from "@/app/shell/inspector/admission-rule-inspector";
 import type { WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
@@ -45,11 +46,34 @@ export function resolveRecipePlacementTarget(appHost: AppHost, recipe: RecipeDef
   return definition === null ? null : resolveDevicePlacementTarget(appHost, definition.id, createRecipeConfig(definition, recipe));
 }
 
-/** 流程图卡片拖出流程图时：有配方的卡片放下带该配方的设备，其余卡片（原料、外部供给）不交出。 */
+/**
+ * 原料的拖出放置目标：本基地可用的仓库取货设备里第一个能取这种物品的，放下即链接到该物品。
+ * 没有能取它的设备时为 null。
+ */
+export function resolveItemSupplyPlacementTarget(appHost: AppHost, itemId: string): PanelPlacementTarget | null {
+  const registry = appHost.workspace.registry;
+  const domain = registry.queries.resolveItemDomain(itemId);
+  if (domain === null) {
+    return null;
+  }
+  const device = registry.entityDefinitions
+    .filter((definition) => definition.uiGroup === "warehouse"
+      && canPlaceEntityDefinitionInCurrentBase(appHost.mainCanvas, definition)
+      && definition.inspectors.some((inspector) => inspector.type === INSPECTOR_TYPE.warehouseItemLink
+        && inspector.slotGroupIds.some((groupId) =>
+          ((definition.storageSlotGroups.find((group) => group.id === groupId)?.kind ?? 0) & domain) !== 0)))
+    .sort((left, right) => left.displayOrder - right.displayOrder)[0];
+  const target = device === undefined ? null : resolveDevicePlacementTarget(appHost, device.id);
+  return target === null ? null : { ...target, warehouseItemId: itemId };
+}
+
+/** 流程图卡片拖出流程图时：有配方的卡片放下带该配方的设备，外部供给卡片放下链接该物品的取货设备。 */
 export function createFlowNodePlacementDrag(appHost: AppHost, node: ProductionFlowNode): PanelPlacementDrag | null {
   const recipeId = node.recipeId ?? node.recipeNode?.recipeId ?? null;
   const recipe = recipeId === null ? null : appHost.workspace.registry.queries.findRecipeDefinition(recipeId);
-  const target = recipe === null ? null : resolveRecipePlacementTarget(appHost, recipe);
+  const target = recipe !== null
+    ? resolveRecipePlacementTarget(appHost, recipe)
+    : node.tone === "source" && node.itemId !== undefined ? resolveItemSupplyPlacementTarget(appHost, node.itemId) : null;
   return target === null ? null : new PanelPlacementDrag(appHost, target);
 }
 
@@ -62,6 +86,7 @@ export function startPlacementWithRecipe(appHost: AppHost, recipe: RecipeDefinit
 
   runInAction(() => {
     appHost.mainCanvas.state.runtime.singlePlacementConfig = target.config;
+    appHost.mainCanvas.state.runtime.singlePlacementWarehouseItemId = null;
     appHost.mainCanvas.state.runtime.singlePlacementRotation = null;
   });
   appHost.gestureAdapter.handleUiButtonMouseTap({

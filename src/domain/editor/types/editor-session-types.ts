@@ -29,6 +29,8 @@ export interface SinglePlacementRequest {
   readonly config?: Readonly<Record<string, unknown>>;
   /** 初始朝向；仅对方形占地设备生效（非方形设备的落点按 0° 占地计算）。 */
   readonly rotation?: GridRotation;
+  /** 放下即把设备的仓库物品链接（如仓库取货口的取货物品）接到该物品，与放置同一步撤销。 */
+  readonly warehouseItemId?: string;
 }
 
 /** 按确定位置与朝向放置的设备（例如沿存取线延伸出的一串基段）。 */

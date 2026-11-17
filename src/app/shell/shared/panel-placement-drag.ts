@@ -11,6 +11,8 @@ export interface PanelPlacementTarget {
   /** 放下的设备附带的初始配置（例如配方）；null 为设备默认配置。 */
   readonly config: Readonly<Record<string, unknown>> | null;
   readonly iconSrc: string | null;
+  /** 放下即链接的仓库物品（原料卡片拖出的仓库取货口）。 */
+  readonly warehouseItemId?: string;
 }
 
 /** 设备的拖出放置目标；config 为放下时附带的初始配置。 */
@@ -65,6 +67,7 @@ export class PanelPlacementDrag {
       if (!this.placing) {
         runInAction(() => {
           canvas.state.runtime.singlePlacementConfig = this.target.config;
+          canvas.state.runtime.singlePlacementWarehouseItemId = this.target.warehouseItemId ?? null;
           canvas.state.runtime.singlePlacementRotation = null;
         });
       }

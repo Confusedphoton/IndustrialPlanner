@@ -174,6 +174,10 @@ export class CanvasInteractionController {
     if (request.config === undefined && pendingConfig !== null && this.state.runtime.singlePlacementDeviceId === request.definitionId) {
       request = { ...request, config: pendingConfig };
     }
+    const pendingItemId = this.state.runtime.singlePlacementWarehouseItemId;
+    if (request.warehouseItemId === undefined && pendingItemId !== null && this.state.runtime.singlePlacementDeviceId === request.definitionId) {
+      request = { ...request, warehouseItemId: pendingItemId };
+    }
     const pendingRotation = this.state.runtime.singlePlacementRotation;
     if (request.rotation === undefined && pendingRotation !== null && this.state.runtime.singlePlacementDeviceId === request.definitionId) {
       request = { ...request, rotation: pendingRotation };

@@ -199,6 +199,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           const applyRuntime = () => runInAction(() => {
             context.canvas.state.runtime.singlePlacementRotation = alignedRotation;
             context.canvas.state.runtime.singlePlacementConfig = null;
+            context.canvas.state.runtime.singlePlacementWarehouseItemId = null;
           });
           applyRuntime();
           const result = handlePlacementEntryButtonTap({
@@ -613,12 +614,13 @@ function handlePlacementEntryButtonTap(options: {
     }
 
     // 切换到另一台设备时保留调用方为它写入的初始配置与朝向（例如配方树指定的配方）。
-    const { singlePlacementConfig, singlePlacementRotation } = options.canvas.state.runtime;
+    const { singlePlacementConfig, singlePlacementRotation, singlePlacementWarehouseItemId } = options.canvas.state.runtime;
     safelyCancelPlacementDraft(options.editor);
     clearPlacementUi(options.canvas);
     runInAction(() => {
       options.canvas.state.runtime.singlePlacementConfig = singlePlacementConfig;
       options.canvas.state.runtime.singlePlacementRotation = singlePlacementRotation;
+      options.canvas.state.runtime.singlePlacementWarehouseItemId = singlePlacementWarehouseItemId;
     });
 
     return finalizePlacementEnter({
@@ -1201,6 +1203,7 @@ export interface HeldDevice {
   readonly deviceId: string;
   readonly config?: Readonly<Record<string, unknown>> | null;
   readonly rotation?: GridRotation | null;
+  readonly warehouseItemId?: string | null;
 }
 
 /**
@@ -1222,6 +1225,7 @@ export function holdDeviceForPlacement(
   runInAction(() => {
     runtime.singlePlacementConfig = device.config ?? null;
     runtime.singlePlacementRotation = device.rotation ?? null;
+    runtime.singlePlacementWarehouseItemId = device.warehouseItemId ?? null;
   });
   const position = options.position ?? null;
   const placing = canvas.state.activeTool === "single-placement";
@@ -1297,6 +1301,7 @@ function clearPlacementUi(canvas: CanvasInteractionController): void {
     canvas.state.runtime.placementAnchor = null;
     canvas.state.runtime.singlePlacementDeviceId = null;
     canvas.state.runtime.singlePlacementConfig = null;
+    canvas.state.runtime.singlePlacementWarehouseItemId = null;
     canvas.state.runtime.singlePlacementRotation = null;
     canvas.state.runtime.singlePlacementPointerMode = null;
   });

@@ -4,6 +4,7 @@ import type { SlotLinkDefinition, WorldEntity } from "@/domain/document/world-do
 import type { EditorAction } from "@/domain/editor/editor-action";
 import type { PositionedPlacementRequest, SinglePlacementRequest } from "@/domain/editor/types/editor-session-types";
 import { isBaseBuiltinEntityId } from "@/domain/registry/types/base-definition";
+import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
 import type { DraftEntity } from "../draft-entity";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GridPoint, GridRectSize } from "@/domain/shared/grid";
@@ -114,6 +115,15 @@ export function createEditorPlacementActions({
 
       if (request.config !== undefined) {
         draft.config = { ...draft.config, ...cloneEntityConfig(request.config) };
+      }
+      const warehouseLink = request.warehouseItemId === undefined
+        ? null
+        : createDraftWarehouseItemLink(definition, draft.id, request.warehouseItemId);
+      if (warehouseLink !== null) {
+        draftSlotLinks = [
+          ...(draftSlotLinks ?? []).filter((link) => !isSameSourceSlot(link, warehouseLink)),
+          warehouseLink,
+        ];
       }
       const snappedPlacement = snapPlacementToOuterRingEdge({
         definition, ...resolveEditorPlacementGeometry(workspace, currentDocument, draft),
@@ -517,6 +527,34 @@ function expandPlacementDefaults(
       },
     })),
   };
+}
+
+/** 设备第一个仓库物品链接槽位到该物品的链接；设备没有这类槽位时为 null。 */
+function createDraftWarehouseItemLink(definition: EntityDefinition, entityId: string, itemId: string): SlotLinkDefinition | null {
+  const inspector = definition.inspectors.find((candidate) => candidate.type === INSPECTOR_TYPE.warehouseItemLink);
+  if (inspector === undefined || inspector.type !== INSPECTOR_TYPE.warehouseItemLink) {
+    return null;
+  }
+  const explicitSlotIds = new Set(inspector.slotIds ?? []);
+  for (const groupId of inspector.slotGroupIds) {
+    const slot = definition.storageSlotGroups.find((group) => group.id === groupId)?.slots
+      .find((candidate) => explicitSlotIds.size === 0 || explicitSlotIds.has(candidate.id));
+    if (slot !== undefined) {
+      return {
+        id: createUuid(),
+        linkType: "share-all",
+        source: { entityId, storageSlotGroupId: groupId, slotId: slot.id },
+        target: { entityId: "warehouse", storageSlotGroupId: "warehouse", slotId: itemId },
+      };
+    }
+  }
+  return null;
+}
+
+function isSameSourceSlot(link: SlotLinkDefinition, other: SlotLinkDefinition): boolean {
+  return link.source.entityId === other.source.entityId
+    && link.source.storageSlotGroupId === other.source.storageSlotGroupId
+    && link.source.slotId === other.source.slotId;
 }
 
 function clearPlacementState(state: EditorActionsContext["state"]): void {

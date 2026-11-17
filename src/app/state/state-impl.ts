@@ -502,6 +502,8 @@ export interface CanvasRuntimeStateReadWrite {
   singlePlacementDeviceId: string | null;
   /** 单设备放置附带的初始配置（如配方树“放置并设定配方”），随放置界面清理。 */
   singlePlacementConfig: Readonly<Record<string, unknown>> | null;
+  /** 单设备放置时放下即链接的仓库物品（从规划里的原料卡片拖出的仓库取货口），随放置界面清理。 */
+  singlePlacementWarehouseItemId: string | null;
   /** 单设备放置的初始朝向（物流设备快捷插入时对齐光标下的传送带/管道）。 */
   singlePlacementRotation: GridRotation | null;
   singlePlacementPointerMode: "mouse" | "touch" | null;
@@ -734,6 +736,7 @@ class CanvasRuntimeStateReadWriteImpl implements CanvasRuntimeStateReadWrite {
   blueprintPlacementFromCopy = false;
   singlePlacementDeviceId: string | null = null;
   singlePlacementConfig: Readonly<Record<string, unknown>> | null = null;
+  singlePlacementWarehouseItemId: string | null = null;
   singlePlacementRotation: GridRotation | null = null;
   singlePlacementPointerMode: "mouse" | "touch" | null = null;
   singlePlacementContinuous = false;

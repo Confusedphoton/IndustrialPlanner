@@ -493,6 +493,7 @@ const PlacementPalette = observer(function PlacementPalette({
       // 从面板选择设备时清除配方树带入的放置配置，避免旧配方带到新放置。
       runInAction(() => {
         appHost.mainCanvas.state.runtime.singlePlacementConfig = null;
+        appHost.mainCanvas.state.runtime.singlePlacementWarehouseItemId = null;
       });
     }
     const source = resolvePlacementPointerSource(appHost, event.pointerType);
