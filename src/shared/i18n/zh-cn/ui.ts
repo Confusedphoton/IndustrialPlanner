@@ -1014,6 +1014,7 @@ const UI: Record<string, string> = {
     "lineEndChip.noRoom": "线末端放不下，请自行放置。",
     "lineEndChip.consumer": "{item} · {machine}",
     "lineEndChip.planned": "{name}，规划需要 {needed} 台，已放 {placed} 台",
+    "lineComb.skipped": "有平行线放不下，已略过。",
     "lineProbe.title": "线上读数",
     "lineProbe.unknownItem": "未能追溯到物品",
     "lineProbe.supply": "上游产出 {rate}/分",

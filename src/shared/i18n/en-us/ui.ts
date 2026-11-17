@@ -1021,6 +1021,7 @@ const UI: Record<string, string> = {
     "lineEndChip.noRoom": "No room at the line end. Place it yourself.",
     "lineEndChip.consumer": "{item} · {machine}",
     "lineEndChip.planned": "{name}, {placed} of {needed} placed in the plan",
+    "lineComb.skipped": "Some parallel lines did not fit and were left out.",
     "lineProbe.title": "Line readout",
     "lineProbe.unknownItem": "Item not traced",
     "lineProbe.supply": "Source makes {rate}/min",

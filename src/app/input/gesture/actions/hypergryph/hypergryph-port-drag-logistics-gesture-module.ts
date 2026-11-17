@@ -1,9 +1,12 @@
+import { runInAction } from "mobx";
+
 import type { CanvasInteractionController } from "@/app/canvas";
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
 import type { EditorContract } from "@/domain/editor/editor-contract";
 import type { GridEdge, GridPoint, GridRect } from "@/domain/shared/grid";
 import { oppositeGridEdge, resolveGridEdgeDelta, resolveRotatedPortGeometry, rotateGridEdge } from "@/shared/geometry/port";
+import { offsetLanePath } from "@/app/canvas/line-comb";
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 import type { CreateLogisticsDraftStartOptions, LogisticsDraftEndpoint, LogisticsKind } from "@/domain/shared/logistics";
 
@@ -23,10 +26,12 @@ type PortDragSession = {
 } & (
   | {
       readonly mode: "forward";
-      readonly source: CreateLogisticsDraftStartOptions["source"];
+      /** 梳线时随划过的端口改为最后一个端口。 */
+      source: CreateLogisticsDraftStartOptions["source"];
       readonly allowEmptySource: boolean;
       /** 续画物流线末端时禁止在起点自动生成分流器（末格应改为转角而非分支）。 */
       readonly continuesLine?: true;
+      readonly comb?: PortComb;
     }
   | {
       readonly mode: "reverse";
@@ -36,6 +41,28 @@ type PortDragSession = {
       readonly avoidPoint: GridPoint;
     }
 );
+
+/** 设备同组、同一边上的一个空闲输出口。 */
+interface CombPort {
+  readonly portId: string;
+  readonly inside: GridPoint;
+  readonly outside: GridPoint;
+}
+
+/**
+ * 梳线：起笔后先沿设备边划过相邻的空闲输出口（swept），离开那一排后固定（fixed），
+ * 主线从最后划过的口铺出，其余划过的口各铺一条与主线平行的线。
+ */
+interface PortComb {
+  readonly entityId: string;
+  readonly portGroupId: string;
+  /** 物品流出端口的方向。 */
+  readonly outward: GridPoint;
+  /** 沿边排好序的空闲输出口。 */
+  readonly ports: readonly CombPort[];
+  readonly swept: number[];
+  fixed: boolean;
+}
 
 /**
  * 从设备端口拖出即铺设物流。
@@ -311,13 +338,18 @@ function finishPortLine(
   commit: boolean,
 ): void {
   canvas.edgePan.stop("pointer");
+  closePortCombLanes(canvas);
   const draft = editor.queries.resolveLogisticsDraftState();
   if (draft === null) {
     return;
   }
   if (commit && draft.canApply) {
-    const endCell = draft.cells.at(-1)?.gridPoint ?? null;
+    const mainCells = draft.cells.map((cell) => cell.gridPoint);
+    const endCell = mainCells.at(-1) ?? null;
     editor.actions.applyLogisticDraft();
+    if (session.mode === "forward" && session.comb !== undefined) {
+      layCombLanes(canvas, editor, session.kind, session.comb, mainCells, draft.target);
+    }
     // 顺流铺出的线末端停在空地上时，提示可在末端接上消费该物品的设备。
     if (session.mode === "forward" && endCell !== null) {
       offerLineEndChip(canvas, editor, draft.kind, endCell);
@@ -325,6 +357,155 @@ function finishPortLine(
     return;
   }
   editor.actions.cancelLogisticsDraft();
+}
+
+/** 同组同边、外侧格空着的输出口（含起笔的口），沿边排序；不足两个时不能梳线。 */
+function resolvePortComb(
+  canvas: CanvasInteractionController,
+  editor: EditorContract,
+  kind: LogisticsKind,
+  endpoint: DevicePortEndpoint,
+): PortComb | null {
+  const entity = editor.queries.getEntityById(endpoint.entityId);
+  const definition = entity === null ? null : canvas.registry.queries.findEntityDefinition(entity.definitionId);
+  const group = definition?.portGroups.find((entry) => entry.id === endpoint.portGroupId);
+  if (entity === null || definition === null || group === undefined) {
+    return null;
+  }
+  const ports = group.ports.flatMap((port): CombPort[] => {
+    const geometry = resolveRotatedPortGeometry({ footprint: definition.footprint, port, rotation: entity.rotation });
+    if (geometry.edge !== endpoint.edge) return [];
+    const inside = { x: entity.position.x + geometry.cell.x, y: entity.position.y + geometry.cell.y };
+    const outside = { x: inside.x + geometry.delta.x, y: inside.y + geometry.delta.y };
+    // 端口外侧的空格会被识别为这台设备自己的端口，所以“没有线、只属于本设备”即算空闲。
+    const beyond = editor.queries.findLogisticsDraftEndpointAtGridPoint(outside, kind);
+    const free = port.id === endpoint.portId || (
+      editor.queries.findTransportLineAtGridPoint(outside, kind) === null
+      && (beyond?.type === "empty-cell" || (beyond?.type === "device-port" && beyond.entityId === entity.id))
+    );
+    return free ? [{ portId: port.id, inside, outside }] : [];
+  }).sort((left, right) => left.inside.x - right.inside.x || left.inside.y - right.inside.y);
+  const start = ports.findIndex((port) => port.portId === endpoint.portId);
+  return ports.length < 2 || start < 0 ? null : {
+    entityId: endpoint.entityId,
+    portGroupId: endpoint.portGroupId,
+    outward: resolveGridEdgeDelta(endpoint.edge),
+    ports,
+    swept: [start],
+    fixed: false,
+  };
+}
+
+/**
+ * 指针仍在端口那一排时处理梳线：停在当前口上不画；沿同一方向移到相邻的空闲口则把它加入、主线改从它起笔。
+ * 离开那一排即固定，之后照常铺线。返回 true 表示这次移动已由梳线处理。
+ */
+function sweepPortComb(
+  canvas: CanvasInteractionController,
+  editor: EditorContract,
+  session: Extract<PortDragSession, { mode: "forward" }>,
+  pointer: GridPoint,
+): boolean {
+  const comb = session.comb!;
+  const index = comb.ports.findIndex((port) => isSameGridPoint(port.inside, pointer) || isSameGridPoint(port.outside, pointer));
+  const current = comb.swept.at(-1)!;
+  if (index === current) {
+    return true;
+  }
+  const step = index - current;
+  const direction = comb.swept.length > 1 ? current - comb.swept.at(-2)! : step;
+  if (index < 0 || Math.abs(step) !== 1 || step !== direction) {
+    comb.fixed = true;
+    return false;
+  }
+  comb.swept.push(index);
+  if (editor.queries.resolveLogisticsDraftState() !== null) {
+    editor.actions.cancelLogisticsDraft();
+  }
+  const port = comb.ports[index]!;
+  session.source = {
+    type: "fixed-device-port",
+    entityId: comb.entityId,
+    portGroupId: comb.portGroupId,
+    portId: port.portId,
+    outsideGridPoint: { ...port.outside },
+  };
+  return true;
+}
+
+/** 梳线的其余各条线（不含主线）的平行路径；走不通的为 null。 */
+function resolveCombLanePaths(comb: PortComb, mainCells: readonly GridPoint[]): (GridPoint[] | null)[] {
+  return comb.swept.slice(0, -1).reverse()
+    .map((index) => offsetLanePath(mainCells, comb.ports[index]!.outside, comb.outward));
+}
+
+/** 铺线过程中把其余各条平行线画成预览。 */
+function publishCombLanes(
+  canvas: CanvasInteractionController,
+  editor: EditorContract,
+  session: Extract<PortDragSession, { mode: "forward" }>,
+): void {
+  const comb = session.comb;
+  const draft = editor.queries.resolveLogisticsDraftState();
+  if (comb === undefined || comb.swept.length < 2 || draft === null) {
+    return;
+  }
+  const lanes = resolveCombLanePaths(comb, draft.cells.map((cell) => cell.gridPoint));
+  runInAction(() => {
+    canvas.state.runtime.portComb = { kind: session.kind, lanes: lanes.filter((lane): lane is GridPoint[] => lane !== null) };
+  });
+}
+
+function closePortCombLanes(canvas: CanvasInteractionController): void {
+  if (canvas.state.runtime.portComb === null) return;
+  runInAction(() => {
+    canvas.state.runtime.portComb = null;
+  });
+}
+
+/**
+ * 主线落地后逐条铺其余平行线：照着平移后的路径画；主线接进了设备时，各线也试着自动接进同一台设备，
+ * 接不上就停在平行的位置。铺不下的线略过并提示数量。
+ */
+function layCombLanes(
+  canvas: CanvasInteractionController,
+  editor: EditorContract,
+  kind: LogisticsKind,
+  comb: PortComb,
+  mainCells: readonly GridPoint[],
+  mainTarget: LogisticsDraftEndpoint | null,
+): void {
+  if (comb.swept.length < 2) {
+    return;
+  }
+  const autoCreateSplittersAndConvergers = canvas.workbench.state.settings.hypergryphAutoCreateSplittersAndConvergers;
+  const draw = (port: CombPort, path: readonly GridPoint[], intoDevice: GridPoint | null): boolean => {
+    editor.actions.createLogisticsDraftStart({
+      kind,
+      allowEmptySource: true,
+      source: { type: "fixed-device-port", entityId: comb.entityId, portGroupId: comb.portGroupId, portId: port.portId, outsideGridPoint: { ...port.outside } },
+    });
+    for (const cell of [...path, ...(intoDevice === null ? [] : [intoDevice])]) {
+      editor.actions.moveLogisticEnd({ pointerGridPoint: cell, allowEmptyTarget: true, autoCreateSplittersAndConvergers, routeMode: { type: "freehand" } });
+    }
+    if (editor.queries.resolveLogisticsDraftState()?.canApply === true && editor.actions.applyLogisticDraft()) {
+      return true;
+    }
+    editor.actions.cancelLogisticsDraft();
+    return false;
+  };
+  const intoDevice = mainTarget?.type === "device-port" ? mainTarget.insideGridPoint : null;
+  const lanes = resolveCombLanePaths(comb, mainCells);
+  const ports = comb.swept.slice(0, -1).reverse().map((index) => comb.ports[index]!);
+  let skipped = 0;
+  lanes.forEach((path, index) => {
+    const port = ports[index]!;
+    const laid = path !== null && ((intoDevice !== null && draw(port, path, intoDevice)) || draw(port, path, null));
+    if (!laid) skipped += 1;
+  });
+  if (skipped > 0) {
+    canvas.actions.showCanvasToast("lineComb.skipped");
+  }
 }
 
 function resolveGridPoint(canvas: CanvasInteractionController, position: GesturePosition | null): GridPoint | null {
@@ -361,6 +542,7 @@ function resolvePortSession(
         portId: endpoint.portId,
         outsideGridPoint: { ...endpoint.outsideGridPoint },
       },
+      comb: resolvePortComb(canvas, editor, kind, endpoint) ?? undefined,
     };
   }
   const entity = editor.queries.getEntityById(endpoint.entityId);
@@ -464,6 +646,9 @@ function updateDraft(
   };
 
   if (session.mode === "forward") {
+    if (session.comb !== undefined && !session.comb.fixed && sweepPortComb(canvas, editor, session, pointer)) {
+      return;
+    }
     if (editor.queries.resolveLogisticsDraftState() === null) {
       editor.actions.createLogisticsDraftStart({
         kind: session.kind,
@@ -477,6 +662,7 @@ function updateDraft(
       autoCreateSplittersAndConvergers: session.continuesLine === true ? false : moveOptions.autoCreateSplittersAndConvergers,
       routeMode: { type: "freehand" },
     });
+    publishCombLanes(canvas, editor, session);
     return;
   }
 

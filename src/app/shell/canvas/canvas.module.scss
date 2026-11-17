@@ -1492,3 +1492,22 @@
   background: none;
   font-weight: 600;
 }
+
+// 梳线：其余平行线的虚线预览。
+.port-comb-lanes {
+  position: fixed;
+  inset: 0;
+  z-index: 7;
+  width: 100vw;
+  height: 100vh;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.port-comb-lanes polyline {
+  fill: none;
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.8;
+}

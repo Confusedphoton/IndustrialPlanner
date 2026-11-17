@@ -49,6 +49,7 @@ import {
 import { DEFAULT_APP_THEME_ID, resolveAppTheme } from "../theme";
 import type { LineEndChipState } from "@/app/canvas/line-end-chip";
 import type { LineProbeState } from "@/app/canvas/line-probe";
+import type { PortCombLanesState } from "@/app/canvas/line-comb";
 import type { MarkingMenuState } from "@/app/canvas/marking-menu";
 
 /** PC 布局下拖动左侧面板时的常规最窄宽度。 */
@@ -496,6 +497,7 @@ export interface CanvasRuntimeStateReadWrite {
   /** 从端口拖出的物流线末端仍开放时的「+ 设备」提示；没有时为 null。 */
   lineEndChip: LineEndChipState | null;
   lineProbe: LineProbeState | null;
+  portComb: PortCombLanesState | null;
   moveAnchor: GridPoint | null;
   moveEnterFrom: ActiveTool | null;
   movePointerMode: "mouse" | "touch" | null;
@@ -754,6 +756,7 @@ class CanvasRuntimeStateReadWriteImpl implements CanvasRuntimeStateReadWrite {
   markingMenu: MarkingMenuState | null = null;
   lineEndChip: LineEndChipState | null = null;
   lineProbe: LineProbeState | null = null;
+  portComb: PortCombLanesState | null = null;
   moveAnchor: GridPoint | null = null;
   moveEnterFrom: ActiveTool | null = null;
   movePointerMode: "mouse" | "touch" | null = null;

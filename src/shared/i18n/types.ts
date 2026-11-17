@@ -1213,6 +1213,7 @@ export type UiKey =
   | "lineEndChip.noRoom"
   | "lineEndChip.consumer"
   | "lineEndChip.planned"
+  | "lineComb.skipped"
   | "lineProbe.title"
   | "lineProbe.unknownItem"
   | "lineProbe.supply"

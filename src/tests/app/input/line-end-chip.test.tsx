@@ -306,6 +306,41 @@ describe("drawing a line out of a port with a finger", () => {
   });
 });
 
+describe("drawing several lines in one stroke", () => {
+  it("lays a parallel line from every free output the stroke sweeps along before leaving the machine", async () => {
+    const appHost = await createAppHost([furnace({ recipe: true })]);
+    const definition = appHost.workspace.registry.queries.findEntityDefinition(FURNACE_ID)!;
+    const outputs = definition.portGroups.find((group) => group.direction === "output" && !group.isPipe)!.ports
+      .map((port) => resolveRotatedPortGeometry({ footprint: definition.footprint, port, rotation: 0 }))
+      .map((geometry) => ({ inside: { x: 30 + geometry.cell.x, y: 30 + geometry.cell.y }, delta: geometry.delta }))
+      .sort((left, right) => left.inside.x - right.inside.x || left.inside.y - right.inside.y);
+    const [first, , last] = outputs;
+    const { delta } = first!;
+
+    // 沿设备边从第一个口划到第三个口，再向外拉四格。
+    penDrag(appHost, first!.inside, [outputs[1]!.inside, last!.inside, ...[1, 2, 3, 4].map((step) => ({
+      x: last!.inside.x + delta.x * step, y: last!.inside.y + delta.y * step,
+    }))]);
+
+    const belts = entities(appHost).filter((entity) => entity.definitionId.startsWith("belt"));
+    expect(belts).toHaveLength(12);
+    for (const { inside } of outputs) {
+      for (const step of [1, 2, 3, 4]) {
+        expect(belts.some((belt) => belt.position.x === inside.x + delta.x * step && belt.position.y === inside.y + delta.y * step)).toBe(true);
+      }
+    }
+    expect(appHost.mainCanvas.state.runtime.portComb).toBeNull();
+  });
+
+  it("still draws a single line when the stroke leaves the machine straight away", async () => {
+    const appHost = await createAppHost([furnace({ recipe: true })]);
+    const { inside, delta } = furnaceBeltOutput(appHost);
+    penDrag(appHost, inside, [{ x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 }]);
+
+    expect(entities(appHost).filter((entity) => entity.definitionId.startsWith("belt"))).toHaveLength(4);
+  });
+});
+
 describe("reading a line under the pen", () => {
   it("traces the line to the machine feeding it and reads that machine's output rate", async () => {
     const appHost = await createAppHost([furnace({ recipe: true })]);
