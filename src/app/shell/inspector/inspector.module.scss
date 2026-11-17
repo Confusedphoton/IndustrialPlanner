@@ -290,7 +290,6 @@
   height: 14px;
 }
 
-
 .logistics-item-list {
   gap: 0;
   padding-top: 3px;
@@ -1002,7 +1001,6 @@
   white-space: nowrap;
 }
 
-
 .warehouse-link-infinity-button {
   position: relative;
   display: inline-flex;
@@ -1038,7 +1036,6 @@
   }
   color: var(--text-0);
 }
-
 
 .warehouse-link-infinity-button[aria-pressed="true"]:not(:disabled) {
   border-color: var(--accent-strong);
@@ -1560,7 +1557,6 @@
   height: 15px;
 }
 
-
 .admission-rule-inspector[data-render-mode="dock"] .admission-rule-controls-row,
 .admission-rule-inspector[data-device-class="mobile"] .admission-rule-controls-row,
 .admission-rule-inspector[data-device-class="tablet"] .admission-rule-controls-row {
@@ -1592,7 +1588,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
 
 .port-output-panel-body {
   padding: 8px;
@@ -1639,7 +1634,6 @@
   --port-output-accent: #4f8fa8;
   --port-output-accent-soft: rgb(79 143 168 / 10%);
 }
-
 
 .port-output-locator {
   display: inline-grid;
@@ -1714,7 +1708,6 @@
   white-space: nowrap;
 }
 
-
 .port-output-item-button {
   display: inline-grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -1777,7 +1770,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
 
 .port-output-action-button {
   display: inline-flex;
@@ -2306,7 +2298,6 @@
   }
 }
 
-
 .slot-config-flow-column-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -2327,7 +2318,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
 
 .slot-config-flow-slot-list,
 .slot-config-group {
@@ -2465,7 +2455,6 @@
   color: var(--text-2);
   text-align: center;
 }
-
 
 .slot-config-flow-direction svg {
   width: min(64px, 100%);
@@ -2835,7 +2824,6 @@
   }
   color: var(--danger);
 }
-
 
 .submit-to-warehouse-inspector {
   background: var(--surface-1);
@@ -3464,66 +3452,6 @@
   }
 }
 
-.recipe-add-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 48px;
-  padding: 8px 12px;
-  border: 1px dashed var(--line-strong);
-  @supports (background: color-mix(in srgb, red 50%, blue)) {
-    border: 1px dashed color-mix(in srgb, var(--line-strong) 66%, var(--line));
-  }
-  border-radius: 6px;
-  background: var(--surface-2);
-  @supports (background: color-mix(in srgb, red 50%, blue)) {
-    background: color-mix(in srgb, var(--surface-2) 58%, transparent);
-  }
-  color: var(--accent-strong);
-  cursor: pointer;
-  font: inherit;
-  text-align: center;
-  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
-
-  &:hover {
-    border-color: var(--accent-strong);
-    @supports (background: color-mix(in srgb, red 50%, blue)) {
-      border-color: color-mix(in srgb, var(--accent-strong) 60%, var(--line));
-    }
-    background: var(--surface-2);
-    @supports (background: color-mix(in srgb, red 50%, blue)) {
-      background: color-mix(in srgb, var(--accent-soft) 26%, var(--surface-2));
-    }
-    color: var(--accent-strong);
-  }
-}
-
-.recipe-add-button-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  color: var(--accent-strong);
-  font-size: 0.88rem;
-  font-weight: 650;
-  line-height: 1;
-}
-
-.recipe-add-icon {
-  width: 18px;
-  height: 18px;
-  stroke-width: 2.1;
-  line-height: 1;
-}
-
-.recipe-add-button-hint {
-  color: var(--text-2);
-  font-size: 0.76rem;
-  font-weight: 500;
-  line-height: 1.3;
-}
-
 [data-problem-severity="error"] p {
   color: #ef4444;
 }
@@ -3534,14 +3462,12 @@
   现代浏览器继续使用上方 color-mix() 声明；本分支只提供旧 Chrome fallback，不影响新版本呈现。
 */
 @supports not (background: color-mix(in srgb, red 50%, blue)) {
-  .recipe-remove-button,
-  .recipe-add-button {
+  .recipe-remove-button {
     border-color: var(--line);
     background: var(--surface-2);
   }
 
-  .recipe-remove-button:hover,
-  .recipe-add-button:hover {
+  .recipe-remove-button:hover {
     border-color: var(--line-strong);
     background: var(--surface-3);
   }

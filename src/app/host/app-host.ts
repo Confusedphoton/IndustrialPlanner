@@ -28,7 +28,6 @@ import { canvasToolRailState } from "../shell/canvas/canvas-tool-rail-state";
 import { WorkbenchBlueprintFolderDialogController } from "../shell/state/blueprint-folder-dialog-state";
 import { WorkbenchBlueprintPreviewController } from "../shell/state/blueprint-preview-dialog-state";
 import { WorkbenchEncyclopediaPickerController } from "../shell/state/encyclopedia-picker-state";
-import { WorkbenchRecipePickerController } from "../shell/state/recipe-picker-state";
 import { WorkbenchSaveBlueprintDialogController } from "../shell/state/save-blueprint-dialog-state";
 import { cleanupDiscardableV2LocalStorageBeforeV3Boot } from "../migration";
 import { RegionalSettingsController } from "../regional-settings";
@@ -48,7 +47,6 @@ export interface AppHost extends AppContract {
   blueprintPreview: WorkbenchBlueprintPreviewController;
   saveBlueprintDialog: WorkbenchSaveBlueprintDialogController;
   encyclopediaPicker: WorkbenchEncyclopediaPickerController;
-  recipePicker: WorkbenchRecipePickerController;
 
 
   regionalSettings: RegionalSettingsController;
@@ -140,7 +138,6 @@ export function createAppHost(
     () => internalState.workbench.toolbox.wiki,
     embedded ? "memory" : "browser",
   );
-  const recipePicker = new WorkbenchRecipePickerController();
   const gestureActionRouter = createGestureActionRouter<AppHost>({
     gestureAdapter,
     workspace,
@@ -173,7 +170,6 @@ export function createAppHost(
     regionalSettings,
     portPriorityDefaults,
     encyclopediaPicker,
-    recipePicker,
   });
 
   const shortcutManager = new KeyboardShortcutManager(host, { persistence: embedded ? "memory" : "browser" });
@@ -232,7 +228,6 @@ export function createAppHost(
       host.mainCanvas.dispose();
       portPriorityDefaults.dispose();
       encyclopediaPicker.dispose();
-      recipePicker.dispose();
       actionImpl.dispose();
       gestureActionRouter.dispose();
       gestureAdapter.dispose();

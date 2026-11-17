@@ -26,7 +26,6 @@ import { BlueprintFolderDialog } from "@/app/shell/dialogs/blueprint-folder-dial
 import { BlueprintPreviewDialog } from "@/app/shell/dialogs/blueprint-preview-dialog";
 import { HelpDialog } from "@/app/shell/dialogs/help-dialog";
 import { MobilePortraitGate } from "@/app/shell/layout/mobile-portrait-gate";
-import { RecipePickerDialog } from "@/app/shell/dialogs/recipe-picker-dialog";
 import { SaveBlueprintDialog } from "@/app/shell/dialogs/save-blueprint-dialog";
 import { SettingsDialog } from "@/app/shell/dialogs/settings-dialog";
 import { V2MigrationDialog } from "@/app/shell/dialogs/v2-migration-dialog";
@@ -1213,7 +1212,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
         <TimelineDialog appHost={appHost} />
         <WarehouseStatsDialog appHost={appHost} />
         <EncyclopediaPickerDialog appHost={appHost} />
-        <RecipePickerDialog appHost={appHost} />
         <HelpDialog appHost={appHost} />
         <FeedbackDialog appHost={appHost} />
         <SettingsDialog
@@ -1276,7 +1274,6 @@ function isAnyDialogShellVisible(
     },
   )
     || appHost.encyclopediaPicker.dialogState.visible
-    || appHost.recipePicker.dialogState.visible
     || appHost.blueprintFolderDialog.dialogState.visible
     || appHost.blueprintPreview.dialogState.visible;
 }

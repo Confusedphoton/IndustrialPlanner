@@ -107,7 +107,6 @@ describe("反应池配方 Channel 模式开关", () => {
       definition,
       entity,
       patchEntityConfig,
-      pickedRecipeId: recipeId,
       root,
     });
 
@@ -127,7 +126,6 @@ function renderInspector(options: {
   definition: EntityDefinition;
   entity: WorldEntity;
   patchEntityConfig: ReturnType<typeof vi.fn>;
-  pickedRecipeId?: string;
   root: Root;
 }) {
   const appHost = {
@@ -138,9 +136,6 @@ function renderInspector(options: {
           patchEntityConfig: options.patchEntityConfig,
         },
       },
-    },
-    recipePicker: {
-      pickRecipe: vi.fn().mockResolvedValue(options.pickedRecipeId ?? null),
     },
   } as unknown as AppHost;
 

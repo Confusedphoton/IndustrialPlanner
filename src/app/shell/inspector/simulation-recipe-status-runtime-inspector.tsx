@@ -3,7 +3,6 @@ import type {
   SimulationDeviceRuntimeStatusReadModel,
 } from "@/domain/simulation/types/simulation-types";
 import LucideLock from "~icons/lucide/lock";
-import LucidePlus from "~icons/lucide/plus";
 import LucideTrash2 from "~icons/lucide/trash-2";
 import type { ProductionPlanningIndex } from "@/app/shell/production-planning/production-planning-model";
 import type { AppHost } from "@/app/host/app-host";
@@ -247,7 +246,6 @@ export function SimulationRecipeStatusRuntimeInspector({
           t={t}
           appHost={appHost}
           entity={entity}
-          definition={definition}
           resolveProgressPercent={resolveProgressPercent}
           allowDuplicateRecipesAcrossChannels={
             recipeChannelBehavior?.allowDuplicateRecipesAcrossChannels ?? false
@@ -342,7 +340,6 @@ interface ManualRecipeSectionProps {
   t: (key: string) => string;
   appHost?: AppHost;
   entity?: WorldEntity;
-  definition?: EntityDefinition;
   allowDuplicateRecipesAcrossChannels: boolean;
   resolveProgressPercent: (
     status: SimulationDeviceRuntimeChannelRecipeStatus | null,
@@ -359,7 +356,6 @@ function ManualRecipeSection({
   t,
   appHost,
   entity,
-  definition,
   allowDuplicateRecipesAcrossChannels,
   resolveProgressPercent,
   machineRecipes,
@@ -372,28 +368,6 @@ function ManualRecipeSection({
   const unfilledChannels = manualChannels.filter(
     (ch) => storedRecipes[ch.id] === undefined || storedRecipes[ch.id] === null,
   );
-
-  const handleAddRecipe = async (channelId: string) => {
-    if (!appHost || !definition || !entity) return;
-    const pickedId = await appHost.recipePicker.pickRecipe({
-      entities: [definition],
-      title: t("productionPlanning.chooseRecipe"),
-    });
-    if (pickedId !== null) {
-      const editor = appHost.workspace.editor;
-      if (!editor) return;
-      const next = { ...storedRecipes };
-      if (!allowDuplicateRecipesAcrossChannels) {
-        for (const [storedChannelId, storedRecipeId] of Object.entries(next)) {
-          if (storedChannelId !== channelId && storedRecipeId === pickedId) {
-            delete next[storedChannelId];
-          }
-        }
-      }
-      next[channelId] = pickedId;
-      editor.actions.patchEntityConfig(entity.id, { channelRecipes: next });
-    }
-  };
 
   const handleRemoveRecipe = (channelId: string) => {
     if (!appHost || !entity) return;
@@ -445,22 +419,6 @@ function ManualRecipeSection({
             selectedRecipeId={null}
             t={t}
           />
-        );
-      })()}
-      {unfilledChannels.length > 0 && machineRecipes.length === 0 && (() => {
-        const nextChannel = unfilledChannels[0]!;
-        return (
-          <button
-            key={`add-${nextChannel.id}`}
-            className={cm(styles, "recipe-add-button")}
-            onClick={() => handleAddRecipe(nextChannel.id)}
-            type="button"
-          >
-            <span className={cm(styles, "recipe-add-button-primary")}>
-              <LucidePlus className={cm(styles, "recipe-add-icon")} aria-hidden="true" />
-              <span>{t("productionPlanning.addRecipe")}</span>
-            </span>
-          </button>
         );
       })()}
     </div>
