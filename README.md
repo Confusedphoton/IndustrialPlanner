@@ -8,7 +8,7 @@ This repository is a fork of [hsyhhssyy/IndustrialPlanner](https://github.com/hs
 
 本仓库是 [hsyhhssyy/IndustrialPlanner](https://github.com/hsyhhssyy/IndustrialPlanner) 的分支，按“手写笔与触控优先、鼠标键盘紧随其后”重新设计了交互：画布常驻工具条、笔尖环形菜单、从端口直接拉线，以及能变成待放置清单的配方树。
 
-![A running production line with the recipe tree's flow graph docked beside it · 运行中的产线与停靠在旁的配方树流程图](.github/readme-assets/overview.png)
+![A production line with the recipe tree's flow graph docked beside it · 产线与停靠在旁的配方树流程图](.github/readme-assets/overview.png)
 
 ## Use it · 使用
 
@@ -30,9 +30,10 @@ Desktop, tablets and landscape phones are supported; portrait phones show a rota
 ![Marking menu: hold the pen on empty canvas, slide through a category, release on a device · 环形菜单：笔尖在空白处按住，划过分类，在设备上抬笔](.github/readme-assets/marking-menu.png)
 
 - **Marking menu.** Hold the pen on empty canvas (or anywhere while placing) to open a ring of device categories. Slide past a category to fan out its devices, and lift on one to have it in hand. The first device of each category sits straight on from the category, so frequent picks become two strokes you can do blind. Lift without moving and the ring stays open for tapping. A finger or mouse long-press on empty canvas opens it too.<br>**环形菜单。** 笔尖在空白画布上按住（放置中则任意位置），弹出设备分类环；划过某个分类展开其设备，在设备上抬笔即拿到手上。每个分类的第一台设备与分类在同一方向，常用设备可以盲划两笔取到。不移动直接抬笔，菜单会保持打开供点按。手指或鼠标在空白处长按也能打开。
-- **Canvas hotbar.** Quick Place favourites and recent devices sit at the bottom corner of the tool rail. Tap one to swap the device in hand, drag it to drop one, hold it to see its name.<br>**设备快捷栏。** 快速放置的收藏与最近使用的设备排在工具条底角。点按换手上的设备，拖出直接放一台，按住显示名称。
-- **Palette and Quick Place.** Icon category chips filter the list without typing. The palette can collapse to a narrow icon shelf and docks on the same side as the tool rail, so dragging the rail to your pen hand's edge brings the devices with it.<br>**设备面板与快速放置。** 图标分类按钮无需输入即可筛选。面板可收成一列窄设备架，并停靠在工具条同侧：把工具条拖到握笔手一侧，设备也跟过去。
-- **Drag from any panel.** Palette tiles, Recipe Tree rows, machine chips and flow-graph cards can be dragged onto the canvas; the recipe comes along when it is known.<br>**从面板拖出。** 面板磁贴、配方树条目、设备标签和流程图卡片都能直接拖到画布上，已知配方会一并带上。
+- **Canvas hotbar.** Recently placed devices sit at the bottom corner of the tool rail, each with the recipe it was placed with. Tap one to swap the device in hand, drag it to drop one, hold it to see its name.<br>**设备快捷栏。** 最近放过的设备排在工具条底角，连同当时的配方。点按换手上的设备，拖出直接放一台，按住显示名称。
+- **Palette.** Icon category chips filter the list without typing, and search also matches pinyin. When the canvas gets narrow the palette becomes a one-column icon shelf by itself, and it docks on the same side as the tool rail, so dragging the rail to your pen hand's edge brings the devices with it.<br>**设备面板。** 图标分类按钮无需输入即可筛选，搜索也支持拼音。画布变窄时面板自动收成一列图标设备架，并停靠在工具条同侧：把工具条拖到握笔手一侧，设备也跟过去。
+- **Drag from any panel.** Palette tiles, Recipe Tree rows and flow-graph cards can be dragged onto the canvas; the recipe comes along when it is known. Drop a recipe card on a machine of the same type to change its recipe instead. Drag a raw input out of the plan and you get a Depot Unloader already linked to that item.<br>**从面板拖出。** 面板磁贴、配方树条目和流程图卡片都能直接拖到画布上，已知配方会一并带上；把带配方的卡片放在同型号设备上则改那台设备的配方。从规划里拖出原料，得到的是已链接该物品的仓库取货口。
+- **Selecting a device.** A tap shows a small card above it with one row of actions (move, rotate, place another, switch mode, hold, delete) and, if no recipe is set yet, the recipe tiles. The full inspector opens from the card's corner button.<br>**选中设备。** 点按设备，上方出现一张小卡片：一行操作图标（移动、旋转、再放一台、切换模式、暂存、删除），还没设配方时直接列出配方磁贴。完整属性面板从卡片角上的按钮打开。
 
 ### Place · 放置
 
@@ -50,10 +51,10 @@ Desktop, tablets and landscape phones are supported; portrait phones show a rota
 
 ### Connect · 连线
 
-- **Draw from a port.** With a pen, finger or mouse, drag from a device's port or the open end of a belt or pipe to draw a line. Release to commit.<br>**从端口拉线。** 用笔、手指或鼠标从设备端口或传送带、管道的开放末端拖出即可铺线，抬起提交。
+- **Draw from a port.** With a pen, finger or mouse, drag from a device's port or the open end of a belt or pipe to draw a line. Release to commit. The rail's line tool does the same; it starts as belt, a second tap switches to pipe, and starting on a pipe outlet switches by itself.<br>**从端口拉线。** 用笔、手指或鼠标从设备端口或传送带、管道的开放末端拖出即可铺线，抬起提交。工具条上的铺线工具也一样：先铺传送带，再点一下换成管道，从管道出口起笔会自动换过去。
 - **Auto-routing.** Draw toward a machine and, once the pen is on it, the line finds its own way into a free input around anything in the way, keeping close to where your stroke went. Existing lines are crossed with bridges. The mouse tools fall back to the same router when a single bend is blocked.<br>**自动寻路。** 朝一台设备画过去，笔一落到它上面，线就自己绕开障碍接进空闲的输入口，并尽量贴着笔画走过的位置；遇到已有的线用桥接器穿过。鼠标工具一次转弯走不通时也改用自动寻路。
 - **Several lines in one stroke.** Start on an output, slide along the machine's edge across its neighbouring free outputs, then pull away: every output you swept gets its own line, running parallel and nesting at turns.<br>**一笔多线。** 从一个输出口起笔，先沿设备边划过相邻的空闲输出口，再拉离设备：划过的每个口各铺一条线，彼此平行，转弯时内外嵌套。
-- **Add a machine at the line end.** When a line drawn from a device ends in open space, a **+** chip appears beyond its end. Tap it to list the machines that consume what the line carries, then pick one to snap it onto the end with a matching input port, as one undo step.<br>**在线末端接上设备。** 从设备拉出的线末端悬空时，末端外侧出现 **+** 提示。点开列出消费线上物品的设备，选一个即以匹配的输入口接在末端，一步即可撤销。
+- **Add a machine at the line end.** When a line drawn from a device ends in open space, a **+** chip appears beyond its end. When one machine is the obvious consumer, one tap places it; otherwise open the chip to list the machines that consume what the line carries and pick one. It snaps onto the end with a matching input port, as one undo step. A line drawn into a machine with no recipe sets the recipe for it.<br>**在线末端接上设备。** 从设备拉出的线末端悬空时，末端外侧出现 **+** 提示。只有一种设备明显该接时点一下就放好；否则展开列出消费线上物品的设备再选。设备以匹配的输入口接在末端，一步即可撤销。把线接进还没设配方的设备，会按线上物品替它设好配方。
 
 - **Chain the next machine.** Picking a machine at the **+** chip also lays one cell out of its product output and moves the chip there, so you can build a line machine by machine. With a plan pinned, the plan's machines come first with their *placed / needed* counts.<br>**接着往下铺。** 在 **+** 提示里选好设备后，它的产物输出口外会伸出一格线，提示随即移到那里，可以一台接一台地往下铺。钉了规划时，规划里的设备排在最前并显示“已放 / 需要”。
 
@@ -69,7 +70,7 @@ Hover a belt or pipe with the pen or mouse (or select one segment with a finger)
 
 ### From plan to factory · 从规划到产线
 
-- **Recipe Tree.** Pin target items and rates; the tree shows the whole chain with machine counts, by-products and raw inputs, as a tree or as a flow graph that fits narrow docks and short windows.<br>**配方树。** 钉住目标物品与产量，按树或流程图显示整条生产链、设备数、副产物和原料，窄停靠栏与矮窗口也能看清。
+- **Recipe Tree.** Pin target items and rates; the tree shows the whole chain with machine counts, by-products and raw inputs, as a tree or as a flow graph that fits narrow docks and short windows. Its settings take external supplies, sourcing policies for water, acid and sewage, and modules, and can turn the plan into a module.<br>**配方树。** 钉住目标物品与产量，按树或流程图显示整条生产链、设备数、副产物和原料，窄停靠栏与矮窗口也能看清。设置里可填外部供给、清水酸液污水的来源策略和模块，也能把规划转成模块。
 - **To-do list.** The pinned plan appears at the top of the palette as device tiles with *placed / needed* counts. Tapping one hands you the device with its recipe already set. Machines with no recipe set count toward the plan for their type.<br>**待放置清单。** 钉住的规划以设备磁贴的形式显示在面板顶部，带“已放 / 需要”计数；点按即拿到已设好配方的设备。没设配方的同型号设备也计入。
 - **Pour the plan into a loop.** With a plan pinned, draw a closed loop with the pen on empty canvas: every machine the plan still needs is laid out inside it with its recipe, one stage per column from raw inputs to the target, leaving room for belts. Machines that must go elsewhere (such as fluid pumps on the base edge) stay on the to-do list.<br>**把规划倒进圈里。** 钉了规划时，用笔在空白处画一个闭合的圈：规划里还缺的设备连同配方摆进圈里，从原料到产物每个阶段一列，列间留出铺线的空隙。必须放在别处的设备（例如贴着基地外缘的水泵）留在待放清单里。
 - **Holding tray.** *Hold* lifts the selected devices off the canvas into a tray on the hotbar, together with their recipes, relative layout and the belts and pipes between them. Tap the entry to place the group again; it leaves the tray only once placed.<br>**暂存托盘。** “暂存”把选中的设备连同配方、相对布局和其间的传送带、管道一起收进快捷栏的托盘；点按条目即可重新放置，放下后才从托盘移除。
@@ -108,7 +109,6 @@ Hover a belt or pipe with the pen or mouse (or select one segment with a finger)
 ### Planning and reference · 规划与查询
 
 - Encyclopedia of items, buildings, recipes and production chains.<br>内置物品、建筑、配方与生产链路百科。
-- Production planner with target output, external inputs, sourcing strategies and flow charts.<br>产线规划器支持目标产出、外部输入、来源策略和流程图。
 - Module balancer for built-in and custom modules across several stages, with the net difference per stage.<br>模块配平支持系统与自定义模块、多阶段配平和每阶段净差值。
 - Undo history with a timeline, persistence across reloads, English and Chinese interface.<br>带时间线的撤销历史，刷新后保留状态，中英双语界面。
 
