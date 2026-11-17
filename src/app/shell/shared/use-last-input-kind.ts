@@ -35,7 +35,7 @@ function subscribe(listener: () => void): () => void {
 }
 
 /** 最近一次按下的是鼠标、笔还是手指。 */
-export function useLastPointerType(): LastPointerType {
+function useLastPointerType(): LastPointerType {
   return useSyncExternalStore(subscribe, () => lastPointerType, () => "mouse");
 }
 

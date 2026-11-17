@@ -10,7 +10,6 @@ import { MarkingMenuOverlay } from "@/app/shell/canvas/marking-menu-overlay";
 import { LineEndChipOverlay } from "@/app/shell/canvas/line-end-chip-overlay";
 import { LineProbeOverlay } from "@/app/shell/canvas/line-probe-overlay";
 import { PortCombOverlay } from "@/app/shell/canvas/port-comb-overlay";
-import { PortDragHandles } from "@/app/shell/canvas/port-drag-handles";
 import { CanvasToolRail } from "@/app/shell/canvas/canvas-tool-rail";
 import { canvasToolRailState } from "@/app/shell/canvas/canvas-tool-rail-state";
 import { fitCanvasViewportToBase } from "@/app/input/gesture/actions";
@@ -1317,7 +1316,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
         <CanvasToolRail appHost={appHost} />
         <CanvasHotbar appHost={appHost} />
         <MarkingMenuOverlay appHost={appHost} />
-        <PortDragHandles appHost={appHost} />
         <LineEndChipOverlay appHost={appHost} />
         <LineProbeOverlay appHost={appHost} />
         <PortCombOverlay appHost={appHost} />

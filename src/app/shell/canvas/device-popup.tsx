@@ -20,9 +20,7 @@ import { readAdmissionRule } from "@/shared/registry/admission-rule";
 import { resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport-transform";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
-import { useLastPointerType } from "@/app/shell/shared/use-last-input-kind";
 import { avoidCanvasToolRail } from "./canvas-tool-rail-bounds";
-import { resolveShownPortDragHandles } from "./port-drag-handles";
 import { canvasToolRailState } from "./canvas-tool-rail-state";
 
 const POPUP_WIDTH = 384;
@@ -43,7 +41,6 @@ export const DevicePopup = observer(function DevicePopup({ appHost }: { appHost:
   const t = appHost.actions.translate;
   // 配方磁贴默认收起为一行摘要，避免卡片遮挡相邻设备与端口；切换选中设备时重新收起。
   const [recipesExpanded, setRecipesExpanded] = useState(false);
-  const pointerType = useLastPointerType();
   const selectedId = appHost.workspace.editor?.state.collections.selection[0] ?? null;
   useEffect(() => {
     setRecipesExpanded(false);
@@ -95,17 +92,12 @@ export const DevicePopup = observer(function DevicePopup({ appHost }: { appHost:
   // 定位：优先放在设备上方（底边贴设备顶边）；上方空间不足或触控悬浮工具条占用上方时放在下方；
   // 水平居中并限制在画布视口内，高度不超过可用空间（内容滚动）。
   const viewport = view.clientRect;
-  // 手指的端口把手浮在设备外侧一格的中心，卡片与设备之间留出把手的位置，免得把手压在卡片上。
-  const portHandles = resolveShownPortDragHandles(appHost, pointerType);
-  const gap = portHandles.handles.length === 0
-    ? POPUP_GAP
-    : Math.max(POPUP_GAP, view.gridCellPixelSize / 2 + portHandles.size / 2 + 4);
   const centerX = deviceRect.left + deviceRect.width / 2;
   // 宽度以画布去掉工具条占用带后的空间为上限，展开配方时也不会盖住工具条。
   const railFreeWidth = viewport.width - canvasToolRailState.width - POPUP_MARGIN * 2;
   const popupWidth = Math.max(POPUP_MIN_WIDTH, Math.min(recipesExpanded ? POPUP_EXPANDED_WIDTH : POPUP_WIDTH, railFreeWidth));
-  const spaceAbove = deviceRect.top - viewport.top - gap - POPUP_MARGIN;
-  const spaceBelow = viewport.top + viewport.height - (deviceRect.top + deviceRect.height) - gap - POPUP_MARGIN;
+  const spaceAbove = deviceRect.top - viewport.top - POPUP_GAP - POPUP_MARGIN;
+  const spaceBelow = viewport.top + viewport.height - (deviceRect.top + deviceRect.height) - POPUP_GAP - POPUP_MARGIN;
   const toolbarAbove = canvas.state.runtime.canvasFloatingToolbar.visible;
   const placeAbove = !toolbarAbove && (spaceAbove >= 260 || spaceAbove >= spaceBelow);
   // 水平居中于设备，并避开画布工具条；纵向范围按弹出层可能占用的最大高度估算。
@@ -119,8 +111,8 @@ export const DevicePopup = observer(function DevicePopup({ appHost }: { appHost:
     maxRight: viewport.left + viewport.width - POPUP_MARGIN,
   });
   const positionStyle = placeAbove
-    ? { top: deviceRect.top - gap, transform: "translateY(-100%)", maxHeight: Math.max(120, spaceAbove) }
-    : { top: deviceRect.top + deviceRect.height + gap, maxHeight: Math.max(120, spaceBelow) };
+    ? { top: deviceRect.top - POPUP_GAP, transform: "translateY(-100%)", maxHeight: Math.max(120, spaceAbove) }
+    : { top: deviceRect.top + deviceRect.height + POPUP_GAP, maxHeight: Math.max(120, spaceBelow) };
 
   const index = resolveCachedRecipeStatusIndex(registry, false);
   const productionChannel = definition.recipeChannels.find((channel) => channel.type !== "consumption-channel");

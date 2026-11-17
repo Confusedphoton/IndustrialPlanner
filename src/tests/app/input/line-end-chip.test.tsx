@@ -9,16 +9,12 @@ import {
   closeLineEndChip,
   placeConsumerAtLineEnd,
   resolveLineEndTarget,
-  resolvePortDragHandles,
-  pressPortHandle,
-  type PortDragHandle,
 } from "@/app/input/gesture/actions";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createWorldDocument, type WorldEntity } from "@/domain/document/world-document";
 import type { GridPoint } from "@/domain/shared/grid";
 import { LineEndChipOverlay } from "@/app/shell/canvas/line-end-chip-overlay";
-import { thinPortDragHandles } from "@/app/shell/canvas/port-drag-handles";
 import { createRegistryContract } from "@/registry";
 import { resolveRotatedPortGeometry } from "@/shared/geometry/port";
 import { createAppTestHost, createEditorTestHost } from "@/tests/helpers/app-test-workspace";
@@ -195,114 +191,39 @@ describe("offering a consumer at the open end of a line dragged from a port", ()
   });
 });
 
-/** 用手指按住把手；之后的 move/end 与把手组件转发的指针事件相同。 */
-function pressHandle(appHost: AppHost, handle: PortDragHandle) {
-  return pressPortHandle(appHost.mainCanvas, handle.source, clientCenter(appHost, handle.cell), { onDrawing() {}, onSettle() {} })!;
-}
-
 describe("drawing a line out of a port with a finger", () => {
-  it("offers a handle beyond every free port and draws from it like a pen drag from the port", async () => {
+  it("draws from a port straight away, like the pen, without selecting the machine first", async () => {
     const appHost = await createAppHost([furnace({ recipe: true })]);
     const { inside, delta } = furnaceBeltOutput(appHost);
-    const outside = { x: inside.x + delta.x, y: inside.y + delta.y };
-    const handles = resolvePortDragHandles(appHost.mainCanvas, "furnace");
-    const handle = handles.find((entry) => entry.cell.x === outside.x && entry.cell.y === outside.y);
-    expect(handle?.source.type).toBe("device-port");
-    expect(handles.length).toBeGreaterThan(1);
-
-    const drag = pressHandle(appHost, handle!);
     const end = { x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 };
-    drag.move(clientCenter(appHost, outside));
-    drag.move(clientCenter(appHost, end));
-    drag.end(true);
+    const center = { ...appHost.mainCanvas.view.state.center };
+
+    fingerDrag(appHost, inside, [end]);
 
     expect(entities(appHost).filter((entity) => entity.definitionId.startsWith("belt"))).toHaveLength(4);
+    expect(appHost.mainCanvas.view.state.center).toEqual(center);
     expect(appHost.mainCanvas.state.runtime.lineEndChip?.endCell).toEqual(end);
-    expect(resolvePortDragHandles(appHost.mainCanvas, "furnace").some((entry) => entry.key === handle!.key)).toBe(false);
   });
 
-  it("keeps one handle per side and port group when the cells are smaller than a handle", async () => {
-    const appHost = await createAppHost([furnace({ recipe: true })]);
-    const handles = resolvePortDragHandles(appHost.mainCanvas, "furnace");
-    const sides = new Set(handles.map((handle) => handle.source.type === "device-port"
-      ? `${handle.source.endpoint.portGroupId}:${handle.flowEdge}` : "line"));
-
-    expect(thinPortDragHandles(handles, 16, 32)).toHaveLength(sides.size);
-    expect(thinPortDragHandles(handles, 40, 32)).toHaveLength(handles.length);
-  });
-
-  it("continues a selected line from its open end", async () => {
+  it("continues a line from its open end", async () => {
     const appHost = await createAppHost([furnace({ recipe: true })]);
     const { inside, delta } = furnaceBeltOutput(appHost);
-    penDrag(appHost, inside, [{ x: inside.x + delta.x * 3, y: inside.y + delta.y * 3 }]);
-    const last = entities(appHost).find((entity) => entity.position.x === inside.x + delta.x * 3 && entity.position.y === inside.y + delta.y * 3)!;
+    const end = { x: inside.x + delta.x * 3, y: inside.y + delta.y * 3 };
+    fingerDrag(appHost, inside, [end]);
 
-    const [handle] = resolvePortDragHandles(appHost.mainCanvas, last.id);
-    expect(handle?.cell).toEqual({ x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 });
-    const drag = pressHandle(appHost, handle!);
-    drag.move(clientCenter(appHost, { x: inside.x + delta.x * 6, y: inside.y + delta.y * 6 }));
-    drag.end(true);
+    fingerDrag(appHost, end, [{ x: inside.x + delta.x * 6, y: inside.y + delta.y * 6 }]);
 
     expect(entities(appHost).filter((entity) => entity.definitionId.startsWith("belt"))).toHaveLength(6);
   });
 
-  it("stops drawing when canvas input is cancelled mid-drag", async () => {
+  it("still pans when the drag starts inside the machine rather than on a port", async () => {
     const appHost = await createAppHost([furnace({ recipe: true })]);
-    const { inside, delta } = furnaceBeltOutput(appHost);
-    const handle = resolvePortDragHandles(appHost.mainCanvas, "furnace")
-      .find((entry) => entry.cell.x === inside.x + delta.x && entry.cell.y === inside.y + delta.y)!;
+    const center = { ...appHost.mainCanvas.view.state.center };
 
-    const drag = pressHandle(appHost, handle);
-    drag.move(clientCenter(appHost, { x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 }));
-    appHost.mainCanvas.cancelInput();
-    drag.move(clientCenter(appHost, { x: inside.x + delta.x * 6, y: inside.y + delta.y * 6 }));
-    drag.end(true);
+    fingerDrag(appHost, { x: 31, y: 31 }, [{ x: 36, y: 36 }]);
 
     expect(entities(appHost)).toHaveLength(1);
-    expect(appHost.workspace.editor!.queries.resolveLogisticsDraftState()).toBeNull();
-  });
-
-  it("ignores a press that was cancelled before it started drawing", async () => {
-    const appHost = await createAppHost([furnace({ recipe: true })]);
-    const { inside, delta } = furnaceBeltOutput(appHost);
-    const handle = resolvePortDragHandles(appHost.mainCanvas, "furnace")
-      .find((entry) => entry.cell.x === inside.x + delta.x && entry.cell.y === inside.y + delta.y)!;
-
-    const drag = pressHandle(appHost, handle);
-    appHost.mainCanvas.cancelInput();
-    drag.move(clientCenter(appHost, { x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 }));
-    drag.end(true);
-
-    expect(entities(appHost)).toHaveLength(1);
-  });
-
-  it("stops drawing when another tool is chosen mid-drag", async () => {
-    const appHost = await createAppHost([furnace({ recipe: true })]);
-    const { inside, delta } = furnaceBeltOutput(appHost);
-    const handle = resolvePortDragHandles(appHost.mainCanvas, "furnace")
-      .find((entry) => entry.cell.x === inside.x + delta.x && entry.cell.y === inside.y + delta.y)!;
-
-    const drag = pressHandle(appHost, handle);
-    drag.move(clientCenter(appHost, { x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 }));
-    appHost.mainCanvas.actions.setActiveTool("logistics-placement");
-    drag.move(clientCenter(appHost, { x: inside.x + delta.x * 6, y: inside.y + delta.y * 6 }));
-    drag.end(true);
-
-    expect(entities(appHost)).toHaveLength(1);
-  });
-
-  it("drops the draft when the drag is cancelled", async () => {
-    const appHost = await createAppHost([furnace({ recipe: true })]);
-    const { inside, delta } = furnaceBeltOutput(appHost);
-    const handle = resolvePortDragHandles(appHost.mainCanvas, "furnace")
-      .find((entry) => entry.cell.x === inside.x + delta.x && entry.cell.y === inside.y + delta.y)!;
-
-    const drag = pressHandle(appHost, handle);
-    drag.move(clientCenter(appHost, { x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 }));
-    drag.end(false);
-
-    expect(entities(appHost)).toHaveLength(1);
-    expect(appHost.workspace.editor!.queries.resolveLogisticsDraftState()).toBeNull();
+    expect(appHost.mainCanvas.view.state.center).not.toEqual(center);
   });
 });
 
@@ -536,4 +457,23 @@ function penDrag(appHost: AppHost, from: GridPoint, path: readonly GridPoint[]):
 function penTap(appHost: AppHost, cell: GridPoint): void {
   appHost.gestureAdapter.handlePointerDown(pointer(appHost, cell, 1));
   appHost.gestureAdapter.handlePointerUp(pointer(appHost, cell, 0));
+}
+
+function fingerDrag(appHost: AppHost, from: GridPoint, path: readonly GridPoint[]): void {
+  const touch = (cell: GridPoint, buttons: number) => ({ ...pointer(appHost, cell, buttons), pointerType: "touch", pointerId: 11 });
+  appHost.gestureAdapter.handlePointerDown(touch(from, 1));
+  for (const cell of path) {
+    const start = clientCenter(appHost, from);
+    const target = clientCenter(appHost, cell);
+    // 分几步移动，像手指一样连续上报位置。
+    for (let step = 1; step <= 4; step += 1) {
+      appHost.gestureAdapter.handlePointerMove({
+        ...touch(cell, 1),
+        clientX: start.x + (target.x - start.x) * step / 4,
+        clientY: start.y + (target.y - start.y) * step / 4,
+      });
+      appHost.gestureAdapter.advanceFrame(0);
+    }
+  }
+  appHost.gestureAdapter.handlePointerUp(touch(path.at(-1)!, 0));
 }
