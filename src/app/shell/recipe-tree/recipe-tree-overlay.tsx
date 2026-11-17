@@ -944,27 +944,6 @@ function RecipeTreeTotals({
   onExpandedChange?: (expanded: boolean) => void;
   t: Translate;
 }) {
-  // 按显示名称合并：同名设备（例如固体/液体模式的种植机）在合计里只出现一次。
-  const machineTotals = useMemo(() => {
-    const totals = new Map<string, { machineId: string; count: number; recipeIds: ReadonlySet<string> }>();
-    for (const recipeTotal of plan.recipeTotals) {
-      const recipe = recipeTotal.recipeId === null ? undefined : index.recipeById.get(recipeTotal.recipeId);
-      if (recipe === undefined || recipeTotal.deviceCount <= 0) {
-        continue;
-      }
-      const nameKey = index.entityById.get(recipe.machineId)?.nameKey ?? recipe.machineId;
-      const existing = totals.get(nameKey);
-      totals.set(nameKey, {
-        machineId: existing?.machineId ?? recipe.machineId,
-        count: (existing?.count ?? 0) + recipeTotal.deviceCount,
-        recipeIds: new Set([...(existing?.recipeIds ?? []), recipe.id]),
-      });
-    }
-    // 只用于一种配方的设备拖出时带上该配方；多种配方共用的设备按默认配置放下。
-    return [...totals.values()]
-      .map(({ machineId, count, recipeIds }) => [machineId, count, recipeIds.size === 1 ? [...recipeIds][0]! : null] as const)
-      .sort((left, right) => right[1] - left[1]);
-  }, [index, plan]);
   const rawTotals = useMemo(() => {
     const totals = new Map<string, number>();
     const visit = (node: ProductionPlanningItemNode) => {
@@ -982,12 +961,11 @@ function RecipeTreeTotals({
     return [...totals.entries()].filter(([, perMinute]) => perMinute > 0.0001);
   }, [plan]);
 
-  const startPlacementPress = useContext(RecipeTreePlacementPressContext);
   const [localExpanded, setLocalExpanded] = useState(false);
   const expanded = controlledExpanded ?? localExpanded;
   const setExpanded = onExpandedChange ?? setLocalExpanded;
 
-  if (machineTotals.length === 0 && rawTotals.length === 0) {
+  if (rawTotals.length === 0) {
     return null;
   }
 
@@ -1004,15 +982,7 @@ function RecipeTreeTotals({
           {t("action.collapse")}
         </button>
         <dl className={cm(styles, "recipe-tree-totals-list")}>
-          {machineTotals.length > 0 ? <dt>{t("recipeTree.machines")}</dt> : null}
-          {machineTotals.map(([machineId, count, recipeId]) => (
-            <dd key={machineId} onPointerDown={(event) => startPlacementPress(event, machineId, recipeId)}>
-              <img alt="" src={resolveProductionPlanningEntityIconSrc(machineId, index)} />
-              <span>{t(index.entityById.get(machineId)?.nameKey ?? machineId)}</span>
-              <b>×{formatProductionDeviceCount(count)}</b>
-            </dd>
-          ))}
-          {rawTotals.length > 0 ? <dt>{t("recipeTree.inputs")}</dt> : null}
+          <dt>{t("recipeTree.inputs")}</dt>
           {rawTotals.map(([itemId, perMinute]) => (
             <dd key={itemId}>
               <img alt="" src={resolveProductionPlanningItemIconSrc(itemId, index)} />
@@ -1027,45 +997,22 @@ function RecipeTreeTotals({
 
   return (
     <div className={cm(styles, "recipe-tree-totals")}>
-      {machineTotals.length > 0 ? (
-        <div className={cm(styles, "recipe-tree-totals-row")}>
-          <span className={cm(styles, "recipe-tree-totals-label")}>{t("recipeTree.machines")}</span>
-          {machineTotals.map(([machineId, count, recipeId]) => (
-            <button
-              aria-expanded={false}
-              aria-label={`${t(index.entityById.get(machineId)?.nameKey ?? machineId)} ×${formatProductionDeviceCount(count)}`}
-              className={cm(styles, "recipe-tree-chip")}
-              key={machineId}
-              onClick={() => {
-                if (!didPanelPlacementDragJustEnd()) setExpanded(true);
-              }}
-              onPointerDown={(event) => startPlacementPress(event, machineId, recipeId)}
-              type="button"
-            >
-              <img alt="" src={resolveProductionPlanningEntityIconSrc(machineId, index)} />
-              {Math.ceil(count - 0.0001)}
-            </button>
-          ))}
-        </div>
-      ) : null}
-      {rawTotals.length > 0 ? (
-        <div className={cm(styles, "recipe-tree-totals-row")}>
-          <span className={cm(styles, "recipe-tree-totals-label")}>{t("recipeTree.inputs")}</span>
-          {rawTotals.map(([itemId, perMinute]) => (
-            <button
-              aria-expanded={false}
-              aria-label={`${resolveProductionPlanningItemName(itemId, index, t)} ${formatProductionFlow(perMinute)}${t("recipeTree.perMinute")}`}
-              className={cm(styles, "recipe-tree-chip")}
-              key={itemId}
-              onClick={() => setExpanded(true)}
-              type="button"
-            >
-              <img alt="" src={resolveProductionPlanningItemIconSrc(itemId, index)} />
-              {formatProductionFlow(perMinute)}
-            </button>
-          ))}
-        </div>
-      ) : null}
+      <div className={cm(styles, "recipe-tree-totals-row")}>
+        <span className={cm(styles, "recipe-tree-totals-label")}>{t("recipeTree.inputs")}</span>
+        {rawTotals.map(([itemId, perMinute]) => (
+          <button
+            aria-expanded={false}
+            aria-label={`${resolveProductionPlanningItemName(itemId, index, t)} ${formatProductionFlow(perMinute)}${t("recipeTree.perMinute")}`}
+            className={cm(styles, "recipe-tree-chip")}
+            key={itemId}
+            onClick={() => setExpanded(true)}
+            type="button"
+          >
+            <img alt="" src={resolveProductionPlanningItemIconSrc(itemId, index)} />
+            {formatProductionFlow(perMinute)}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

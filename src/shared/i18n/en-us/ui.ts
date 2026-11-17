@@ -1478,7 +1478,6 @@ const UI: Record<string, string> = {
     "recipeTree.raw": "Raw",
     "recipeTree.recipe": "Recipe",
     "recipeTree.supplied": "Supplied",
-    "recipeTree.machines": "Machines",
     "recipeTree.inputs": "Raw inputs",
     "recipeTree.recipeAuto": "Auto",
     "recipeTree.recipeChip": "Recipe: {recipe}",

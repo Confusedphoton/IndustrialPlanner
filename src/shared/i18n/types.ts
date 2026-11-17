@@ -759,7 +759,6 @@ export type UiKey =
   | "recipeTree.raw"
   | "recipeTree.recipe"
   | "recipeTree.supplied"
-  | "recipeTree.machines"
   | "recipeTree.inputs"
   | "recipeTree.recipeAuto"
   | "recipeTree.recipeChip"

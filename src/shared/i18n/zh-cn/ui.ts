@@ -1472,7 +1472,6 @@ const UI: Record<string, string> = {
     "recipeTree.raw": "原料",
     "recipeTree.recipe": "配方",
     "recipeTree.supplied": "外部供给",
-    "recipeTree.machines": "设备",
     "recipeTree.inputs": "原料投入",
     "recipeTree.recipeAuto": "自动",
     "recipeTree.recipeChip": "配方：{recipe}",
