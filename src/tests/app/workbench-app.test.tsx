@@ -81,7 +81,6 @@ const DEFAULT_APP_SETTINGS_STORAGE = {
   blueprintPlacementDefaultContinuous: true,
   hypergryphAllowEmptyLogisticsEndpoints: false,
   hypergryphAutoCreateSplittersAndConvergers: true,
-  quickPlaceEnabled: true,
   invertWheelZoom: false,
   penPreciseInput: true,
   penTiltFacing: false,
@@ -249,7 +248,6 @@ function createWorkbenchStorageSnapshot(options: {
   topBarCollapsed?: boolean;
   rightDockActiveTab?: "selection";
   selectedPlacementVariantByCraftGroup?: Record<string, string>;
-  quickPlaceFavoriteEntityIds?: Array<string | null>;
   toolboxDialog?: ReturnType<typeof createDialogStateSnapshot>;
   timelineDialog?: ReturnType<typeof createDialogStateSnapshot>;
   helpDialog?: ReturnType<typeof createDialogStateSnapshot>;
@@ -277,7 +275,6 @@ function createWorkbenchStorageSnapshot(options: {
     rightDockActiveTab: options.rightDockActiveTab ?? DEFAULT_RIGHT_DOCK_TAB_ID,
     selectedPlacementVariantByCraftGroup:
       options.selectedPlacementVariantByCraftGroup ?? {},
-    quickPlaceFavoriteEntityIds: options.quickPlaceFavoriteEntityIds ?? [],
     dialogState: {
       toolbox: options.toolboxDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_TOOLBOX_DIALOG_TAB_ID }),
       timeline: options.timelineDialog ?? createDialogStateSnapshot(),

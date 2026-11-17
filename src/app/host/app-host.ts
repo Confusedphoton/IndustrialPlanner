@@ -296,9 +296,5 @@ function resolveShortcutInputLayer(appHost: AppHost): ShortcutInputLayer {
   if (appHost.mainCanvas.overlapEntityMenu.visible) {
     return "overlap-entity-menu";
   }
-  if (appHost.mainCanvas.state.runtime.quickPlace.visible) {
-    return "quick-place";
-  }
-
   return "canvas";
 }

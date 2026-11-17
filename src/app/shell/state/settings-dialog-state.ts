@@ -321,13 +321,6 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
     descriptionKey: "settingsGroup.convenienceOperationDescription",
     items: [
       {
-        id: "game-quick-place",
-        kind: "switch",
-        labelKey: "settingsField.game-quick-place",
-        descriptionKey: "settingsField.game-quick-placeDescription",
-        defaultValue: true,
-      },
-      {
         id: "game-arknights-immediate-move",
         kind: "switch",
         labelKey: "settingsField.game-arknights-immediate-move",
@@ -547,7 +540,6 @@ export class WorkbenchSettingsDialogController {
 
   private static readonly RESET_OPERATION_KEYS: readonly string[] = [
     // 操作
-    "game-quick-place",
     "game-arknights-immediate-move",
     "game-arknights-copy-while-moving",
     "game-arknights-immediate-marquee",

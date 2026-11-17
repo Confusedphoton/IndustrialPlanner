@@ -38,7 +38,6 @@ export const SHORTCUT_KEY = {
   TOGGLE_BLUEPRINT_PANEL: "shortcut-toggle-blueprint-panel",
   TOGGLE_HISTORY_PANEL:   "shortcut-toggle-history-panel",
   TOGGLE_BASE_PANEL:      "shortcut-toggle-base-panel",
-  QUICK_PLACE:            "shortcut-quick-place",
   OPEN_TOOLBOX:           "shortcut-open-toolbox",
   PAN_VIEWPORT_UP:        "shortcut-pan-viewport-up",
   PAN_VIEWPORT_DOWN:      "shortcut-pan-viewport-down",
@@ -104,7 +103,6 @@ export const SHORTCUT_ACTION_GROUP_SPECS: readonly ShortcutActionGroupSpec[] = [
 
 /** 可配置 Action 的名称、分组与默认双槽位元数据。 */
 export const CONFIGURABLE_SHORTCUT_ACTION_SPECS: readonly ConfigurableShortcutActionSpec[] = [
-  { id: SHORTCUT_KEY.QUICK_PLACE, group: "quick-access", labelKey: "settingsField.shortcut-quick-place", defaultBindings: ["Z"], configurable: true },
   { id: SHORTCUT_KEY.OPEN_TOOLBOX, group: "quick-access", labelKey: "settingsField.shortcut-open-toolbox", defaultBindings: ["T"], configurable: true },
   { id: SHORTCUT_KEY.TOGGLE_PLACEMENT_PANEL, group: "quick-access", labelKey: "settingsField.shortcut-toggle-placement-panel", defaultBindings: ["P"], configurable: true },
   { id: SHORTCUT_KEY.TOGGLE_BLUEPRINT_PANEL, group: "quick-access", labelKey: "settingsField.shortcut-toggle-blueprint-panel", defaultBindings: ["L"], configurable: true },
@@ -143,16 +141,6 @@ const FIXED_DIGIT_BINDINGS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] 
 
 /** 固定 Action 仍进入统一注册表，但不会出现在普通快捷键设置中。 */
 export const FIXED_SHORTCUT_ACTION_SPECS: readonly FixedShortcutActionSpec[] = [
-  { id: "fixed.quick-place.close", labelKey: "keyboardShortcutAction.quickPlaceClose", defaultBindings: ["Esc"], configurable: false },
-  ...FIXED_DIGIT_BINDINGS.map((binding, index): FixedShortcutActionSpec => ({
-    id: `fixed.quick-place.favorite-${index}`,
-    labelKey: "keyboardShortcutAction.quickPlaceFavorite",
-    defaultBindings: [binding],
-    configurable: false,
-  })),
-  { id: "fixed.quick-place.result-next", labelKey: "keyboardShortcutAction.quickPlaceResultNext", defaultBindings: ["ArrowDown"], configurable: false },
-  { id: "fixed.quick-place.result-previous", labelKey: "keyboardShortcutAction.quickPlaceResultPrevious", defaultBindings: ["ArrowUp"], configurable: false },
-  { id: "fixed.quick-place.confirm", labelKey: "keyboardShortcutAction.quickPlaceConfirm", defaultBindings: ["Enter"], configurable: false },
   ...FIXED_DIGIT_BINDINGS.map((binding, index): FixedShortcutActionSpec => ({
     id: `fixed.placement-device.${index}`,
     labelKey: "keyboardShortcutAction.placementDeviceSlot",
@@ -360,19 +348,16 @@ function migrateLegacyShortcutStateToV1(raw: unknown): PersistedShortcutState | 
     return null;
   }
 
-  const quickPlaceShortcut = SHORTCUT_DEFAULTS[SHORTCUT_KEY.QUICK_PLACE];
+  // v1 当时把 Z 让给（已删除的）快速放置，清掉其他占用 Z 的绑定；保持这一历史迁移的结果不变。
+  const legacyQuickPlaceShortcut = "Z";
   const placementPanelShortcut = SHORTCUT_DEFAULTS[SHORTCUT_KEY.TOGGLE_PLACEMENT_PANEL];
 
   for (const key of Object.values(SHORTCUT_KEY)) {
-    if (
-      key !== SHORTCUT_KEY.QUICK_PLACE
-      && normalizeShortcut(migrated[key] ?? "") === normalizeShortcut(quickPlaceShortcut)
-    ) {
+    if (normalizeShortcut(migrated[key] ?? "") === normalizeShortcut(legacyQuickPlaceShortcut)) {
       migrated[key] = "";
     }
   }
 
-  migrated[SHORTCUT_KEY.QUICK_PLACE] = quickPlaceShortcut;
   migrated[SHORTCUT_KEY.TOGGLE_PLACEMENT_PANEL] =
     isShortcutValueOccupiedByOtherKey(
       migrated,

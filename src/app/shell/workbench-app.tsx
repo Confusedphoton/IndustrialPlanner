@@ -18,7 +18,6 @@ import { CanvasFloatingToolbar } from "@/app/shell/canvas/canvas-floating-toolba
 import { CanvasTopLeftCornerToolbar } from "@/app/shell/canvas/canvas-top-left-corner-toolbar";
 import { CanvasRightDockToolbar } from "@/app/shell/canvas/canvas-right-dock-toolbar";
 import { OverlapEntityMenu } from "@/app/shell/canvas/overlap-entity-menu";
-import { QuickPlacePopup } from "@/app/shell/quick-place/quick-place-popup";
 import { cleanupPlacementDraft } from "@/app/input";
 import { canPlaceEntityDefinitionInCurrentBase } from "@/app/placement-zone-availability";
 import { FullscreenToggleButton } from "@/app/shell/layout/fullscreen-toggle-button";
@@ -251,26 +250,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
         writeValue: action((value) => {
           if (typeof value === "boolean") {
             appHost.internalState.settings.penTiltFacing = value;
-          }
-        }),
-      },
-      "game-quick-place": {
-        readValue: () => appHost.internalState.settings.quickPlaceEnabled,
-        writeValue: action((value) => {
-          if (typeof value !== "boolean") {
-            return;
-          }
-
-          if (appHost.internalState.settings.quickPlaceEnabled === value) {
-            return;
-          }
-
-          appHost.internalState.settings.quickPlaceEnabled = value;
-          if (!value) {
-            appHost.mainCanvas.state.runtime.quickPlace.visible = false;
-            appHost.mainCanvas.state.runtime.quickPlace.anchor = null;
-            appHost.mainCanvas.state.runtime.quickPlace.searchQuery = "";
-            appHost.mainCanvas.state.runtime.quickPlace.openSource = null;
           }
         }),
       },
@@ -1312,7 +1291,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
         ) : null}
         <OverlapEntityMenu appHost={appHost} />
         <DevicePopup appHost={appHost} />
-        <QuickPlacePopup appHost={appHost} />
         <CanvasToolRail appHost={appHost} />
         <CanvasHotbar appHost={appHost} />
         <MarkingMenuOverlay appHost={appHost} />

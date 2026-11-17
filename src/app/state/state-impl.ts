@@ -88,7 +88,6 @@ export interface AppSettingsReadWrite extends Omit<AppSettings, "regionalMultiBa
   blueprintPlacementDefaultContinuous: boolean;
   hypergryphAllowEmptyLogisticsEndpoints: boolean;
   hypergryphAutoCreateSplittersAndConvergers: boolean;
-  quickPlaceEnabled: boolean;
   invertWheelZoom: boolean;
   /** 手写笔按鼠标精确输入处理（悬停预览、笔尖拖动、侧键右键、橡皮擦删除）；关闭时沿用触控手势。 */
   penPreciseInput: boolean;
@@ -129,7 +128,6 @@ export interface WorkbenchStateReadWrite extends WorkbenchState {
   topBarCollapsed: boolean;
   rightDockActiveTab: RightDockTabId;
   selectedPlacementVariantByCraftGroup: Record<string, string>;
-  quickPlaceFavoriteEntityIds: Array<string | null>;
   dialogState: DialogStateMapReadWrite;
   toolbox: ToolboxStateReadWrite;
   timelineDockPreference: TimelineDockPreference;
@@ -491,7 +489,6 @@ export interface CanvasRuntimeStateReadWrite {
   canvasToastKey: UiKey | null;
   canvasAlertKey: UiKey | null;
 
-  quickPlace: QuickPlaceRuntimeStateReadWrite;
   /** 笔尖处打开的环形标记菜单；未打开时为 null。 */
   markingMenu: MarkingMenuState | null;
   /** 从端口拖出的物流线末端仍开放时的「+ 设备」提示；没有时为 null。 */
@@ -525,16 +522,6 @@ export interface CanvasRuntimeStateReadWrite {
 export interface RuntimeStateReadWrite {
 productionPlanningNewSessionRequested: boolean;
 activePanel: ActivePanel;
-}
-
-export interface QuickPlaceRuntimeStateReadWrite {
-  visible: boolean;
-  anchor: ClientPixelPoint | null;
-  searchQuery: string;
-  openSource: "keyboard-shortcut" | "pointer" | null;
-  activeResultId: string | null;
-  /** 只列出该放置分类（uiGroup）的设备；搜索时忽略。 */
-  category: string | null;
 }
 
 export interface LogisticsPlacementRuntimeStateReadWrite {
@@ -619,7 +606,6 @@ class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
   topBarCollapsed = false;
   rightDockActiveTab = DEFAULT_RIGHT_DOCK_TAB_ID;
   selectedPlacementVariantByCraftGroup: Record<string, string> = {};
-  quickPlaceFavoriteEntityIds: Array<string | null> = [];
   dialogState: DialogStateMapReadWrite = {
     toolbox: createDefaultDialogStateForKey("toolbox"),
     timeline: createDefaultDialogStateForKey("timeline"),
@@ -713,19 +699,6 @@ class CanvasTopLeftCornerToolbarStateReadWriteImpl implements CanvasTopLeftCorne
   }
 }
 
-class QuickPlaceRuntimeStateReadWriteImpl implements QuickPlaceRuntimeStateReadWrite {
-  visible = false;
-  anchor: ClientPixelPoint | null = null;
-  searchQuery = "";
-  openSource: "keyboard-shortcut" | "pointer" | null = null;
-  activeResultId: string | null = null;
-  category: string | null = null;
-
-  public constructor() {
-    makeAutoObservable(this, {}, { autoBind: true });
-  }
-}
-
 class LogisticsPlacementRuntimeStateReadWriteImpl implements LogisticsPlacementRuntimeStateReadWrite {
   kind: LogisticsKind | null = null;
   shortcutPlacementGroup: "beltLogistics" | "pipeLogistics" | null = null;
@@ -752,7 +725,6 @@ class CanvasRuntimeStateReadWriteImpl implements CanvasRuntimeStateReadWrite {
   canvasToastKey: UiKey | null = null;
   canvasAlertKey: UiKey | null = null;
 
-  quickPlace: QuickPlaceRuntimeStateReadWrite = new QuickPlaceRuntimeStateReadWriteImpl();
   markingMenu: MarkingMenuState | null = null;
   lineEndChip: LineEndChipState | null = null;
   lineProbe: LineProbeState | null = null;
@@ -810,7 +782,6 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
     blueprintPlacementDefaultContinuous: true,
     hypergryphAllowEmptyLogisticsEndpoints: false,
     hypergryphAutoCreateSplittersAndConvergers: true,
-    quickPlaceEnabled: true,
     invertWheelZoom: false,
     penPreciseInput: true,
     penTiltFacing: false,

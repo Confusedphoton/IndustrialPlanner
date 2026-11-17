@@ -4,7 +4,7 @@ export const CANVAS_OPERATION_IDS = [
   "delete-device", "cancel-placement", "confirm-logistics-start", "confirm-logistics-end",
   "change-belt-route-priority", "change-pipe-route-priority", "toggle-marquee-selection",
   "marquee-select", "marquee-deselect", "exit-marquee",
-  "select", "paste", "cut", "undo", "redo", "quick-place", "blueprint-placement",
+  "select", "paste", "cut", "undo", "redo", "blueprint-placement",
   "logistics-placement", "region-edit", "configure-device", "open-inspector", "rotate-viewport", "session-intent",
 ] as const;
 

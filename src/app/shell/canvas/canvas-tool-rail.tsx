@@ -20,7 +20,6 @@ import LucideEllipsis from "~icons/lucide/ellipsis";
 import LucideGripHorizontal from "~icons/lucide/grip-horizontal";
 import LucideScan from "~icons/lucide/scan";
 import LucideX from "~icons/lucide/x";
-import LucideZap from "~icons/lucide/zap";
 import LucideZoomIn from "~icons/lucide/zoom-in";
 import LucideZoomOut from "~icons/lucide/zoom-out";
 import { selectDocumentBaseId } from "@/shared/snapshot/world-document-selection";
@@ -31,7 +30,6 @@ import {
   fitCanvasViewportToBase,
   LOGISTICS_CANCEL_ROUTE_BUTTON_ID,
   LOGISTICS_ROUTE_ORDER_BUTTON_ID,
-  openQuickPlace,
   PLACEMENT_RAIL_CANCEL_BUTTON_ID,
   PLACEMENT_RAIL_ROTATE_BUTTON_ID,
   ROTATE_VIEW_BUTTON_ID,
@@ -237,7 +235,6 @@ export const CanvasToolRail = observer(function CanvasToolRail({ appHost }: { ap
   const history = editor?.state.history;
   const canUndo = editor !== null && (history?.undoDepth ?? 0) > 0;
   const canRedo = editor !== null && (history?.redoDepth ?? 0) > 0;
-  const quickPlaceEnabled = appHost.internalState.settings.quickPlaceEnabled;
   const activeTool = canvas.state.activeTool;
   const logistics = canvas.state.runtime.logisticsPlacement;
   const inLogisticsPlacement = activeTool === "logistics-placement" && logistics.kind !== null;
@@ -450,21 +447,6 @@ export const CanvasToolRail = observer(function CanvasToolRail({ appHost }: { ap
     <RotateViewRailButton appHost={appHost} key="rotate-view" />,
   ];
 
-  const quickPlaceItems: RailItem[] = quickPlaceEnabled ? [{
-    kind: "button",
-    key: "quick-place",
-    node: (
-      <RailButton
-        active={canvas.state.runtime.quickPlace.visible}
-        label={t("workbench.quickPlace.title")}
-        onActivate={(rect) => openQuickPlace(canvas, { x: rect.right + 12, y: rect.top }, "pointer")}
-        uiButtonId="canvas-tool-rail-quick-place"
-      >
-        <LucideZap aria-hidden className={iconClassName} />
-      </RailButton>
-    ),
-  }] : [];
-
   const columnBudget = layoutMetrics.areaHeight > 0
     ? layoutMetrics.areaHeight - RAIL_VERTICAL_RESERVE_PX - layoutMetrics.chromeHeight
     : Number.POSITIVE_INFINITY;
@@ -475,16 +457,12 @@ export const CanvasToolRail = observer(function CanvasToolRail({ appHost }: { ap
     ...historyItems,
     { kind: "divider", key: "divider-view" },
     ...asRailItems(viewButtons),
-    { kind: "divider", key: "divider-quick-place" },
-    ...quickPlaceItems,
   ], columnBudget, layoutMetrics.buttonSize);
   const compact = fullColumns.length > 1;
   const showMore = compact && moreOpen;
   const columns = compact ? packRailColumns([
     gripItem,
     ...toolItems,
-    { kind: "divider", key: "divider-quick-place" },
-    ...quickPlaceItems,
     { kind: "divider", key: "divider-history" },
     ...historyItems,
     { kind: "divider", key: "divider-more" },

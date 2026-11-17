@@ -1491,3 +1491,13 @@
   stroke-linejoin: round;
   opacity: 0.8;
 }
+
+// 快捷栏里带配方的条目：右下角显示产物。
+.canvas-hotbar-recipe {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+}

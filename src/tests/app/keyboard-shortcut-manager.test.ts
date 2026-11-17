@@ -17,10 +17,9 @@ describe("KeyboardShortcutManager", () => {
     localStorage.clear();
   });
 
-  it("defaults quick place to Z and placement panel to P", () => {
+  it("defaults the placement panel to P", () => {
     const manager = createManager();
 
-    expect(manager.getKeyboardShortcutFor(SHORTCUT_KEY.QUICK_PLACE)).toBe("Z");
     expect(manager.getKeyboardShortcutFor(SHORTCUT_KEY.TOGGLE_PLACEMENT_PANEL)).toBe("P");
     expect(manager.getKeyboardShortcutFor(SHORTCUT_KEY.CHEAT)).toBe("U");
   });
@@ -111,14 +110,13 @@ describe("KeyboardShortcutManager", () => {
     )).toBe(true);
   });
 
-  it("migrates legacy unversioned Z placement panel shortcut to quick place", () => {
+  it("frees a legacy unversioned Z placement panel shortcut and restores P", () => {
     localStorage.setItem(APP_SHORTCUTS_LOCAL_STORAGE_KEY, JSON.stringify({
       [SHORTCUT_KEY.TOGGLE_PLACEMENT_PANEL]: "Z",
     }));
 
     const manager = createManager();
 
-    expect(manager.getKeyboardShortcutFor(SHORTCUT_KEY.QUICK_PLACE)).toBe("Z");
     expect(manager.getKeyboardShortcutFor(SHORTCUT_KEY.TOGGLE_PLACEMENT_PANEL)).toBe("P");
   });
 
@@ -130,12 +128,11 @@ describe("KeyboardShortcutManager", () => {
 
     const manager = createManager();
 
-    expect(manager.getKeyboardShortcutFor(SHORTCUT_KEY.QUICK_PLACE)).toBe("Z");
     expect(manager.getKeyboardShortcutFor(SHORTCUT_KEY.TOGGLE_PLACEMENT_PANEL)).toBe("");
     expect(manager.getKeyboardShortcutFor(SHORTCUT_KEY.WAREHOUSE)).toBe("P");
   });
 
-  it("removes legacy bare Z from non-quick-place shortcuts", () => {
+  it("removes legacy bare Z bindings during migration", () => {
     localStorage.setItem(APP_SHORTCUTS_LOCAL_STORAGE_KEY, JSON.stringify({
       [SHORTCUT_KEY.ROTATE]: "Z",
       [SHORTCUT_KEY.UNDO]: "Ctrl+Z",
@@ -143,7 +140,6 @@ describe("KeyboardShortcutManager", () => {
 
     const manager = createManager();
 
-    expect(manager.getKeyboardShortcutFor(SHORTCUT_KEY.QUICK_PLACE)).toBe("Z");
     expect(manager.getKeyboardShortcutFor(SHORTCUT_KEY.ROTATE)).toBe("");
     expect(manager.getKeyboardShortcutFor(SHORTCUT_KEY.UNDO)).toBe("Ctrl+Z");
   });
@@ -185,7 +181,6 @@ describe("KeyboardShortcutManager", () => {
       [SHORTCUT_KEY.TOGGLE_BLUEPRINT_PANEL]: "L;Ctrl+L",
       [SHORTCUT_KEY.TOGGLE_HISTORY_PANEL]: "H;Ctrl+H",
       [SHORTCUT_KEY.TOGGLE_BASE_PANEL]: "K;Ctrl+K",
-      [SHORTCUT_KEY.QUICK_PLACE]: "Z;Shift+Z",
       [SHORTCUT_KEY.OPEN_TOOLBOX]: "T;Ctrl+T",
       [SHORTCUT_KEY.PAN_VIEWPORT_UP]: "W;ArrowUp",
       [SHORTCUT_KEY.PAN_VIEWPORT_DOWN]: "S;ArrowDown",
@@ -205,13 +200,13 @@ describe("KeyboardShortcutManager", () => {
 
     const manager = createManager();
 
-    expect(Object.values(SHORTCUT_KEY)).toHaveLength(33);
+    expect(Object.values(SHORTCUT_KEY)).toHaveLength(32);
     for (const shortcutId of Object.values(SHORTCUT_KEY)) {
       expect(manager.getKeyboardShortcutFor(shortcutId)).toBe(persistedShortcuts[shortcutId]);
     }
   });
 
-  it("resets all 29 actions from the unified action specs", () => {
+  it("resets every action from the unified action specs", () => {
     const manager = createManager();
     for (const shortcutId of Object.values(SHORTCUT_KEY)) {
       manager.setShortcutFor(shortcutId, `Ctrl+Alt+${shortcutId.at(-1) ?? "A"}`);
@@ -219,7 +214,7 @@ describe("KeyboardShortcutManager", () => {
 
     manager.resetAllShortcutsToDefaults();
 
-    expect(CONFIGURABLE_SHORTCUT_ACTION_SPECS).toHaveLength(33);
+    expect(CONFIGURABLE_SHORTCUT_ACTION_SPECS).toHaveLength(32);
     for (const spec of CONFIGURABLE_SHORTCUT_ACTION_SPECS) {
       expect(manager.getKeyboardShortcutFor(spec.id)).toBe(spec.defaultBindings.join(";"));
     }

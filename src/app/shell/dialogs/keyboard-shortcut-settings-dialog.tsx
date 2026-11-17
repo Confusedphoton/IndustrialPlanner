@@ -49,7 +49,6 @@ interface KeyboardShortcutSettingDefinition {
 }
 
 export const KEYBOARD_SHORTCUT_SETTINGS: readonly KeyboardShortcutSettingDefinition[] = [
-  { id: SHORTCUT_KEY.QUICK_PLACE, labelKey: "settingsField.shortcut-quick-place" },
   { id: SHORTCUT_KEY.OPEN_TOOLBOX, labelKey: "settingsField.shortcut-open-toolbox" },
   { id: SHORTCUT_KEY.PLACE_CONVEYOR, labelKey: "settingsField.shortcut-place-conveyor" },
   { id: SHORTCUT_KEY.PLACE_PIPE, labelKey: "settingsField.shortcut-place-pipe" },

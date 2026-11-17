@@ -5,7 +5,6 @@ import { createRoot, type Root } from "react-dom/client";
 import { runInAction } from "mobx";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PlacementPanel } from "@/app/shell/panels/placement-panel";
-import { QuickPlacePopup } from "@/app/shell/quick-place/quick-place-popup";
 import { createWorldDocument } from "@/domain/document/world-document";
 import { type EditorHost } from "@/editor/editor-host";
 import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
@@ -96,22 +95,5 @@ describe("白名单设备与变体面板", () => {
     expect(container.querySelector(".placement-entity-variant-trigger")).toBeNull();
     changeBase(BASE_ID);
     expect(container.querySelector("[aria-expanded='true']")).toBeNull();
-  });
-  it("当前不可用收藏隐藏但保留槽位，切回恢复；唯一变体不显示徽标", () => {
-    runInAction(() => {
-      session.app.internalState.workbench.quickPlaceFavoriteEntityIds = ["furnance_1_liquid", "furnance_1"];
-      session.app.mainCanvas.state.runtime.quickPlace.visible = true;
-      session.app.mainCanvas.state.runtime.quickPlace.anchor = { x: 120, y: 80 };
-    });
-    changeBase("draft_box");
-    act(() => { root.render(<QuickPlacePopup appHost={session.app} />); });
-    expect(session.app.internalState.workbench.quickPlaceFavoriteEntityIds).toEqual(["furnance_1_liquid", "furnance_1"]);
-    const slots = container.querySelectorAll(".quick-place-favorite-slot");
-    expect(slots[0]?.classList.contains("is-empty")).toBe(true);
-    expect(slots[1]?.classList.contains("is-empty")).toBe(false);
-    expect(container.querySelector(".quick-place-variant-badge")).toBeNull();
-    changeBase(BASE_ID);
-    expect(container.querySelectorAll(".quick-place-favorite-slot")[0]?.classList.contains("is-empty")).toBe(false);
-    expect(container.querySelector(".quick-place-variant-badge")).not.toBeNull();
   });
 });

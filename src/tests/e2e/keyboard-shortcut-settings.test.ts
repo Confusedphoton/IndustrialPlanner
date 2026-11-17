@@ -34,7 +34,7 @@ for (const profile of SCREEN_PROFILES.filter(profile => profile.name === "deskto
       });
 
       const shortcutDialog = page.locator(".keyboard-shortcut-settings-dialog");
-      await expect(shortcutDialog.locator('[data-shortcut-id][data-slot-index="0"]')).toHaveCount(29);
+      await expect(shortcutDialog.locator('[data-shortcut-id][data-slot-index="0"]')).toHaveCount(28);
       await expect(primarySlot(page, "shortcut-cut-selection")).toHaveAttribute("aria-label", /剪切选区.*Ctrl\+X/);
       await expect(shortcutDialog.locator("[data-shortcut-group]")).toHaveCount(5);
       for (const groupSpec of EXPECTED_GROUPS) {
@@ -57,14 +57,14 @@ for (const profile of SCREEN_PROFILES.filter(profile => profile.name === "deskto
       await chordConflict.getByRole("button", { name: "取消" }).click();
       await expect(rotate).toHaveAttribute("aria-label", /· G$/);
 
-      const quickPlace = primarySlot(page, "shortcut-quick-place");
-      await captureBinding(page, "shortcut-quick-place", "1");
+      const openToolbox = primarySlot(page, "shortcut-open-toolbox");
+      await captureBinding(page, "shortcut-open-toolbox", "1");
       const fixedConflict = page.locator(".keyboard-shortcut-conflict-dialog");
       await expect(fixedConflict).toContainText("选择放置设备快捷位（1）");
       await expect(fixedConflict).toContainText("无法替换");
       await expect(fixedConflict.getByRole("button", { name: "更换" })).toHaveCount(0);
       await fixedConflict.getByRole("button", { name: "取消" }).click();
-      await expect(quickPlace).toHaveAttribute("aria-label", /· Z$/);
+      await expect(openToolbox).toHaveAttribute("aria-label", /· T$/);
 
       await resetAllShortcuts(page);
       await expect(rotate).toHaveAttribute("aria-label", /· R$/);

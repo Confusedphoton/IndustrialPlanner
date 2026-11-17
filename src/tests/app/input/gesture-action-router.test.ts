@@ -709,7 +709,7 @@ describe("GestureActionRouter", () => {
       workspace: createWorkspace(),
       getAppHost: () => fixture.app,
       getShortcutBinding: (shortcutId) => (
-        shortcutId === SHORTCUT_KEY.QUICK_PLACE ? "Z" : ""
+        shortcutId === SHORTCUT_KEY.OPEN_TOOLBOX ? "T" : ""
       ),
       getShortcutInputLayer: () => "canvas",
       getActiveTool: () => "select",
@@ -718,11 +718,11 @@ describe("GestureActionRouter", () => {
           id: "fixed-conflict-routes",
           shortcutRoutes: [
             {
-              id: "quick-place.open",
-              actionId: SHORTCUT_KEY.QUICK_PLACE,
+              id: "toolbox.open",
+              actionId: SHORTCUT_KEY.OPEN_TOOLBOX,
               binding: {
                 kind: "configurable",
-                shortcutId: SHORTCUT_KEY.QUICK_PLACE,
+                shortcutId: SHORTCUT_KEY.OPEN_TOOLBOX,
               },
               scope: {
                 inputLayers: ["canvas"],
@@ -748,7 +748,7 @@ describe("GestureActionRouter", () => {
     });
 
     expect(router.findShortcutConflicts({
-      shortcutId: SHORTCUT_KEY.QUICK_PLACE,
+      shortcutId: SHORTCUT_KEY.OPEN_TOOLBOX,
       slotIndex: 0,
       nextBinding: "1",
     })).toEqual([

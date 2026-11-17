@@ -11,7 +11,7 @@ import {
   PLACEMENT_RAIL_ROTATE_BUTTON_ID,
 } from "@/app/input/gesture/actions";
 import type { AppHost } from "@/app/host/app-host";
-import { recentPlacementDevices } from "@/app/recent-placement-devices";
+import { recentPlacements } from "@/app/recent-placement-devices";
 import { CanvasToolRail } from "@/app/shell/canvas/canvas-tool-rail";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
@@ -76,7 +76,7 @@ describe("canvas tool rail", () => {
       });
     });
     expect(appHost.mainCanvas.state.activeTool).toBe("single-placement");
-    expect(recentPlacementDevices.deviceIds[0]).toBe("storager_1");
+    expect(recentPlacements.entries[0]?.deviceId).toBe("storager_1");
     expect(mainRailButtonIds()).toEqual(before);
     expect(contextualButtonIds()).toEqual([PLACEMENT_RAIL_ROTATE_BUTTON_ID, PLACEMENT_RAIL_CANCEL_BUTTON_ID]);
 

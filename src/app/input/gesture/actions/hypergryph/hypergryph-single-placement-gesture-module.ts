@@ -34,7 +34,7 @@ import {
   swapLogisticsDeviceRole,
 } from "@/app/logistics-role-swap";
 import { runInAction } from "mobx";
-import { recentPlacementDevices } from "@/app/recent-placement-devices";
+import { recentPlacements } from "@/app/recent-placement-devices";
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 
 import type { GestureHandleResult, GestureMappingModule, ShortcutActionRoute } from "../types";
@@ -721,7 +721,7 @@ function finalizePlacementEnter(options: {
     return { status: "ignored" };
   }
   if (options.canvas.canUseWorkbenchActions) {
-    recentPlacementDevices.record(options.deviceId);
+    recentPlacements.record(options.deviceId, options.canvas.state.runtime.singlePlacementConfig);
   }
 
   // shouldSetActiveTool 路径只写桥接变量 + setActiveTool，

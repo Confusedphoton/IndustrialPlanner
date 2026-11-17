@@ -1,3 +1,5 @@
+import { pinyin } from "pinyin-pro";
+import { lookupText } from "@/shared/i18n";
 import { selectDocumentBaseId } from "@/shared/snapshot/world-document-selection";
 import type { AppHost } from "@/app/host/app-host";
 import { observer } from "mobx-react-lite";
@@ -685,6 +687,7 @@ function filterPlacementDeviceSections(
       ...section,
       buttons: section.buttons.filter((button) => (
         translate(button.labelKey).toLowerCase().includes(normalizedQuery)
+        || matchesPinyin(button.labelKey, normalizedQuery)
         || button.uiButtonId.toLowerCase().includes(normalizedQuery)
         || (button.variantDefinitions ?? []).some((definition) => (
           translate(definition.nameKey).toLowerCase().includes(normalizedQuery)
@@ -692,6 +695,22 @@ function filterPlacementDeviceSections(
       )),
     }))
     .filter((section) => section.buttons.length > 0);
+}
+
+/** 设备中文名的全拼与首字母，搜索时可直接打拼音（如 “jlh” 或 “jinglianhu”）。 */
+const pinyinByNameKey = new Map<string, { readonly full: string; readonly initial: string }>();
+
+function matchesPinyin(nameKey: string, normalizedQuery: string): boolean {
+  let keys = pinyinByNameKey.get(nameKey);
+  if (keys === undefined) {
+    const zhName = lookupText("zh-CN", nameKey) ?? "";
+    keys = {
+      full: pinyin(zhName, { toneType: "none", separator: "" }).toLowerCase(),
+      initial: pinyin(zhName, { pattern: "first", toneType: "none", separator: "" }).toLowerCase(),
+    };
+    pinyinByNameKey.set(nameKey, keys);
+  }
+  return keys.full.includes(normalizedQuery) || keys.initial.includes(normalizedQuery);
 }
 
 function isEditableEventTarget(target: EventTarget | null): boolean {

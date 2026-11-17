@@ -246,9 +246,6 @@ export function normalizePersistedAppSettings(
       typeof persistedAppSettings.hypergryphAutoCreateSplittersAndConvergers === "boolean"
         ? persistedAppSettings.hypergryphAutoCreateSplittersAndConvergers
         : fallback.hypergryphAutoCreateSplittersAndConvergers,
-    quickPlaceEnabled: typeof persistedAppSettings.quickPlaceEnabled === "boolean"
-      ? persistedAppSettings.quickPlaceEnabled
-      : fallback.quickPlaceEnabled,
     invertWheelZoom: typeof persistedAppSettings.invertWheelZoom === "boolean"
       ? persistedAppSettings.invertWheelZoom
       : fallback.invertWheelZoom,
@@ -374,10 +371,6 @@ export function normalizePersistedWorkbenchState(
       persistedWorkbenchState.selectedPlacementVariantByCraftGroup,
       fallback.selectedPlacementVariantByCraftGroup,
     ),
-    quickPlaceFavoriteEntityIds: normalizeQuickPlaceFavoriteEntityIds(
-      persistedWorkbenchState.quickPlaceFavoriteEntityIds,
-      fallback.quickPlaceFavoriteEntityIds,
-    ),
     dialogState: normalizePersistedDialogStateMap(persistedWorkbenchState, fallback.dialogState),
     toolbox: normalizePersistedToolboxState(persistedWorkbenchState, fallback.toolbox),
     timelineDockPreference: isTimelineDockPreference(persistedWorkbenchState.timelineDockPreference)
@@ -431,45 +424,6 @@ function normalizeDeviceIdKeyedStringRecord(
       return [deviceId, selectedVariant];
     }),
   );
-}
-
-function normalizeQuickPlaceFavoriteEntityIds(
-  value: unknown,
-  fallback: readonly (string | null)[],
-): Array<string | null> {
-  if (!Array.isArray(value)) {
-    return [...fallback];
-  }
-
-  const result: Array<string | null> = [];
-  const seen = new Set<string>();
-  for (const rawId of value.slice(0, 10)) {
-    if (rawId === null) {
-      result.push(null);
-      continue;
-    }
-
-    if (typeof rawId !== "string") {
-      result.push(null);
-      continue;
-    }
-
-    const historicalId = rawId.trim();
-    const id = migrateBlueprintDeviceReference(historicalId)?.deviceId ?? historicalId;
-    if (id === "" || seen.has(id)) {
-      result.push(null);
-      continue;
-    }
-
-    seen.add(id);
-    result.push(id);
-  }
-
-  while (result.at(-1) === null) {
-    result.pop();
-  }
-
-  return result;
 }
 
 function normalizePersistedToolboxState(

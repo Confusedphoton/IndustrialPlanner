@@ -27,7 +27,6 @@ export type GestureHandleResult =
 
 export type ShortcutInputLayer =
   | "canvas"
-  | "quick-place"
   | "overlap-entity-menu"
   | "dialog"
   | "inspector-dialog"

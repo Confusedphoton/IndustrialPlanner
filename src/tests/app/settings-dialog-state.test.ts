@@ -130,7 +130,6 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-blueprint-placement-default-continuous": true,
         "game-arknights-allow-empty-logistics-endpoints": false,
         "game-arknights-auto-create-splitters-and-convergers": true,
-        "game-quick-place": true,
         "game-invert-wheel-zoom": false,
         "game-pen-precise-input": true,
         "game-pen-tilt-facing": false,
@@ -178,7 +177,6 @@ describe("WorkbenchSettingsDialogController", () => {
     expect(
       hydratedController.values["game-arknights-auto-create-splitters-and-convergers"],
     ).toBe(true);
-    expect(hydratedController.values["game-quick-place"]).toBe(true);
     expect(hydratedController.values["game-arknights-selection-right-dock-sync"]).toBe(false);
     expect(hydratedController.values["game-arknights-inspector-open-on-second-click"]).toBe(false);
     expect(Object.keys(hydratedController.values).some((key) => key.startsWith("shortcut-"))).toBe(false);
@@ -432,7 +430,6 @@ describe("WorkbenchSettingsDialogController", () => {
         "game-blueprint-placement-default-continuous": true,
         "game-arknights-allow-empty-logistics-endpoints": false,
         "game-arknights-auto-create-splitters-and-convergers": true,
-        "game-quick-place": true,
         "game-invert-wheel-zoom": false,
         "game-pen-precise-input": true,
         "game-pen-tilt-facing": false,

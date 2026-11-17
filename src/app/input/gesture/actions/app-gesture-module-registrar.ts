@@ -61,7 +61,6 @@ import { createHypergryphViewportZoomModule } from "./hypergryph/hypergryph-view
 import { createHypergryphViewportRotationModule } from "./hypergryph/hypergryph-viewport-rotation-module";
 import { createHypergryphHistoryGestureModule } from "./hypergryph/hypergryph-history-gesture-module";
 import { createPanelToggleGestureModule } from "./panel-toggle-gesture-module";
-import { createQuickPlaceGestureModule } from "./quick-place-gesture-module";
 import { createSimulationControlGestureModule } from "./simulation-control-gesture-module";
 import { createToolboxOpenGestureModule } from "./toolbox-open-gesture-module";
 
@@ -123,7 +122,6 @@ export class AppGestureModuleRegistrar {
     register("zoom-viewport", createHypergryphViewportZoomModule());
     register("rotate-viewport", createHypergryphViewportRotationModule());
     register("undo", createHypergryphHistoryGestureModule());
-    register("quick-place", createQuickPlaceGestureModule());
     if (options.canvas.canUseWorkbenchActions) {
       this.unregisterModules.push(options.router.registerModule(createPanelToggleGestureModule()),
         options.router.registerModule(createSimulationControlGestureModule()),

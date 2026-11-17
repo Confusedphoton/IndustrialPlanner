@@ -51,7 +51,6 @@ export {
 export { createHypergryphViewportRotationModule, ROTATE_VIEW_BUTTON_ID } from "./hypergryph/hypergryph-viewport-rotation-module";
 export { createHypergryphHistoryGestureModule } from "./hypergryph/hypergryph-history-gesture-module";
 export { createPanelToggleGestureModule } from "./panel-toggle-gesture-module";
-export { createQuickPlaceGestureModule, openQuickPlace } from "./quick-place-gesture-module";
 export { pullFromHoldingTray } from "./hypergryph/hypergryph-holding-tray-gesture-module";
 export { closeLineProbe } from "./hypergryph/hypergryph-line-probe-gesture-module";
 export {

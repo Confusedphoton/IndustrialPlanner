@@ -169,7 +169,6 @@ function createWorkbenchStorageSnapshot(options: {
   topBarCollapsed?: boolean;
   rightDockActiveTab?: "selection";
   selectedPlacementVariantByCraftGroup?: Record<string, string>;
-  quickPlaceFavoriteEntityIds?: Array<string | null>;
   toolboxDialog?: ReturnType<typeof createDialogStateSnapshot>;
   timelineDialog?: ReturnType<typeof createDialogStateSnapshot>;
   helpDialog?: ReturnType<typeof createDialogStateSnapshot>;
@@ -197,7 +196,6 @@ function createWorkbenchStorageSnapshot(options: {
     rightDockActiveTab: options.rightDockActiveTab ?? DEFAULT_RIGHT_DOCK_TAB_ID,
     selectedPlacementVariantByCraftGroup:
       options.selectedPlacementVariantByCraftGroup ?? {},
-    quickPlaceFavoriteEntityIds: options.quickPlaceFavoriteEntityIds ?? [],
     dialogState: {
       toolbox: options.toolboxDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_TOOLBOX_DIALOG_TAB_ID }),
       timeline: options.timelineDialog ?? createDialogStateSnapshot(),
@@ -318,7 +316,6 @@ describe("createAppTestHost", () => {
     localStorage.setItem(
       WORKBENCH_STATE_LOCAL_STORAGE_KEY,
       JSON.stringify(createWorkbenchStorageSnapshot({
-        quickPlaceFavoriteEntityIds: ["item_port_storager_1", "storager_1"],
         moduleBalancing: createModuleBalancingStorageSnapshot({
           customModules: [{
             id: "custom-old-icon",
@@ -335,7 +332,6 @@ describe("createAppTestHost", () => {
 
     const appHost = createAppTestHost(createWorkspace());
 
-    expect(appHost.internalState.workbench.quickPlaceFavoriteEntityIds).toEqual(["storager_1"]);
     expect(
       appHost.internalState.workbench.toolbox.moduleBalancing.customModules[0]?.iconItemIds,
     ).toEqual(["originium_ore"]);
