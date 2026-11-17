@@ -8,6 +8,7 @@ import type { ScreenProfile } from "@/domain/app/types/screen-profile";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { RightDockTabId } from "@/domain/app/types/app-types";
 import type { ClientPixelPoint } from "@/domain/shared/client-pixel";
+import type { ModuleBalancingCustomModule } from "@/app/toolbox-types";
 import type { AppLocale } from "@/domain/app";
 import { lookupText } from "@/shared/i18n";
 import { isMobileOrTabletScreenProfile } from "@/shared/browser/screen-profile";
@@ -88,7 +89,8 @@ export interface AppInternalAction {
   setDialogOffset: (dialogKey: string, offsetX: number, offsetY: number) => void;
   setDialogSize: (dialogKey: string, width: number | null, height: number | null) => void;
   setToolboxDockPreference: (preference: ToolboxDockPreference) => void;
-  startNewProductionPlanning: () => void;
+  /** 在工具箱的模块平衡里打开一份模块草稿。 */
+  openCustomModuleDraft: (module: ModuleBalancingCustomModule) => void;
   setToolboxBottomDockCollapsed: (collapsed: boolean) => void;
   setToolboxBottomDockHeight: (height: number) => void;
   setTimelineDockPreference: (preference: TimelineDockPreference) => void;
@@ -398,9 +400,9 @@ export class AppActionImpl implements AppAction, AppInternalAction {
     }
   });
 
-  public readonly startNewProductionPlanning: AppInternalAction["startNewProductionPlanning"] = action(() => {
-    this.internalState.runtime.productionPlanningNewSessionRequested = true;
-    this.setDialogTab("toolbox", "production-planning");
+  public readonly openCustomModuleDraft: AppInternalAction["openCustomModuleDraft"] = action((module) => {
+    this.internalState.runtime.pendingCustomModuleDraft = module;
+    this.setDialogTab("toolbox", "module-balancing");
     this.setToolboxBottomDockCollapsed(false);
     this.openDialog("toolbox");
   });

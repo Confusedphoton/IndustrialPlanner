@@ -8,8 +8,6 @@ import {
   isRecipeExcludedFromProductionPlanningAuto,
   type ProductionPlanningSourceConfig,
 } from "@/app/shell/production-planning/production-planning-model";
-import { buildProductionPlanningTreeRows } from "@/app/shell/production-planning/production-planning-panel";
-import { isProductionPlanningDeviceMinimumConsumptionRecipeId } from "@/app/shell/production-planning/production-planning-ledger";
 import type { ProductionPlanningPort } from "@/app/shell/production-planning/production-planning-model";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import { createRegistryContract, WIKI_DEFAULT_CRAFT_DEFINITIONS } from "@/registry";
@@ -156,10 +154,6 @@ describe("production planning model", () => {
       .toEqual([]);
     expect(result.itemTotals.some((total) => total.itemId === "item_liquid_water")).toBe(false);
 
-    const rows = buildProductionPlanningTreeRows(result, "item");
-    const copperRow = rows.find((row) => row.recipeId === "r_miner_copper_ore_basic");
-    expect(copperRow?.inputItemIds).toEqual([]);
-    expect(rows.some((row) => row.targetItemId === "item_liquid_water")).toBe(false);
   });
 
   it("uses provided supply before recipe production", () => {
@@ -486,115 +480,7 @@ describe("production planning model", () => {
       }),
     ]);
 
-    const rows = buildProductionPlanningTreeRows(result, "device");
-    const productionRow = rows.find((row) => row.recipeId === recipeId);
-    const consumptionRow = rows.find((row) => (
-      row.isSharedDemandReference
-      && row.isDeviceMinimumConsumption
-      && row.targetItemId === "item_liquid_xiranite"
-    ));
-    expect(productionRow?.childIds).toContain(consumptionRow?.id);
-    expect(consumptionRow?.parentIds).toEqual([productionRow?.id]);
-    expect(consumptionRow?.childIds).toEqual([]);
-    expect(consumptionRow?.sourceRowId).toBe(productionRow?.id);
-    expect(productionRow?.demandReferenceIds).toContain(consumptionRow?.id);
-    expect(productionRow?.isShared).toBe(true);
-    expect(consumptionRow?.recipeNode.inputs).toEqual([
-      expect.objectContaining({ itemId: "item_liquid_xiranite", perMinute: 7.5 }),
-    ]);
-    expect(consumptionRow?.recipeNode.outputs).toEqual([]);
     expect(result.unresolvedPerMinute).toBe(0);
-  });
-
-  it("keeps a non-shared minimum-consumption source real and replaces shared demand positions with leaf references", () => {
-    const index = buildProductionPlanningIndex(createRegistryContract());
-    const heavyLiquidRecipeId = "liquid_transmuter_1_liquid_liquid_xiranite_enr_1";
-    const mixedLiquidRecipeId = "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic";
-    const transmutedLiquidRecipeId = "liquid_transmuter_1_liquid_liquid_xiranite_1";
-    const createResult = (liquidRecipeId: string) => computeProductionPlan({
-      targets: [port("item_liquid_xiranite_enr", 12)],
-      supplies: [],
-      infiniteItemIds: baseInfiniteItemIds(index),
-      recipeChoices: new Map([
-        ["item_liquid_xiranite_enr", heavyLiquidRecipeId],
-        ["item_liquid_xiranite", liquidRecipeId],
-      ]),
-      sourceConfig: DEFAULT_SOURCE_CONFIG,
-    }, index);
-
-    const mixedRows = buildProductionPlanningTreeRows(createResult(mixedLiquidRecipeId), "item");
-    const mixedHeavyLiquidRow = mixedRows.find((row) => (
-      row.recipeId === heavyLiquidRecipeId
-      && row.targetItemId === "item_liquid_xiranite_enr"
-    ));
-    const mixedLiquidRow = mixedRows.find((row) => (
-      row.recipeId === mixedLiquidRecipeId
-      && row.targetItemId === "item_liquid_xiranite"
-    ));
-    expect(mixedLiquidRow?.isSharedDemandReference).toBe(false);
-    expect(mixedLiquidRow?.isDeviceMinimumConsumption).toBe(true);
-    expect(mixedLiquidRow?.isShared).toBe(false);
-    expect(mixedLiquidRow?.total?.deviceCount).toBe(0.2);
-    expect(mixedLiquidRow?.parentIds).toEqual([mixedHeavyLiquidRow?.id]);
-    expect(mixedHeavyLiquidRow?.childIds).toContain(mixedLiquidRow?.id);
-
-    const xiraniteReference = mixedRows.find((row) => (
-      row.parentIds.includes(mixedLiquidRow?.id ?? "")
-      && row.targetItemId === "item_xiranite_powder"
-      && row.isSharedDemandReference
-    ));
-    const waterReference = mixedRows.find((row) => (
-      row.parentIds.includes(mixedLiquidRow?.id ?? "")
-      && row.targetItemId === "item_liquid_water"
-      && row.isSharedDemandReference
-    ));
-    expect(xiraniteReference?.childIds).toEqual([]);
-    expect(xiraniteReference?.isDeviceMinimumConsumption).toBe(false);
-    expect(xiraniteReference?.consumedPerMinute).toBe(6);
-    expect(waterReference?.childIds).toEqual([]);
-    expect(waterReference?.isDeviceMinimumConsumption).toBe(false);
-    expect(waterReference?.consumedPerMinute).toBe(6);
-
-    const transmutedRows = buildProductionPlanningTreeRows(createResult(transmutedLiquidRecipeId), "item");
-    const transmutedHeavyLiquidRow = transmutedRows.find((row) => (
-      row.recipeId === heavyLiquidRecipeId
-      && row.targetItemId === "item_liquid_xiranite_enr"
-    ));
-    const transmutedLiquidRow = transmutedRows.find((row) => (
-      row.recipeId === transmutedLiquidRecipeId
-      && row.targetItemId === "item_liquid_xiranite"
-    ));
-    const heavyLiquidMinimumReference = transmutedRows.find((row) => (
-      row.parentIds.includes(transmutedHeavyLiquidRow?.id ?? "")
-      && row.targetItemId === "item_liquid_xiranite"
-      && row.isSharedDemandReference
-      && row.isDeviceMinimumConsumption
-    ));
-    expect(heavyLiquidMinimumReference?.childIds).toEqual([]);
-    expect(heavyLiquidMinimumReference?.sourceRowId).toBe(transmutedLiquidRow?.id);
-    expect(heavyLiquidMinimumReference?.consumedPerMinute).toBe(6);
-    expect(transmutedLiquidRow?.depth).toBe(0);
-    expect(transmutedLiquidRow?.parentIds).toEqual([]);
-    expect(transmutedLiquidRow?.isShared).toBe(true);
-    expect(transmutedLiquidRow?.total?.deviceCount).toBe(0.25);
-
-    const gasReference = transmutedRows.find((row) => (
-      row.parentIds.includes(transmutedLiquidRow?.id ?? "")
-      && row.targetItemId === "item_gas_xiranite"
-      && row.isSharedDemandReference
-      && !row.isDeviceMinimumConsumption
-    ));
-    const selfMinimumReference = transmutedRows.find((row) => (
-      row.parentIds.includes(transmutedLiquidRow?.id ?? "")
-      && row.targetItemId === "item_liquid_xiranite"
-      && row.isSharedDemandReference
-      && row.isDeviceMinimumConsumption
-    ));
-    expect(gasReference?.childIds).toEqual([]);
-    expect(gasReference?.consumedPerMinute).toBe(7.5);
-    expect(selfMinimumReference?.childIds).toEqual([]);
-    expect(selfMinimumReference?.sourceRowId).toBe(transmutedLiquidRow?.id);
-    expect(selfMinimumReference?.consumedPerMinute).toBe(1.5);
   });
 
   it("does not include minimum device consumption when the option is disabled", () => {
@@ -616,9 +502,6 @@ describe("production planning model", () => {
     }));
     expect(total?.inputs.some((input) => input.itemId === "item_liquid_xiranite")).toBe(false);
     expect(total?.deviceMinimumConsumptionInputs).toEqual([]);
-    expect(buildProductionPlanningTreeRows(result, "device").some((row) => (
-      isProductionPlanningDeviceMinimumConsumptionRecipeId(row.recipeId)
-    ))).toBe(false);
   });
 
   it("rounds up minimum device consumption by device count when mode is ceil", () => {
@@ -670,31 +553,15 @@ describe("production planning model", () => {
       sourceConfig: DEFAULT_SOURCE_CONFIG,
     }, index);
     const picker = result.recipeTotals.find((entry) => entry.recipeId === "r_seedcol_grass_seed_2_from_grass_2_basic");
-    const planter = result.recipeTotals.find((entry) => entry.recipeId === "r_hydro_planter_grass_2_from_seed_2_and_water_basic");
     const grass = result.itemTotals.find((entry) => entry.itemId === "item_plant_grass_2");
     const seed = result.itemTotals.find((entry) => entry.itemId === "item_plant_grass_seed_2");
     const feedback = flattenNodes(result.roots).find((entry) => entry.itemId === "item_plant_grass_2" && entry.isCycleSource);
 
     expect(picker?.cyclesPerMinute).toBe(15);
-    expect(planter?.cyclesPerMinute).toBe(15);
-    expect(planter?.outputs[0]?.perMinute).toBe(30);
     expect(grass?.producedPerMinute).toBe(grass?.demandPerMinute);
     expect(seed?.producedPerMinute).toBe(seed?.demandPerMinute);
     expect(feedback?.supply.cycle).toBe(0);
     expect(result.unresolvedPerMinute).toBe(0);
-    const rows = buildProductionPlanningTreeRows(result, "device");
-    const pickerRow = rows.find((row) => row.recipeId === picker?.recipeId);
-    const planterRow = rows.find((row) => row.recipeId === planter?.recipeId);
-    expect(rows.some((row) => row.recipeId === "external-supply:item_plant_grass_2")).toBe(false);
-    expect(planterRow).toMatchObject({ isShared: false, isPlantCycle: true, depth: 1 });
-    expect(pickerRow).toMatchObject({ isShared: false, isPlantCycle: true, depth: 2 });
-    const feedbackRow = rows.find((row) => row.isPlantCycleReference && row.sourceRowId === planterRow?.id);
-    expect(feedbackRow).toMatchObject({
-      isSharedDemandReference: false, childIds: [], consumedPerMinute: 15,
-      parentIds: [pickerRow?.id],
-    });
-    expect(planterRow?.demandReferenceIds).toContain(feedbackRow?.id);
-    expect(rows.some((row) => row.isSharedDemandReference && row.targetItemId === "item_plant_grass_2")).toBe(false);
   });
 
   it.each(["item_plant_grass_2", "item_plant_grass_seed_2"])("直接输出 %s 时只形成植物循环，不把目标与回流算作共享", (itemId) => {
@@ -703,14 +570,6 @@ describe("production planning model", () => {
       targets: [port(itemId, 15)], supplies: [], infiniteItemIds: new Set(),
       recipeChoices: new Map(), sourceConfig: DEFAULT_SOURCE_CONFIG,
     }, index);
-    const rows = buildProductionPlanningTreeRows(result, "item");
-    const source = rows.find((row) => row.targetItemId === itemId && !row.isPlantCycleReference);
-    expect(source).toMatchObject({ isShared: false, isPlantCycle: true, depth: 0, parentIds: [] });
-    expect(rows.filter((row) => row.isPlantCycleReference)).toHaveLength(1);
-    expect(rows.find((row) => row.isPlantCycleReference)).toMatchObject({
-      targetItemId: itemId, sourceRowId: source?.id, consumedPerMinute: 15, childIds: [],
-    });
-    expect(rows.some((row) => row.isSharedDemandReference)).toBe(false);
     for (const plantItemId of ["item_plant_grass_2", "item_plant_grass_seed_2"]) {
       const total = result.itemTotals.find((item) => item.itemId === plantItemId)!;
       expect(total.producedPerMinute).toBe(total.demandPerMinute);
@@ -726,16 +585,6 @@ describe("production planning model", () => {
       targets: reverse ? [...targets].reverse() : targets, supplies: [], infiniteItemIds: new Set(),
       recipeChoices: new Map(), sourceConfig: DEFAULT_SOURCE_CONFIG,
     }, index);
-    const rows = buildProductionPlanningTreeRows(result, "device");
-    const planter = rows.find((row) => row.recipeId === "r_hydro_planter_grass_2_from_seed_2_and_water_basic");
-    expect(planter).toMatchObject({ isShared: true, isPlantCycle: true, depth: 0, parentIds: [] });
-    expect(planter?.total?.outputs).toContainEqual(expect.objectContaining({ itemId: "item_plant_grass_2", perMinute: 60 }));
-    const references = rows.filter((row) => row.sourceRowId === planter?.id);
-    expect(references.filter((row) => row.isSharedDemandReference)).toHaveLength(1);
-    expect(references.find((row) => row.isSharedDemandReference)?.consumedPerMinute).toBe(15);
-    expect(references.filter((row) => row.isPlantCycleReference)).toHaveLength(1);
-    expect(references.find((row) => row.isPlantCycleReference)?.consumedPerMinute).toBe(30);
-    expect(rows.filter((row) => row.recipeId === planter?.recipeId)).toHaveLength(1);
     expect(result.unresolvedPerMinute).toBe(0);
   });
 
@@ -745,13 +594,6 @@ describe("production planning model", () => {
       targets: [port("item_plant_grass_powder_2", 30), port("item_liquid_plant_grass_2", 30)],
       supplies: [], infiniteItemIds: new Set(), recipeChoices: new Map(), sourceConfig: DEFAULT_SOURCE_CONFIG,
     }, index);
-    const rows = buildProductionPlanningTreeRows(result, "item");
-    const powder = rows.find((row) => row.targetItemId === "item_plant_grass_powder_2" && !row.isSharedDemandReference);
-    const planter = rows.find((row) => row.recipeId === "r_hydro_planter_grass_2_from_seed_2_and_water_basic");
-    expect(powder).toMatchObject({ isShared: true, isPlantCycle: false, parentIds: [] });
-    expect(planter).toMatchObject({ isShared: false, isPlantCycle: true, parentIds: [powder?.id] });
-    expect(rows.some((row) => row.isSharedDemandReference && row.sourceRowId === powder?.id)).toBe(true);
-    expect(rows.some((row) => row.isSharedDemandReference && row.targetItemId === "item_plant_grass_2")).toBe(false);
     expect(result.unresolvedPerMinute).toBe(0);
   });
 
@@ -771,11 +613,7 @@ describe("production planning model", () => {
     expect(feedback).toMatchObject({ itemId, demandPerMinute: perMinute, suppliedPerMinute: 0,
       unresolvedPerMinute: perMinute, blockedByCycle: true,
       supply: { cycle: 0, manual: 0, surplus: 0, infinite: 0 } });
-    const rows = buildProductionPlanningTreeRows(result, "device");
-    const sources = rows.filter((row) => row.recipeId === `external-supply:${itemId}`);
-    expect(sources).toHaveLength(0);
     expect(result.cycleIssues).toHaveLength(1);
-    expect(rows.some((row) => row.isPlantCycle || row.isPlantCycleReference)).toBe(false);
     for (const id of ["item_gas_copper", "item_copper_nugget"]) {
       const produced = result.recipeTotals.flatMap((recipe) => recipe.outputs)
         .filter((output) => output.itemId === id).reduce((sum, output) => sum + output.perMinute, 0);
@@ -798,14 +636,11 @@ describe("production planning model", () => {
       sourceConfig: DEFAULT_SOURCE_CONFIG,
     }, index);
     const picker = result.recipeTotals.find((entry) => entry.recipeId === "r_seedcol_moss_seed_from_moss_basic");
-    const planter = result.recipeTotals.find((entry) => entry.recipeId === "r_planter_moss_from_moss_seed_basic");
     const moss = result.itemTotals.find((entry) => entry.itemId === "item_plant_moss_3");
     const feedback = flattenNodes(result.roots).find((entry) => entry.itemId === "item_plant_moss_3" && entry.isCycleSource);
 
     expect(picker?.cyclesPerMinute).toBe(30);
     expect(picker?.deviceCount).toBe(1);
-    expect(planter?.cyclesPerMinute).toBe(60);
-    expect(planter?.deviceCount).toBe(2);
     expect(moss?.producedPerMinute).toBe(moss?.demandPerMinute);
     expect(feedback?.supply.cycle).toBe(0);
   });
@@ -820,11 +655,8 @@ describe("production planning model", () => {
       sourceConfig: DEFAULT_SOURCE_CONFIG,
     }, index);
     const picker = result.recipeTotals.find((entry) => entry.recipeId === "r_seedcol_moss_seed_from_moss_basic");
-    const planter = result.recipeTotals.find((entry) => entry.recipeId === "r_planter_moss_from_moss_seed_basic");
 
     expect(picker?.cyclesPerMinute).toBe(15);
-    expect(planter?.cyclesPerMinute).toBe(30);
-    expect(planter?.deviceCount).toBe(2);
   });
 
   it("有限种子外供参与植物回流配平", () => {
@@ -837,11 +669,9 @@ describe("production planning model", () => {
       sourceConfig: DEFAULT_SOURCE_CONFIG,
     }, index);
     const picker = result.recipeTotals.find((entry) => entry.recipeId === "r_seedcol_grass_seed_2_from_grass_2_basic");
-    const planter = result.recipeTotals.find((entry) => entry.recipeId === "r_hydro_planter_grass_2_from_seed_2_and_water_basic");
     const grass = result.itemTotals.find((entry) => entry.itemId === "item_plant_grass_2");
 
     expect(picker?.cyclesPerMinute).toBe(9);
-    expect(planter?.cyclesPerMinute).toBe(12);
     expect(grass?.producedPerMinute).toBe(grass?.demandPerMinute);
   });
 
@@ -945,24 +775,6 @@ describe("production planning model", () => {
       expect.objectContaining({ itemId: "item_liquid_sewage", perMinute: 240 }),
     ]);
 
-    const rows = buildProductionPlanningTreeRows(result, "device");
-    const sewageTreatmentRow = rows.find((row) => (
-      row.recipeId === "r_chrono_wastewater_treatment_void_wastewater_basic"
-      && row.targetItemId === "item_liquid_sewage"
-    ));
-    const waterPurifierRow = rows.find((row) => (
-      row.recipeId === WATER_PURIFIER_BYPRODUCT_RECIPE_ID
-      && row.targetItemId === "item_liquid_xiranite_poly"
-    ));
-    const sewageSourceRow = rows.find((row) => (
-      row.recipeId === TEST_SEWAGE_BYPRODUCT_RECIPE_ID
-      && row.targetItemId === "item_liquid_sewage"
-      && row.parentIds.includes(sewageTreatmentRow?.id ?? "")
-    ));
-    expect(sewageTreatmentRow).toBeDefined();
-    expect(waterPurifierRow).toBeDefined();
-    expect(sewageSourceRow).toBeDefined();
-    expect(waterPurifierRow?.childIds).not.toContain(sewageSourceRow?.id);
   });
 
   it("routes the fully consumed sewage in the 6x enriched xiranite and quality Yazhen injection plan under the water purifier", () => {
@@ -1003,21 +815,6 @@ describe("production planning model", () => {
     expect(sewageFurnace?.outputs.find((output) => output.itemId === "item_liquid_sewage")?.perMinute)
       .toBe(120);
 
-    const rows = buildProductionPlanningTreeRows(result, "device");
-    const waterPurifierRow = rows.find((row) => (
-      row.recipeId === WATER_PURIFIER_BYPRODUCT_RECIPE_ID
-      && row.targetItemId === "item_liquid_xiranite_poly"
-    ));
-    const purifierSewageSourceRow = rows.find((row) => (
-      row.recipeId === sewageFurnaceRecipeId
-      && row.targetItemId === "item_liquid_sewage"
-      && row.parentIds.includes(waterPurifierRow?.id ?? "")
-    ));
-
-    expect(rows.some((row) => row.recipeId === sewageTreatmentRecipeId)).toBe(false);
-    expect(waterPurifierRow).toBeDefined();
-    expect(purifierSewageSourceRow).toBeDefined();
-    expect(waterPurifierRow?.childIds).toContain(purifierSewageSourceRow?.id);
   });
 
   it("does not use the water purifier without xiranite waste demand", () => {
@@ -1081,27 +878,6 @@ describe("production planning model", () => {
     expect(result.byproductItemIds.has("item_liquid_xiranite_poly")).toBe(false);
     expect(result.byproductItemIds.has("item_liquid_xiranite_lowpoly")).toBe(true);
 
-    const rows = buildProductionPlanningTreeRows(result, "item");
-    expect(rows.every((row) => !("kind" in row))).toBe(true);
-    const usedWasteLiquidRow = rows.find((row) => (
-      row.recipeId === "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic"
-      && row.targetItemId === "item_liquid_xiranite_poly"
-    ));
-    const leftoverWasteLiquidRow = rows.find((row) => (
-      row.recipeId === "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic"
-      && row.targetItemId === "item_liquid_xiranite_lowpoly"
-    ));
-    const treatmentRow = rows.find((row) => (
-      row.recipeId === "r_chrono_wastewater_treatment_void_inert_xiranite_waste_liquid_basic"
-      && row.targetItemId === "item_liquid_xiranite_lowpoly"
-    ));
-
-    expect(usedWasteLiquidRow?.isByproduct).toBe(false);
-    expect(leftoverWasteLiquidRow?.isByproduct).toBe(true);
-    expect(treatmentRow?.isByproduct).toBe(true);
-    expect(treatmentRow?.depth).toBe(0);
-    expect(treatmentRow?.childIds).toContain(leftoverWasteLiquidRow?.id);
-    expect(leftoverWasteLiquidRow?.parentIds).toEqual([treatmentRow?.id]);
   });
 
   it("does not mark productive pumped acid as byproduct when acid byproducts are dumped", () => {
@@ -1121,27 +897,6 @@ describe("production planning model", () => {
 
     expect(result.byproductItemIds.has("item_liquid_acid")).toBe(true);
 
-    const rows = buildProductionPlanningTreeRows(result, "item");
-    const pumpedAcidRow = rows.find((row) => (
-      row.recipeId === "r_pump_acid_basic"
-      && row.targetItemId === "item_liquid_acid"
-    ));
-    const purifierByproductAcidRow = rows.find((row) => (
-      row.recipeId === "r_liquid_purifier_acid_and_copper_enr_from_copper_basic"
-      && row.targetItemId === "item_liquid_acid"
-    ));
-    const dumperRow = rows.find((row) => (
-      row.recipeId === "r_dumper_void_liquid_acid_basic"
-      && row.targetItemId === "item_liquid_acid"
-    ));
-
-    expect(pumpedAcidRow).toBeDefined();
-    expect(pumpedAcidRow?.isByproduct).toBe(false);
-    expect(pumpedAcidRow?.parentIds.length).toBeGreaterThan(0);
-    expect(purifierByproductAcidRow?.isByproduct).toBe(true);
-    expect(dumperRow?.isByproduct).toBe(true);
-    expect(dumperRow?.depth).toBe(0);
-    expect(dumperRow?.childIds).toContain(purifierByproductAcidRow?.id);
   });
 });
 

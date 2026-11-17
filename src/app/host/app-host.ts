@@ -1,7 +1,6 @@
 import { CanvasInteractionController } from "../canvas";
 import type { EditorViewContract } from "@/domain/editor/editor-view-contract";
 import type { SceneSessionFactories } from "@/domain/document/scene-session";
-import { createProductionPlanningDiagnostics } from "../shell";
 import { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { AppContract } from "@/domain/app/app-contract";
 import { AppActionImpl, AppInternalAction } from "../actions/action-impl";
@@ -46,7 +45,6 @@ export interface AppHost extends AppContract {
   internalState: UiStateReadWrite;
   internalActions: AppInternalAction;
   blueprintFolderDialog: WorkbenchBlueprintFolderDialogController;
-  productionPlanningDiagnostics: ReturnType<typeof createProductionPlanningDiagnostics>;
   blueprintPreview: WorkbenchBlueprintPreviewController;
   saveBlueprintDialog: WorkbenchSaveBlueprintDialogController;
   encyclopediaPicker: WorkbenchEncyclopediaPickerController;
@@ -67,8 +65,6 @@ export function createAppHost(
   if (!embedded) regionalSimulationUiState.loadPersisted();
   const disposers: Array<() => void> = [];
   const internalState = createUiStateReadWrite();
-  const productionPlanningDiagnostics = createProductionPlanningDiagnostics(!embedded);
-  disposers.push(productionPlanningDiagnostics.dispose);
   const portPriorityDefaults = new DefaultPortPriorityController(workspace.registry);
   const regionalSettings = new RegionalSettingsController(workspace.registry);
   const host = {
@@ -171,7 +167,6 @@ export function createAppHost(
     gestureDiagnostics,
     internalState,
     blueprintFolderDialog,
-    productionPlanningDiagnostics,
     blueprintPreview,
     saveBlueprintDialog,
 
@@ -201,7 +196,7 @@ export function createAppHost(
     setDialogOffset: actionImpl.setDialogOffset,
     setDialogSize: actionImpl.setDialogSize,
     setToolboxDockPreference: actionImpl.setToolboxDockPreference,
-    startNewProductionPlanning: actionImpl.startNewProductionPlanning,
+    openCustomModuleDraft: actionImpl.openCustomModuleDraft,
     setToolboxBottomDockCollapsed: actionImpl.setToolboxBottomDockCollapsed,
     setToolboxBottomDockHeight: actionImpl.setToolboxBottomDockHeight,
     setTimelineDockPreference: actionImpl.setTimelineDockPreference,

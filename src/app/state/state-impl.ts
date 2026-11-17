@@ -227,7 +227,6 @@ export type CanvasFloatingToolbarButtonId = typeof CANVAS_FLOATING_TOOLBAR_BUTTO
 
 export const TOOLBOX_DIALOG_TAB_IDS = [
   "item-encyclopedia",
-  "production-planning",
   "module-balancing",
 ] as const;
 
@@ -473,7 +472,8 @@ export interface CanvasRuntimeStateReadWrite {
 }
 
 export interface RuntimeStateReadWrite {
-productionPlanningNewSessionRequested: boolean;
+/** 配方树转换出的模块草稿，等模块平衡打开编辑器后取走。 */
+pendingCustomModuleDraft: ModuleBalancingCustomModule | null;
 activePanel: ActivePanel;
 }
 
@@ -687,7 +687,7 @@ class CanvasRuntimeStateReadWriteImpl implements CanvasRuntimeStateReadWrite {
 }
 
 class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
-productionPlanningNewSessionRequested = false;
+pendingCustomModuleDraft: ModuleBalancingCustomModule | null = null;
 activePanel: ActivePanel = null;
 public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });

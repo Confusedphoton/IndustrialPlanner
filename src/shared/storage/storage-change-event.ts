@@ -4,8 +4,7 @@ export type StorageAssetType =
   | "blueprint-folder"
   | "custom-module"
   | "module-canvas"
-  | "regional-settings"
-  | "production-planning";
+  | "regional-settings";
 
 export type StorageChangeOrigin = "local" | "remote-sync";
 

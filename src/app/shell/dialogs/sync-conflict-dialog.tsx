@@ -392,8 +392,6 @@ function resolveConflictItemTypeLabel(
       return t("syncConflict.type.moduleCanvas");
     case "module-canvas-folders":
       return t("syncConflict.type.moduleCanvasFolder");
-    case "production-planning":
-      return t("syncConflict.type.productionPlanning");
     default:
       return t("syncConflict.type.syncData");
   }
@@ -432,8 +430,6 @@ function resolveConflictItemName(options: {
     case "module-canvas-folders":
       name = moduleBalancing.canvasFolders.find((item) => item.id === assetId)?.name;
       break;
-    case "production-planning":
-      return t("syncConflict.currentPlan");
   }
 
   return name?.trim()

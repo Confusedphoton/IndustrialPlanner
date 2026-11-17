@@ -2713,7 +2713,7 @@ describe("WorkbenchApp", () => {
       JSON.stringify(createWorkbenchStorageSnapshot({
         toolboxDialog: createDialogStateSnapshot({
           visible: true,
-          activeTab: TOOLBOX_DIALOG_TAB_IDS[2],
+          activeTab: TOOLBOX_DIALOG_TAB_IDS[1],
         }),
       })),
     );
@@ -2766,7 +2766,7 @@ describe("WorkbenchApp", () => {
       JSON.stringify(createWorkbenchStorageSnapshot({
         toolboxDialog: createDialogStateSnapshot({
           visible: true,
-          activeTab: TOOLBOX_DIALOG_TAB_IDS[2],
+          activeTab: TOOLBOX_DIALOG_TAB_IDS[1],
         }),
         moduleBalancing: createModuleBalancingStorageSnapshot({
           activeCanvasId: "activity-canvas",
@@ -2855,7 +2855,7 @@ describe("WorkbenchApp", () => {
       JSON.stringify(createWorkbenchStorageSnapshot({
         toolboxDialog: createDialogStateSnapshot({
           visible: true,
-          activeTab: TOOLBOX_DIALOG_TAB_IDS[2],
+          activeTab: TOOLBOX_DIALOG_TAB_IDS[1],
         }),
         moduleBalancing: createModuleBalancingStorageSnapshot({
           canvasFolders: [{ id: "canvas-folder-a", name: "炼铁" }],
@@ -3027,7 +3027,7 @@ describe("WorkbenchApp", () => {
       JSON.stringify(createWorkbenchStorageSnapshot({
         toolboxDialog: createDialogStateSnapshot({
           visible: true,
-          activeTab: TOOLBOX_DIALOG_TAB_IDS[2],
+          activeTab: TOOLBOX_DIALOG_TAB_IDS[1],
         }),
         moduleBalancing: createModuleBalancingStorageSnapshot({
           canvases: [{
@@ -3126,7 +3126,7 @@ describe("WorkbenchApp", () => {
       JSON.stringify(createWorkbenchStorageSnapshot({
         toolboxDialog: createDialogStateSnapshot({
           visible: true,
-          activeTab: TOOLBOX_DIALOG_TAB_IDS[2],
+          activeTab: TOOLBOX_DIALOG_TAB_IDS[1],
         }),
       })),
     );

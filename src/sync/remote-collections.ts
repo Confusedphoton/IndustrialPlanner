@@ -12,12 +12,6 @@ const IDENTITY_ASSET_ID_CODEC: SyncRemoteAssetIdCodec = {
   toAdapterAssetId: (remoteAssetId) => remoteAssetId,
 };
 
-const PLANNER_STATE_ASSET_ID_CODEC: SyncRemoteAssetIdCodec = {
-  toRemoteAssetId: (adapterAssetId) => adapterAssetId === "single" ? "default" : adapterAssetId,
-  toAdapterAssetId: (remoteAssetId) => remoteAssetId === "default" ? "single" : remoteAssetId,
-  acceptsRemoteAssetId: (remoteAssetId) => remoteAssetId === "default",
-};
-
 const REGIONAL_SETTINGS_ASSET_ID_CODEC: SyncRemoteAssetIdCodec = {
   toRemoteAssetId: (adapterAssetId) =>
     adapterAssetId === "default" ? "regional-settings" : adapterAssetId,
@@ -61,8 +55,6 @@ function resolveDefaultCollectionName(adapterId: string): string {
     case "module-canvas-folders":
     case "module-canvases":
       return "modules";
-    case "production-planning":
-      return "toolbox";
     default:
       return adapterId;
   }
@@ -90,9 +82,6 @@ function resolveDefaultAssetType(adapterId: string): SyncAssetType {
 }
 
 function resolveDefaultAssetIdCodec(adapterId: string): SyncRemoteAssetIdCodec {
-  if (adapterId === "production-planning") {
-    return PLANNER_STATE_ASSET_ID_CODEC;
-  }
   if (adapterId === "regional-settings") {
     return REGIONAL_SETTINGS_ASSET_ID_CODEC;
   }

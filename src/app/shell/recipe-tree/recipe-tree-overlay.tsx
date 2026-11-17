@@ -25,6 +25,7 @@ import LucideX from "~icons/lucide/x";
 import LucideWorkflow from "~icons/lucide/workflow";
 import LucidePanelRight from "~icons/lucide/panel-right";
 import LucidePictureInPicture from "~icons/lucide/picture-in-picture-2";
+import LucideSlidersHorizontal from "~icons/lucide/sliders-horizontal";
 import { buildProductionFlowGraph, ProductionFlowGraph } from "@/app/shell/production-planning/flow";
 
 import type { AppHost } from "@/app/host/app-host";
@@ -68,12 +69,13 @@ import { resolveOverlayBottomLimit } from "@/app/shell/layout/status-bar-bounds"
 import { canvasToolRailState } from "@/app/shell/canvas/canvas-tool-rail-state";
 import { resolveLeftDockWidthForScreenProfile } from "@/app/state/state-impl";
 import {
-  RECIPE_TREE_INFINITE_ITEM_IDS,
-  RECIPE_TREE_SOURCE_CONFIG,
+  createRecipeTreePlanRequest,
+  recipeTreePlanSettingsSignature,
   useCombinedRecipeTreePlan,
   useRecipeTreePlanningIndex,
 } from "./recipe-tree-plan";
 import { createFlowNodePlacementDrag, resolveItemSupplyPlacementTarget, resolveRecipePlacementTarget } from "./recipe-quick-actions";
+import { RecipeTreePlanSettings } from "./recipe-tree-plan-settings";
 import {
   didPanelPlacementDragJustEnd,
   resolveDevicePlacementTarget,
@@ -289,7 +291,8 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
   const docked = state.docked;
   const minimized = state.minimized && !docked;
   const showsGraph = !minimized && state.pins.length > 0 && state.viewMode === "graph";
-  const combinedPlan = useCombinedRecipeTreePlan(index, showsGraph || actionTarget !== null);
+  const showsSettings = !minimized && state.settingsOpen;
+  const combinedPlan = useCombinedRecipeTreePlan(index, showsGraph || showsSettings || actionTarget !== null);
   const liveAction = useMemo(
     () => actionTarget === null || combinedPlan === null
       ? (actionTarget === null ? null : { target: actionTarget, canChooseRecipe: true })
@@ -354,6 +357,7 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
             className={cm(styles, "recipe-tree-icon-button")}
             onClick={() => {
               state.setViewMode("tree");
+              state.setSettingsOpen(false);
               state.setStackFocus("recipe");
             }}
             title={t("recipeTree.viewTree")}
@@ -366,6 +370,7 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
             className={cm(styles, "recipe-tree-icon-button")}
             onClick={() => {
               state.setViewMode("graph");
+              state.setSettingsOpen(false);
               state.setStackFocus("recipe");
             }}
             title={t("recipeTree.viewGraph")}
@@ -374,6 +379,19 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
             <LucideWorkflow />
           </button>
         </div>
+        <button
+          aria-label={t("recipeTree.planSettings")}
+          aria-pressed={state.settingsOpen}
+          className={cm(styles, "recipe-tree-icon-button")}
+          onClick={() => {
+            state.setSettingsOpen(!state.settingsOpen);
+            state.setStackFocus("recipe");
+          }}
+          title={t("recipeTree.planSettings")}
+          type="button"
+        >
+          <LucideSlidersHorizontal />
+        </button>
         <button
           aria-label={t(docked ? "recipeTree.float" : "recipeTree.dock")}
           aria-pressed={docked}
@@ -408,10 +426,14 @@ const RecipeTreeOverlayCard = observer(function RecipeTreeOverlayCard({ appHost 
       {minimized ? null : (
         <>
           {/* 流程图视图把搜索框并入图的工具栏行，给图留出高度。 */}
-          {state.viewMode === "graph" && state.pins.length > 0 ? null : <RecipeTreeSearch appHost={appHost} index={index} t={t} />}
+          {showsSettings || (state.viewMode === "graph" && state.pins.length > 0)
+            ? null
+            : <RecipeTreeSearch appHost={appHost} index={index} t={t} />}
           <RecipeActionMenuContext.Provider value={setActionTarget}>
           <RecipeTreePlacementPressContext.Provider value={startPlacementPress}>
-            {state.pins.length === 0 ? (
+            {showsSettings ? (
+              <RecipeTreePlanSettings appHost={appHost} index={index} plan={combinedPlan} t={t} />
+            ) : state.pins.length === 0 ? (
               <div className={cm(styles, "recipe-tree-body")}>
                 <p className={cm(styles, "recipe-tree-empty")}>{t("recipeTree.empty")}</p>
               </div>
@@ -581,14 +603,19 @@ const RecipeTreePinSection = observer(function RecipeTreePinSection({
   isFirst: boolean;
   t: Translate;
 }) {
-  const plan = useMemo<ProductionPlanningResult>(() => computeProductionPlan({
-    targets: [{ id: pin.id, itemId: pin.itemId, perMinute: pin.perMinute }],
-    supplies: [],
-    infiniteItemIds: RECIPE_TREE_INFINITE_ITEM_IDS,
-    recipeChoices: new Map(Object.entries(pin.recipeChoices)),
-    sourceConfig: RECIPE_TREE_SOURCE_CONFIG,
-    useModules: false,
-  }, index), [index, pin.id, pin.itemId, pin.perMinute, pin.recipeChoices]);
+  // 外部供给属于整个规划：只钉一个目标时计入它的树；多个目标时由合并的流程图与待放清单计入，单棵树按毛需求显示。
+  const includeSupplies = recipeTreeOverlayState.pins.length === 1;
+  const settingsSignature = recipeTreePlanSettingsSignature();
+  const plan = useMemo<ProductionPlanningResult>(
+    () => computeProductionPlan(createRecipeTreePlanRequest(
+      [{ id: pin.id, itemId: pin.itemId, perMinute: pin.perMinute }],
+      new Map(Object.entries(pin.recipeChoices)),
+      { includeSupplies },
+    ), index),
+    // settingsSignature 覆盖规划设置。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [index, pin.id, pin.itemId, pin.perMinute, pin.recipeChoices, includeSupplies, settingsSignature],
+  );
   const root = plan.roots[0] ?? null;
   const itemName = resolveProductionPlanningItemName(pin.itemId, index, t);
 

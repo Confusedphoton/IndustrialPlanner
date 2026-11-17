@@ -1,7 +1,6 @@
 import { prepareLocalJsonMigration } from "@/shared/storage/migration-records";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { DataMigrationJob, DataMigrationPlan } from "@/shared/data-migration";
-import { preparePlannerStorageMigration } from "@/shared/storage/planner-storage";
 import { prepareModuleBalancingMigration } from "./storage/module-balancing-storage";
 import { prepareRegionalSettingsMigration } from "./regional-settings/storage";
 import { createUiStateReadWrite, type AppSettingsReadWrite } from "./state/state-impl";
@@ -16,7 +15,7 @@ export async function prepareAppDataMigration(registry: RegistryContract, versio
       value => normalizePersistedAppSettings(value as AppSettingsReadWrite, defaults.settings), "应用设置", version),
     await prepareLocalJsonMigration(WORKBENCH_STATE_LOCAL_STORAGE_KEY,
       value => normalizePersistedWorkbenchState(value, defaults.workbench), "工作台设置", version),
-    await prepareModuleBalancingMigration(version), await preparePlannerStorageMigration(version),
+    await prepareModuleBalancingMigration(version),
     await prepareRegionalSettingsMigration(registry.itemDefinitions, version),
   ];
   for (const plan of plans) jobs.push(...plan.jobs);

@@ -1,23 +1,20 @@
 import {
   useEffect,
   useRef,
-  useState,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
+import { runInAction } from "mobx";
 import { observer } from "mobx-react-lite";
 
 import type { AppHost } from "@/app/host/app-host";
-import type { ModuleBalancingCustomModule } from "@/app/toolbox-types";
 import { DialogShell, type DialogShellTab } from "@/app/shell/shared/dialog-shell";
 import { EncyclopediaPanel } from "@/app/shell/encyclopedia/encyclopedia-panel";
 import { ModuleBalancingPanel } from "@/app/shell/module-balancing/module-balancing-panel";
-import { ProductionPlanningPanel } from "@/app/shell/production-planning";
 import {
   canUseWorkbenchBottomDock,
   COLLAPSED_TOOLBOX_BOTTOM_DOCK_HEIGHT,
   isToolboxBottomDockActive,
-  TOOLBOX_DIALOG_TAB_IDS,
   type ToolboxDialogTabId,
 } from "@/app/state/state-impl";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
@@ -80,97 +77,47 @@ const TOOLBOX_DIALOG_TABS: Array<{
   labelKey: string;
 }> = [
   {
-    id: TOOLBOX_DIALOG_TAB_IDS[0],
+    id: "item-encyclopedia",
     labelKey: "toolboxDialog.tab.itemEncyclopedia",
   },
   {
-    id: TOOLBOX_DIALOG_TAB_IDS[1],
-    labelKey: "toolboxDialog.tab.productionPlanning",
-  },
-  {
-    id: TOOLBOX_DIALOG_TAB_IDS[2],
+    id: "module-balancing",
     labelKey: "toolboxDialog.tab.moduleBalancing",
   },
 ];
 
-function createToolboxTabs(options: {
+function useToolboxTabs(options: {
   appHost: AppHost;
   isTouch: boolean;
-  onOpenGeneratedModuleEditor: (module: ModuleBalancingCustomModule) => void;
-  onPendingCustomModuleDraftConsumed: () => void;
-  pendingCustomModuleDraft: ModuleBalancingCustomModule | null;
 }): DialogShellTab[] {
-  const {
-    appHost,
-    isTouch,
-    onOpenGeneratedModuleEditor,
-    onPendingCustomModuleDraftConsumed,
-    pendingCustomModuleDraft,
-  } = options;
+  const { appHost, isTouch } = options;
   const t = appHost.actions.translate;
-  const tabContents: Record<string, ReactNode> = {
-    [TOOLBOX_DIALOG_TAB_IDS[0]]: renderInitialSyncLockedContent({
+  const runtime = appHost.internalState.runtime;
+  const tabContents: Record<ToolboxDialogTabId, ReactNode> = {
+    "item-encyclopedia": renderInitialSyncLockedContent({
       appHost,
       feature: "toolbox",
       content: <EncyclopediaPanel appHost={appHost} isTouch={isTouch} />,
     }),
-    [TOOLBOX_DIALOG_TAB_IDS[1]]: renderInitialSyncLockedContent({
-      appHost,
-      feature: "toolbox",
-      content: (
-        <ProductionPlanningPanel
-          appHost={appHost}
-          isTouch={isTouch}
-          onOpenGeneratedModuleEditor={onOpenGeneratedModuleEditor}
-        />
-      ),
-    }),
-    [TOOLBOX_DIALOG_TAB_IDS[2]]: renderInitialSyncLockedContent({
+    "module-balancing": renderInitialSyncLockedContent({
       appHost,
       feature: "modules",
       content: (
         <ModuleBalancingPanel
           appHost={appHost}
           isTouch={isTouch}
-          onPendingCustomModuleDraftConsumed={onPendingCustomModuleDraftConsumed}
-          pendingCustomModuleDraft={pendingCustomModuleDraft}
+          onPendingCustomModuleDraftConsumed={() => runInAction(() => { runtime.pendingCustomModuleDraft = null; })}
+          pendingCustomModuleDraft={runtime.pendingCustomModuleDraft}
         />
       ),
     }),
   };
 
-  const tabs: DialogShellTab[] = TOOLBOX_DIALOG_TABS.map((tab) => {
-    const customContent = tabContents[tab.id];
-    return {
-      id: tab.id,
-      label: t(tab.labelKey),
-      content: customContent ?? (
-        <div className={cm(styles, "toolbox-dialog-content")}>
-          <div className={cm(styles, "toolbox-dialog-placeholder")}>
-            <h3>{t(tab.labelKey)}</h3>
-            <p>{t("toolboxDialog.empty")}</p>
-          </div>
-        </div>
-      ),
-    };
-  });
-
-  return tabs;
-}
-
-function useToolboxTabs(options: {
-  appHost: AppHost;
-  isTouch: boolean;
-}): DialogShellTab[] {
-  const [pendingCustomModuleDraft, setPendingCustomModuleDraft] =
-    useState<ModuleBalancingCustomModule | null>(null);
-
-  return createToolboxTabs({
-    ...options,
-    onOpenGeneratedModuleEditor: setPendingCustomModuleDraft,
-    onPendingCustomModuleDraftConsumed: () => setPendingCustomModuleDraft(null),
-    pendingCustomModuleDraft,
-  });
+  return TOOLBOX_DIALOG_TABS.map((tab) => ({
+    id: tab.id,
+    label: t(tab.labelKey),
+    content: tabContents[tab.id],
+  }));
 }
 
 export const ToolboxDialog = observer(function ToolboxDialog({ appHost }: { appHost: AppHost }) {

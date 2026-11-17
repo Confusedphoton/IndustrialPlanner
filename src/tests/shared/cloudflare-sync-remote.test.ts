@@ -282,7 +282,7 @@ describe("cloudflare-sync-remote-v2", () => {
     remote.dispose?.();
   });
 
-  it("isolates production planning and regional settings in the shared planner-state namespace", async () => {
+  it("reads regional settings without picking up the retired planner entry in the shared planner-state namespace", async () => {
     fetchMock
       .add("GET:/check", () => ({ json: {}, status: 204 }))
       .add("GET:/plan", () => ({
@@ -292,31 +292,22 @@ describe("cloudflare-sync-remote-v2", () => {
         ]),
       }));
 
-    const productionPlanning = createSyncRemoteCollection({
-      adapterId: "production-planning",
-      mode: "full-no-revision",
-      stateKey: "production-planning",
-    });
     const regionalSettings = createSyncRemoteCollection({
       adapterId: "regional-settings",
       mode: "full-with-revision",
       stateKey: "regional-settings",
     });
-    expect(productionPlanning.assetIdCodec.toRemoteAssetId("single"))
-      .toBe("default");
     expect(regionalSettings.assetIdCodec.toRemoteAssetId("default"))
       .toBe("regional-settings");
 
     const remote = createTestRemote();
     const session = await remote.beginSession({
       reason: "foreground",
-      collections: [productionPlanning, regionalSettings],
+      collections: [regionalSettings],
     });
-    await session.prefetchIndexes([productionPlanning, regionalSettings]);
+    await session.prefetchIndexes([regionalSettings]);
 
-    const productionPlanningIndex = await session.readIndex(productionPlanning);
     const regionalSettingsIndex = await session.readIndex(regionalSettings);
-    expect(Object.keys(productionPlanningIndex.entries)).toEqual(["single"]);
     expect(Object.keys(regionalSettingsIndex.entries)).toEqual(["default"]);
 
     await session.dispose?.();

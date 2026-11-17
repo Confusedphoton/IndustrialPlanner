@@ -2,10 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
 import { createWorldDocument } from "@/domain/document/world-document";
-import {
-  savePlannerState,
-  type PlannerPersistedState,
-} from "@/shared/storage/planner-storage";
+import { deleteRegionalSettingsAsset } from "@/app/regional-settings/storage";
 import { subscribeToStorageChanges } from "@/shared/storage/storage-change-event";
 import { recordWorldDocumentProjectionChange } from "@/sync/sync-host";
 import { createFakeIndexedDbFactory } from "./fake-indexed-db";
@@ -33,37 +30,13 @@ describe("sync change origin", () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
     const origins: string[] = [];
     const unsubscribe = subscribeToStorageChanges((event) => {
-      if (event.assetType === "production-planning") {
+      if (event.assetType === "regional-settings") {
         origins.push(event.origin);
       }
     });
-    const state: PlannerPersistedState = {
-      targets: [],
-      supplies: [],
-      displayMode: "item",
-      viewMode: "tree",
-      useModules: false,
-      recipeChoices: {},
-      recipeChoicesDemandSignature: null,
-      sourceConfig: {
-        waterPolicy: "use-byproduct",
-        acidPolicy: "use-byproduct",
-        sewagePolicy: "external-supply",
-        waterPurifierPolicy: "disabled",
-        includeDeviceMinimumConsumption: "fractional",
-      },
-      session: {
-        activeScreen: "input",
-        flowViewport: { x: 0, y: 0, scale: 1 },
-        treeScrollTop: 0,
-        processExpandedItems: [],
-        processViewport: { x: 0, y: 0, scale: 1 },
-      },
-    };
-
     try {
-      await savePlannerState(state);
-      await savePlannerState(state, { origin: "remote-sync" });
+      await deleteRegionalSettingsAsset();
+      await deleteRegionalSettingsAsset({ origin: "remote-sync" });
     } finally {
       unsubscribe();
     }

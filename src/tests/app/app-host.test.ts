@@ -685,10 +685,10 @@ describe("createAppTestHost", () => {
     expect(appHost.internalState.workbench.dialogState.help.maximized).toBe(false);
     expect(appHost.internalState.workbench.dialogState.help.activeTab).toBe(DEFAULT_HELP_DIALOG_TAB_ID);
 
-    appHost.internalActions.openDialog("toolbox:production-planning");
+    appHost.internalActions.openDialog("toolbox:module-balancing");
 
     expect(appHost.internalState.workbench.dialogState.toolbox.visible).toBe(true);
-    expect(appHost.internalState.workbench.dialogState.toolbox.activeTab).toBe("production-planning");
+    expect(appHost.internalState.workbench.dialogState.toolbox.activeTab).toBe("module-balancing");
 
     appHost.internalActions.closeDialog("toolbox");
 
@@ -709,7 +709,7 @@ describe("createAppTestHost", () => {
     expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBe(
       JSON.stringify(createWorkbenchStorageSnapshot({
         toolboxDialog: createDialogStateSnapshot({
-          activeTab: "production-planning",
+          activeTab: "module-balancing",
         }),
         helpDialog: createDialogStateSnapshot({
           visible: true,

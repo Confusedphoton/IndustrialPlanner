@@ -23,12 +23,6 @@ import {
   type BlueprintRecord,
 } from "@/shared/storage/blueprint-storage";
 import {
-  loadPlannerState,
-  normalizePlannerPersistedState,
-  savePlannerState,
-  type PlannerPersistedState,
-} from "@/shared/storage/planner-storage";
-import {
   deleteWorldDocument,
   listLatestWorldDocumentsByBase,
   listWorldDocuments,
@@ -40,7 +34,6 @@ import { subscribeToStorageChanges } from "@/shared/storage/storage-change-event
 import type { SnapshotChangeContext } from "@/shared/snapshot/snapshot-store";
 
 import {
-  createFullNoRevisionAdapter,
   createFullWithRevisionAdapter,
   createPatchCollectionWithRevisionAdapter,
   type SyncAdapterConflict,
@@ -368,16 +361,6 @@ export async function createSyncHost(
     return "pause";
   };
   const adapters: SyncAdapter[] = [
-    createFullNoRevisionAdapter<PlannerPersistedState>({
-      id: "production-planning",
-      remotePath: "assets/planner-state.json",
-      readLocal: async () => await loadPlannerState(),
-      writeLocal: async (value) => {
-        await savePlannerState(value, { origin: "remote-sync" });
-      },
-      normalizeRemote: normalizePlannerPersistedState,
-      resolveConflict: resolveInteractiveConflict,
-    }),
     createFullWithRevisionAdapter<BlueprintRecord>({
       id: "blueprints",
       recoverUnavailableRemote: true,
@@ -706,8 +689,6 @@ export async function createSyncHost(
       notifyLocalChange({
         adapterId: "world-documents",
       });
-    } else if (event.assetType === "production-planning") {
-      notifyLocalChange({ adapterId: "production-planning" });
     } else if (event.assetType === "blueprint") {
       notifyLocalChange({
         adapterId: "blueprints",
@@ -943,9 +924,6 @@ function resolveAdapterTaskKind(
   if (adapterId === "blueprints" || adapterId === "blueprint-folders") {
     return "blueprints";
   }
-  if (adapterId === "production-planning") {
-    return "toolbox";
-  }
   if (externalSources.some((source) => source.id === adapterId)) {
     return "modules";
   }
@@ -983,10 +961,6 @@ function createInitialSyncPlan(
         requests: externalSources.map((source) => ({
           adapterId: source.id,
         })),
-      },
-      {
-        stage: "toolbox",
-        requests: [{ adapterId: "production-planning" }],
       },
     ],
     backgroundRequests: [{

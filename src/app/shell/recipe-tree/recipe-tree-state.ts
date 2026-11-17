@@ -1,5 +1,10 @@
 import { makeAutoObservable, reaction } from "mobx";
 
+import type {
+  ProductionPlanningPort,
+  ProductionPlanningSourceConfig,
+} from "@/app/shell/production-planning/production-planning-model";
+
 /**
  * 配方树浮层的个人 UI 状态。
  *
@@ -37,6 +42,15 @@ const DEFAULT_RECT: RecipeTreeOverlayRect = { x: -1, y: 72, width: 380, height: 
 
 export type RecipeTreeViewMode = "tree" | "graph";
 
+/** 规划的来源策略默认值：副产水与酸液回用、污水外部供给、不用净水节点、按比例计入设备最低消耗。 */
+export const DEFAULT_RECIPE_TREE_SOURCE_CONFIG: ProductionPlanningSourceConfig = {
+  waterPolicy: "use-byproduct",
+  acidPolicy: "use-byproduct",
+  sewagePolicy: "external-supply",
+  waterPurifierPolicy: "disabled",
+  includeDeviceMinimumConsumption: "fractional",
+};
+
 interface PersistedRecipeTreeState {
   readonly docked?: unknown;
   readonly dockWidth?: unknown;
@@ -47,6 +61,9 @@ interface PersistedRecipeTreeState {
   readonly rect?: unknown;
   readonly pins?: unknown;
   readonly collapsedNodeIds?: unknown;
+  readonly supplies?: unknown;
+  readonly sourceConfig?: unknown;
+  readonly useModules?: unknown;
 }
 
 export class RecipeTreeOverlayState {
@@ -70,6 +87,13 @@ export class RecipeTreeOverlayState {
   public pins: RecipeTreePin[] = [];
   /** 折叠的树节点：`${pinId}:${nodePath}`。 */
   public collapsedNodeIds: string[] = [];
+  /** 外部供给：已有的原料来源，规划时先用它们再安排生产。 */
+  public supplies: ProductionPlanningPort[] = [];
+  public sourceConfig: ProductionPlanningSourceConfig = DEFAULT_RECIPE_TREE_SOURCE_CONFIG;
+  /** 规划时可以用模块平衡里的模块代替整段生产。 */
+  public useModules = false;
+  /** 规划设置视图取代树/流程图（不持久化）。 */
+  public settingsOpen = false;
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
@@ -195,6 +219,33 @@ export class RecipeTreeOverlayState {
     this.updatePin(pinId, { recipeChoices });
   }
 
+  public setSettingsOpen(open: boolean): void {
+    this.settingsOpen = open;
+  }
+
+  public addSupply(itemId: string, perMinute: number): void {
+    if (this.supplies.some((supply) => supply.itemId === itemId)) {
+      return;
+    }
+    this.supplies = [...this.supplies, { id: createSupplyId(), itemId, perMinute }];
+  }
+
+  public updateSupply(supplyId: string, patch: Partial<Omit<ProductionPlanningPort, "id">>): void {
+    this.supplies = this.supplies.map((supply) => (supply.id === supplyId ? { ...supply, ...patch } : supply));
+  }
+
+  public removeSupply(supplyId: string): void {
+    this.supplies = this.supplies.filter((supply) => supply.id !== supplyId);
+  }
+
+  public setSourceConfig(patch: Partial<ProductionPlanningSourceConfig>): void {
+    this.sourceConfig = { ...this.sourceConfig, ...patch };
+  }
+
+  public setUseModules(useModules: boolean): void {
+    this.useModules = useModules;
+  }
+
   public isNodeCollapsed(nodeId: string): boolean {
     return this.collapsedNodeIds.includes(nodeId);
   }
@@ -227,6 +278,11 @@ export class RecipeTreeOverlayState {
     this.collapsedNodeIds = Array.isArray(raw.collapsedNodeIds)
       ? raw.collapsedNodeIds.filter((nodeId): nodeId is string => typeof nodeId === "string")
       : [];
+    this.supplies = Array.isArray(raw.supplies)
+      ? raw.supplies.map(normalizeSupply).filter((supply): supply is ProductionPlanningPort => supply !== null)
+      : [];
+    this.sourceConfig = normalizeSourceConfig(raw.sourceConfig);
+    this.useModules = raw.useModules === true;
   }
 
   public toPersisted(): PersistedRecipeTreeState {
@@ -240,6 +296,9 @@ export class RecipeTreeOverlayState {
       rect: this.rect,
       pins: this.pins,
       collapsedNodeIds: this.collapsedNodeIds,
+      supplies: this.supplies,
+      sourceConfig: this.sourceConfig,
+      useModules: this.useModules,
     };
   }
 }
@@ -331,6 +390,46 @@ function normalizePin(value: unknown): RecipeTreePin | null {
     recipeChoices: normalizedChoices,
     collapsed: collapsed === true,
   };
+}
+
+function normalizeSupply(value: unknown): ProductionPlanningPort | null {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+  const { id, itemId, perMinute, isInfinite } = value as Record<string, unknown>;
+  if (typeof id !== "string" || typeof itemId !== "string") {
+    return null;
+  }
+  return {
+    id,
+    itemId,
+    perMinute: typeof perMinute === "number" && Number.isFinite(perMinute) && perMinute >= 0 ? perMinute : 0,
+    ...(isInfinite === true ? { isInfinite: true } : {}),
+  };
+}
+
+function pickOption<T extends string>(value: unknown, options: readonly T[], fallback: T): T {
+  return options.includes(value as T) ? value as T : fallback;
+}
+
+function normalizeSourceConfig(value: unknown): ProductionPlanningSourceConfig {
+  const raw = typeof value === "object" && value !== null ? value as Record<string, unknown> : {};
+  const fallback = DEFAULT_RECIPE_TREE_SOURCE_CONFIG;
+  return {
+    waterPolicy: pickOption(raw.waterPolicy, ["use-byproduct", "dump-byproduct"], fallback.waterPolicy),
+    acidPolicy: pickOption(raw.acidPolicy, ["use-byproduct", "dump-byproduct"], fallback.acidPolicy),
+    sewagePolicy: pickOption(raw.sewagePolicy, ["external-supply", "self-produce"], fallback.sewagePolicy),
+    waterPurifierPolicy: pickOption(raw.waterPurifierPolicy, ["disabled", "use-when-available"], fallback.waterPurifierPolicy),
+    includeDeviceMinimumConsumption: pickOption(
+      raw.includeDeviceMinimumConsumption,
+      ["none", "fractional", "ceil"],
+      fallback.includeDeviceMinimumConsumption,
+    ),
+  };
+}
+
+function createSupplyId(): string {
+  return `supply-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function createPinId(): string {
