@@ -43,7 +43,7 @@ Desktop, tablets and landscape phones are supported; portrait phones show a rota
 | Place a row · 铺一排 | Drag with a device in hand<br>手持设备拖动 | Long-press the preview, then drag<br>长按预览后拖动 | Drag with a device in hand<br>手持设备拖动 |
 | Rotate · 旋转 | Double-tap the device or preview<br>双击设备或预览 | Double-tap the device or preview<br>双击设备或预览 | Double-click / rotate key<br>双击 / 旋转快捷键 |
 | Copy a placed device · 复制已放置设备 | Barrel tap it (barrel drag drags out a copy)<br>侧键点设备（侧键拖动拖出副本） | Place Another in the device actions<br>设备操作里的“再放一台” | Right click it<br>右键设备 |
-| Delete · 删除 | Eraser end<br>笔的橡皮擦端 | Delete in the device actions<br>设备操作里的删除 | Delete key<br>Delete 键 |
+| Delete · 删除 | Eraser end, or scratch back and forth across devices (start beside them)<br>笔的橡皮擦端，或从设备旁起笔来回涂抹划过设备 | Delete in the device actions<br>设备操作里的删除 | Delete key<br>Delete 键 |
 | Undo / redo · 撤销 / 重做 | Rail buttons<br>工具条按钮 | Two-finger tap / three-finger tap<br>双指点按 / 三指点按 | Shortcuts or rail buttons<br>快捷键或工具条按钮 |
 
 - Dragging a preview, a belt or a pipe to the edge of the canvas pans the map. The tool rail counts as an edge.<br>拖动预览或传送带、管道到画布边缘时地图会跟着平移，工具条也算边缘。
@@ -54,15 +54,28 @@ Desktop, tablets and landscape phones are supported; portrait phones show a rota
 ![Finger port handles: select a device, drag a handle to draw a belt, then the + chip offers a consumer · 端口把手：选中设备，拖动把手拉出传送带，末端的 + 提示可接上消费设备](.github/readme-assets/port-handles.png)
 
 - **Draw from a port.** With a pen or mouse, drag from a device's port or the open end of a belt or pipe to draw a line. Release to commit.<br>**从端口拉线。** 用笔或鼠标从设备端口或传送带、管道的开放末端拖出即可铺线，抬起提交。
+- **Auto-routing.** Draw toward a machine and, once the pen is on it, the line finds its own way into a free input around anything in the way, keeping close to where your stroke went. Existing lines are crossed with bridges. The mouse tools fall back to the same router when a single bend is blocked.<br>**自动寻路。** 朝一台设备画过去，笔一落到它上面，线就自己绕开障碍接进空闲的输入口，并尽量贴着笔画走过的位置；遇到已有的线用桥接器穿过。鼠标工具一次转弯走不通时也改用自动寻路。
+- **Several lines in one stroke.** Start on an output, slide along the machine's edge across its neighbouring free outputs, then pull away: every output you swept gets its own line, running parallel and nesting at turns.<br>**一笔多线。** 从一个输出口起笔，先沿设备边划过相邻的空闲输出口，再拉离设备：划过的每个口各铺一条线，彼此平行，转弯时内外嵌套。
 - **Port handles for fingers.** Tap a device or line segment with a finger and arrow handles appear beyond its free ports. Drag one to draw a line out of an output or into an input. One-finger pan and long-press move still work on the device itself.<br>**手指用端口把手。** 手指点选设备或线段后，空闲端口外侧出现箭头把手，拖动即从输出口拉出或向输入口接入。在设备本身上单指平移、长按移动照旧。
 - **Add a machine at the line end.** When a line drawn from a device ends in open space, a **+** chip appears beyond its end. Tap it to list the machines that consume what the line carries, then pick one to snap it onto the end with a matching input port, as one undo step.<br>**在线末端接上设备。** 从设备拉出的线末端悬空时，末端外侧出现 **+** 提示。点开列出消费线上物品的设备，选一个即以匹配的输入口接在末端，一步即可撤销。
 
-![The + chip lists machines that consume carbon from a Refining Unit · + 提示列出消费精炼炉所产碳块的设备](.github/readme-assets/line-end-chip.png)
+- **Chain the next machine.** Picking a machine at the **+** chip also lays one cell out of its product output and moves the chip there, so you can build a line machine by machine. With a plan pinned, the plan's machines come first with their *placed / needed* counts.<br>**接着往下铺。** 在 **+** 提示里选好设备后，它的产物输出口外会伸出一格线，提示随即移到那里，可以一台接一台地往下铺。钉了规划时，规划里的设备排在最前并显示“已放 / 需要”。
+
+![The + chip lists machines that consume carbon from a Refining Unit · + 提示列出消费精炼炉所产碳块的设备](.github/readme-assets/line-end-chip.png) ![Three parallel belts combed out of a Refining Unit in one stroke · 一笔从精炼炉梳出三条平行传送带](.github/readme-assets/comb.png)
+
+### Read a line · 线上读数
+
+![Hovering a belt shows its item, supply, capacity, demand and live flow · 悬停在传送带上显示物品、产量、运力、用量与实测流量](.github/readme-assets/line-readout.png)
+
+Hover a belt or pipe with the pen or mouse (or select one segment with a finger) to highlight the whole line and see what it carries: what the source machine makes, what the line can carry, what the next machine uses and, while the simulation runs, what is actually flowing. It warns when a line is over capacity or short of what the next machine needs.
+
+笔或鼠标悬停在传送带、管道上（手指则点选一段线），整条线高亮并显示它运的物品：上游产出、线的运力、下游用量，仿真运行时还有实测流量；超出运力或不够下游使用时会提示。
 
 ### From plan to factory · 从规划到产线
 
 - **Recipe Tree.** Pin target items and rates; the tree shows the whole chain with machine counts, by-products and raw inputs, as a tree or as a flow graph that fits narrow docks and short windows.<br>**配方树。** 钉住目标物品与产量，按树或流程图显示整条生产链、设备数、副产物和原料，窄停靠栏与矮窗口也能看清。
-- **To-do list.** The pinned plan appears at the top of the palette as device tiles with *placed / needed* counts. Tapping one hands you the device with its recipe already set.<br>**待放置清单。** 钉住的规划以设备磁贴的形式显示在面板顶部，带“已放 / 需要”计数；点按即拿到已设好配方的设备。
+- **To-do list.** The pinned plan appears at the top of the palette as device tiles with *placed / needed* counts. Tapping one hands you the device with its recipe already set. Machines with no recipe set count toward the plan for their type.<br>**待放置清单。** 钉住的规划以设备磁贴的形式显示在面板顶部，带“已放 / 需要”计数；点按即拿到已设好配方的设备。没设配方的同型号设备也计入。
+- **Pour the plan into a loop.** With a plan pinned, draw a closed loop with the pen on empty canvas: every machine the plan still needs is laid out inside it with its recipe, one stage per column from raw inputs to the target, leaving room for belts. Machines that must go elsewhere (such as fluid pumps on the base edge) stay on the to-do list.<br>**把规划倒进圈里。** 钉了规划时，用笔在空白处画一个闭合的圈：规划里还缺的设备连同配方摆进圈里，从原料到产物每个阶段一列，列间留出铺线的空隙。必须放在别处的设备（例如贴着基地外缘的水泵）留在待放清单里。
 - **Holding tray.** *Hold* lifts the selected devices off the canvas into a tray on the hotbar, together with their recipes, relative layout and the belts and pipes between them. Tap the entry to place the group again; it leaves the tray only once placed.<br>**暂存托盘。** “暂存”把选中的设备连同配方、相对布局和其间的传送带、管道一起收进快捷栏的托盘；点按条目即可重新放置，放下后才从托盘移除。
 - **Depot bus.** With a pen or mouse, drag from a Depot Bus Port or Section to lay sections along the drag.<br>**存取线。** 用笔或鼠标从存取线源桩或存取线基段拖动，即沿拖动方向铺设基段。
 
