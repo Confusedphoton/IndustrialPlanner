@@ -8,6 +8,7 @@ import { CanvasHotbar } from "@/app/shell/canvas/canvas-hotbar";
 import { PLACEMENT_SHELF_WIDTH_PX, placementShelfState } from "@/app/shell/panels/placement-shelf-state";
 import { MarkingMenuOverlay } from "@/app/shell/canvas/marking-menu-overlay";
 import { LineEndChipOverlay } from "@/app/shell/canvas/line-end-chip-overlay";
+import { LineProbeOverlay } from "@/app/shell/canvas/line-probe-overlay";
 import { PortDragHandles } from "@/app/shell/canvas/port-drag-handles";
 import { CanvasToolRail } from "@/app/shell/canvas/canvas-tool-rail";
 import { canvasToolRailState } from "@/app/shell/canvas/canvas-tool-rail-state";
@@ -1317,6 +1318,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
         <MarkingMenuOverlay appHost={appHost} />
         <PortDragHandles appHost={appHost} />
         <LineEndChipOverlay appHost={appHost} />
+        <LineProbeOverlay appHost={appHost} />
         {canvasTopLeftCornerToolbar.visible && canvasTopLeftCornerToolbar.buttonIds.length > 0 ? (
           <CanvasTopLeftCornerToolbar
             canvas={appHost.mainCanvas}

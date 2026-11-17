@@ -2,21 +2,18 @@ import { runInAction } from "mobx";
 
 import type { CanvasInteractionController } from "@/app/canvas";
 import { resolveLineEndOutputStub, resolveLineEndSnapPlacements } from "@/app/canvas/line-end-chip";
+import { resolveLineEdge, traceLine } from "@/app/canvas/line-trace";
 import type { AppHost } from "@/app/host/app-host";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { EditorContract } from "@/domain/editor/editor-contract";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
-import type { RegistryQuery } from "@/domain/registry/registry-query";
 import type { GridEdge, GridPoint } from "@/domain/shared/grid";
 import type { LogisticsKind } from "@/domain/shared/logistics";
 import { outputPortItemIds } from "@/shared/device-item-labels";
-import { resolveGridEdgeDelta, rotateGridEdge } from "@/shared/geometry/port";
+import { resolveGridEdgeDelta } from "@/shared/geometry/port";
 
 import type { GestureMappingModule } from "../types";
 import { holdDeviceForPlacement } from "./hypergryph-single-placement-gesture-module";
-
-/** 向上游追溯物流线的最大格数，防止环线。 */
-const MAX_TRACE_CELLS = 4096;
 
 /**
  * 只观察不消费：线末端提示出现后，画布上的下一次点按、长按、从设备上开始的拖动、按 Esc 或切换工具都让它消失。
@@ -174,11 +171,6 @@ export function isOpenBeyondLine(
   return endpoint?.type === "empty-cell" || (endpoint?.type === "device-port" && endpoint.entityId === line.id);
 }
 
-function resolveLineEdge(registry: RegistryQuery, line: WorldEntity, direction: "input" | "output"): GridEdge | null {
-  const port = registry.findEntityDefinition(line.definitionId)?.portGroups.find((group) => group.direction === direction)?.ports[0];
-  return port === undefined ? null : rotateGridEdge(port.edge, line.rotation);
-}
-
 /** 沿线逆流找到上游设备的输出端口，取该端口运送的物品；中途遇到分流器等物流设备时不再追溯。 */
 function traceLineItemIds(
   canvas: CanvasInteractionController,
@@ -186,31 +178,9 @@ function traceLineItemIds(
   kind: LogisticsKind,
   endCell: GridPoint,
 ): string[] {
-  const registry = canvas.registry.queries;
-  const visited = new Set<string>();
-  let cell = endCell;
-  for (let step = 0; step < MAX_TRACE_CELLS; step += 1) {
-    const line = editor.queries.findTransportLineAtGridPoint(cell, kind);
-    const inputEdge = line === null || visited.has(line.id) ? null : resolveLineEdge(registry, line, "input");
-    if (line === null || inputEdge === null) {
-      return [];
-    }
-    visited.add(line.id);
-    const delta = resolveGridEdgeDelta(inputEdge);
-    const upstream = { x: cell.x + delta.x, y: cell.y + delta.y };
-    if (editor.queries.findTransportLineAtGridPoint(upstream, kind) !== null) {
-      cell = upstream;
-      continue;
-    }
-    const port = editor.queries.findDevicePortAtGridPoint(upstream);
-    if (port === null || port.kind !== kind || port.endpoint.portDirection !== "output") {
-      return [];
-    }
-    const device = editor.queries.getEntityById(port.endpoint.entityId);
-    const definition = device === null ? null : canvas.registry.queries.findEntityDefinition(device.definitionId);
-    return device === null || definition === null
-      ? []
-      : [...outputPortItemIds(definition, device, port.endpoint.portGroupId, canvas.registry)];
-  }
-  return [];
+  const source = traceLine(editor, canvas.registry.queries, kind, endCell)?.source ?? null;
+  const definition = source === null ? null : canvas.registry.queries.findEntityDefinition(source.entity.definitionId);
+  return source === null || definition === null
+    ? []
+    : [...outputPortItemIds(definition, source.entity, source.portGroupId, canvas.registry)];
 }

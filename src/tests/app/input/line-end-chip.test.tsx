@@ -4,7 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AppHost } from "@/app/host/app-host";
 import { resolveLineEndSnapPlacements } from "@/app/canvas/line-end-chip";
+import { configuredRecipeIds, resolveRecipeItemRatePerMinute, traceLine } from "@/app/canvas/line-trace";
 import {
+  closeLineEndChip,
   placeConsumerAtLineEnd,
   resolveLineEndTarget,
   resolvePortDragHandles,
@@ -301,6 +303,78 @@ describe("drawing a line out of a port with a finger", () => {
 
     expect(entities(appHost)).toHaveLength(1);
     expect(appHost.workspace.editor!.queries.resolveLogisticsDraftState()).toBeNull();
+  });
+});
+
+describe("reading a line under the pen", () => {
+  it("traces the line to the machine feeding it and reads that machine's output rate", async () => {
+    const appHost = await createAppHost([furnace({ recipe: true })]);
+    const { inside, delta } = furnaceBeltOutput(appHost);
+    const end = { x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 };
+    penDrag(appHost, inside, [end]);
+    closeLineEndChip(appHost.mainCanvas);
+
+    const trace = traceLine(appHost.workspace.editor!, appHost.workspace.registry.queries, "belt", end)!;
+    expect(trace.cells).toHaveLength(4);
+    expect(trace.cells[0]!.cell).toEqual({ x: inside.x + delta.x, y: inside.y + delta.y });
+    expect(trace.source?.entity.id).toBe("furnace");
+    expect(trace.sink).toBeNull();
+    const recipe = appHost.workspace.registry.queries.findRecipeDefinition(IRON_NUGGET_RECIPE_ID)!;
+    const perMinute = recipe.outputs.find((flow) => flow.itemId === "item_iron_nugget")!.amount * 60 / recipe.durationSeconds;
+    const recipeIds = configuredRecipeIds(trace.source!.entity);
+    expect(resolveRecipeItemRatePerMinute(appHost.workspace.registry, recipeIds, ["item_iron_nugget"], "output")).toBeCloseTo(perMinute);
+    // 不产出该物品的配方不算速率。
+    expect(resolveRecipeItemRatePerMinute(appHost.workspace.registry, recipeIds, ["item_iron_powder"], "output")).toBeNull();
+
+    // 悬停在线上即记下读数位置，离开线就收起。
+    appHost.gestureAdapter.handlePointerMove(pointer(appHost, end, 0));
+    appHost.gestureAdapter.advanceFrame(0);
+    expect(appHost.mainCanvas.state.runtime.lineProbe).toMatchObject({ kind: "belt", cell: end });
+    appHost.gestureAdapter.handlePointerMove(pointer(appHost, { x: end.x + 6, y: end.y + 6 }, 0));
+    appHost.gestureAdapter.advanceFrame(0);
+    expect(appHost.mainCanvas.state.runtime.lineProbe).toBeNull();
+  });
+
+  it("follows the line across a bridge where another line crosses it", async () => {
+    const appHost = await createAppHost([furnace({ recipe: true })]);
+    const { inside, delta } = furnaceBeltOutput(appHost);
+    const end = { x: inside.x + delta.x * 6, y: inside.y + delta.y * 6 };
+    penDrag(appHost, inside, [end]);
+    // 一条垂直的线从第三格横穿过去，交叉处生成桥接器。
+    const side = { x: delta.y, y: delta.x };
+    const crossing = { x: inside.x + delta.x * 3, y: inside.y + delta.y * 3 };
+    const editor = appHost.workspace.editor!;
+    editor.actions.createLogisticsDraftStart({ kind: "belt", source: { type: "empty-cell", gridPoint: { x: crossing.x - side.x * 3, y: crossing.y - side.y * 3 } } });
+    editor.actions.moveLogisticEnd({ pointerGridPoint: { x: crossing.x + side.x * 3, y: crossing.y + side.y * 3 }, routeMode: { type: "freehand" } });
+    editor.actions.applyLogisticDraft();
+    expect(appHost.workspace.registry.queries.resolveLogisticsRole(
+      editor.queries.findDevicePortAtGridPoint(crossing) === null ? "" : editor.queries.getEntityById(editor.queries.findDevicePortAtGridPoint(crossing)!.endpoint.entityId)!.definitionId,
+    )).toBe("connector");
+
+    const trace = traceLine(editor, appHost.workspace.registry.queries, "belt", end)!;
+    expect(trace.source?.entity.id).toBe("furnace");
+    expect(trace.cells.some((entry) => entry.cell.x === crossing.x && entry.cell.y === crossing.y)).toBe(true);
+  });
+
+  it("does not follow a parallel line that is not joined to it", async () => {
+    const appHost = await createAppHost([furnace({ recipe: true })]);
+    const definition = appHost.workspace.registry.queries.findEntityDefinition(FURNACE_ID)!;
+    const ports = definition.portGroups.find((group) => group.direction === "output" && !group.isPipe)!.ports;
+    const insides = ports.slice(0, 2).map((port) => {
+      const geometry = resolveRotatedPortGeometry({ footprint: definition.footprint, port, rotation: 0 });
+      return { inside: { x: 30 + geometry.cell.x, y: 30 + geometry.cell.y }, delta: geometry.delta };
+    });
+    for (const { inside, delta } of insides) {
+      penDrag(appHost, inside, [{ x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 }]);
+    }
+
+    const [first] = insides;
+    const trace = traceLine(appHost.workspace.editor!, appHost.workspace.registry.queries, "belt",
+      { x: first!.inside.x + first!.delta.x * 2, y: first!.inside.y + first!.delta.y * 2 })!;
+    expect(trace.cells).toHaveLength(4);
+    expect(new Set(trace.cells.map((entry) => entry.cell.x * 1000 + entry.cell.y)).size).toBe(4);
+    expect(trace.cells.every((entry) => (entry.cell.x - first!.inside.x) * first!.delta.y === 0
+      && (entry.cell.y - first!.inside.y) * first!.delta.x === 0)).toBe(true);
   });
 });
 

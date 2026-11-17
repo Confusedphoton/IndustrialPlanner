@@ -138,18 +138,12 @@ export function resolveLineEndOutputStub(options: {
   return best === undefined ? null : { kind: best.kind, definitionId: best.definitionId, cell: best.cell, rotation: best.rotation };
 }
 
-/** 该族的直线段定义（输入与输出在相对两边）及其未旋转时的输出边。 */
+/** 该族的直线段定义及其未旋转时的输出边。 */
 function resolveStraightLineDefinition(
   registry: RegistryContract,
   kind: LogisticsKind,
 ): { readonly definitionId: string; readonly outputEdge: GridEdge } | null {
-  for (const definition of registry.entityDefinitions) {
-    if (kind === "belt" ? !registry.queries.isBelt(definition.id) : !registry.queries.isPipe(definition.id)) continue;
-    const input = definition.portGroups.find((group) => group.direction === "input")?.ports[0];
-    const output = definition.portGroups.find((group) => group.direction === "output")?.ports[0];
-    if (input !== undefined && output !== undefined && oppositeGridEdge(input.edge) === output.edge) {
-      return { definitionId: definition.id, outputEdge: output.edge };
-    }
-  }
-  return null;
+  const definition = registry.queries.findEntityDefinition(registry.queries.resolveLogisticsDefinitionId(kind, "straight"));
+  const output = definition?.portGroups.find((group) => group.direction === "output")?.ports[0];
+  return definition === null || output === undefined ? null : { definitionId: definition.id, outputEdge: output.edge };
 }

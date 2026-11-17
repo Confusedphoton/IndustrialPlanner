@@ -41,6 +41,7 @@ import {
 import { createHypergryphRotateSelectionGestureModule } from "./hypergryph/hypergryph-rotate-selection-gesture-module";
 import { createHypergryphPenEraserGestureModule } from "./hypergryph/hypergryph-pen-eraser-gesture-module";
 import { createHypergryphScratchOutGestureModule } from "./hypergryph/hypergryph-scratch-out-gesture-module";
+import { createHypergryphLineProbeGestureModule } from "./hypergryph/hypergryph-line-probe-gesture-module";
 import { createHypergryphPenTiltFacingModule } from "./hypergryph/hypergryph-pen-tilt-facing-module";
 import { createHypergryphHoldingTrayGestureModule } from "./hypergryph/hypergryph-holding-tray-gesture-module";
 import { createHypergryphPaintRowGestureModule } from "./hypergryph/hypergryph-paint-row-gesture-module";
@@ -94,6 +95,7 @@ export class AppGestureModuleRegistrar {
     register("logistics-placement", createHypergryphLogisticsPlacementGestureModule());
     register("logistics-placement", createHypergryphPortDragLogisticsGestureModule(options.canvas));
     register("logistics-placement", createHypergryphLineEndChipGestureModule());
+    register("select", createHypergryphLineProbeGestureModule());
     register("confirm-placement", createHypergryphBusExtendGestureModule());
     register("confirm-placement", createHypergryphEyedropperGestureModule());
     register("confirm-placement", createHypergryphMarkingMenuGestureModule());

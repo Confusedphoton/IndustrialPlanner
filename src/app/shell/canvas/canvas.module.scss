@@ -1418,3 +1418,77 @@
   background: var(--surface-2);
   color: var(--text-0);
 }
+
+// 线上读数：整条线的半透明高亮，与指针旁的小卡片；都不接收指针，不挡住画布操作。
+.line-probe-path {
+  position: fixed;
+  inset: 0;
+  z-index: 7;
+  width: 100vw;
+  height: 100vh;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.line-probe-path polyline {
+  fill: none;
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.5;
+}
+
+.line-probe-card {
+  position: fixed;
+  z-index: 9;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-1);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 18%);
+  color: var(--text-1);
+  font-size: 12px;
+  line-height: 1.35;
+  pointer-events: none;
+}
+
+.line-probe-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-0);
+  font-size: 13px;
+}
+
+.line-probe-title img {
+  width: 22px;
+  height: 22px;
+}
+
+.line-probe-bar {
+  display: block;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--surface-3);
+}
+
+.line-probe-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.line-probe-bar.is-over > span,
+.line-probe-warning {
+  color: var(--danger);
+  background: var(--danger);
+}
+
+.line-probe-warning {
+  background: none;
+  font-weight: 600;
+}

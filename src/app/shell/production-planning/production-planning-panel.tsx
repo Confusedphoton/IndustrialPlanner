@@ -35,10 +35,7 @@ import {
   isRecipeAvailableByActivity,
   resolveEffectiveActivityIds,
 } from "@/shared/registry/activity-availability";
-import {
-  BELT_TRANSPORT_DURATION_SECONDS,
-  PIPE_TRANSPORT_DURATION_SECONDS,
-} from "@/domain/registry";
+import { resolveLogisticsThroughputPerMinute } from "@/domain/registry";
 import {
   LOGISTICS_KIND,
   type LogisticsKind,
@@ -1602,7 +1599,7 @@ function ProductionPlanningLogisticsRate({
   t: (key: string) => string;
 }) {
   const logisticsKind = resolveProductionPlanningLogisticsKind(itemId, index);
-  const count = Math.ceil(flowPerMinute / resolveProductionPlanningLogisticsThroughput(logisticsKind));
+  const count = Math.ceil(flowPerMinute / resolveLogisticsThroughputPerMinute(logisticsKind));
   const entityId = index.registryQueries.resolveLogisticsDefinitionId(
     logisticsKind,
     "straight",
@@ -2955,13 +2952,7 @@ function resolveProductionPlanningLogisticsKind(
     : LOGISTICS_KIND.belt;
 }
 
-function resolveProductionPlanningLogisticsThroughput(kind: LogisticsKind): number {
-  const secondsPerCell = kind === LOGISTICS_KIND.pipe
-    ? PIPE_TRANSPORT_DURATION_SECONDS
-    : BELT_TRANSPORT_DURATION_SECONDS;
-  const itemsPerCycle = 1;
-  return (60 * itemsPerCycle) / secondsPerCell;
-}
+
 
 
 

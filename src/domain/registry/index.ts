@@ -45,6 +45,7 @@ export type {
 export {
 	BELT_TRANSPORT_DURATION_SECONDS,
 	PIPE_TRANSPORT_DURATION_SECONDS,
+	resolveLogisticsThroughputPerMinute,
 	ADMISSION_RATE_WINDOWS_PER_MINUTE,
 } from "./types/logistics-constants";
 export type { ItemDefinition } from "./types/item-definition";

@@ -3,6 +3,7 @@ import type { SceneViewInput } from "@/domain/document/scene-view-input";
 import type { SceneTimePolicy } from "@/domain/shared/scene-time";
 import type { DragEvent } from "react";
 import type { AppHost } from "@/app/host/app-host";
+import { closeLineProbe } from "@/app/input/gesture/actions";
 import type { LongPressState } from "@/app/input/gesture/adapter";
 import type { GestureDiagnosticsSnapshot } from "@/app/input/gesture/diagnostics";
 import { useViewportResizeAdapter } from "@/app/shell/canvas/viewport-resize-adapter";
@@ -178,6 +179,10 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost, canvas = app
   const handlePointerUp = (event: PointerEvent<HTMLElement>) => {
     gestureAdapter.handlePointerUp(event);
   };
+  // 笔离开感应范围或指针移出画布时，悬停读数随之收起。
+  const handlePointerLeave = () => {
+    closeLineProbe(canvas);
+  };
 
   // 通过原生 DOM document capture 阶段阻止来自 canvas-panel 内部的 touch/pen 事件
   // 合成 compat mouse/click 事件，避免 ghost click 穿透到后续渲染的 dialog。
@@ -236,6 +241,7 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost, canvas = app
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerLeave}
       onWheel={handleWheel}
       onKeyDown={event => {
         if (!scopedKeyboard) return;
