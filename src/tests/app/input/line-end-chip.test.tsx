@@ -216,6 +216,31 @@ describe("drawing a line out of a port with a finger", () => {
     expect(entities(appHost).filter((entity) => entity.definitionId.startsWith("belt"))).toHaveLength(6);
   });
 
+  it("drops the line when the tool changes or input is cancelled mid-drag", async () => {
+    const appHost = await createAppHost([furnace({ recipe: true })]);
+    const { inside, delta } = furnaceBeltOutput(appHost);
+    const touch = (cell: GridPoint, buttons: number) => ({ ...pointer(appHost, cell, buttons), pointerType: "touch", pointerId: 11 });
+    const midway = { x: inside.x + delta.x * 4, y: inside.y + delta.y * 4 };
+
+    appHost.gestureAdapter.handlePointerDown(touch(inside, 1));
+    appHost.gestureAdapter.handlePointerMove(touch(midway, 1));
+    appHost.gestureAdapter.advanceFrame(0);
+    appHost.mainCanvas.actions.setActiveTool("marquee");
+    appHost.gestureAdapter.handlePointerMove(touch({ x: midway.x + delta.x, y: midway.y + delta.y }, 1));
+    appHost.gestureAdapter.advanceFrame(0);
+    appHost.gestureAdapter.handlePointerUp(touch(midway, 0));
+    expect(entities(appHost)).toHaveLength(1);
+
+    appHost.mainCanvas.actions.setActiveTool("select");
+    appHost.gestureAdapter.handlePointerDown(touch(inside, 1));
+    appHost.gestureAdapter.handlePointerMove(touch(midway, 1));
+    appHost.gestureAdapter.advanceFrame(0);
+    appHost.mainCanvas.cancelInput();
+    appHost.gestureAdapter.handlePointerUp(touch(midway, 0));
+    expect(entities(appHost)).toHaveLength(1);
+    expect(appHost.workspace.editor!.queries.resolveLogisticsDraftState()).toBeNull();
+  });
+
   it("still pans when the drag starts inside the machine rather than on a port", async () => {
     const appHost = await createAppHost([furnace({ recipe: true })]);
     const center = { ...appHost.mainCanvas.view.state.center };

@@ -76,13 +76,24 @@ interface PortComb {
  */
 export function createHypergryphPortDragLogisticsGestureModule(): GestureMappingModule<AppHost> {
   let session: PortDragSession | null = null;
+  /** 进行中的拉线所在的画布；路由取消时据此丢弃草稿。 */
+  let sessionCanvas: CanvasInteractionController | null = null;
+  const abandon = () => {
+    const finished = session;
+    const canvas = sessionCanvas;
+    session = null;
+    sessionCanvas = null;
+    if (finished !== null && canvas !== null && canvas.editor !== null) {
+      finishPortLine(canvas, canvas.editor, finished, false);
+    }
+  };
 
   return {
     id: "hypergryph-port-drag-logistics-gesture",
     // 高于选择（100），在移动/框选之前判定是否从端口格起拖。
     priority: 150,
     cancel() {
-      session = null;
+      abandon();
     },
     handle(event, context) {
       const canvas = context.canvas;
@@ -118,6 +129,7 @@ export function createHypergryphPortDragLogisticsGestureModule(): GestureMapping
           }
 
           session = next;
+          sessionCanvas = canvas;
           drivePortLine(canvas, editor, session, event.position);
           return { status: "claimed" };
         }
@@ -126,6 +138,11 @@ export function createHypergryphPortDragLogisticsGestureModule(): GestureMapping
         case "touch dragmove":
           if (session === null || session.gestureId !== event.gestureId) {
             return { status: "ignored" };
+          }
+          // 拉线途中换了工具：这条线作废。
+          if (canvas.state.activeTool !== "select") {
+            abandon();
+            return { status: "handled" };
           }
           drivePortLine(canvas, editor, session, event.position);
           return { status: "handled" };
@@ -137,7 +154,8 @@ export function createHypergryphPortDragLogisticsGestureModule(): GestureMapping
           }
           const finished = session;
           session = null;
-          finishPortLine(canvas, editor, finished, event.reason === "release");
+          sessionCanvas = null;
+          finishPortLine(canvas, editor, finished, event.reason === "release" && canvas.state.activeTool === "select");
           return { status: "handled" };
         }
 
