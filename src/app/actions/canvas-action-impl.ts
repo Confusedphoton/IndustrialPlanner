@@ -4,9 +4,9 @@ import type { AppInternalAction } from "./action-impl";
 import type { ClientPixelPoint } from "@/domain/shared/client-pixel";
 import { CANVAS_OPERATION_IDS, type CanvasOperationId } from "@/domain/shared/canvas-operation";
 import { resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport-transform";
-import { CANVAS_FLOATING_TOOLBAR_BUTTON_IDS, CANVAS_TOP_LEFT_CORNER_TOOLBAR_BUTTON_IDS, type CanvasInteractionStateReadWriteImpl, type CanvasFloatingToolbarButtonId, type CanvasFloatingToolbarSize, type CanvasRightDockToolbarItemRequest, type CanvasRightDockToolbarPresentation, type CanvasTopLeftCornerToolbarButtonId, type CanvasTopLeftCornerToolbarShowButtonId } from "../state";
+import { CANVAS_FLOATING_TOOLBAR_BUTTON_IDS, type CanvasInteractionStateReadWriteImpl, type CanvasFloatingToolbarButtonId, type CanvasFloatingToolbarSize, type CanvasRightDockToolbarItemRequest, type CanvasRightDockToolbarPresentation } from "../state";
 
-type CanvasInternalAction = Pick<AppInternalAction, "showCanvasToast" | "setCanvasAlert" | "setActiveTool" | "showCanvasFloatingToolbar" | "showCanvasFloatingToolbarForCollection" | "moveCanvasFloatingToolbar" | "alignCanvasFloatingToolbar" | "setCanvasFloatingToolbarSize" | "hideCanvasFloatingToolbar" | "showCanvasRightDockToolbar" | "hideCanvasRightDockToolbar" | "showCanvasTopLeftCornerToolbar" | "hideCanvasTopLeftCornerToolbar">;
+type CanvasInternalAction = Pick<AppInternalAction, "showCanvasToast" | "setCanvasAlert" | "setActiveTool" | "showCanvasFloatingToolbar" | "showCanvasFloatingToolbarForCollection" | "moveCanvasFloatingToolbar" | "alignCanvasFloatingToolbar" | "setCanvasFloatingToolbarSize" | "hideCanvasFloatingToolbar" | "showCanvasRightDockToolbar" | "hideCanvasRightDockToolbar">;
 const DEFAULT_CANVAS_FLOATING_TOOLBAR_HEIGHT = 44;
 const FLOATING_TOOLBAR_DEVICE_GAP_PX = 6;
 /** 悬停指针与浮动工具条的距离不超过此值时冻结工具条位置。 */
@@ -340,35 +340,6 @@ public readonly hideCanvasRightDockToolbar: CanvasInternalAction["hideCanvasRigh
     this.state.runtime.canvasRightDockToolbar.items = [];
   });
 
-public readonly showCanvasTopLeftCornerToolbar: CanvasInternalAction["showCanvasTopLeftCornerToolbar"] = action((
-    buttonIds,
-  ) => {
-    const nextToolbarState = normalizeCanvasTopLeftCornerToolbarButtons(buttonIds);
-
-    if (nextToolbarState.buttonIds.length === 0) {
-      this.hideCanvasTopLeftCornerToolbar();
-      return;
-    }
-
-    this.state.runtime.canvasTopLeftCornerToolbar.visible = true;
-    this.state.runtime.canvasTopLeftCornerToolbar.buttonIds = nextToolbarState.buttonIds;
-    this.state.runtime.canvasTopLeftCornerToolbar.initialOffButtonIds =
-      nextToolbarState.initialOffButtonIds;
-  });
-
-public readonly hideCanvasTopLeftCornerToolbar: CanvasInternalAction["hideCanvasTopLeftCornerToolbar"] = action(() => {
-    if (
-      !this.state.runtime.canvasTopLeftCornerToolbar.visible
-      && this.state.runtime.canvasTopLeftCornerToolbar.buttonIds.length === 0
-      && this.state.runtime.canvasTopLeftCornerToolbar.initialOffButtonIds.length === 0
-    ) {
-      return;
-    }
-
-    this.state.runtime.canvasTopLeftCornerToolbar.visible = false;
-    this.state.runtime.canvasTopLeftCornerToolbar.buttonIds = [];
-    this.state.runtime.canvasTopLeftCornerToolbar.initialOffButtonIds = [];
-  });
 }
 
 function normalizeCanvasFloatingToolbarButtonIds(
@@ -419,41 +390,6 @@ function normalizeCanvasRightDockToolbarItems(
   }
 
   return deduped;
-}
-
-function normalizeCanvasTopLeftCornerToolbarButtons(
-  buttonIds: readonly CanvasTopLeftCornerToolbarShowButtonId[],
-): {
-  buttonIds: CanvasTopLeftCornerToolbarButtonId[];
-  initialOffButtonIds: CanvasTopLeftCornerToolbarButtonId[];
-} {
-  const knownButtonIds = new Set<CanvasTopLeftCornerToolbarButtonId>(
-    CANVAS_TOP_LEFT_CORNER_TOOLBAR_BUTTON_IDS,
-  );
-  const deduped: CanvasTopLeftCornerToolbarButtonId[] = [];
-  const initialOffButtonIds: CanvasTopLeftCornerToolbarButtonId[] = [];
-
-  for (const requestedButtonId of buttonIds) {
-    const isInitialOffButton = requestedButtonId.endsWith("-off");
-    const buttonId = (isInitialOffButton
-      ? requestedButtonId.slice(0, -4)
-      : requestedButtonId) as CanvasTopLeftCornerToolbarButtonId;
-
-    if (!knownButtonIds.has(buttonId) || deduped.includes(buttonId)) {
-      continue;
-    }
-
-    deduped.push(buttonId);
-
-    if (isInitialOffButton) {
-      initialOffButtonIds.push(buttonId);
-    }
-  }
-
-  return {
-    buttonIds: deduped,
-    initialOffButtonIds,
-  };
 }
 
 function normalizeClientPixelPoint(

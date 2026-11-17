@@ -32,10 +32,16 @@ import {
   LOGISTICS_ROUTE_ORDER_BUTTON_ID,
   PLACEMENT_RAIL_CANCEL_BUTTON_ID,
   PLACEMENT_RAIL_ROTATE_BUTTON_ID,
+  RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID,
+  RAIL_TOGGLE_DIM_BELTS_BUTTON_ID,
+  RAIL_TOGGLE_DIM_PIPES_BUTTON_ID,
+  RAIL_TOGGLE_REVERSE_MARQUEE_BUTTON_ID,
   ROTATE_VIEW_BUTTON_ID,
   zoomCanvasViewportByButton,
 } from "@/app/input/gesture/actions";
-import { LOGISTICS_KIND } from "@/domain/shared/logistics";
+import { hasPlaceableEntityDefinitionInCurrentBase } from "@/app/placement-zone-availability";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import { LOGISTICS_KIND, type LogisticsKind } from "@/domain/shared/logistics";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import { useEditorDocumentSnapshot } from "../hooks";
 import {
@@ -320,14 +326,17 @@ export const CanvasToolRail = observer(function CanvasToolRail({ appHost }: { ap
     readonly icon: ReactNode;
     readonly hint?: string | null;
     readonly disabled?: boolean;
+    readonly pressed?: boolean;
   }) => (
     <RailButton
+      active={options.pressed === true}
       disabled={options.disabled}
       hint={options.hint}
       key={options.uiButtonId}
       label={options.label}
       onKeyboardActivate={() => dispatchUiButtonKeyboardActivate(options.uiButtonId)}
       onPointerUp={(event) => dispatchUiButtonPointerUp(event, options.uiButtonId)}
+      pressed={options.pressed}
       uiButtonId={options.uiButtonId}
     >
       {options.icon}
@@ -488,6 +497,21 @@ export const CanvasToolRail = observer(function CanvasToolRail({ appHost }: { ap
     },
   ], columnBudget, layoutMetrics.buttonSize) : fullColumns;
 
+  // 淡化另一种线（传送带与管道可以交叉，铺一种时另一种挡视线）。
+  const dimToggle = (kind: LogisticsKind) => {
+    const dimmed = kind === LOGISTICS_KIND.pipe ? editor?.state.suppressPipes === true : editor?.state.suppressBelts === true;
+    return gestureButton({
+      uiButtonId: kind === LOGISTICS_KIND.pipe ? RAIL_TOGGLE_DIM_PIPES_BUTTON_ID : RAIL_TOGGLE_DIM_BELTS_BUTTON_ID,
+      pressed: dimmed,
+      label: t(kind === LOGISTICS_KIND.pipe ? "action.deemphasizePipe" : "action.deemphasizeBelt"),
+      icon: <WorkbenchIcon className={iconClassName} kind="eye-off" />,
+    });
+  };
+  const hasPipes = hasPlaceableEntityDefinitionInCurrentBase(canvas, "pipeLogistics");
+  const continuous = activeTool === "blueprint-placement"
+    ? canvas.state.runtime.blueprintPlacementContinuous
+    : canvas.state.runtime.singlePlacementContinuous;
+  const reverseMarquee = canvas.state.toolInfo.marqueeType === EntityCollectionType.reverseMarquee;
   const contextual = inLogisticsPlacement ? {
     triggerId: activeToolButtonId,
     nodes: [
@@ -505,6 +529,22 @@ export const CanvasToolRail = observer(function CanvasToolRail({ appHost }: { ap
         label: t("action.cancelLogisticsRoute"),
         icon: <LucideX aria-hidden className={iconClassName} />,
       }),
+      ...(logistics.kind === LOGISTICS_KIND.belt && !hasPipes ? [] : [
+        dimToggle(logistics.kind === LOGISTICS_KIND.belt ? LOGISTICS_KIND.pipe : LOGISTICS_KIND.belt),
+      ]),
+    ],
+  } : activeTool === "marquee" ? {
+    triggerId: activeToolButtonId,
+    nodes: [
+      gestureButton({
+        uiButtonId: RAIL_TOGGLE_REVERSE_MARQUEE_BUTTON_ID,
+        disabled: !canvas.isOperationEnabled("toggle-marquee-selection"),
+        pressed: reverseMarquee,
+        label: t("action.switchToReverseMarquee"),
+        icon: <WorkbenchIcon className={iconClassName} kind="batch-select" />,
+      }),
+      ...(hasPipes ? [dimToggle(LOGISTICS_KIND.pipe)] : []),
+      dimToggle(LOGISTICS_KIND.belt),
     ],
   } : inPlacement ? {
     triggerId: activeToolButtonId,
@@ -520,6 +560,13 @@ export const CanvasToolRail = observer(function CanvasToolRail({ appHost }: { ap
         label: t(activeTool === "move" ? "action.cancelMove" : "action.cancelPlacement"),
         icon: <LucideX aria-hidden className={iconClassName} />,
       }),
+      ...(activeTool === "move" ? [] : [gestureButton({
+        uiButtonId: RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID,
+        disabled: !continuous && !canvas.isOperationEnabled("continuous-placement"),
+        pressed: continuous,
+        label: t("action.continuousPlacement"),
+        icon: <WorkbenchIcon className={iconClassName} kind="placement" />,
+      })]),
     ],
   } : null;
   const contextTriggerId = contextual?.triggerId ?? null;

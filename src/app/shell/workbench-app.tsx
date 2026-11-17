@@ -15,7 +15,6 @@ import { canvasToolRailState } from "@/app/shell/canvas/canvas-tool-rail-state";
 import { fitCanvasViewportToBase } from "@/app/input/gesture/actions";
 import { CanvasPanel } from "@/app/shell/canvas/canvas-panel";
 import { CanvasFloatingToolbar } from "@/app/shell/canvas/canvas-floating-toolbar";
-import { CanvasTopLeftCornerToolbar } from "@/app/shell/canvas/canvas-top-left-corner-toolbar";
 import { CanvasRightDockToolbar } from "@/app/shell/canvas/canvas-right-dock-toolbar";
 import { OverlapEntityMenu } from "@/app/shell/canvas/overlap-entity-menu";
 import { cleanupPlacementDraft } from "@/app/input";
@@ -656,8 +655,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
   const screenProfile = appHost.state.screenProfile;
   const canvasFloatingToolbar = appHost.mainCanvas.state.runtime.canvasFloatingToolbar;
   const canvasRightDockToolbar = appHost.mainCanvas.state.runtime.canvasRightDockToolbar;
-  const canvasTopLeftCornerToolbar = appHost.mainCanvas.state.runtime.canvasTopLeftCornerToolbar;
-  const canvasTopLeftCornerToolbarKey = `${canvasTopLeftCornerToolbar.buttonIds.join("|")}::${canvasTopLeftCornerToolbar.initialOffButtonIds.join("|")}`;
   const timelineBottomDockGridHeight = resolveTimelineBottomDockGridHeight(appHost);
   const showTimelineBottomDock = timelineBottomDockGridHeight > 0;
   const toolboxBottomDockGridHeight = showTimelineBottomDock
@@ -1197,14 +1194,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
         <LineEndChipOverlay appHost={appHost} />
         <LineProbeOverlay appHost={appHost} />
         <PortCombOverlay appHost={appHost} />
-        {canvasTopLeftCornerToolbar.visible && canvasTopLeftCornerToolbar.buttonIds.length > 0 ? (
-          <CanvasTopLeftCornerToolbar
-            canvas={appHost.mainCanvas}
-            buttonIds={canvasTopLeftCornerToolbar.buttonIds}
-            initialOffButtonIds={canvasTopLeftCornerToolbar.initialOffButtonIds}
-            key={canvasTopLeftCornerToolbarKey}
-          />
-        ) : null}
         {canvasFloatingToolbar.visible && canvasFloatingToolbar.anchor !== null && canvasFloatingToolbar.buttonIds.length > 0 ? (
           <CanvasFloatingToolbar
             anchor={canvasFloatingToolbar.anchor}

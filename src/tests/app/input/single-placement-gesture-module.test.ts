@@ -102,9 +102,6 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     expect(
       module.handle(onEnterActiveToolEvent("select", "single-placement"), context),
     ).toEqual({ status: "handled" });
-    expect(context.canvas.actions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
-      CONTINUOUS_PLACEMENT_BUTTON_ID_FOR_TEST,
-    ]);
     expect(context.canvas.actions.showCanvasFloatingToolbarForCollection).toHaveBeenCalledWith(
       PLACEMENT_TOOLBAR_BUTTON_IDS_FOR_TEST,
       EntityCollectionType.preview,
@@ -125,7 +122,7 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
 
     expect(
       module.handle(
-        uiButtonTouchTapEvent(`${CONTINUOUS_PLACEMENT_BUTTON_ID_FOR_TEST}-on`),
+        uiButtonTouchTapEvent(CONTINUOUS_PLACEMENT_BUTTON_ID_FOR_TEST),
         context,
       ),
     ).toEqual({ status: "handled" });
@@ -133,7 +130,7 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
 
     expect(
       module.handle(
-        uiButtonTouchTapEvent(`${CONTINUOUS_PLACEMENT_BUTTON_ID_FOR_TEST}-off`),
+        uiButtonTouchTapEvent(CONTINUOUS_PLACEMENT_BUTTON_ID_FOR_TEST),
         context,
       ),
     ).toEqual({ status: "handled" });
@@ -609,9 +606,6 @@ const missResult = module.handle(touchDragStartEvent({ position: { x: 32, y: 32 
       y: 5,
     } });
     expect(editor.actions.rotateCollectionAroundPivotCell).toHaveBeenCalledTimes(2);
-    expect(context.canvas.actions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
-      `${CONTINUOUS_PLACEMENT_BUTTON_ID_FOR_TEST}-off`,
-    ]);
     expect(context.canvas.actions.setActiveTool).not.toHaveBeenCalled();
     expect(context.canvas.state.activeTool).toBe("single-placement");
     expect(context.canvas.state.runtime.singlePlacementContinuous).toBe(true);
@@ -697,7 +691,6 @@ const missResult = module.handle(touchDragStartEvent({ position: { x: 32, y: 32 
       module.handle(uiButtonTouchTapEvent("canvas-floating-toolbar-button-cancel"), cancel.context),
     ).toEqual({ status: "handled" });
     expect(cancel.editor.actions.cancelPlacementDraft).toHaveBeenCalledTimes(1);
-    expect(cancel.context.canvas.actions.hideCanvasTopLeftCornerToolbar).toHaveBeenCalledTimes(1);
     expect(cancel.context.canvas.state.activeTool).toBe("select");
     expect(cancel.context.canvas.state.runtime.placementAnchor).toBeNull();
     // 连续放置是用户的工作方式，退出放置后保留，下次拿起设备时仍生效。
@@ -757,7 +750,7 @@ function createContext(options: {
     "moveCollectionCenterPointTo", "rotateCollection", "rotateCollectionAroundCenterPoint", "rotateCollectionAroundPivotCell",
     "rotateCollectionToSnapOnBuilding", "replaceEntityDefinition"] as const) vi.spyOn(test.editor.actions, action);
   for (const action of ["setActiveTool", "showCanvasFloatingToolbarForCollection", "hideCanvasFloatingToolbar",
-    "showCanvasTopLeftCornerToolbar", "hideCanvasTopLeftCornerToolbar", "showCanvasRightDockToolbar",
+    "showCanvasRightDockToolbar",
     "hideCanvasRightDockToolbar", "alignCanvasFloatingToolbar"] as const) vi.spyOn(test.canvas.actions, action);
   vi.spyOn(test.app.internalActions, "isShortcutFor");
   return { context: test.context, editor: test.editor, appHost: test.app,
@@ -771,8 +764,7 @@ const PLACEMENT_TOOLBAR_BUTTON_IDS_FOR_TEST = [
   "canvas-floating-toolbar-button-ok",
 ] as const;
 
-const CONTINUOUS_PLACEMENT_BUTTON_ID_FOR_TEST =
-  "canvas-top-left-corner-toolbar-button-toggle-continuous-placement";
+const CONTINUOUS_PLACEMENT_BUTTON_ID_FOR_TEST = "canvas-tool-rail-toggle-continuous-placement";
 
 const PLACEMENT_RIGHT_DOCK_TOOLBAR_ITEMS_FOR_TEST = [
   { operationId: "pan-viewport", presentation: "shortcut" },

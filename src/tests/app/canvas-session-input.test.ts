@@ -96,7 +96,7 @@ describe("canvas input ownership", () => {
       uiButtonId, altKey: false, ctrlKey: false, metaKey: false, shiftKey: false,
     });
     tap("ui-left-dock-placement-mode-storager_1-touch-tap");
-    tap("canvas-top-left-corner-toolbar-button-toggle-continuous-placement-on");
+    tap("canvas-tool-rail-toggle-continuous-placement");
     tap("canvas-floating-toolbar-button-ok");
     expect(session.editor.document.getSnapshot().entityOrder).toHaveLength(1);
     expect(session.editor.state.collections.preview).toHaveLength(0);

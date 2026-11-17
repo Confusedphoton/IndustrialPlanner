@@ -18,7 +18,6 @@ import {
 import type {
   CanvasFloatingToolbarButtonId,
   CanvasRightDockToolbarItemRequest,
-  CanvasTopLeftCornerToolbarShowButtonId,
   PlacementGroup,
 } from "@/app/state/state-impl";
 import type { EditorContract } from "@/domain/editor/editor-contract";
@@ -38,6 +37,7 @@ import { recentPlacements } from "@/app/recent-placement-devices";
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 
 import type { GestureHandleResult, GestureMappingModule, ShortcutActionRoute } from "../types";
+import { RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID } from "../rail-toggle-buttons";
 import { recordEntityLandedBy, resolveRepeatTapEntityId, spinEntity } from "./entity-spin-tap";
 import {
   didPreviewRectChange,
@@ -105,12 +105,6 @@ export function isPlacementCancelButtonId(uiButtonId: string): boolean {
   return uiButtonId === "canvas-floating-toolbar-button-cancel" || uiButtonId === PLACEMENT_RAIL_CANCEL_BUTTON_ID;
 }
 
-const CONTINUOUS_PLACEMENT_TOGGLE_BUTTON_ID =
-  "canvas-top-left-corner-toolbar-button-toggle-continuous-placement";
-const TOGGLE_CONTINUOUS_PLACEMENT_ON =
-  `${CONTINUOUS_PLACEMENT_TOGGLE_BUTTON_ID}-on`;
-const TOGGLE_CONTINUOUS_PLACEMENT_OFF =
-  `${CONTINUOUS_PLACEMENT_TOGGLE_BUTTON_ID}-off`;
 
 const PLACEMENT_MODE_EVENT_PREFIX = "ui-left-dock-placement-mode-";
 export const PLACEMENT_DEVICE_SHORTCUT_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] as const;
@@ -1306,7 +1300,6 @@ function clearPlacementUi(canvas: CanvasInteractionController): void {
     canvas.state.runtime.singlePlacementPointerMode = null;
   });
   canvas.actions.hideCanvasFloatingToolbar();
-  canvas.actions.hideCanvasTopLeftCornerToolbar();
   canvas.actions.hideCanvasRightDockToolbar();
 }
 
@@ -1328,7 +1321,6 @@ function safelyCancelPlacementDraft(editor: EditorContract): void {
 export function syncPlacementEntryUi(
   canvas: CanvasInteractionController,
   pointerMode = canvas.state.runtime.singlePlacementPointerMode,
-  continuous = canvas.state.runtime.singlePlacementContinuous,
   options: {
     readonly floatingToolbarButtonIds?: readonly CanvasFloatingToolbarButtonId[];
     readonly rightDockToolbarItems?: readonly CanvasRightDockToolbarItemRequest[];
@@ -1341,7 +1333,6 @@ export function syncPlacementEntryUi(
 
   if (pointerMode !== "touch") {
     canvas.actions.hideCanvasFloatingToolbar();
-    canvas.actions.hideCanvasTopLeftCornerToolbar();
     canvas.actions.showCanvasRightDockToolbar(
       options.rightDockToolbarItems ?? resolvePlacementRightDockToolbarItems(canvas),
     );
@@ -1349,9 +1340,6 @@ export function syncPlacementEntryUi(
   }
 
   canvas.actions.hideCanvasRightDockToolbar();
-  canvas.actions.showCanvasTopLeftCornerToolbar(
-    resolveSinglePlacementTopLeftToolbarButtonIds(canvas, continuous),
-  );
 
   return canvas.actions.showCanvasFloatingToolbarForCollection(
     options.floatingToolbarButtonIds ?? resolvePlacementToolbarButtonIds(canvas),
@@ -1381,34 +1369,14 @@ function handleContinuousPlacementToggleTap(
     return null;
   }
 
-  switch (uiButtonId) {
-    case TOGGLE_CONTINUOUS_PLACEMENT_ON:
-      if (!canvas.isOperationEnabled("continuous-placement")) return { status: "ignored" };
-      canvas.state.runtime.singlePlacementContinuous = true;
-      return { status: "handled" };
-
-    case TOGGLE_CONTINUOUS_PLACEMENT_OFF:
-      canvas.state.runtime.singlePlacementContinuous = false;
-      return { status: "handled" };
-
-    default:
-      return null;
+  if (uiButtonId !== RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID) {
+    return null;
   }
-}
-
-function resolveSinglePlacementTopLeftToolbarButtonIds(
-  canvas: CanvasInteractionController,
-  continuous = canvas.state.runtime.singlePlacementContinuous,
-): readonly CanvasTopLeftCornerToolbarShowButtonId[] {
-  return resolveContinuousPlacementTopLeftToolbarButtonIds(continuous);
-}
-
-function resolveContinuousPlacementTopLeftToolbarButtonIds(
-  continuous: boolean,
-): readonly CanvasTopLeftCornerToolbarShowButtonId[] {
-  return continuous
-    ? [TOGGLE_CONTINUOUS_PLACEMENT_OFF]
-    : [CONTINUOUS_PLACEMENT_TOGGLE_BUTTON_ID];
+  if (!canvas.state.runtime.singlePlacementContinuous && !canvas.isOperationEnabled("continuous-placement")) {
+    return { status: "ignored" };
+  }
+  canvas.state.runtime.singlePlacementContinuous = !canvas.state.runtime.singlePlacementContinuous;
+  return { status: "handled" };
 }
 
 function resolvePlacementToolbarButtonIds(

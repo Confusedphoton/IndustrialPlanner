@@ -186,7 +186,6 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
         activeTouchLogisticsDragGestureId = null;
         activeMouseLogisticsDragGestureId = null;
         cleanupLogisticsPlacement(context.canvas);
-        context.canvas.actions.hideCanvasTopLeftCornerToolbar();
         return { status: "handled" };
       }
 
@@ -446,7 +445,7 @@ export function cleanupLogisticsPlacement(canvas: CanvasInteractionController): 
   canvas.actions.hideCanvasRightDockToolbar();
 }
 
-/** 切换正在铺的线的种类：设备快捷键分组、另一种线的淡化与左上角开关都跟着换。 */
+/** 切换正在铺的线的种类：设备快捷键分组与另一种线的淡化都跟着换。 */
 function applyLogisticsKind(canvas: CanvasInteractionController, kind: LogisticsKind): void {
   const runtime = canvas.state.runtime.logisticsPlacement;
   if (runtime.kind !== null && runtime.kind !== kind) {
@@ -458,11 +457,6 @@ function applyLogisticsKind(canvas: CanvasInteractionController, kind: Logistics
   canvas.editor?.actions.setLogisticsSuppression(
     kind === LOGISTICS_KIND.belt ? LOGISTICS_KIND.pipe : LOGISTICS_KIND.belt,
     true,
-  );
-  canvas.actions.showCanvasTopLeftCornerToolbar(
-    kind === LOGISTICS_KIND.belt
-      ? ["canvas-top-left-corner-toolbar-button-toggle-pipe-off"]
-      : ["canvas-top-left-corner-toolbar-button-toggle-belt-off"],
   );
 }
 

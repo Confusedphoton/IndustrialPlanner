@@ -244,20 +244,6 @@ export interface CanvasRightDockToolbarItemRequest {
   readonly presentation: CanvasRightDockToolbarPresentation;
 }
 
-export const CANVAS_TOP_LEFT_CORNER_TOOLBAR_BUTTON_IDS = [
-  "canvas-top-left-corner-toolbar-button-toggle-pipe",
-  "canvas-top-left-corner-toolbar-button-toggle-belt",
-  "canvas-top-left-corner-toolbar-button-toggle-reverse-marquee",
-  "canvas-top-left-corner-toolbar-button-toggle-continuous-placement",
-] as const;
-
-export type CanvasTopLeftCornerToolbarButtonId =
-  typeof CANVAS_TOP_LEFT_CORNER_TOOLBAR_BUTTON_IDS[number];
-
-export type CanvasTopLeftCornerToolbarShowButtonId =
-  | CanvasTopLeftCornerToolbarButtonId
-  | `${CanvasTopLeftCornerToolbarButtonId}-off`;
-
 export const TOOLBOX_DIALOG_TAB_IDS = [
   "item-encyclopedia",
   "production-planning",
@@ -472,11 +458,6 @@ export interface CanvasRightDockToolbarStateReadWrite {
   items: CanvasRightDockToolbarItemRequest[];
 }
 
-export interface CanvasTopLeftCornerToolbarStateReadWrite {
-  visible: boolean;
-  buttonIds: CanvasTopLeftCornerToolbarButtonId[];
-  initialOffButtonIds: CanvasTopLeftCornerToolbarButtonId[];
-}
 
 
 export interface CanvasRuntimeStateReadWrite {
@@ -513,7 +494,6 @@ export interface CanvasRuntimeStateReadWrite {
   marqueeAnchor: GridPoint | null;
   canvasFloatingToolbar: CanvasFloatingToolbarStateReadWrite;
   canvasRightDockToolbar: CanvasRightDockToolbarStateReadWrite;
-  canvasTopLeftCornerToolbar: CanvasTopLeftCornerToolbarStateReadWrite;
 }
 
 export interface RuntimeStateReadWrite {
@@ -684,16 +664,6 @@ class CanvasRightDockToolbarStateReadWriteImpl implements CanvasRightDockToolbar
   }
 }
 
-class CanvasTopLeftCornerToolbarStateReadWriteImpl implements CanvasTopLeftCornerToolbarStateReadWrite {
-  visible = false;
-  buttonIds: CanvasTopLeftCornerToolbarButtonId[] = [];
-  initialOffButtonIds: CanvasTopLeftCornerToolbarButtonId[] = [];
-
-  public constructor() {
-    makeAutoObservable(this, {}, { autoBind: true });
-  }
-}
-
 class LogisticsPlacementRuntimeStateReadWriteImpl implements LogisticsPlacementRuntimeStateReadWrite {
   kind: LogisticsKind | null = null;
   shortcutPlacementGroup: "beltLogistics" | "pipeLogistics" | null = null;
@@ -744,7 +714,6 @@ class CanvasRuntimeStateReadWriteImpl implements CanvasRuntimeStateReadWrite {
   marqueeAnchor: GridPoint | null = null;
   canvasFloatingToolbar: CanvasFloatingToolbarStateReadWrite = new CanvasFloatingToolbarStateReadWriteImpl();
   canvasRightDockToolbar: CanvasRightDockToolbarStateReadWrite = new CanvasRightDockToolbarStateReadWriteImpl();
-  canvasTopLeftCornerToolbar: CanvasTopLeftCornerToolbarStateReadWrite = new CanvasTopLeftCornerToolbarStateReadWriteImpl();
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });

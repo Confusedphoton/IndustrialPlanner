@@ -2,7 +2,6 @@ import type { CanvasInteractionController } from "@/app/canvas";
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
 import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
-import { hasPlaceableEntityDefinitionInCurrentBase } from "@/app/placement-zone-availability";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { EditorContract } from "@/domain/editor/editor-contract";
 import {
@@ -15,6 +14,11 @@ import { collectConnectedStrictLogisticsEntityIds } from "@/shared/transport-com
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { ALL_SHORTCUT_ACTIVE_TOOLS } from "../shortcut-route-matching";
+import {
+  RAIL_TOGGLE_DIM_BELTS_BUTTON_ID,
+  RAIL_TOGGLE_DIM_PIPES_BUTTON_ID,
+  RAIL_TOGGLE_REVERSE_MARQUEE_BUTTON_ID,
+} from "../rail-toggle-buttons";
 import { openOverlapEntityMenuIfNeeded } from "./overlap-entity-candidates";
 
 const MARQUEE_RIGHT_DOCK_OPERATION_IDS = [
@@ -36,20 +40,6 @@ const EMPTY_MARQUEE_RIGHT_DOCK_OPERATION_IDS = [
 ] as const;
 
 
-const MARQUEE_TOP_LEFT_BUTTON_IDS = [
-  "canvas-top-left-corner-toolbar-button-toggle-pipe",
-  "canvas-top-left-corner-toolbar-button-toggle-belt",
-  "canvas-top-left-corner-toolbar-button-toggle-reverse-marquee",
-] as const;
-
-const TOGGLE_REVERSE_MARQUEE_ON =
-  "canvas-top-left-corner-toolbar-button-toggle-reverse-marquee-on";
-const TOGGLE_REVERSE_MARQUEE_OFF =
-  "canvas-top-left-corner-toolbar-button-toggle-reverse-marquee-off";
-const TOGGLE_PIPE_ON = "canvas-top-left-corner-toolbar-button-toggle-pipe-on";
-const TOGGLE_PIPE_OFF = "canvas-top-left-corner-toolbar-button-toggle-pipe-off";
-const TOGGLE_BELT_ON = "canvas-top-left-corner-toolbar-button-toggle-belt-on";
-const TOGGLE_BELT_OFF = "canvas-top-left-corner-toolbar-button-toggle-belt-off";
 
 export function createHypergryphMarqueeGestureModule(): GestureMappingModule<AppHost> {
   return {
@@ -107,39 +97,8 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
           cleanupMarquee(context.canvas, editor, event.to === "move"
             || (event.to === "blueprint-placement"
               && context.canvas.state.runtime.blueprintPlacementFromCopy));
-          if (event.to !== "logistics-placement") {
-            context.canvas.actions.hideCanvasTopLeftCornerToolbar();
-          }
           return { status: "handled" };
 
-        /*
-        case "key down":
-          if (event.code === "Escape" && context.appHost.internalState.activeTool === "marquee") {
-            exitMarqueeToSelect(context.appHost, editor);
-            return { status: "handled" };
-          }
-
-          if (!context.appHost.internalActions.isShortcutFor(
-            SHORTCUT_KEY.MARQUEE,
-            event.code,
-            event.key,
-            event.modifiers,
-          )) {
-            return { status: "ignored" };
-          }
-
-          if (context.appHost.internalState.activeTool === "marquee") {
-            exitMarqueeToSelect(context.appHost, editor);
-            return { status: "handled" };
-          }
-
-          enterMarqueeMode({
-            appHost: context.appHost,
-            editor,
-            source: "mouse",
-          });
-          return { status: "handled" };
-        */
 
         case "ui-button-touch-tap":
           return handleUiButtonTap({
@@ -367,36 +326,22 @@ function handleUiButtonTap(options: {
       exitMarqueeToSelect(options.canvas);
       return { status: "handled" };
 
-    case TOGGLE_REVERSE_MARQUEE_ON:
+    case RAIL_TOGGLE_REVERSE_MARQUEE_BUTTON_ID:
       if (options.canvas.state.activeTool !== "marquee") {
         return { status: "ignored" };
       }
 
-      options.canvas.state.toolInfo.marqueeType = EntityCollectionType.reverseMarquee;
+      options.canvas.state.toolInfo.marqueeType = options.canvas.state.toolInfo.marqueeType === EntityCollectionType.reverseMarquee
+        ? EntityCollectionType.marquee
+        : EntityCollectionType.reverseMarquee;
       return { status: "handled" };
 
-    case TOGGLE_REVERSE_MARQUEE_OFF:
-      if (options.canvas.state.activeTool !== "marquee") {
-        return { status: "ignored" };
-      }
-
-      options.canvas.state.toolInfo.marqueeType = EntityCollectionType.marquee;
+    case RAIL_TOGGLE_DIM_PIPES_BUTTON_ID:
+      options.editor?.actions.setLogisticsSuppression(LOGISTICS_KIND.pipe, !options.editor.state.suppressPipes);
       return { status: "handled" };
 
-    case TOGGLE_PIPE_ON:
-      options.canvas.editor?.actions.setLogisticsSuppression(LOGISTICS_KIND.pipe, true);
-      return { status: "handled" };
-
-    case TOGGLE_PIPE_OFF:
-      options.canvas.editor?.actions.setLogisticsSuppression(LOGISTICS_KIND.pipe, false);
-      return { status: "handled" };
-
-    case TOGGLE_BELT_ON:
-      options.canvas.editor?.actions.setLogisticsSuppression(LOGISTICS_KIND.belt, true);
-      return { status: "handled" };
-
-    case TOGGLE_BELT_OFF:
-      options.canvas.editor?.actions.setLogisticsSuppression(LOGISTICS_KIND.belt, false);
+    case RAIL_TOGGLE_DIM_BELTS_BUTTON_ID:
+      options.editor?.actions.setLogisticsSuppression(LOGISTICS_KIND.belt, !options.editor.state.suppressBelts);
       return { status: "handled" };
 
     default:
@@ -411,7 +356,6 @@ export function enterMarqueeMode(options: {
 }): void {
   const wasMarquee = options.canvas.state.activeTool === "marquee";
   options.canvas.actions.setActiveTool("marquee");
-  // options.appHost.workspace.editor?.actions.clearCollection(EntityCollectionType.selection);
   if (!wasMarquee) {
     resetMarqueeLogisticsSuppression(options.editor);
   }
@@ -424,18 +368,6 @@ export function enterMarqueeMode(options: {
   } else {
     showMarqueeRightDockToolbar(options.canvas, options.editor, "shortcut");
   }
-  options.canvas.actions.showCanvasTopLeftCornerToolbar(
-    resolveMarqueeTopLeftButtonIds(options.canvas),
-  );
-}
-
-function resolveMarqueeTopLeftButtonIds(canvas: CanvasInteractionController) {
-  return MARQUEE_TOP_LEFT_BUTTON_IDS.filter((buttonId) => {
-    if (buttonId === "canvas-top-left-corner-toolbar-button-toggle-pipe") {
-      return hasPlaceableEntityDefinitionInCurrentBase(canvas, "pipeLogistics");
-    }
-    return true;
-  });
 }
 
 function startMouseMarqueeDrag(options: {

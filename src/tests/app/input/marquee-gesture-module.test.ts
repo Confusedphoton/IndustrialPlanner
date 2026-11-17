@@ -89,11 +89,6 @@ describe("createHypergryphMarqueeGestureModule", () => {
       { operationId: "exit-marquee", presentation: "button" },
     ]);
     expect(context.canvas.state.runtime.canvasRightDockToolbar.items[0]?.presentation).toBe("button");
-    expect(context.canvas.actions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
-      "canvas-top-left-corner-toolbar-button-toggle-pipe",
-      "canvas-top-left-corner-toolbar-button-toggle-belt",
-      "canvas-top-left-corner-toolbar-button-toggle-reverse-marquee",
-    ]);
     expect(appHost.internalState.workbench.rightDockOpen).toBe(false);
   });
 
@@ -289,11 +284,6 @@ describe("createHypergryphMarqueeGestureModule", () => {
       { operationId: "marquee-deselect", presentation: "button" },
       { operationId: "exit-marquee", presentation: "button" },
     ]);
-    expect(context.canvas.actions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
-      "canvas-top-left-corner-toolbar-button-toggle-pipe",
-      "canvas-top-left-corner-toolbar-button-toggle-belt",
-      "canvas-top-left-corner-toolbar-button-toggle-reverse-marquee",
-    ]);
     expect(appHost.internalState.workbench.rightDockOpen).toBe(false);
     expect(context.canvas.state.runtime.marqueeAnchor).toEqual({ x: 6, y: 7 });
     expect(context.canvas.state.toolInfo.marqueeType).toBe(EntityCollectionType.marquee);
@@ -407,7 +397,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
     expect(editor.actions.setMarqueeRange).not.toHaveBeenCalled();
   });
 
-  it("uses the top-left toggle state for touch reverse marquee", () => {
+  it("uses the rail toggle for touch reverse marquee", () => {
     const { context, editor } = createContext({
       activeTool: "marquee",
     });
@@ -415,7 +405,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
 
     expect(
       module.handle(
-        uiButtonTouchTapEvent("canvas-top-left-corner-toolbar-button-toggle-reverse-marquee-on"),
+        uiButtonTouchTapEvent("canvas-tool-rail-toggle-reverse-marquee"),
         context,
       ),
     ).toEqual({ status: "handled" });
@@ -436,7 +426,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
 
     expect(
       module.handle(
-        uiButtonMouseTapEvent("canvas-top-left-corner-toolbar-button-toggle-reverse-marquee-off"),
+        uiButtonMouseTapEvent("canvas-tool-rail-toggle-reverse-marquee"),
         context,
       ),
     ).toEqual({ status: "handled" });
@@ -456,7 +446,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
 
     expect(
       module.handle(
-        uiButtonTouchTapEvent("canvas-top-left-corner-toolbar-button-toggle-belt-on"),
+        uiButtonTouchTapEvent("canvas-tool-rail-toggle-dim-belts"),
         context,
       ),
     ).toEqual({ status: "handled" });
@@ -513,7 +503,7 @@ function createContext(options: { activeTool?: "select" | "move" | "marquee" | "
   test.canvas.state.runtime.marqueeAnchor = options.marqueeAnchor ?? null;
   for (const entityId of options.selectedEntityIds ?? []) test.editor.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId });
   for (const key of ["setMarqueeRange", "applyMarquee", "cancelMarquee", "clearCollection", "addToCollection", "removeFromCollection", "setLogisticsSuppression", "setHoverPoint", "clearHoverPoint"] as const) vi.spyOn(test.editor.actions, key);
-  for (const key of ["setActiveTool", "showCanvasRightDockToolbar", "hideCanvasRightDockToolbar", "showCanvasTopLeftCornerToolbar", "hideCanvasTopLeftCornerToolbar"] as const) vi.spyOn(test.canvas.actions, key);
+  for (const key of ["setActiveTool", "showCanvasRightDockToolbar", "hideCanvasRightDockToolbar"] as const) vi.spyOn(test.canvas.actions, key);
   for (const key of ["toggleRightDock", "isShortcutFor"] as const) vi.spyOn(test.app.internalActions, key);
   return { context: test.context, editor: test.editor, appHost: test.app };
 }

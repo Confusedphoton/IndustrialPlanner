@@ -9,6 +9,8 @@ import {
   LOGISTICS_ROUTE_ORDER_BUTTON_ID,
   PLACEMENT_RAIL_CANCEL_BUTTON_ID,
   PLACEMENT_RAIL_ROTATE_BUTTON_ID,
+  RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID,
+  RAIL_TOGGLE_DIM_PIPES_BUTTON_ID,
 } from "@/app/input/gesture/actions";
 import type { AppHost } from "@/app/host/app-host";
 import { recentPlacements } from "@/app/recent-placement-devices";
@@ -61,7 +63,19 @@ describe("canvas tool rail", () => {
 
     expect(appHost.mainCanvas.state.activeTool).toBe("logistics-placement");
     expect(mainRailButtonIds()).toEqual(before);
-    expect(contextualButtonIds()).toEqual([LOGISTICS_ROUTE_ORDER_BUTTON_ID, LOGISTICS_CANCEL_ROUTE_BUTTON_ID]);
+    expect(contextualButtonIds()).toEqual([
+      LOGISTICS_ROUTE_ORDER_BUTTON_ID,
+      LOGISTICS_CANCEL_ROUTE_BUTTON_ID,
+      RAIL_TOGGLE_DIM_PIPES_BUTTON_ID,
+    ]);
+
+    // 铺传送带时管道默认淡化；工具条上的开关按真实状态显示并切换。
+    const editor = appHost.workspace.editor!;
+    expect(editor.state.suppressPipes).toBe(true);
+    expect(button(RAIL_TOGGLE_DIM_PIPES_BUTTON_ID).getAttribute("aria-pressed")).toBe("true");
+    penTap(button(RAIL_TOGGLE_DIM_PIPES_BUTTON_ID));
+    expect(editor.state.suppressPipes).toBe(false);
+    expect(button(RAIL_TOGGLE_DIM_PIPES_BUTTON_ID).getAttribute("aria-pressed")).toBe("false");
   });
 
   it("switches the line tool between belt and pipe with a second tap", async () => {
@@ -89,7 +103,15 @@ describe("canvas tool rail", () => {
     expect(appHost.mainCanvas.state.activeTool).toBe("single-placement");
     expect(recentPlacements.entries[0]?.deviceId).toBe("storager_1");
     expect(mainRailButtonIds()).toEqual(before);
-    expect(contextualButtonIds()).toEqual([PLACEMENT_RAIL_ROTATE_BUTTON_ID, PLACEMENT_RAIL_CANCEL_BUTTON_ID]);
+    expect(contextualButtonIds()).toEqual([
+      PLACEMENT_RAIL_ROTATE_BUTTON_ID,
+      PLACEMENT_RAIL_CANCEL_BUTTON_ID,
+      RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID,
+    ]);
+    const continuousBefore = appHost.mainCanvas.state.runtime.singlePlacementContinuous;
+    penTap(button(RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID));
+    expect(appHost.mainCanvas.state.runtime.singlePlacementContinuous).toBe(!continuousBefore);
+    expect(button(RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID).getAttribute("aria-pressed")).toBe(String(!continuousBefore));
 
     const rotationBefore = previewRotation(appHost);
     penTap(button(PLACEMENT_RAIL_ROTATE_BUTTON_ID));

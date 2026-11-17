@@ -7,7 +7,7 @@ import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 import { resolveRegionGridBounds } from "@/shared/geometry/region-rects";
 import type { mountCanvasSceneView } from "./scene-view-mount";
 import { CanvasInteractionStateReadWriteImpl } from "../state";
-import type { CanvasFloatingToolbarButtonId, CanvasTopLeftCornerToolbarButtonId } from "../state";
+import type { CanvasFloatingToolbarButtonId } from "../state";
 import { CanvasActionImpl } from "../actions";
 import type { AppHost } from "../host";
 import type { GestureAdapter } from "../input/gesture/adapter";
@@ -151,15 +151,6 @@ export class CanvasInteractionController {
       "canvas-floating-toolbar-button-delete-many": "delete",
       "canvas-floating-toolbar-button-delete-upstream-segment": "delete",
       "canvas-floating-toolbar-button-delete-downstream-segment": "delete",
-    };
-    return this.getOperationAvailability(operations[button]);
-  }
-  public getTopLeftButtonAvailability(button: CanvasTopLeftCornerToolbarButtonId) {
-    const operations: Record<CanvasTopLeftCornerToolbarButtonId, CanvasOperationId> = {
-      "canvas-top-left-corner-toolbar-button-toggle-pipe": "select",
-      "canvas-top-left-corner-toolbar-button-toggle-belt": "select",
-      "canvas-top-left-corner-toolbar-button-toggle-reverse-marquee": "toggle-marquee-selection",
-      "canvas-top-left-corner-toolbar-button-toggle-continuous-placement": "continuous-placement",
     };
     return this.getOperationAvailability(operations[button]);
   }

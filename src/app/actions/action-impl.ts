@@ -18,7 +18,6 @@ import {
   type CanvasFloatingToolbarButtonId,
   type CanvasFloatingToolbarSize,
   type CanvasRightDockToolbarItemRequest,
-  type CanvasTopLeftCornerToolbarShowButtonId,
   clampLeftDockWidth,
   clampTimelineBottomDockHeight,
   clampToolboxBottomDockHeight,
@@ -114,10 +113,6 @@ export interface AppInternalAction {
     items: readonly CanvasRightDockToolbarItemRequest[],
   ) => void;
   hideCanvasRightDockToolbar: () => void;
-  showCanvasTopLeftCornerToolbar: (
-    buttonIds: readonly CanvasTopLeftCornerToolbarShowButtonId[],
-  ) => void;
-  hideCanvasTopLeftCornerToolbar: () => void;
   setLeftDockWidth: (width: number) => void;
   setScreenProfile: (screenProfile: ScreenProfile) => void;
   setLocale: (locale: AppLocale) => void;
@@ -486,9 +481,7 @@ export class AppActionImpl implements AppAction, AppInternalAction {
 
   public readonly hideCanvasRightDockToolbar: AppInternalAction["hideCanvasRightDockToolbar"] = (...args: Parameters<AppInternalAction["hideCanvasRightDockToolbar"]>) => this.canvas.actions.hideCanvasRightDockToolbar(...args);
 
-  public readonly showCanvasTopLeftCornerToolbar: AppInternalAction["showCanvasTopLeftCornerToolbar"] = (...args: Parameters<AppInternalAction["showCanvasTopLeftCornerToolbar"]>) => this.canvas.actions.showCanvasTopLeftCornerToolbar(...args);
 
-  public readonly hideCanvasTopLeftCornerToolbar: AppInternalAction["hideCanvasTopLeftCornerToolbar"] = (...args: Parameters<AppInternalAction["hideCanvasTopLeftCornerToolbar"]>) => this.canvas.actions.hideCanvasTopLeftCornerToolbar(...args);
 
 
   public readonly setLeftDockWidth: AppInternalAction["setLeftDockWidth"] = action((width) => {

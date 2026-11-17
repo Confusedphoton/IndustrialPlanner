@@ -2042,19 +2042,6 @@ describe("createAppTestHost", () => {
       entityOrder: ["dummy-entity-2"],
     });
     expect(editorHost.state.collections.preview).toHaveLength(1);
-    expect(appHost.mainCanvas.state.runtime.canvasTopLeftCornerToolbar.visible).toBe(true);
-    expect(appHost.mainCanvas.state.runtime.canvasTopLeftCornerToolbar.buttonIds).toEqual([
-      "canvas-top-left-corner-toolbar-button-toggle-continuous-placement",
-    ]);
-
-    appHost.gestureAdapter.handleUiButtonTouchTap({
-      uiButtonId: "canvas-top-left-corner-toolbar-button-toggle-continuous-placement-on",
-      altKey: false,
-      ctrlKey: false,
-      metaKey: false,
-      shiftKey: false,
-    });
-
     expect(appHost.mainCanvas.state.runtime.blueprintPlacementContinuous).toBe(true);
 
     appHost.gestureAdapter.handleUiButtonTouchTap({
@@ -2080,10 +2067,6 @@ describe("createAppTestHost", () => {
     expect(appHost.mainCanvas.state.activeTool).toBe("marquee");
     expect(editorHost.state.collections.selection).toEqual(["dummy-entity-2"]);
     expect(appHost.mainCanvas.state.runtime.blueprintPlacementContinuous).toBe(false);
-    expect(appHost.mainCanvas.state.runtime.canvasTopLeftCornerToolbar.visible).toBe(true);
-    expect(appHost.mainCanvas.state.runtime.canvasTopLeftCornerToolbar.buttonIds).not.toContain(
-      "canvas-top-left-corner-toolbar-button-toggle-continuous-placement",
-    );
   });
 
   it("pastes the last temporary blueprint from Ctrl+V without persistent storage", () => {

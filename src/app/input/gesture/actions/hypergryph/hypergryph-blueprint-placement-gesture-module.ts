@@ -16,6 +16,7 @@ import type { BlueprintLibraryRecord } from "@/shared/blueprints/blueprint-libra
 
 import type { GestureActionContext, GestureHandleResult, GestureMappingModule } from "../types";
 import { ALL_SHORTCUT_ACTIVE_TOOLS } from "../shortcut-route-matching";
+import { RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID } from "../rail-toggle-buttons";
 import { enterMarqueeMode } from "./hypergryph-marquee-gesture-module";
 import { TOUCH_PREVIEW_HIT_SLOP_PX } from "./mobile-preview-bounds";
 import {
@@ -34,12 +35,6 @@ import { holdingTrayState } from "@/app/shell/canvas/holding-tray-state";
 
 const BLUEPRINT_PREVIEW_PLACE_BUTTON_ID = "blueprint-preview-place-button";
 const RIGHT_DOCK_COPY_BUTTON_ID = "canvas-right-dock-toolbar-button-copy";
-const CONTINUOUS_PLACEMENT_TOGGLE_BUTTON_ID =
-  "canvas-top-left-corner-toolbar-button-toggle-continuous-placement";
-const TOGGLE_CONTINUOUS_PLACEMENT_ON =
-  `${CONTINUOUS_PLACEMENT_TOGGLE_BUTTON_ID}-on`;
-const TOGGLE_CONTINUOUS_PLACEMENT_OFF =
-  `${CONTINUOUS_PLACEMENT_TOGGLE_BUTTON_ID}-off`;
 const TEMP_BLUEPRINT_NAME = "Temp Blueprint";
 
 const BLUEPRINT_RIGHT_DOCK_TOOLBAR_ITEMS = [
@@ -251,7 +246,6 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
         syncPlacementEntryUi(
           context.canvas,
           context.canvas.state.runtime.blueprintPlacementPointerMode,
-          context.canvas.state.runtime.blueprintPlacementContinuous,
           BLUEPRINT_PLACEMENT_UI_OPTIONS,
         );
         return { status: "handled" };
@@ -431,13 +425,8 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
           return { status: "handled" };
 
         case "ui-button-touch-tap":
-          if (event.uiButtonId === TOGGLE_CONTINUOUS_PLACEMENT_ON) {
-            context.canvas.state.runtime.blueprintPlacementContinuous = true;
-            return { status: "handled" };
-          }
-
-          if (event.uiButtonId === TOGGLE_CONTINUOUS_PLACEMENT_OFF) {
-            context.canvas.state.runtime.blueprintPlacementContinuous = false;
+          if (event.uiButtonId === RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID) {
+            context.canvas.state.runtime.blueprintPlacementContinuous = !context.canvas.state.runtime.blueprintPlacementContinuous;
             return { status: "handled" };
           }
 
@@ -466,13 +455,8 @@ export function createHypergryphBlueprintPlacementGestureModule(): GestureMappin
             return { status: "ignored" };
           }
 
-          if (event.uiButtonId === TOGGLE_CONTINUOUS_PLACEMENT_ON) {
-            context.canvas.state.runtime.blueprintPlacementContinuous = true;
-            return { status: "handled" };
-          }
-
-          if (event.uiButtonId === TOGGLE_CONTINUOUS_PLACEMENT_OFF) {
-            context.canvas.state.runtime.blueprintPlacementContinuous = false;
+          if (event.uiButtonId === RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID) {
+            context.canvas.state.runtime.blueprintPlacementContinuous = !context.canvas.state.runtime.blueprintPlacementContinuous;
             return { status: "handled" };
           }
 
@@ -580,7 +564,6 @@ export function enterBlueprintPlacement(options: {
       if (!syncPlacementEntryUi(
         options.canvas,
         options.source,
-        options.canvas.state.runtime.blueprintPlacementContinuous,
         BLUEPRINT_PLACEMENT_UI_OPTIONS,
       )) {
         restoreFailedBlueprintPlacementEnter(options.canvas, options.editor);
@@ -705,7 +688,6 @@ function applyBlueprintPlacement(
         || !syncPlacementEntryUi(
           canvas,
           pointerMode,
-          canvas.state.runtime.blueprintPlacementContinuous,
           BLUEPRINT_PLACEMENT_UI_OPTIONS,
         )
       ) {
@@ -771,7 +753,6 @@ function clearBlueprintPlacementUi(canvas: CanvasInteractionController): void {
   canvas.state.runtime.blueprintPlacementContinuous = false;
   canvas.state.runtime.blueprintPlacementFromCopy = false;
   canvas.actions.hideCanvasFloatingToolbar();
-  canvas.actions.hideCanvasTopLeftCornerToolbar();
   canvas.actions.hideCanvasRightDockToolbar();
 }
 
