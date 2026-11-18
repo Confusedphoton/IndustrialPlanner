@@ -302,6 +302,35 @@ describe("物流绘制模式", () => {
     )).toHaveLength(4);
   });
 
+  it("reverses an unanchored route only when the pointer enters the output port", () => {
+    const editorHost = createEditorTestHost(createWorkspace());
+    const storage = createTestEntity("storage", "storager_1", 10, 10, 180);
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([storage]));
+    editorHost.actions.createLogisticsDraftStart({
+      kind: "belt",
+      source: { type: "empty-cell", gridPoint: { x: 11, y: 16 } },
+      allowEmptySource: true,
+    });
+    const move = (y: number) => editorHost.actions.moveLogisticEnd({
+      pointerGridPoint: { x: 11, y },
+      allowEmptyTarget: true,
+      routeMode: { type: "freehand" },
+    });
+
+    move(13);
+    expect(editorHost.queries.resolveLogisticsDraftState()?.source?.type).toBe("empty-cell");
+    expect(move(12).canApply).toBe(true);
+    expect(editorHost.queries.resolveLogisticsDraftState()?.source).toMatchObject({
+      type: "device-port", entityId: "storage", portDirection: "output",
+    });
+
+    move(13);
+    expect(editorHost.queries.resolveLogisticsDraftState()?.source?.type).toBe("empty-cell");
+    expect(move(12).canApply).toBe(true);
+    expect(editorHost.actions.applyLogisticDraft()).toBe(true);
+    expect(editorHost.queries.findTransportLineAtGridPoint({ x: 11, y: 13 }, "belt")?.rotation).toBe(90);
+  });
+
   it("creates a pipe logistics draft from a gas output port", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);

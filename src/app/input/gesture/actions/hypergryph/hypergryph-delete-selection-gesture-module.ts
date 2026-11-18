@@ -6,6 +6,7 @@ import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { RAIL_SELECTION_DELETE_BUTTON_ID } from "../rail-buttons";
+import { selectEraseTarget } from "./hypergryph-pen-eraser-gesture-module";
 
 const FLOATING_DELETE_BUTTON_ID = "canvas-floating-toolbar-button-delete";
 const FLOATING_DELETE_MANY_BUTTON_ID = "canvas-floating-toolbar-button-delete-many";
@@ -101,6 +102,10 @@ function deleteSelection(
     return { status: "ignored" };
   }
 
+  if (editor.state.collections.selection.length === 1) {
+    const entity = editor.queries.getEntityById(editor.state.collections.selection[0]!);
+    if (entity !== null) selectEraseTarget(canvas, entity);
+  }
   editor.actions.deleteCollection(EntityCollectionType.selection);
 
   if (activeTool === "select") {

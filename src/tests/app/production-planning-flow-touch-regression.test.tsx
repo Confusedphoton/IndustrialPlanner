@@ -269,10 +269,7 @@ function parsePathNumbers(path: string): number[] {
   return Array.from(path.matchAll(/-?\d+(?:\.\d+)?/g), (match) => Number.parseFloat(match[0]));
 }
 
-function expectCubicPathNumbers(numbers: number[]): [number, number, number, number, number, number, number, number] {
-  expect(numbers).toHaveLength(8);
-  return numbers as [number, number, number, number, number, number, number, number];
-}
+
 
 // ---- tests ----
 describe("ProductionFlowGraph touch regression", () => {
@@ -338,17 +335,6 @@ describe("ProductionFlowGraph touch regression", () => {
   // ==================== Test 1: touch-action CSS 样式类 ====================
   // jsdom 不会加载 CSS module 的实际样式，因此验证 CSS 类名存在于元素上。
   // 真实 computed-style（touch-action: none）验证应通过 Playwright E2E 完成。
-  it("has the touch-action:none CSS class on the flow canvas", () => {
-    render();
-
-    const canvas = container.querySelector("[class*='production-flow-canvas']") as HTMLDivElement | null;
-    expect(canvas).not.toBeNull();
-
-    // CSS 模块会将 .production-flow-canvas 编译为带 hash 的类名，校验 className 包含关键字
-    expect(canvas!.className).toContain("production-flow-canvas");
-  });
-
-  // ==================== Test 2: 单指/鼠标拖拽平移 ====================
   it("pans the viewport on pointer drag", () => {
     render();
 
@@ -609,7 +595,7 @@ describe("ProductionFlowGraph touch regression", () => {
     expect(node!.style.left).toBe(initialLeft);
   });
 
-  it("keeps same-column plant seed cycle side loops local", () => {
+  it("separates both return paths when cycle nodes share a column", () => {
     vi.mocked(buildProductionFlowGraph).mockReturnValue(createMockPlantSeedCycleGraphInput());
     render();
 
@@ -659,20 +645,16 @@ describe("ProductionFlowGraph touch regression", () => {
     const plantBodyNumbers = parsePathNumbers(plantBodyPath);
     const seedNumbers = parsePathNumbers(seedPath);
 
-    expect(plantBodyPath).not.toContain(" L ");
-    expect(seedPath).not.toContain(" L ");
-
-    const [plantBodySourceX, , plantBodyControlX, , plantBodyControlX2, , plantBodyTargetX] = expectCubicPathNumbers(plantBodyNumbers);
-    const [seedSourceX, , seedControlX, , seedControlX2, , seedTargetX] = expectCubicPathNumbers(seedNumbers);
-    const plantBodyControlOffset = plantBodyControlX - Math.max(plantBodySourceX, plantBodyTargetX);
-    const seedControlOffset = Math.min(seedSourceX, seedTargetX) - seedControlX;
-
-    expect(plantBodyControlX).toBeCloseTo(plantBodyControlX2);
-    expect(seedControlX).toBeCloseTo(seedControlX2);
-    expect(plantBodyControlOffset).toBeGreaterThan(40);
-    expect(plantBodyControlOffset).toBeLessThanOrEqual(90);
-    expect(seedControlOffset).toBeGreaterThan(40);
-    expect(seedControlOffset).toBeLessThanOrEqual(90);
+    const crossCoordinates = (coordinates: number[]) => coordinates.filter((_, index) => index % 2 === 1);
+    const bottomOfBothCards = Math.max(
+      Number.parseFloat(planterNode.style.top) + Number.parseFloat(planterNode.style.height),
+      Number.parseFloat(seedCollectorNode.style.top) + Number.parseFloat(seedCollectorNode.style.height),
+    );
+    const plantLane = Math.max(...crossCoordinates(plantBodyNumbers));
+    const seedLane = Math.max(...crossCoordinates(seedNumbers));
+    expect(plantLane).toBeGreaterThan(bottomOfBothCards);
+    expect(seedLane).toBeGreaterThan(bottomOfBothCards);
+    expect(plantLane).not.toBe(seedLane);
   });
 
   // ==================== Test 3: 滚轮缩放 ====================

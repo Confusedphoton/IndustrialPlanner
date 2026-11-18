@@ -74,7 +74,10 @@ export function createFlowNodePlacementDrag(appHost: AppHost, node: ProductionFl
   const target = recipe !== null
     ? resolveRecipePlacementTarget(appHost, recipe)
     : node.tone === "source" && node.itemId !== undefined ? resolveItemSupplyPlacementTarget(appHost, node.itemId) : null;
-  return target === null ? null : new PanelPlacementDrag(appHost, target);
+  const definition = target === null ? null : appHost.workspace.registry.queries.findEntityDefinition(target.deviceId);
+  return target === null || definition === null || !canPlaceEntityDefinitionInCurrentBase(appHost.mainCanvas, definition)
+    ? null
+    : new PanelPlacementDrag(appHost, target);
 }
 
 /** 进入该配方设备的放置模式，放下的设备自动带上该配方。返回是否成功进入放置。 */

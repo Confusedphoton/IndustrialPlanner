@@ -141,7 +141,7 @@ export function createEditorEntityQueries({
       entityId,
       state,
     }),
-    findEntityAtClientPixelPoint: (clientPixelPoint, viewport) => {
+    findEntityAtClientPixelPoint: (clientPixelPoint, viewport, options) => {
       const gridCell = resolveGridCellAtClientPixelPoint({
         clientPixelPoint,
         viewportState: viewport,
@@ -154,7 +154,7 @@ export function createEditorEntityQueries({
       const currentDocument = document.getSnapshot();
       const listedEntities = resolveListedEntities({
         document: currentDocument,
-        drafts: state.drafts,
+        drafts: options?.includeDrafts === false ? [] : state.drafts,
         baseDefinitions,
       });
 

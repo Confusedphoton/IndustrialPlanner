@@ -1,5 +1,5 @@
 import type { CanvasInteractionController } from "@/app/canvas";
-import { isLassoStroke, isScratchOutStroke, type StrokePoint } from "@/app/canvas/pen-strokes";
+import { isLassoStroke, isScratchOutStroke, SCRATCH_WINDOW_MS, type StrokePoint } from "@/app/canvas/pen-strokes";
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
@@ -13,6 +13,7 @@ interface StrokeTracker {
   readonly start: GesturePosition;
   readonly points: StrokePoint[];
   erasing: boolean;
+  panning: boolean;
   last: GesturePosition;
 }
 
@@ -23,17 +24,15 @@ interface StrokeTracker {
  *
  * 涂抹删除：选择工具下用笔尖在画布上来回快速划几下，划过的设备被删除（与橡皮擦端拖动相同，一条撤销记录）。
  *
- * 笔尖在空白处拖动本是平移视图，所以这里只旁观笔迹：识别出涂抹的那一刻，把这一笔已平移的视图挪回原处，
- * 按落笔时的视图找出笔迹划过的设备，之后的移动由本模块接管、继续标记，抬笔删除。
- * 不是涂抹的拖动照常平移；被其他模块认领的拖动（从设备上起笔是移动设备、从端口起笔是拉线）收不到后续移动，
- * 所以涂抹要从设备旁的空地起笔，再来回划过设备。
+ * 延迟平移到涂抹识别窗口结束，避免笔迹来回时画布跟着跳动。
+ * 从设备或端口起笔仍由移动和铺线手势优先处理。
  */
 export function createHypergryphPenStrokeGestureModule(): GestureMappingModule<AppHost> {
   let tracker: StrokeTracker | null = null;
 
   return {
     id: "hypergryph-pen-stroke-gesture",
-    // 高于平移，以便识别后截住后续移动；低于橡皮擦、标记菜单等明确的笔操作。
+    // 只接管从空地开始的笔迹。
     priority: 190,
     cancel() {
       tracker = null;
@@ -49,15 +48,17 @@ export function createHypergryphPenStrokeGestureModule(): GestureMappingModule<A
         case "mouse dragstart":
           tracker = event.isPen === true && event.originButton === 0 && canvas.state.activeTool === "select"
             && canvas.canUseWorkbenchActions && canvas.isOperationEnabled("delete")
+            && editor.queries.findEntityAtClientPixelPoint(event.startPosition, canvas.view.state) === null
             ? {
                 gestureId: event.gestureId,
                 start: event.startPosition,
                 points: [stamp(canvas, event.startPosition), stamp(canvas, event.position)],
                 erasing: false,
+                panning: false,
                 last: event.position,
               }
             : null;
-          return { status: "ignored" };
+          return { status: tracker === null ? "ignored" : "claimed" };
 
         case "mouse dragmove": {
           if (tracker === null || tracker.gestureId !== event.gestureId) {
@@ -68,14 +69,16 @@ export function createHypergryphPenStrokeGestureModule(): GestureMappingModule<A
             tracker.last = event.position;
             return { status: "handled" };
           }
-          tracker.points.push(stamp(canvas, event.position));
+          const point = stamp(canvas, event.position);
+          tracker.points.push(point);
           if (!isScratchOutStroke(tracker.points)) {
-            // 这次移动交给平移处理，视图随之跟到这里。
+            if (point.timeMs - tracker.points[0]!.timeMs > SCRATCH_WINDOW_MS) {
+              panStroke(canvas, tracker.panning ? tracker.last : tracker.start, event.position);
+              tracker.panning = true;
+            }
             tracker.last = event.position;
-            return { status: "ignored" };
+            return { status: "handled" };
           }
-          // 平移让落笔处的内容一直跟着笔尖（到上一次移动为止，这次移动由本模块截下）；挪回原处，笔迹才对得上用户看到的设备。
-          canvas.view.actions.moveViewportByClientPixelVector({ startClientPixel: tracker.last, endClientPixel: tracker.start });
           tracker.erasing = true;
           editor.actions.clearCollection(EntityCollectionType.selection);
           canvas.actions.hideCanvasFloatingToolbar();
@@ -94,9 +97,13 @@ export function createHypergryphPenStrokeGestureModule(): GestureMappingModule<A
           tracker = null;
           if (!finished.erasing) {
             finished.points.push(stamp(canvas, event.position));
-            return event.reason === "release" && canvas.isOperationEnabled("confirm-placement") && isLassoStroke(finished.points)
-              ? pourPlanIfPinned(canvas, finished)
-              : { status: "ignored" };
+            if (event.reason !== "release") return { status: "handled" };
+            if (canvas.isOperationEnabled("confirm-placement") && isLassoStroke(finished.points)) {
+              const result = pourPlanIfPinned(canvas, finished);
+              if (result.status !== "ignored") return result;
+            }
+            panStroke(canvas, finished.panning ? finished.last : finished.start, event.position);
+            return { status: "handled" };
           }
           if (event.reason !== "release") {
             editor.actions.clearCollection(EntityCollectionType.selection);
@@ -119,9 +126,14 @@ function pourPlanIfPinned(canvas: CanvasInteractionController, stroke: StrokeTra
   if (machines === null) {
     return { status: "ignored" };
   }
-  canvas.view.actions.moveViewportByClientPixelVector({ startClientPixel: stroke.last, endClientPixel: stroke.start });
+  if (stroke.panning) panStroke(canvas, stroke.last, stroke.start);
   pourPlanIntoLasso(canvas, machines, stroke.points);
   return { status: "handled" };
+}
+
+function panStroke(canvas: CanvasInteractionController, start: GesturePosition, end: GesturePosition): void {
+  canvas.view.actions.moveViewportByClientPixelVector({ startClientPixel: start, endClientPixel: end });
+  canvas.actions.alignCanvasFloatingToolbar();
 }
 
 function stamp(canvas: CanvasInteractionController, position: GesturePosition): StrokePoint {

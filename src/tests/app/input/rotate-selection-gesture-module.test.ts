@@ -90,7 +90,7 @@ describe("double tapping a device to spin it", () => {
     expect(editor.state.collections.selection.length).toBe(0);
   });
 
-  it("spins a device tapped again right after the pen tap that placed it", async () => {
+  it("dismisses repeated placement when the pen taps the newly placed device", async () => {
     const appHost = await createAppHostWithPlacedDevice();
     const editor = appHost.workspace.editor!;
     const position = { x: 300, y: 300 };
@@ -109,7 +109,8 @@ describe("double tapping a device to spin it", () => {
     clock.mockReturnValue(1150);
     penCanvasTap(appHost, position, 3);
 
-    expect(editor.document.getSnapshot().entities[placedId]?.rotation).toBe(90);
+    expect(appHost.mainCanvas.state.activeTool).toBe("select");
+    expect(editor.document.getSnapshot().entities[placedId]?.rotation).toBe(0);
     expect(editor.document.getSnapshot().entityOrder.length).toBe(placedCount);
   });
 });

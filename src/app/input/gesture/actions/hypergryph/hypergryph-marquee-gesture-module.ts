@@ -10,7 +10,7 @@ import {
 } from "@/domain/editor/types/editor-types";
 import type { GridPoint, GridRect } from "@/domain/shared/grid";
 import { LOGISTICS_KIND } from "@/domain/shared/logistics";
-import { collectConnectedStrictLogisticsEntityIds } from "@/shared/transport-component";
+import { collectTransportSegmentEntityIds } from "@/shared/transport-component";
 
 import type { GestureHandleResult, GestureMappingModule } from "../types";
 import { ALL_SHORTCUT_ACTIVE_TOOLS } from "../shortcut-route-matching";
@@ -436,30 +436,10 @@ function resolveStrictLogisticsSegmentSelectionIds(options: {
   entity: WorldEntity;
 }): readonly string[] {
   const registry = options.canvas.registry;
-  if (!registry.queries.isDedicatedLogisticsDevice(options.entity.definitionId)) {
-    return [options.entity.id];
-  }
-
-  const kind = registry.queries.resolveDedicatedLogisticsKind(options.entity.definitionId);
-  if (kind === null) {
-    return [options.entity.id];
-  }
-
-  const entityDefinitionMap = new Map(
-    registry.entityDefinitions.map((definition) => [
-      definition.id,
-      definition,
-    ]),
-  );
-  const segmentEntityIds = collectConnectedStrictLogisticsEntityIds({
-    startEntityId: options.entity.id,
+  const segmentEntityIds = collectTransportSegmentEntityIds({
     startEntity: options.entity,
-    kind,
     document: options.editor.document.getSnapshot(),
-    entityDefinitionMap,
-    isDedicatedLogisticsDevice: registry.queries.isDedicatedLogisticsDevice.bind(registry.queries),
-    resolveDedicatedLogisticsKind: registry.queries.resolveDedicatedLogisticsKind.bind(registry.queries),
-    directions: ["input", "output"],
+    registry,
   });
 
   return segmentEntityIds.size > 0 ? Array.from(segmentEntityIds) : [options.entity.id];

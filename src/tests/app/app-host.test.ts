@@ -187,7 +187,7 @@ function createWorkbenchStorageSnapshot(options: {
   moduleBalancingLibraryUi?: ReturnType<typeof createModuleBalancingLibraryUiStorageSnapshot>;
 } = {}) {
   return {
-    leftDockOpen: options.leftDockOpen ?? true,
+    leftDockOpen: options.leftDockOpen ?? false,
     rightDockOpen: options.rightDockOpen ?? false,
     leftDockWidth: options.leftDockWidth ?? DEFAULT_LEFT_DOCK_WIDTH,
     touchLeftDockWidth: MOBILE_LEFT_DOCK_WIDTH,
@@ -587,7 +587,6 @@ describe("createAppTestHost", () => {
     expect(workspace.app?.state.theme.id).toBe("ayu-light");
     expect(appHost.state.screenProfile.deviceClass).toBe("desktop");
     expect(workspace.app?.state.screenProfile.deviceClass).toBe("desktop");
-    expect(appHost.state.workbench.leftDockOpen).toBe(true);
     expect(appHost.state.workbench.rightDockOpen).toBe(false);
     expect(appHost.state.workbench.leftDockWidth).toBe(DEFAULT_LEFT_DOCK_WIDTH);
     expect(appHost.internalState.workbench.dialogState.toolbox.visible).toBe(false);
@@ -1078,7 +1077,7 @@ describe("createAppTestHost", () => {
     });
 
     expect(appHost.internalState.runtime.activePanel).toBe("blueprint");
-    expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBeNull();
+    expect(JSON.parse(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)!)).not.toHaveProperty("activePanel");
 
     const nextWorkspace = createWorkspace();
     const nextAppHost = createAppTestHost(nextWorkspace);
@@ -1123,7 +1122,6 @@ describe("createAppTestHost", () => {
     createEditorTestHost(workspace);
     const appHost = createAppTestHost(workspace);
 
-    appHost.internalActions.toggleLeftDock();
     expect(appHost.state.workbench.leftDockOpen).toBe(false);
 
     appHost.internalActions.setActivePanel("blueprint");
@@ -2216,7 +2214,7 @@ describe("createAppTestHost", () => {
     )?.definitionId).toBe("grinder_1");
   });
 
-  it("applies blueprint-placement via touch OK and returns to select with placement panel", () => {
+  it("applies blueprint-placement via touch OK and returns to select without opening the placement panel", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
@@ -2257,7 +2255,7 @@ describe("createAppTestHost", () => {
 
     // 非连续放置 → 回到 select + placement 面板
     expect(appHost.mainCanvas.state.activeTool).toBe("select");
-    expect(appHost.internalState.runtime.activePanel).toBe("placement");
+    expect(appHost.state.workbench.leftDockOpen).toBe(false);
     expect(appHost.mainCanvas.state.runtime.blueprintPlacementRecord).toBeNull();
     expect(appHost.mainCanvas.state.runtime.blueprintPlacementPointerMode).toBeNull();
     expect(editorHost.document.getSnapshot().entityOrder).toHaveLength(initialEntityOrderLength + 2);
@@ -2321,7 +2319,6 @@ describe("createAppTestHost", () => {
     });
 
     expect(appHost.mainCanvas.state.activeTool).toBe("select");
-    expect(appHost.internalState.runtime.activePanel).toBe("placement");
     expect(appHost.mainCanvas.state.runtime.blueprintPlacementRecord).toBeNull();
     expect(appHost.mainCanvas.state.runtime.blueprintPlacementPointerMode).toBeNull();
     expect(editorHost.state.collections.preview).toEqual([]);
@@ -2368,7 +2365,6 @@ describe("createAppTestHost", () => {
     }));
 
     expect(appHost.mainCanvas.state.activeTool).toBe("select");
-    expect(appHost.internalState.runtime.activePanel).toBe("placement");
     expect(appHost.mainCanvas.state.runtime.blueprintPlacementRecord).toBeNull();
     expect(editorHost.state.collections.preview).toEqual([]);
   });
@@ -2885,7 +2881,7 @@ describe("createAppTestHost", () => {
     const endPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 2 });
 
     appHost.gestureAdapter.handleUiButtonTouchTap({
-      uiButtonId: "placement-action-line-draw",
+      uiButtonId: "placement-action-belt-draw",
       altKey: false,
       ctrlKey: false,
       metaKey: false,
@@ -3172,7 +3168,7 @@ describe("createAppTestHost", () => {
     const endPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 2 });
 
     appHost.gestureAdapter.handleUiButtonTouchTap({
-      uiButtonId: "placement-action-line-draw",
+      uiButtonId: "placement-action-belt-draw",
       altKey: false,
       ctrlKey: false,
       metaKey: false,
@@ -3280,7 +3276,7 @@ describe("createAppTestHost", () => {
     const startPoint = resolveClientPixelPointForGridCell(editorHost, { x: 7, y: 5 });
     const endPoint = resolveClientPixelPointForGridCell(editorHost, { x: 7, y: 3 });
     appHost.gestureAdapter.handleUiButtonTouchTap({
-      uiButtonId: "placement-action-line-draw",
+      uiButtonId: "placement-action-belt-draw",
       altKey: false,
       ctrlKey: false,
       metaKey: false,
@@ -3324,7 +3320,7 @@ describe("createAppTestHost", () => {
 
     // 进入传送带物流模式（touch 按钮）
     appHost.gestureAdapter.handleUiButtonTouchTap({
-      uiButtonId: "placement-action-line-draw",
+      uiButtonId: "placement-action-belt-draw",
       altKey: false,
       ctrlKey: false,
       metaKey: false,
@@ -3382,7 +3378,7 @@ describe("createAppTestHost", () => {
 
     // 进入传送带物流模式（touch 按钮）
     appHost.gestureAdapter.handleUiButtonTouchTap({
-      uiButtonId: "placement-action-line-draw",
+      uiButtonId: "placement-action-belt-draw",
       altKey: false,
       ctrlKey: false,
       metaKey: false,
@@ -3437,7 +3433,7 @@ describe("createAppTestHost", () => {
     };
 
     appHost.gestureAdapter.handleUiButtonTouchTap({
-      uiButtonId: "placement-action-line-draw",
+      uiButtonId: "placement-action-belt-draw",
       altKey: false,
       ctrlKey: false,
       metaKey: false,
@@ -3496,7 +3492,7 @@ describe("createAppTestHost", () => {
     const secondNextHeadPoint = resolveClientPixelPointForGridCell(editorHost, { x: 2, y: 2 });
 
     appHost.gestureAdapter.handleUiButtonTouchTap({
-      uiButtonId: "placement-action-line-draw",
+      uiButtonId: "placement-action-belt-draw",
       altKey: false,
       ctrlKey: false,
       metaKey: false,

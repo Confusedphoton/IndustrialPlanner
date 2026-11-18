@@ -76,6 +76,7 @@ const REGISTRY: Record<string, string> = {
   "registry.entity.mix_pool_2.name": "Expanded Crucible",
   "registry.entity.planter_1.name": "Planting Unit",
   "registry.entity.power_diffuser_1.name": "Electric Pylon",
+  "registry.entity.power_diffuser_2.name": "Xiranite Pylon",
   "registry.entity.power_sta_1.name": "Thermal Bank",
   "registry.entity.seedcol_1.name": "Seed-Picking Unit",
   "registry.entity.shaper_1.name": "Moulding Unit",

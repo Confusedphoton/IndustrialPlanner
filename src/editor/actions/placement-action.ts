@@ -18,6 +18,7 @@ import {
 
 import {
   resolveOutsideBasePlacementEntityIds,
+  resolvePlacementValidations,
   syncPlacementValidationState,
 } from "../placement-validation";
 import { action } from "mobx";
@@ -358,6 +359,18 @@ export function createEditorPlacementActions({
             replacedEntityIds.add(entityId);
           }
         }
+      }
+
+      const validation = resolvePlacementValidations({
+        document: currentDocument,
+        workspace,
+        drafts: committedPreviewDrafts,
+        ignoredEntityIds: replacedEntityIds,
+      });
+      if (committedPreviewDrafts.some((draft) =>
+        validation[draft.id]?.reasons.some((reason) => reason.code === "overlap"),
+      )) {
+        return false;
       }
 
       const nextEntities = { ...currentDocument.entities };

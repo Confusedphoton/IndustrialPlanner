@@ -85,13 +85,6 @@ const CANVAS_FLOATING_TOOLBAR_DEFINITIONS: Record<CanvasFloatingToolbarButtonId,
     },
     icon: "copy",
   },
-  "canvas-floating-toolbar-button-hold": {
-    label: {
-      "zh-CN": "暂存",
-      "en-US": "Hold",
-    },
-    icon: "panel-bottom-close",
-  },
   "canvas-floating-toolbar-button-save-blueprint": {
     label: {
       "zh-CN": "保存蓝图",

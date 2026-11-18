@@ -7,6 +7,7 @@ import type {
 import {
   formatProductionDeviceCount,
   formatProductionFlow,
+  isWasteTreatmentItem,
   resolveProductionPlanningEntityIconSrc,
   resolveProductionPlanningItemIconSrc,
   resolveProductionPlanningItemName,
@@ -135,14 +136,27 @@ export function buildProductionFlowGraph(
       continue;
     }
 
+    const isSecondaryWasteRow = isWasteTreatmentItem(row.targetItemId)
+      && row.recipeNodes.every((recipeNode) => recipeNode.id.includes(":target:"));
+    if (isSecondaryWasteRow) continue;
+
     addLedgerRowNode(row, context);
-    const producedPerMinute = findOutputFlow(row.recipeNode, row.targetItemId);
-    if (row.targetItemId.length > 0 && producedPerMinute > FLOW_EPSILON) {
-      appendEndpoint(producersByItemId, row.targetItemId, {
-        itemId: row.targetItemId,
+    const outputs = new Map([[row.targetItemId, findOutputFlow(row.recipeNode, row.targetItemId)]]);
+    for (const recipeNode of row.recipeNodes) {
+      if (recipeNode.id.includes(":target:") || recipeNode.targetItemId !== row.targetItemId) continue;
+      for (const output of recipeNode.outputs) {
+        if (output.itemId !== row.targetItemId && isWasteTreatmentItem(output.itemId)) {
+          outputs.set(output.itemId, (outputs.get(output.itemId) ?? 0) + output.perMinute);
+        }
+      }
+    }
+    for (const [itemId, value] of outputs) {
+      if (itemId.length === 0 || value <= FLOW_EPSILON) continue;
+      appendEndpoint(producersByItemId, itemId, {
+        itemId,
         nodeId: row.id,
         row,
-        value: producedPerMinute,
+        value,
         isDeviceMinimumConsumption: false,
       });
     }
@@ -205,8 +219,9 @@ function addLedgerRowNode(row: ProductionPlanningLedgerRow, context: LedgerBuild
   const displayRate = producedPerMinute > 0 ? producedPerMinute : consumedPerMinute;
   const deviceCount = formatProductionDeviceCount(row.recipeNode.deviceCount);
   const kind: ProductionFlowNodeKind = context.displayMode === "item" ? "item" : "recipe";
-  const title = context.displayMode === "item" ? targetName : machineName;
-  const subtitle = context.displayMode === "item" ? machineName : targetName;
+  const titleShowsMachine = context.displayMode === "device" || isProductionPlanningDisposalRecipeId(row.recipeId);
+  const title = titleShowsMachine ? machineName : targetName;
+  const subtitle = titleShowsMachine ? targetName : machineName;
   const iconSrcs = context.displayMode === "item"
     ? [resolveProductionPlanningItemIconSrc(row.targetItemId, context.index)]
     : resolveLedgerRowMachineIconSrcs(row, context.index);
@@ -220,7 +235,7 @@ function addLedgerRowNode(row: ProductionPlanningLedgerRow, context: LedgerBuild
     rate: `${formatProductionFlow(displayRate)}/min`,
     rateValue: formatProductionFlow(displayRate),
     machineCount: isExternal ? undefined : `×${deviceCount}`,
-    machineIconSrc: isExternal || context.displayMode !== "item"
+    machineIconSrc: context.displayMode !== "item"
       ? undefined
       : resolveLedgerRowMachineIconSrcs(row, context.index)[0],
     iconSrcs,
@@ -252,7 +267,9 @@ function resolveLedgerRowMachineName(
   translate: (key: string) => string,
 ): string {
   if (isProductionPlanningExternalSupplyRecipeId(row.recipeId)) {
-    return translate("productionPlanning.externalSupply");
+    return translate(index.naturalResourceItemIds.has(row.targetItemId)
+      ? "productionPlanning.depotSupply"
+      : "productionPlanning.externalSupply");
   }
   if (row.recipeNode.module !== null) {
     const sourceName = translate(
@@ -423,14 +440,11 @@ function resolveConsumerLinkOptions(
   if (shouldEnterConsumerFromRight(itemId, producers, consumer, context)) {
     return {
       preferredFeedback: true,
-      targetSide: "right",
       isDeviceMinimumConsumption: consumer.isDeviceMinimumConsumption,
     };
   }
 
-  return shouldExitProducerFromLeft(itemId, producers, consumer, context)
-    ? { sourceSide: "left", isDeviceMinimumConsumption: consumer.isDeviceMinimumConsumption }
-    : { isDeviceMinimumConsumption: consumer.isDeviceMinimumConsumption };
+  return { isDeviceMinimumConsumption: consumer.isDeviceMinimumConsumption };
 }
 
 function shouldEnterConsumerFromRight(
@@ -444,25 +458,10 @@ function shouldEnterConsumerFromRight(
     && producers.some((producer) => isPlanterLedgerRow(producer.row, context.index));
 }
 
-function shouldExitProducerFromLeft(
-  itemId: string,
-  producers: readonly ItemFlowEndpoint[],
-  consumer: ItemFlowEndpoint,
-  context: LedgerBuildContext,
-): boolean {
-  return isPlantSeedItemId(itemId)
-    && isPlanterLedgerRow(consumer.row, context.index)
-    && producers.some((producer) => isSeedCollectorLedgerRow(producer.row, context.index));
-}
-
 function isPlantBodyItemId(itemId: string): boolean {
   return itemId.startsWith("item_plant_")
     && !itemId.includes("_seed")
     && !itemId.includes("_powder");
-}
-
-function isPlantSeedItemId(itemId: string): boolean {
-  return itemId.startsWith("item_plant_") && itemId.includes("_seed");
 }
 
 function isPlanterLedgerRow(row: ProductionPlanningLedgerRow, index: ProductionPlanningIndex): boolean {

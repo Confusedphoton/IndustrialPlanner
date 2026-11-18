@@ -68,6 +68,7 @@ const REGISTRY: Record<string, string> = {
   "registry.entity.mix_pool_2.name": "扩容反应池",
   "registry.entity.planter_1.name": "种植机",
   "registry.entity.power_diffuser_1.name": "供电桩",
+  "registry.entity.power_diffuser_2.name": "息壤供电桩",
   "registry.entity.power_sta_1.name": "热能池",
   "registry.entity.seedcol_1.name": "采种机",
   "registry.entity.shaper_1.name": "塑形机",

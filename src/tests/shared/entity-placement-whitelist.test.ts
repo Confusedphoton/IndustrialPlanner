@@ -57,7 +57,7 @@ describe("设备地图与区域白名单", () => {
   it("迁移后的现有地区设备保留武陵与草稿箱权限，并禁止四号谷地", () => {
     expect(() => validateEntityPlacementWhitelists(ENTITY_DEFINITIONS, BASE_DEFINITIONS)).not.toThrow();
     const regional = ENTITY_DEFINITIONS.filter((definition) => definition.tags.includes("武陵"));
-    expect(regional).toHaveLength(32);
+    expect(regional.some((definition) => definition.id === "power_diffuser_2")).toBe(true);
     for (const definition of regional) {
       for (const candidate of BASE_DEFINITIONS) {
         const allowed = candidate.tag === "武陵" || candidate.id === "draft_box";

@@ -1,6 +1,8 @@
+import LucideMenu from "~icons/lucide/menu";
 import { FullscreenToggleButton } from "@/app/shell/layout/fullscreen-toggle-button";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
+import { RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID } from "@/app/input/gesture/actions";
 import type { AppHost } from "@/app/host/app-host";
 import { observer } from "mobx-react-lite";
 import type {
@@ -173,9 +175,11 @@ export const SimulationSpeedButtons = observer(function SimulationSpeedButtons({
 export const TimelineButton = observer(function TimelineButton({
   appHost,
   className,
+  onOpen,
 }: {
   appHost: AppHost;
   className: string;
+  onOpen?: () => void;
 }) {
   const label = appHost.actions.translate("timelineDialog.title");
   const active = appHost.internalState.workbench.dialogState.timeline.visible;
@@ -186,7 +190,10 @@ export const TimelineButton = observer(function TimelineButton({
       aria-pressed={active}
       className={cm(styles, className)}
       data-ui-button-id="top-bar-timeline"
-      onClick={() => appHost.internalActions.openDialog("timeline")}
+      onClick={() => {
+        onOpen?.();
+        appHost.internalActions.openDialog("timeline");
+      }}
       title={label}
       type="button"
     >
@@ -266,6 +273,127 @@ function MobileOngoingActivityStatus({ label }: { readonly label: string }) {
   );
 }
 
+function TopBarMenu({ label, icon, children }: {
+  readonly label: string;
+  readonly icon: React.ReactNode;
+  readonly children: (close: () => void) => React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const panelId = useId();
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (event.target instanceof Node && !rootRef.current?.contains(event.target)) setOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.stopPropagation();
+      setOpen(false);
+      buttonRef.current?.focus();
+    };
+    document.addEventListener("pointerdown", closeOnOutsidePointer, true);
+    window.addEventListener("keydown", closeOnEscape, true);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer, true);
+      window.removeEventListener("keydown", closeOnEscape, true);
+    };
+  }, [open]);
+
+  return (
+    <div className={cm(styles, "top-bar-menu")} ref={rootRef}>
+      <button
+        aria-controls={panelId}
+        aria-expanded={open}
+        aria-label={label}
+        className={cm(styles, "top-bar-menu-trigger")}
+        onClick={() => setOpen(!open)}
+        ref={buttonRef}
+        title={label}
+        type="button"
+      >
+        <span className={cm(styles, "top-bar-toggle-icon")}>{icon}</span>
+        {label}
+      </button>
+      <div className={cm(styles, "top-bar-menu-panel")} hidden={!open} id={panelId}>
+        {open ? children(() => setOpen(false)) : null}
+      </div>
+    </div>
+  );
+}
+
+export const SimulationMenu = observer(function SimulationMenu({ appHost }: { appHost: AppHost }) {
+  const t = appHost.actions.translate;
+  const running = appHost.workspace.simulation?.state.runningState === "start";
+  return (
+    <TopBarMenu
+      label={t("workbench.leftRail.simulation")}
+      icon={<WorkbenchIcon kind={running ? "play" : "simulation"} />}
+    >
+      {(close) => (
+        <>
+          <SimulationControlButton appHost={appHost} className="top-bar-icon-button" />
+          <SimulationSpeedButtons appHost={appHost} />
+          <TimelineButton appHost={appHost} className="top-bar-icon-button" onOpen={close} />
+        </>
+      )}
+    </TopBarMenu>
+  );
+});
+
+export const PlacementMenu = observer(function PlacementMenu({ appHost }: { appHost: AppHost }) {
+  const t = appHost.actions.translate;
+  const canvas = appHost.mainCanvas;
+  const placing = canvas.state.activeTool === "single-placement" || canvas.state.activeTool === "blueprint-placement";
+  const continuous = canvas.state.activeTool === "blueprint-placement"
+    ? canvas.state.runtime.blueprintPlacementContinuous
+    : canvas.state.runtime.singlePlacementContinuous;
+  const placementOpen = appHost.state.workbench.leftDockOpen
+    && (appHost.internalState.runtime.activePanel ?? "placement") === "placement";
+  return (
+    <TopBarMenu label={t("topBar.menu")} icon={<LucideMenu aria-hidden />}>
+      {(close) => (
+        <div className={cm(styles, "top-bar-placement-menu")}>
+          <button
+            aria-pressed={placementOpen}
+            className={cm(styles, "top-bar-menu-trigger")}
+            onClick={() => {
+              if (placementOpen) appHost.internalActions.toggleLeftDock();
+              else appHost.internalActions.setActivePanel("placement");
+              close();
+            }}
+            title={t("workbench.panel.placement.title")}
+            type="button"
+          >
+            <span className={cm(styles, "top-bar-toggle-icon")}><WorkbenchIcon kind="placement" /></span>
+            {t("workbench.panel.placement.title")}
+          </button>
+          {placing ? (
+            <button
+              aria-pressed={continuous}
+              className={cm(styles, "top-bar-menu-trigger")}
+              disabled={!continuous && !canvas.isOperationEnabled("continuous-placement")}
+              onClick={() => appHost.gestureAdapter.handleUiButtonMouseTap({
+                uiButtonId: RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID,
+                button: 0,
+                altKey: false,
+                ctrlKey: false,
+                metaKey: false,
+                shiftKey: false,
+              })}
+              type="button"
+            >
+              {t("action.continuousPlacement")}
+            </button>
+          ) : null}
+        </div>
+      )}
+    </TopBarMenu>
+  );
+});
+
 export const TopBar = observer(function TopBar({
   appHost,
   isStandalone = false,
@@ -333,15 +461,8 @@ export const TopBar = observer(function TopBar({
         ) : null}
       </div>
       <div className={cm(styles, "toolbar-group top-bar-controls")}>
-        <SimulationControlButton
-          appHost={appHost}
-          className={cm(styles, "top-bar-icon-button")}
-        />
-        <SimulationSpeedButtons appHost={appHost} />
-        <TimelineButton
-          appHost={appHost}
-          className={cm(styles, "top-bar-icon-button")}
-        />
+        <PlacementMenu appHost={appHost} />
+        <SimulationMenu appHost={appHost} />
         <FullscreenToggleButton
           appHost={appHost}
           className={cm(styles, "top-bar-icon-button top-bar-fullscreen-button")}

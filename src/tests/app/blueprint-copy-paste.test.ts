@@ -850,6 +850,11 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
       expect(copyConsumed).toBe(true);
       expect(editorHost.state.collections.preview).toHaveLength(1);
 
+      editorHost.actions.moveCollectionTo({
+        collectionType: EntityCollectionType.preview,
+        startGridPoint: { x: 0, y: 0 },
+        endGridPoint: { x: (cycle + 1) * 12, y: 0 },
+      });
       // 放置
       const applied = editorHost.actions.applyPlacementDraft();
       expect(applied).toBe(true);
@@ -1196,7 +1201,7 @@ describe("ID rewriting in blueprint placement", () => {
     blueprint: BlueprintDocument,
   ) {
     editorHost.actions.createBlueprintPlacementDraft!(blueprint, {
-      x: blueprint.initialGridPoint.x,
+      x: blueprint.initialGridPoint.x + 24,
       y: blueprint.initialGridPoint.y,
     });
     return editorHost.actions.applyPlacementDraft();

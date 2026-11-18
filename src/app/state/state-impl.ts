@@ -215,7 +215,6 @@ export const CANVAS_FLOATING_TOOLBAR_BUTTON_IDS = [
   "canvas-floating-toolbar-button-move",
   "canvas-floating-toolbar-button-copy",
   "canvas-floating-toolbar-button-pick-up",
-  "canvas-floating-toolbar-button-hold",
   "canvas-floating-toolbar-button-save-blueprint",
   "canvas-floating-toolbar-button-delete",
   "canvas-floating-toolbar-button-delete-many",
@@ -551,7 +550,7 @@ export function isTimelineBottomDockActive(
 }
 
 class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
-  leftDockOpen = true;
+  leftDockOpen = false;
   rightDockOpen = false;
   leftDockWidth = DEFAULT_LEFT_DOCK_WIDTH;
   touchLeftDockWidth = MOBILE_LEFT_DOCK_WIDTH;

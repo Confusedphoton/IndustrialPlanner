@@ -113,6 +113,7 @@ export function createEditorLogisticsActions(
   context: EditorActionsContext,
 ): EditorLogisticsActions {
   let logisticsDraftCounter = 0;
+  let reverseDrawSource: LogisticsDraftEndpoint | null = null;
   const logisticsContext: LogisticsActionContext = {
     ...context,
     entityDefinitionMap: createEntityDefinitionMap(
@@ -128,6 +129,7 @@ export function createEditorLogisticsActions(
     createLogisticsDraftStart: action((options) => {
       // TODO: 实现物流草稿起点创建逻辑
       // 2026-04-30 订正：ST1-RQ-047 已实现 source 解析、初始 preview 和 collection 接线。
+      reverseDrawSource = null;
       clearLogisticsDraftState(logisticsContext);
 
       const source = resolveCreateSourceEndpoint(logisticsContext, options);
@@ -198,7 +200,13 @@ export function createEditorLogisticsActions(
       // TODO: 实现物流终点移动逻辑
       // 2026-04-30 订正：ST1-RQ-047 已实现 touch freehand 与 mouse single-bend 路径更新。
       // 2026-04-30 修正：已吸附设备端口时，指针在设备内保持吸附，不深入设备内部。
-      const draft = logisticsContext.state.internalTransientState.logisticsDraft;
+      const activeDraft = logisticsContext.state.internalTransientState.logisticsDraft;
+      const draft = activeDraft === null || reverseDrawSource === null ? activeDraft : {
+        ...activeDraft,
+        source: reverseDrawSource,
+        cells: [...activeDraft.cells].reverse(),
+      };
+      reverseDrawSource = null;
       if (draft === null || draft.source === null) {
         return createIgnoredLogisticsActionResult();
       }
@@ -228,6 +236,25 @@ export function createEditorLogisticsActions(
           ) {
             return createLogisticsActionResultFromDraft(draft);
           }
+        }
+      }
+
+      if (draft.source.type === "empty-cell") {
+        const reverseRoute = resolveReverseOutputRoute(logisticsContext, draft, options);
+        if (reverseRoute !== null) {
+          reverseDrawSource = draft.source;
+          return rebuildLogisticsDraft({
+            context: logisticsContext,
+            kind: draft.kind,
+            source: reverseRoute.source,
+            target: null,
+            points: reverseRoute.points,
+            routeOrder: draft.routeOrder,
+            replacingEntityId: null,
+            allowEmptyTarget: options.allowEmptyTarget ?? true,
+            autoCreateSplittersAndConvergers: options.autoCreateSplittersAndConvergers ?? true,
+            status: "updated",
+          });
         }
       }
 
@@ -651,6 +678,49 @@ function resolveCreateSourceEndpoint(
         gridPoint: { ...options.source.gridPoint },
       };
   }
+}
+
+function resolveReverseOutputRoute(
+  context: LogisticsActionContext,
+  draft: LogisticsDraftReadonlyState,
+  options: MoveLogisticsDraftEndOptions,
+): { source: DevicePortEndpoint; points: GridPoint[] } | null {
+  if (draft.source?.type !== "empty-cell") return null;
+  const document = context.document.getSnapshot();
+  const gridPoint = options.pointerGridPoint;
+  const entity = findTopEntityAtGridPoint({
+    gridPoint,
+    document,
+    drafts: [],
+    entityDefinitionMap: context.entityDefinitionMap,
+    registryQueries: context.workspace.registry.queries,
+    baseDefinitions: context.workspace.registry.baseDefinitions,
+    skipLogisticsKind: draft.kind === LOGISTICS_KIND.belt ? LOGISTICS_KIND.pipe : LOGISTICS_KIND.belt,
+  });
+  if (entity === null || isOrdinaryLogisticsDefinitionId(entity.definitionId, draft.kind, context.workspace.registry.queries)) {
+    return null;
+  }
+  const definition = context.entityDefinitionMap.get(entity.definitionId);
+  if (definition === undefined) return null;
+
+  const points = options.routeMode.type === "freehand"
+    ? appendFreehandPathPoints({ points: draft.cells.map((cell) => cell.gridPoint), pointerGridPoint: gridPoint })
+    : generateSingleBendPathPoints({ start: draft.source.gridPoint, target: gridPoint, routeOrder: options.routeMode.routeOrder });
+  const approach = points.at(-2);
+  if (approach === undefined) return null;
+
+  const port = resolveDevicePortEndpoints({
+    entity,
+    definition,
+    kind: draft.kind,
+    direction: "output",
+    pointerGridPoint: gridPoint,
+  }).find((endpoint) => areGridPointsEqual(endpoint.insideGridPoint, gridPoint)
+    && areGridPointsEqual(endpoint.outsideGridPoint, approach));
+  return port === undefined ? null : {
+    source: { ...port, fixedSource: true },
+    points: points.slice(0, -1).reverse(),
+  };
 }
 
 function resolveMoveSourceEndpoint(options: {

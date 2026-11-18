@@ -142,7 +142,7 @@ describe("production planning model", () => {
       targets: [port("item_copper_ore", 20)],
       supplies: [],
       infiniteItemIds: baseInfiniteItemIds(index),
-      recipeChoices: new Map(),
+      recipeChoices: new Map([["item_copper_ore", "r_miner_copper_ore_basic"]]),
       sourceConfig: DEFAULT_SOURCE_CONFIG,
     }, index);
 
@@ -176,10 +176,11 @@ describe("production planning model", () => {
     expect(root.recipeNode?.inputs).toEqual([
       expect.objectContaining({ itemId: "item_iron_ore", perMinute: 30 }),
     ]);
-    // 自然资源不再从 infiniteItemIds 补齐；铁矿石走矿机配方生产。
-    expect(root.recipeNode?.inputItems[0]?.isInfiniteSource).toBe(false);
-    expect(root.recipeNode?.inputItems[0]?.recipeNode).not.toBeNull();
-    expect(root.recipeNode?.inputItems[0]?.recipeNode?.recipeId).toBe("r_miner_iron_ore_basic");
+    expect(root.recipeNode?.inputItems[0]).toMatchObject({
+      itemId: "item_iron_ore",
+      suppliedPerMinute: 30,
+      recipeNode: null,
+    });
   });
 
   it("uses recipe surplus before finite external supply", () => {
@@ -247,7 +248,7 @@ describe("production planning model", () => {
   });
 
   it.each(["item_gas_xiranite", "item_iron_ore"])(
-    "keeps gathering by default and restores finite supply after disabling infinity (%s)",
+    "defaults to depot supply and honors explicit finite and infinite inputs (%s)",
     (itemId) => {
       const index = buildProductionPlanningIndex(createRegistryContract());
       const request = {
@@ -257,9 +258,8 @@ describe("production planning model", () => {
         sourceConfig: DEFAULT_SOURCE_CONFIG,
       };
       const automatic = computeProductionPlan({ ...request, supplies: [] }, index);
-      expect(automatic.roots[0]?.isInfiniteSource).toBe(false);
-      expect(automatic.roots[0]?.producedPerMinute).toBe(120);
-      expect(automatic.roots[0]?.recipeNode).not.toBeNull();
+      expect(automatic.roots[0]?.suppliedPerMinute).toBe(120);
+      expect(automatic.roots[0]?.recipeNode).toBeNull();
 
       const supply = { ...infinitePort(itemId), perMinute: 30, isInfinite: false };
       const finite = computeProductionPlan({ ...request, supplies: [supply] }, index);

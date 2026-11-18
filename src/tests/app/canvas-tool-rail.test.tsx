@@ -9,7 +9,6 @@ import {
   LOGISTICS_ROUTE_ORDER_BUTTON_ID,
   PLACEMENT_RAIL_CANCEL_BUTTON_ID,
   PLACEMENT_RAIL_ROTATE_BUTTON_ID,
-  RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID,
   RAIL_TOGGLE_DIM_PIPES_BUTTON_ID,
 } from "@/app/input/gesture/actions";
 import type { AppHost } from "@/app/host/app-host";
@@ -59,7 +58,7 @@ describe("canvas tool rail", () => {
     renderRail(appHost);
     const before = mainRailButtonIds();
 
-    penTap(button("placement-action-line-draw"));
+    penTap(button("placement-action-belt-draw"));
 
     expect(appHost.mainCanvas.state.activeTool).toBe("logistics-placement");
     expect(mainRailButtonIds()).toEqual(before);
@@ -78,13 +77,13 @@ describe("canvas tool rail", () => {
     expect(button(RAIL_TOGGLE_DIM_PIPES_BUTTON_ID).getAttribute("aria-pressed")).toBe("false");
   });
 
-  it("switches the line tool between belt and pipe with a second tap", async () => {
+  it("selects belt and pipe with their respective tools", async () => {
     const appHost = await createAppHost();
     renderRail(appHost);
 
-    penTap(button("placement-action-line-draw"));
+    penTap(button("placement-action-belt-draw"));
     expect(appHost.mainCanvas.state.runtime.logisticsPlacement.kind).toBe("belt");
-    penTap(button("placement-action-line-draw"));
+    penTap(button("placement-action-pipe-draw"));
     expect(appHost.mainCanvas.state.activeTool).toBe("logistics-placement");
     expect(appHost.mainCanvas.state.runtime.logisticsPlacement.kind).toBe("pipe");
   });
@@ -106,12 +105,8 @@ describe("canvas tool rail", () => {
     expect(contextualButtonIds()).toEqual([
       PLACEMENT_RAIL_ROTATE_BUTTON_ID,
       PLACEMENT_RAIL_CANCEL_BUTTON_ID,
-      RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID,
-    ]);
-    const continuousBefore = appHost.mainCanvas.state.runtime.singlePlacementContinuous;
-    penTap(button(RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID));
-    expect(appHost.mainCanvas.state.runtime.singlePlacementContinuous).toBe(!continuousBefore);
-    expect(button(RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID).getAttribute("aria-pressed")).toBe(String(!continuousBefore));
+        ]);
+
 
     const rotationBefore = previewRotation(appHost);
     penTap(button(PLACEMENT_RAIL_ROTATE_BUTTON_ID));

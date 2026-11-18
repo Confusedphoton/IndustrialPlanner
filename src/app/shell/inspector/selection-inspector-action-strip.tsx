@@ -108,11 +108,6 @@ function resolveSelectionActionButtonIds(options: {
     buttonIds.push(SWITCH_DEVICE_MODE_BUTTON_ID);
   }
 
-  // 暂存：整组收进画布底角的托盘，之后连同配方与组内连接一起拿回；只选中传送带/管道时没有意义。
-  if (!options.isDedicatedLogistics) {
-    buttonIds.push("canvas-floating-toolbar-button-hold");
-  }
-
   if (options.canSaveBlueprint) {
     buttonIds.push("canvas-floating-toolbar-button-save-blueprint");
   }

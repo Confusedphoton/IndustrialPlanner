@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { createHypergryphPortDragLogisticsGestureModule } from "@/app/input/gesture/actions/hypergryph/hypergryph-port-drag-logistics-gesture-module";
+import { createWorldDocument, type WorldEntity } from "@/domain/document/world-document";
 import { createHypergryphLogisticsPlacementGestureModule } from "@/app/input/gesture/actions";
 import type { GestureEvent } from "@/app/input/gesture/adapter";
 import { LOGISTICS_KIND } from "@/domain/shared/logistics";
@@ -30,6 +32,41 @@ describe("logistics placement mouse/pen drag", () => {
     expect(editor.queries.resolveLogisticsDraftState()).toBeNull();
     expect(editor.document.getSnapshot().entityOrder.length).toBeGreaterThan(entityCountBefore);
     expect(context.canvas.state.runtime.logisticsPlacement.phase).toBe("idle");
+  });
+
+  it("connects a backward drag to the exact output port without capturing nearby cells", () => {
+    const storage = (id: string, y: number): WorldEntity => ({
+      id,
+      definitionId: "storager_1",
+      position: { x: 22, y },
+      rotation: 0,
+      tags: [],
+      config: {},
+    });
+    const test = createCanvasTestSession({
+      activeTool: "select",
+      document: {
+        ...createWorldDocument({ baseId: "draft_box" }),
+        entities: { source: storage("source", 20), sink: storage("sink", 28) },
+        entityOrder: ["source", "sink"],
+      },
+      viewport: { center: { x: 50, y: 50 }, gridSize: 1 / 16, displayRotation: 0 },
+    });
+    cleanups.push(test.dispose);
+    test.view.actions.setViewportClientRect({ left: 0, top: 0, width: 100, height: 100 });
+    const { context, editor } = test;
+    const module = createHypergryphPortDragLogisticsGestureModule();
+
+    module.handle(dragStart({ x: 23, y: 28 }, { x: 23, y: 26 }), context);
+    module.handle(dragMove({ x: 23, y: 23 }), context);
+    expect(editor.queries.resolveLogisticsDraftState()?.source?.type).toBe("empty-cell");
+
+    module.handle(dragEnd({ x: 23, y: 22 }, "release"), context);
+
+    const firstBelt = editor.queries.findTransportLineAtGridPoint({ x: 23, y: 23 }, LOGISTICS_KIND.belt);
+    const lastBelt = editor.queries.findTransportLineAtGridPoint({ x: 23, y: 27 }, LOGISTICS_KIND.belt);
+    expect(firstBelt?.rotation).toBe(90);
+    expect(lastBelt?.rotation).toBe(90);
   });
 
   it("discards the dragged route when the drag is cancelled", () => {

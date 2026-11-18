@@ -185,15 +185,16 @@ interface SolverContext {
   manualSupplyRemaining: Map<string, number>;
   surplusSupplyRemaining: Map<string, number>;
   infiniteItemIds: ReadonlySet<string>;
+  explicitlySuppliedItemIds: ReadonlySet<string>;
   recipeChoices: ReadonlyMap<string, string>;
   sourceConfig: ProductionPlanningSourceConfig;
   useModules: boolean;
   globalDemandRemaining: Map<string, number>;
   dumperAmounts: Map<string, number>;
-  wasteTreatmentAmounts: Map<string, number>;
   nextNodeIndex: number;
 }
 
+const ENVIRONMENT_ITEM_PREFIX = "environment:";
 const EPSILON = 0.0001;
 const MAX_RECURSION_DEPTH = 48;
 
@@ -394,12 +395,12 @@ function computeProductionPlanPass(
       ? new Map([[WATER_PURIFIER_OUTPUT_ITEM_ID, waterPurifierOutputPerMinute]])
       : new Map(),
     infiniteItemIds: buildInfiniteItemIds(request.infiniteItemIds, request.supplies),
+    explicitlySuppliedItemIds: new Set(request.supplies.filter((supply) => supply.perMinute > EPSILON).map((supply) => supply.itemId)),
     recipeChoices: request.recipeChoices,
     sourceConfig: request.sourceConfig,
     useModules,
     globalDemandRemaining,
     dumperAmounts: new Map(),
-    wasteTreatmentAmounts: new Map(),
     nextNodeIndex: 0,
   };
 
@@ -518,8 +519,11 @@ export function resolveProductionPlanningItemName(
   index: ProductionPlanningIndex,
   translate: (key: string) => string,
 ): string {
-  const item = index.itemById.get(itemId);
-  return item === undefined ? itemId : translate(item.nameKey);
+  const environment = itemId.startsWith(ENVIRONMENT_ITEM_PREFIX);
+  const materialId = environment ? itemId.slice(ENVIRONMENT_ITEM_PREFIX.length) : itemId;
+  const item = index.itemById.get(materialId);
+  const name = item === undefined ? materialId : translate(item.nameKey);
+  return environment ? translate("productionPlanning.environment").replace("{item}", name) : name;
 }
 
 export function resolveProductionPlanningRecipeName(
@@ -553,8 +557,10 @@ export function resolveProductionPlanningCandidateName(
 }
 
 export function resolveProductionPlanningItemIconSrc(itemId: string, index: ProductionPlanningIndex): string {
-  const item = index.itemById.get(itemId);
-  return createItemIconAssetUrl(item?.iconId ?? itemId);
+  const materialId = itemId.startsWith(ENVIRONMENT_ITEM_PREFIX)
+    ? itemId.slice(ENVIRONMENT_ITEM_PREFIX.length) : itemId;
+  const item = index.itemById.get(materialId);
+  return createItemIconAssetUrl(item?.iconId ?? materialId);
 }
 
 export function resolveProductionPlanningModuleIconSrcs(
@@ -678,7 +684,10 @@ function resolveDemand(
   const suppliedByStoredItems = roundFlow(supply.manual + supply.surplus);
   let remaining = roundFlow(demand - suppliedByStoredItems);
 
-  if (remaining > EPSILON && context.infiniteItemIds.has(itemId)) {
+  const defaultsToDepot = context.index.naturalResourceItemIds.has(itemId)
+    && !context.recipeChoices.has(itemId)
+    && !context.explicitlySuppliedItemIds.has(itemId);
+  if (remaining > EPSILON && (context.infiniteItemIds.has(itemId) || defaultsToDepot)) {
     supply.infinite = remaining;
     remaining = 0;
   }
@@ -867,6 +876,10 @@ function resolveDemand(
       ? createProductionPlanningCycleSupplyItemNode(input.itemId, input.perMinute, context)
       : resolveDemand(input.itemId, input.perMinute, context, [...stack, itemId], closedPlantCycleItemIds)
   ));
+  const environment = recipe === undefined
+    ? null
+    : resolveEnvironmentDemand(recipe, deviceCount, context, [...stack, itemId]);
+  if (environment !== null) inputItems.push(environment.itemNode);
   const recipeNode: ProductionPlanningRecipeNode = {
     id: createNodeId(candidate.sourceType === "system-recipe" ? "recipe" : "module", context),
     kind: "recipe",
@@ -878,7 +891,7 @@ function resolveDemand(
     durationSeconds: recipe?.durationSeconds ?? 60,
     cyclesPerMinute,
     deviceCount,
-    inputs: inputPorts,
+    inputs: environment === null ? inputPorts : [...inputPorts, environment.port],
     deviceMinimumConsumptionInputs: deviceConsumptionPorts,
     outputs: outputPorts,
     inputItems,
@@ -897,6 +910,61 @@ function resolveDemand(
     isCycleSource: false,
     blockedByCycle: false,
   }, context);
+}
+
+function resolveEnvironmentDemand(
+  host: RecipeDefinition,
+  hostDeviceCount: number,
+  context: SolverContext,
+  stack: readonly string[],
+): { port: ProductionPlanningPort; itemNode: ProductionPlanningItemNode } | null {
+  const diffuser = [...context.index.recipeById.values()].find((recipe) =>
+    recipe.environmentOutput !== undefined
+      && host.requiredEnvironmentAnyOf?.includes(recipe.environmentOutput.itemId),
+  );
+  if (diffuser?.environmentOutput === undefined || hostDeviceCount <= EPSILON) return null;
+
+  // Coverage depends on the floor plan. Budget one diffuser per full-time facility equivalent.
+  const cyclesPerMinute = roundFlow(hostDeviceCount * 60 / diffuser.durationSeconds);
+  const itemId = ENVIRONMENT_ITEM_PREFIX + diffuser.environmentOutput.itemId;
+  const port = { id: `${host.id}-environment`, itemId, perMinute: cyclesPerMinute };
+  const inputs = diffuser.inputs.map((input) => ({
+    id: `${diffuser.id}-in-${input.itemId}`,
+    itemId: input.itemId,
+    perMinute: roundFlow(input.amount * cyclesPerMinute),
+  }));
+  const recipeNode: ProductionPlanningRecipeNode = {
+    id: createNodeId("environment", context),
+    kind: "recipe",
+    candidateId: createProductionPlanningRecipeCandidateId(diffuser.id),
+    candidateSourceType: "system-recipe",
+    module: null,
+    recipeId: diffuser.id,
+    targetItemId: itemId,
+    durationSeconds: diffuser.durationSeconds,
+    cyclesPerMinute,
+    deviceCount: hostDeviceCount,
+    inputs,
+    outputs: [port],
+    inputItems: inputs.map((input) => resolveDemand(input.itemId, input.perMinute, context, stack)),
+    deviceMinimumConsumptionInputs: [],
+    deviceMinimumConsumptionItems: [],
+  };
+  return {
+    port,
+    itemNode: createItemNode({
+      itemId,
+      demandPerMinute: port.perMinute,
+      suppliedPerMinute: 0,
+      producedPerMinute: port.perMinute,
+      unresolvedPerMinute: 0,
+      supply: { manual: 0, surplus: 0, infinite: 0, cycle: 0 },
+      recipeNode,
+      isInfiniteSource: false,
+      isCycleSource: false,
+      blockedByCycle: false,
+    }, context),
+  };
 }
 
 /** 采种与种植的回流属于内部消耗；用净外供量反推两台设备的实际运行速率。 */
@@ -1925,6 +1993,10 @@ const WASTE_TREATMENT_RECIPE_MAP: Record<string, { recipeId: string; durationSec
   "item_liquid_xiranite_poly": { recipeId: "r_chrono_wastewater_treatment_void_xiranite_waste_liquid_basic", durationSeconds: 2, inputAmount: 1 },
   "item_liquid_xiranite_lowpoly": { recipeId: "r_chrono_wastewater_treatment_void_inert_xiranite_waste_liquid_basic", durationSeconds: 2, inputAmount: 1 },
 };
+
+export function isWasteTreatmentItem(itemId: string): boolean {
+  return Object.hasOwn(WASTE_TREATMENT_RECIPE_MAP, itemId);
+}
 
 function buildDumperRecipeNodes(context: SolverContext): ProductionPlanningRecipeNode[] {
   const nodes: ProductionPlanningRecipeNode[] = [];

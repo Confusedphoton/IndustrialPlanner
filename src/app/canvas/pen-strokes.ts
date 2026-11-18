@@ -14,7 +14,7 @@ export interface StrokePoint {
 const SCRATCH_LEG_PX = 14;
 const SCRATCH_REVERSALS = 3;
 /** 从落笔到识别出涂抹的最长时间。 */
-const SCRATCH_WINDOW_MS = 1200;
+export const SCRATCH_WINDOW_MS = 1200;
 
 export function isScratchOutStroke(points: readonly StrokePoint[]): boolean {
   const first = points[0];

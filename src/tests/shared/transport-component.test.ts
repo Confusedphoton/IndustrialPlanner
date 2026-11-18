@@ -5,13 +5,9 @@ import {
   type WorldEntity,
 } from "@/domain/document/world-document";
 import { createRegistryContract } from "@/registry";
-import { collectConnectedStrictLogisticsEntityIds } from "@/shared/transport-component";
+import { collectTransportSegmentEntityIds } from "@/shared/transport-component";
 
 const registry = createRegistryContract();
-const entityDefinitionMap = new Map(
-  registry.entityDefinitions.map((definition) => [definition.id, definition]),
-);
-
 describe("transport component collection", () => {
   it("does not include an adjacent pipe without reciprocal ports in whole-segment operations", () => {
     const selected = createPipe("selected", 0, 0, 0);
@@ -30,6 +26,16 @@ describe("transport component collection", () => {
       new Set([selected.id, connected.id]),
     );
   });
+  it("crosses a bridge along the selected lane and keeps the other line intact", () => {
+    const first = createPipe("first", 0, 0, 0);
+    const bridge = { ...createPipe("bridge", 1, 0, 0), definitionId: "pipe_connector" };
+    const last = createPipe("last", 2, 0, 0);
+    const crossing = createPipe("crossing", 1, 1, 90);
+
+    expect(collectPipeSegment([first, bridge, last, crossing], first.id)).toEqual(new Set([first.id, last.id]));
+    expect(collectPipeSegment([first, bridge, last], first.id)).toEqual(new Set([first.id, bridge.id, last.id]));
+  });
+
 });
 
 function collectPipeSegment(
@@ -42,15 +48,10 @@ function collectPipeSegment(
     entityOrder: entities.map((entity) => entity.id),
   };
 
-  return collectConnectedStrictLogisticsEntityIds({
-    startEntityId,
+  return collectTransportSegmentEntityIds({
+    startEntity: document.entities[startEntityId]!,
     document,
-    entityDefinitionMap,
-    isDedicatedLogisticsDevice:
-      registry.queries.isDedicatedLogisticsDevice.bind(registry.queries),
-    resolveDedicatedLogisticsKind:
-      registry.queries.resolveDedicatedLogisticsKind.bind(registry.queries),
-    directions: ["input", "output"],
+    registry,
   });
 }
 

@@ -1,4 +1,6 @@
 import type { CanvasInteractionController } from "@/app/canvas";
+import type { WorldEntity } from "@/domain/document/world-document";
+import { collectTransportSegmentEntityIds } from "@/shared/transport-component";
 import type { AppHost } from "@/app/host/app-host";
 import { PEN_ERASER_BUTTON } from "@/app/input/gesture/adapter";
 import { isBaseBuiltinEntityId } from "@/domain/registry/types/base-definition";
@@ -36,7 +38,7 @@ export function createHypergryphPenEraserGestureModule(): GestureMappingModule<A
             return { status: "handled" };
           }
           editor.actions.clearCollection(EntityCollectionType.selection);
-          editor.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId: entity.id });
+          selectEraseTarget(canvas, entity);
           return deleteErasedSelection(canvas);
         }
 
@@ -92,12 +94,30 @@ export function markEntityForErase(
   if (
     entity === null
     || isBaseBuiltinEntityId(entity.id)
+    || canvas.registry.queries.resolveLogisticsRole(entity.definitionId) === "connector"
     || editor.state.collections.selection.includes(entity.id)
   ) {
     return;
   }
 
-  editor.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId: entity.id });
+  selectEraseTarget(canvas, entity);
+}
+
+export function selectEraseTarget(canvas: CanvasInteractionController, entity: WorldEntity): void {
+  const editor = canvas.editor;
+  if (editor === null || isBaseBuiltinEntityId(entity.id)) return;
+  const selection = editor.state.collections.selection;
+  const segmentIds = collectTransportSegmentEntityIds({
+    startEntity: entity,
+    document: editor.document.getSnapshot(),
+    registry: canvas.registry,
+    alreadySelected: new Set(selection),
+  });
+  for (const entityId of segmentIds.size === 0 ? [entity.id] : segmentIds) {
+    if (!selection.includes(entityId)) {
+      editor.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId });
+    }
+  }
 }
 
 /** 删除累积的选择，形成单条撤销记录。 */

@@ -160,7 +160,9 @@ export function createHypergryphPortDragLogisticsGestureModule(): GestureMapping
           const finished = session;
           session = null;
           sessionCanvas = null;
-          finishPortLine(canvas, editor, finished, event.reason === "release" && canvas.state.activeTool === "select");
+          const commit = event.reason === "release" && canvas.state.activeTool === "select";
+          if (commit) updateDraft(canvas, editor, finished, resolveGridPoint(canvas, event.position));
+          finishPortLine(canvas, editor, finished, commit);
           return { status: "handled" };
         }
 
@@ -589,9 +591,19 @@ function updateDraft(
     return;
   }
   const pointerEndpoint = editor.queries.findLogisticsDraftEndpointAtGridPoint(pointer, session.kind);
-  const source: CreateLogisticsDraftStartOptions["source"] = pointerEndpoint?.type === "logistics-entity"
-    ? { type: "logistics-entity", entityId: pointerEndpoint.entityId, gridPoint: pointer }
-    : { type: "empty-cell", gridPoint: pointer };
+  let source: CreateLogisticsDraftStartOptions["source"] = { type: "empty-cell", gridPoint: pointer };
+  if (pointerEndpoint?.type === "logistics-entity") {
+    source = { type: "logistics-entity", entityId: pointerEndpoint.entityId, gridPoint: pointer };
+  } else if (pointerEndpoint?.type === "device-port" && pointerEndpoint.portDirection === "output"
+    && isSameGridPoint(pointer, pointerEndpoint.insideGridPoint)) {
+    source = {
+      type: "fixed-device-port",
+      entityId: pointerEndpoint.entityId,
+      portGroupId: pointerEndpoint.portGroupId,
+      portId: pointerEndpoint.portId,
+      outsideGridPoint: pointerEndpoint.outsideGridPoint,
+    };
+  }
   editor.actions.createLogisticsDraftStart({ kind: session.kind, allowEmptySource: true, source });
   editor.actions.moveLogisticEnd({
     pointerGridPoint: session.targetGridPoint,

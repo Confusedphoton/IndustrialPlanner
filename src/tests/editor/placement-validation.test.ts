@@ -134,7 +134,7 @@ describe("placement validation", () => {
     )).toBe(true);
   });
 
-  it("caches ordered placement reasons and keeps invalid placement placeable", () => {
+  it("reports existing placement problems and blocks new overlaps", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
     const document = createDocumentWithEntities([
@@ -163,21 +163,9 @@ describe("placement validation", () => {
     expect(
       editorHost.state.collections[EntityCollectionType.invalidPlacement].contains(draftId ?? ""),
     ).toBe(true);
-    expect(editorHost.actions.applyPlacementDraft()).toBe(true);
+    expect(editorHost.actions.applyPlacementDraft()).toBe(false);
+    expect(editorHost.document.getSnapshot().entityOrder).toEqual(document.entityOrder);
 
-    // 最终 ID 由 commit 时基于文档状态重新分配，不再从 draft ID 剥前缀推导。
-    const finalDoc = editorHost.document.getSnapshot();
-    const finalId = finalDoc.entityOrder.find(
-      (id) => finalDoc.entities[id]?.definitionId === "grinder_1",
-    );
-
-    expect(finalId).toBeDefined();
-    expect(
-      editorHost.document.getSnapshot().entities[finalId ?? ""],
-    ).toBeDefined();
-    expect(
-      editorHost.state.collections[EntityCollectionType.invalidPlacement].contains(finalId ?? ""),
-    ).toBe(true);
   });
 
   it("allows configured devices and dedicated pipes to overlap without invalidating either device", () => {

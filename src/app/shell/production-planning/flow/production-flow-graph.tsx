@@ -35,8 +35,7 @@ interface ProductionFlowGraphProps {
   /** 节点被点按（未拖动）时回调，用于弹出节点快捷操作；锚点为节点卡片的屏幕矩形。 */
   readonly onNodeActivate?: (node: ProductionFlowNode, anchor: DOMRect) => void;
   /**
-   * 从卡片开始的拖动离开流程图区域时调用：返回放置拖动则交给它（拖到画布上放下该节点的设备），
-   * 卡片位置与视图恢复到按下时；返回 null 则照常移动卡片或平移。
+   * 在卡片按下时创建放置拖动。返回 null 的卡片继续支持普通移动或平移。
    */
   readonly onNodeDragOut?: (node: ProductionFlowNode) => PanelPlacementDrag | null;
   /** 工具栏行左侧的附加内容（例如调用方的搜索框）。 */
@@ -202,7 +201,7 @@ export function ProductionFlowGraph({
       ? targetNodes
       : layoutNodes.filter((node) => !node.sourceLinks.some((link) => link.direction === "forward")))
       .map((node) => resolveCardRect(node, orientation, metrics));
-    const bounds = unionRects(rects);
+    const bounds = unionRects([...rects, ...feedbackLaneRects(layoutNodes, metrics, orientation)]);
     const sinkBounds = unionRects(sinkRects.length > 0 ? sinkRects : rects);
     const margin = FIT_MARGIN;
     const availableWidth = Math.max(1, element.clientWidth - margin * 2);
@@ -300,17 +299,28 @@ export function ProductionFlowGraph({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fit, nodeSetKey, orientation]);
 
+  const [pressedNodeId, setPressedNodeId] = useState<string | null>(null);
   const interactionRef = useRef<{
     node: NodePressState | null;
     pan: PanDragState | null;
     pinch: PinchState | null;
     dragOut: { readonly pointerId: number; readonly drag: PanelPlacementDrag } | null;
+    pendingDrag: PanelPlacementDrag | null;
   }>({
     node: null,
     pan: null,
     pinch: null,
     dragOut: null,
+    pendingDrag: null,
   });
+
+  useEffect(() => {
+    const interaction = interactionRef.current;
+    return () => {
+      interaction.pendingDrag?.cancel();
+      interaction.dragOut?.drag.cancel();
+    };
+  }, []);
 
   // 手动拖动过的卡片相对自动布局的位移（布局坐标）。数值或显示方式变化而重建布局时按节点 id 保留，
   // 换向（层方向与横向互换）、换成节点不同的另一张图或重置布局时清空。
@@ -395,6 +405,9 @@ export function ProductionFlowGraph({
     }
 
     if (interaction.pan !== null && interaction.pan.pointerId !== event.pointerId) {
+      interaction.pendingDrag?.cancel();
+      interaction.pendingDrag = null;
+      setPressedNodeId(null);
       const p0 = interaction.pan;
       p0.tapEligible = false;
       const rect = canvasRef.current?.getBoundingClientRect();
@@ -434,7 +447,7 @@ export function ProductionFlowGraph({
     if (event.button !== 0 && event.button !== 1) {
       return;
     }
-    startPanOrPinch(event, null);
+    if (interactionRef.current.dragOut === null) startPanOrPinch(event, null);
   }, [startPanOrPinch]);
 
   const handleNodePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>, node: SankeyNode<ProductionFlowNode>) => {
@@ -444,6 +457,11 @@ export function ProductionFlowGraph({
     event.stopPropagation();
 
     const interaction = interactionRef.current;
+    if (interaction.dragOut !== null) return;
+    if (interaction.pan === null && interaction.node === null) {
+      interaction.pendingDrag = onNodeDragOut?.(node.source) ?? null;
+      if (interaction.pendingDrag !== null) setPressedNodeId(node.id);
+    }
     if (nodeDrag === "pan" || interaction.pan !== null || interaction.node !== null) {
       startPanOrPinch(event, node.id);
       return;
@@ -466,23 +484,17 @@ export function ProductionFlowGraph({
       clientY: event.clientY,
       moving: false,
     };
-  }, [nodeDrag, startPanOrPinch]);
+  }, [nodeDrag, onNodeDragOut, startPanOrPinch]);
 
   /** 从卡片开始的拖动离开流程图区域时交给放置拖动；返回是否已交出。 */
-  const tryHandOffNodeDrag = useCallback((event: React.PointerEvent<HTMLDivElement>, nodeId: string): boolean => {
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (onNodeDragOut === undefined || rect === undefined) return false;
-    const inside = event.clientX >= rect.left && event.clientX <= rect.right
-      && event.clientY >= rect.top && event.clientY <= rect.bottom;
-    const node = graphRef.current.nodes.find((candidate) => candidate.id === nodeId);
-    const drag = inside || node === undefined ? null : onNodeDragOut(node.source);
-    if (drag === null) return false;
-
+  const tryHandOffNodeDrag = useCallback((event: React.PointerEvent<HTMLDivElement>): boolean => {
     const interaction = interactionRef.current;
-    const pan = interaction.pan;
-    if (pan !== null) {
-      setViewport({ x: pan.viewportX, y: pan.viewportY, scale: viewportRef.current.scale });
-    }
+    const drag = interaction.pendingDrag;
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (drag === null || rect === undefined) return false;
+    if (event.clientX >= rect.left && event.clientX <= rect.right
+      && event.clientY >= rect.top && event.clientY <= rect.bottom) return false;
+
     const press = interaction.node;
     if (press !== null) {
       if (press.startOffset === undefined) movedNodeOffsetsRef.current.delete(press.nodeId);
@@ -502,10 +514,11 @@ export function ProductionFlowGraph({
     interaction.pan = null;
     interaction.node = null;
     interaction.pinch = null;
+    interaction.pendingDrag = null;
     interaction.dragOut = { pointerId: event.pointerId, drag };
     drag.move(event.clientX, event.clientY);
     return true;
-  }, [onNodeDragOut, setViewport]);
+  }, []);
 
   const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     const interaction = interactionRef.current;
@@ -544,7 +557,15 @@ export function ProductionFlowGraph({
 
     if (interaction.pan !== null && interaction.pan.pointerId === event.pointerId) {
       const pan = interaction.pan;
-      if (pan.pressedNodeId !== null && tryHandOffNodeDrag(event, pan.pressedNodeId)) {
+      if (interaction.pendingDrag !== null) {
+        const distance = Math.hypot(event.clientX - pan.startClientX, event.clientY - pan.startClientY);
+        if (distance >= TAP_SLOP_PX) {
+          pan.tapEligible = false;
+          if (tryHandOffNodeDrag(event)) return;
+          interaction.pendingDrag.preview(event.clientX, event.clientY);
+        }
+        pan.clientX = event.clientX;
+        pan.clientY = event.clientY;
         return;
       }
       pan.clientX = event.clientX;
@@ -566,7 +587,7 @@ export function ProductionFlowGraph({
       if (!press.moving && Math.hypot(screenDx, screenDy) < TAP_SLOP_PX) {
         return;
       }
-      if (tryHandOffNodeDrag(event, press.nodeId)) {
+      if (tryHandOffNodeDrag(event)) {
         return;
       }
       press.moving = true;
@@ -638,9 +659,16 @@ export function ProductionFlowGraph({
     const dragOut = interaction.dragOut;
     if (dragOut?.pointerId === event.pointerId) {
       interaction.dragOut = null;
+      setPressedNodeId(null);
       if (event.type === "pointerup") dragOut.drag.drop(event.clientX, event.clientY, event.pointerType);
       else dragOut.drag.cancel();
       return;
+    }
+
+    if (interaction.pan?.pointerId === event.pointerId || interaction.node?.pointerId === event.pointerId) {
+      interaction.pendingDrag?.cancel();
+      interaction.pendingDrag = null;
+      setPressedNodeId(null);
     }
 
     if (interaction.pan?.pointerId === event.pointerId) {
@@ -688,7 +716,10 @@ export function ProductionFlowGraph({
   }, [handleTap]);
 
   const surfaceSize = useMemo(() => {
-    const bounds = unionRects(graph.nodes.map((node) => resolveCardRect(node, orientation, metrics)));
+    const bounds = unionRects([
+      ...graph.nodes.map((node) => resolveCardRect(node, orientation, metrics)),
+      ...feedbackLaneRects(graph.nodes, metrics, orientation),
+    ]);
     return {
       width: Math.max(960, bounds.left + bounds.width + SURFACE_PADDING * 2),
       height: Math.max(520, bounds.top + bounds.height + SURFACE_PADDING * 2),
@@ -772,6 +803,8 @@ export function ProductionFlowGraph({
             graph={graph}
             metrics={metrics}
             onNodePointerDown={handleNodePointerDown}
+            pressedNodeId={pressedNodeId}
+            placementEnabled={onNodeDragOut !== undefined}
             orientation={orientation}
             surfaceSize={surfaceSize}
             t={t}
@@ -791,6 +824,8 @@ const FlowSurfaceContent = memo(function FlowSurfaceContent({
   metrics,
   surfaceSize,
   onNodePointerDown,
+  pressedNodeId,
+  placementEnabled,
   t,
 }: {
   /** 低于可读比例（总览）时卡片只显示放大的图标与速率，连线标签隐藏；只在越过阈值时重绘。 */
@@ -802,9 +837,15 @@ const FlowSurfaceContent = memo(function FlowSurfaceContent({
   readonly metrics: CardMetrics;
   readonly surfaceSize: { readonly width: number; readonly height: number };
   readonly onNodePointerDown: (event: React.PointerEvent<HTMLDivElement>, node: SankeyNode<ProductionFlowNode>) => void;
+  readonly pressedNodeId: string | null;
+  readonly placementEnabled: boolean;
   readonly t: (key: string) => string;
 }) {
-  const labelPositions = useMemo(() => layoutEdgeLabels(graph.links, orientation, metrics), [graph, metrics, orientation]);
+  const routes = useMemo(() => {
+    const lanes = feedbackLanes(graph.nodes, metrics);
+    return new Map(graph.links.map((link) => [link.id, createLinkRoute(link, metrics, lanes.get(link.id))]));
+  }, [graph, metrics]);
+  const labelPositions = useMemo(() => layoutEdgeLabels(graph.links, orientation, metrics, routes), [graph, metrics, orientation, routes]);
   const cardClearances = useMemo(
     () => (compact ? resolveCardClearances(graph.nodes, orientation, metrics) : null),
     [compact, graph, metrics, orientation],
@@ -812,9 +853,12 @@ const FlowSurfaceContent = memo(function FlowSurfaceContent({
   return (
     <>
       <svg className={styles["production-flow-edges"]} width={surfaceSize.width} height={surfaceSize.height}>
-        {graph.links.map((link) => (
-          <FlowEdgePath key={link.id} link={link} metrics={metrics} orientation={orientation} />
-        ))}
+        {graph.links.map((link) => {
+          const route = routes.get(link.id);
+          return route === undefined ? null : (
+            <FlowEdgePath key={link.id} link={link} route={route} orientation={orientation} />
+          );
+        })}
       </svg>
       <div className={[styles["production-flow-nodes"], compact ? styles["is-compact"] : null].filter(Boolean).join(" ")}>
         {graph.nodes.map((node) => (
@@ -828,6 +872,10 @@ const FlowSurfaceContent = memo(function FlowSurfaceContent({
             metrics={metrics}
             node={node}
             onPointerDown={onNodePointerDown}
+            pressed={node.id === pressedNodeId}
+            placementHint={placementEnabled && !node.source.isTransient
+              && (node.source.machineIconSrc !== undefined || node.source.kind === "recipe")
+              && node.source.recipeNode?.module == null ? t("productionPlanning.dragFacility") : undefined}
             orientation={orientation}
           />
         ))}
@@ -876,6 +924,8 @@ function FlowNode({
   orientation,
   metrics,
   onPointerDown,
+  pressed,
+  placementHint,
 }: {
   readonly compact: boolean;
   /** 总览名称标签放在卡片下方还是上方；两侧都放不下（会压到相邻卡片）时为 null，不显示。 */
@@ -885,6 +935,8 @@ function FlowNode({
   readonly orientation: ProductionFlowOrientation;
   readonly metrics: CardMetrics;
   readonly onPointerDown: (event: React.PointerEvent<HTMLDivElement>, node: SankeyNode<ProductionFlowNode>) => void;
+  readonly pressed: boolean;
+  readonly placementHint?: string;
 }) {
   const source = node.source;
   const className = [
@@ -893,9 +945,11 @@ function FlowNode({
     styles[`is-${source.tone}`],
     source.isTransient === true ? styles["is-transient"] : null,
     source.isTarget === true ? styles["is-target"] : null,
+    pressed ? styles["is-pressed"] : null,
+    placementHint === undefined ? null : styles["is-placeable"],
   ].filter(Boolean).join(" ");
   const rect = resolveCardRect(node, orientation, metrics);
-  const tooltip = [source.title, source.subtitle, source.machineCount, source.rate]
+  const tooltip = [source.title, source.subtitle, source.machineCount, source.rate, placementHint]
     .filter((part) => part !== undefined && part !== "")
     .join("\n");
   // 物品模式下设备名只在提示与点按详情中出现，卡片上以设备图标 + 数量常驻。
@@ -911,11 +965,17 @@ function FlowNode({
         width: rect.width,
         height: rect.height,
       }}
+      onDragStart={(event) => event.preventDefault()}
       onPointerDown={(event) => onPointerDown(event, node)}
       data-flow-node-id={node.id}
       title={tooltip}
     >
       <CompositeItemIcon iconSrcs={source.iconSrcs} size={compact ? 44 : 32} />
+      {compact && source.machineIconSrc !== undefined ? (
+        <span className={styles["production-flow-node-facility"]}>
+          <img alt="" draggable={false} src={source.machineIconSrc} />
+        </span>
+      ) : null}
       <div className={styles["production-flow-node-text"]}>
         <strong>{source.title}</strong>
         <span className={styles["production-flow-node-meta"]}>
@@ -948,13 +1008,12 @@ function FlowNode({
 function FlowEdgePath({
   link,
   orientation,
-  metrics,
+  route,
 }: {
   readonly link: SankeyLink<ProductionFlowNode, ProductionFlowLink>;
   readonly orientation: ProductionFlowOrientation;
-  readonly metrics: CardMetrics;
+  readonly route: LinkRoute;
 }) {
-  const route = createLinkRoute(link, metrics);
   const className = [
     styles["production-flow-edge"],
     styles[`is-${link.direction}`],
@@ -1013,11 +1072,13 @@ function layoutEdgeLabels(
   links: readonly SankeyLink<ProductionFlowNode, ProductionFlowLink>[],
   orientation: ProductionFlowOrientation,
   metrics: CardMetrics,
+  routes: ReadonlyMap<string, LinkRoute>,
 ): Map<string, AxisPoint> {
   const desired: { readonly id: string; readonly point: AxisPoint; readonly width: number }[] = [];
   const forwardByTarget = new Map<string, { readonly link: SankeyLink<ProductionFlowNode, ProductionFlowLink>; readonly route: LinkRoute }[]>();
   for (const link of links) {
-    const route = createLinkRoute(link, metrics);
+    const route = routes.get(link.id);
+    if (route === undefined) continue;
     if (route.kind === "loop") {
       desired.push({ id: link.id, point: route.midpoint, width: estimateEdgeLabelWidth(link) });
       continue;
@@ -1099,8 +1160,40 @@ interface LinkRoute {
   readonly midpoint: AxisPoint;
 }
 
+function feedbackLanes(nodes: readonly SankeyNode<ProductionFlowNode>[], metrics: CardMetrics): Map<string, number> {
+  const lanes = new Map<string, number>();
+  let outer = nodes.reduce((edge, node) => Math.max(edge, cardCrossEnd(node, metrics)), 0) + 44;
+  for (const node of nodes) {
+    for (const link of node.sourceLinks) {
+      if (link.direction === "forward" && link.source.x1 <= link.target.x0) continue;
+      lanes.set(link.id, outer);
+      outer += 34;
+    }
+  }
+  return lanes;
+}
+
+function feedbackLaneRects(
+  nodes: readonly SankeyNode<ProductionFlowNode>[],
+  metrics: CardMetrics,
+  orientation: ProductionFlowOrientation,
+): ScreenRect[] {
+  const lanes = feedbackLanes(nodes, metrics);
+  return nodes.flatMap((node) => node.sourceLinks.flatMap((link) => {
+    const cross = lanes.get(link.id);
+    if (cross === undefined) return [];
+    const first = toScreen({ layer: Math.min(link.source.x0, link.target.x0) - 44, cross }, orientation);
+    const last = toScreen({ layer: Math.max(link.source.x1, link.target.x1) + 44, cross }, orientation);
+    return [{ left: first.x - 12, top: first.y - 12, width: last.x - first.x + 24, height: last.y - first.y + 24 }];
+  }));
+}
+
 /** 在流向轴（layer）/交叉轴（cross）坐标中构造连线，再统一映射到屏幕坐标。 */
-function createLinkRoute(link: SankeyLink<ProductionFlowNode, ProductionFlowLink>, metrics: CardMetrics): LinkRoute {
+function createLinkRoute(
+  link: SankeyLink<ProductionFlowNode, ProductionFlowLink>,
+  metrics: CardMetrics,
+  feedbackCross?: number,
+): LinkRoute {
   const sourceSide = link.original.sourceSide ?? "right";
   const targetSide = link.original.targetSide ?? "left";
   const start: AxisPoint = {
@@ -1113,7 +1206,7 @@ function createLinkRoute(link: SankeyLink<ProductionFlowNode, ProductionFlowLink
   };
   const sideOffset = 48 + Math.max(8, resolveVisibleLinkWidth(link));
 
-  if (sourceSide === targetSide) {
+  if (feedbackCross === undefined && sourceSide === targetSide) {
     const controlLayer = sourceSide === "left"
       ? Math.min(start.layer, end.layer) - sideOffset
       : Math.max(start.layer, end.layer) + sideOffset;
@@ -1128,7 +1221,7 @@ function createLinkRoute(link: SankeyLink<ProductionFlowNode, ProductionFlowLink
     };
   }
 
-  if (link.direction === "forward" && sourceSide === "right") {
+  if (feedbackCross === undefined && sourceSide === "right") {
     const midLayer = (start.layer + end.layer) / 2;
     return {
       kind: "forward",
@@ -1141,11 +1234,12 @@ function createLinkRoute(link: SankeyLink<ProductionFlowNode, ProductionFlowLink
   }
 
   // 反向（回流）连线绕到交叉轴外侧，避免穿过中间卡片。
-  const outer = Math.max(cardCrossEnd(link.source, metrics), cardCrossEnd(link.target, metrics)) + 40 + Math.max(8, resolveVisibleLinkWidth(link));
+  const outer = feedbackCross
+    ?? Math.max(cardCrossEnd(link.source, metrics), cardCrossEnd(link.target, metrics)) + 44;
   const sourceControl = sourceSide === "left" ? start.layer - 44 : start.layer + 44;
   const targetControl = targetSide === "right" ? end.layer + 44 : end.layer - 44;
-  const turnStart = { layer: start.layer, cross: outer };
-  const turnEnd = { layer: end.layer, cross: outer };
+  const turnStart = { layer: sourceControl, cross: outer };
+  const turnEnd = { layer: targetControl, cross: outer };
   return {
     kind: "loop",
     start,

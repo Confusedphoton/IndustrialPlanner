@@ -1,6 +1,6 @@
 import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
-import type { GridPoint, GridRect } from "@/domain/shared/grid";
+import type { GridEdge, GridRect } from "@/domain/shared/grid";
 import type {
   LogisticsDraftEndpoint,
   LogisticsKind,
@@ -12,6 +12,8 @@ import {
   ItemDomainFlag,
 } from "@/domain/shared/item-domain-flags";
 import { LOGISTICS_KIND } from "@/domain/shared/logistics";
+import type { RegistryContract } from "@/domain/registry/registry-contract";
+import { GridRectIndex } from "./geometry/grid-rect-index";
 
 import { getRotatedGridFootprint } from "./geometry/grid";
 import {
@@ -22,149 +24,89 @@ import {
 
 type DevicePortEndpoint = Extract<LogisticsDraftEndpoint, { readonly type: "device-port" }>;
 
-export function collectConnectedStrictLogisticsEntityIds(options: {
-  startEntityId: string;
-  startEntity?: WorldEntity;
-  kind?: LogisticsKind;
-  document: WorldDocument;
-  entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
-  isDedicatedLogisticsDevice: (definitionId: string) => boolean;
-  resolveDedicatedLogisticsKind: (definitionId: string) => LogisticsKind | null;
-  directions?: readonly LogisticsPortDirection[];
+/** Select a belt or pipe run through the corresponding lane of each bridge. */
+export function collectTransportSegmentEntityIds(options: {
+  readonly startEntity: WorldEntity;
+  readonly document: WorldDocument;
+  readonly registry: RegistryContract;
+  readonly directions?: readonly LogisticsPortDirection[];
+  readonly alreadySelected?: ReadonlySet<string>;
 }): ReadonlySet<string> {
-  const startEntity = options.startEntity ?? options.document.entities[options.startEntityId];
-  if (startEntity === undefined) {
-    return new Set();
-  }
+  const { startEntity, document, registry } = options;
+  const kind = registry.queries.resolveDedicatedLogisticsKind(startEntity.definitionId);
+  if (kind === null) return new Set();
 
-  if (!options.isDedicatedLogisticsDevice(startEntity.definitionId)) {
-    return new Set();
-  }
+  const definitions = new Map(registry.entityDefinitions.map((definition) => [definition.id, definition]));
+  const indexedEntities = Object.values(document.entities).flatMap((entity) => {
+    const definition = definitions.get(entity.definitionId);
+    return definition === undefined ? [] : [{ entity, rect: resolveEntityGridRect({ entity, definition }) }];
+  });
+  const index = new GridRectIndex(indexedEntities, ({ rect }) => rect);
 
-  const kind = options.kind ?? options.resolveDedicatedLogisticsKind(startEntity.definitionId);
-  if (kind === null) {
-    return new Set();
+  const endpoints = new Map<string, DevicePortEndpoint[]>();
+  const ports = (entity: WorldEntity): readonly DevicePortEndpoint[] => {
+    let cached = endpoints.get(entity.id);
+    if (cached === undefined) {
+      const definition = definitions.get(entity.definitionId);
+      cached = definition === undefined ? [] : (["input", "output"] as const).flatMap((direction) =>
+        resolveDevicePortEndpoints({ entity, definition, kind, direction }),
+      );
+      endpoints.set(entity.id, cached);
+    }
+    return cached;
+  };
+
+  function neighbors(endpoint: DevicePortEndpoint) {
+    const point = endpoint.outsideGridPoint;
+    return index.at(point).flatMap(({ entity }) =>
+      ports(entity).filter((other) => other.portDirection !== endpoint.portDirection
+        && other.insideGridPoint.x === point.x && other.insideGridPoint.y === point.y
+        && other.outsideGridPoint.x === endpoint.insideGridPoint.x
+        && other.outsideGridPoint.y === endpoint.insideGridPoint.y)
+        .map((port) => ({ entity, port })),
+    );
   }
 
   const directions = options.directions ?? ["input", "output"];
-  const visited = new Set<string>();
-  const connectedEntityIds = new Set<string>();
-  const queue: string[] = [options.startEntityId];
-  visited.add(options.startEntityId);
+  const selected = new Set([startEntity.id]);
+  const bridgeLanes = new Map<string, Set<ReturnType<typeof portAxis>>>();
+  const queue: { entity: WorldEntity; axis?: ReturnType<typeof portAxis> }[] = [{ entity: startEntity }];
 
-  while (queue.length > 0) {
-    const currentId = queue.shift()!;
-    const entity = currentId === options.startEntityId
-      ? startEntity
-      : options.document.entities[currentId];
-
-    if (entity === undefined) {
-      continue;
-    }
-
-    if (!options.isDedicatedLogisticsDevice(entity.definitionId)) {
-      continue;
-    }
-    if (options.resolveDedicatedLogisticsKind(entity.definitionId) !== kind) {
-      continue;
-    }
-
-    connectedEntityIds.add(currentId);
-
-    const definition = options.entityDefinitionMap.get(entity.definitionId);
-    if (definition === undefined) {
-      continue;
-    }
-
-    const adjacentCells = new Set<string>();
-    for (const direction of directions) {
-      const endpoints = resolveDevicePortEndpoints({
-        entity,
-        definition,
-        kind,
-        direction,
-      });
-
-      for (const endpoint of endpoints) {
-        adjacentCells.add(`${endpoint.outsideGridPoint.x},${endpoint.outsideGridPoint.y}`);
-      }
-    }
-
-    for (const key of adjacentCells) {
-      const [cx, cy] = key.split(",").map(Number) as [number, number];
-      const cellPoint: GridPoint = { x: cx, y: cy };
-
-      for (const [otherId, otherEntity] of Object.entries(options.document.entities)) {
-        if (visited.has(otherId)) {
-          continue;
-        }
-
-        if (!options.isDedicatedLogisticsDevice(otherEntity.definitionId)) {
-          continue;
-        }
-        if (options.resolveDedicatedLogisticsKind(otherEntity.definitionId) !== kind) {
-          continue;
-        }
-
-        const otherDefinition = options.entityDefinitionMap.get(otherEntity.definitionId);
-        if (otherDefinition === undefined) {
-          continue;
-        }
-
-        if (
-          isGridPointInsideRect(
-            cellPoint,
-            resolveEntityGridRect({ entity: otherEntity, definition: otherDefinition }),
-          )
-          && hasReciprocalPortConnection({
-            endpointEntity: entity,
-            endpointDefinition: definition,
-            otherEntity,
-            otherDefinition,
-            kind,
-            directions,
-          })
-        ) {
-          visited.add(otherId);
-          queue.push(otherId);
+  for (const { entity, axis } of queue) {
+    for (const port of ports(entity)) {
+      if (!directions.includes(port.portDirection) || (axis !== undefined && portAxis(port.edge) !== axis)) continue;
+      for (const neighbor of neighbors(port)) {
+        const definitionId = neighbor.entity.definitionId;
+        if (registry.queries.resolveDedicatedLogisticsKind(definitionId) === kind && !selected.has(neighbor.entity.id)) {
+          selected.add(neighbor.entity.id);
+          queue.push({ entity: neighbor.entity });
+        } else if (registry.queries.resolveLogisticsRole(definitionId) === "connector") {
+          const nextAxis = portAxis(neighbor.port.edge);
+          const lanes = bridgeLanes.get(neighbor.entity.id) ?? new Set();
+          if (lanes.has(nextAxis)) continue;
+          lanes.add(nextAxis);
+          bridgeLanes.set(neighbor.entity.id, lanes);
+          queue.push({ entity: neighbor.entity, axis: nextAxis });
         }
       }
     }
   }
 
-  return connectedEntityIds;
+  for (const [bridgeId, lanes] of bridgeLanes) {
+    const bridge = document.entities[bridgeId];
+    if (bridge === undefined) continue;
+    const carriesAnotherLine = ports(bridge).some((port) =>
+      !lanes.has(portAxis(port.edge)) && neighbors(port).some(({ entity }) =>
+        !selected.has(entity.id) && !options.alreadySelected?.has(entity.id),
+      ),
+    );
+    if (!carriesAnotherLine) selected.add(bridgeId);
+  }
+  return selected;
 }
 
-function hasReciprocalPortConnection(options: {
-  endpointEntity: WorldEntity;
-  endpointDefinition: EntityDefinition;
-  otherEntity: WorldEntity;
-  otherDefinition: EntityDefinition;
-  kind: LogisticsKind;
-  directions: readonly LogisticsPortDirection[];
-}): boolean {
-  return options.directions.some((direction) => {
-    const reciprocalDirection = direction === "input" ? "output" : "input";
-    const endpoints = resolveDevicePortEndpoints({
-      entity: options.endpointEntity,
-      definition: options.endpointDefinition,
-      kind: options.kind,
-      direction,
-    });
-    const reciprocalEndpoints = resolveDevicePortEndpoints({
-      entity: options.otherEntity,
-      definition: options.otherDefinition,
-      kind: options.kind,
-      direction: reciprocalDirection,
-    });
-
-    return endpoints.some((endpoint) => reciprocalEndpoints.some((reciprocalEndpoint) =>
-      endpoint.outsideGridPoint.x === reciprocalEndpoint.insideGridPoint.x
-      && endpoint.outsideGridPoint.y === reciprocalEndpoint.insideGridPoint.y
-      && endpoint.insideGridPoint.x === reciprocalEndpoint.outsideGridPoint.x
-      && endpoint.insideGridPoint.y === reciprocalEndpoint.outsideGridPoint.y
-    ));
-  });
+function portAxis(edge: GridEdge): "horizontal" | "vertical" {
+  return edge === "EAST" || edge === "WEST" ? "horizontal" : "vertical";
 }
 
 function resolveDevicePortEndpoints(options: {
@@ -239,13 +181,4 @@ function resolveEntityGridRect(options: {
     width: footprint.width,
     height: footprint.height,
   };
-}
-
-function isGridPointInsideRect(point: GridPoint, rect: GridRect): boolean {
-  return (
-    point.x >= rect.x
-    && point.x < rect.x + rect.width
-    && point.y >= rect.y
-    && point.y < rect.y + rect.height
-  );
 }

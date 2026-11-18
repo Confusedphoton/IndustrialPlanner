@@ -1,6 +1,6 @@
 import { SHORTCUT_KEY, type ShortcutKeyId } from "@/app/actions/keyboard-shortcut-manager";
 import type { AppHost } from "@/app/host/app-host";
-import { LINE_DRAW_BUTTON_ID } from "@/app/input/gesture/actions/hypergryph/hypergryph-logistics-placement-gesture-module";
+import { LINE_DRAW_BUTTON_IDS } from "@/app/input/gesture/actions/hypergryph/hypergryph-logistics-placement-gesture-module";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { UiKey } from "@/shared/i18n";
 import { LOGISTICS_KIND } from "@/domain/shared/logistics";
@@ -39,23 +39,21 @@ const MARQUEE_OPERATION_BUTTON: PlacementOperationButtonDefinition = {
   activeWhen: (appHost) => appHost.mainCanvas.state.activeTool === "marquee",
 };
 
-const isDrawingPipe = (appHost: AppHost) =>
-  appHost.mainCanvas.state.activeTool === "logistics-placement"
-  && appHost.mainCanvas.state.runtime.logisticsPlacement.kind === LOGISTICS_KIND.pipe;
-
-/** 一个铺线工具：显示当前在铺的线；已在铺线时再点一下切换传送带与管道。 */
-const LINE_DRAW_OPERATION_BUTTON: PlacementOperationButtonDefinition = {
-  uiButtonId: LINE_DRAW_BUTTON_ID,
-  labelKey: (appHost) => isDrawingPipe(appHost) ? "workbench.button.pipeDraw" : "workbench.button.beltDraw",
-  iconSrc: (appHost) => isDrawingPipe(appHost) ? PIPE_ICON_SRC : BELT_ICON_SRC,
-  hotkeyKeyId: SHORTCUT_KEY.PLACE_CONVEYOR,
-  activeWhen: (appHost) => appHost.mainCanvas.state.activeTool === "logistics-placement",
-};
+const LINE_DRAW_OPERATION_BUTTONS: readonly PlacementOperationButtonDefinition[] = (
+  [LOGISTICS_KIND.belt, LOGISTICS_KIND.pipe] as const
+).map((kind) => ({
+  uiButtonId: LINE_DRAW_BUTTON_IDS[kind],
+  labelKey: kind === LOGISTICS_KIND.pipe ? "workbench.button.pipeDraw" : "workbench.button.beltDraw",
+  iconSrc: kind === LOGISTICS_KIND.pipe ? PIPE_ICON_SRC : BELT_ICON_SRC,
+  hotkeyKeyId: kind === LOGISTICS_KIND.belt ? SHORTCUT_KEY.PLACE_CONVEYOR : SHORTCUT_KEY.PLACE_PIPE,
+  activeWhen: (appHost) => appHost.mainCanvas.state.activeTool === "logistics-placement"
+    && appHost.mainCanvas.state.runtime.logisticsPlacement.kind === kind,
+}));
 
 export const PLACEMENT_OPERATION_BUTTONS = [
   SELECT_OPERATION_BUTTON,
   MARQUEE_OPERATION_BUTTON,
-  LINE_DRAW_OPERATION_BUTTON,
+  ...LINE_DRAW_OPERATION_BUTTONS,
 ] as const satisfies readonly PlacementOperationButtonDefinition[];
 
 export function getVisiblePlacementOperationButtons(

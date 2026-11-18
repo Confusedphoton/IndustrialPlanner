@@ -54,7 +54,7 @@ import { RightDock } from "@/app/shell/layout/right-dock";
 import { RecipeTreeOverlay } from "@/app/shell/recipe-tree/recipe-tree-overlay";
 import { DevicePopup } from "@/app/shell/canvas/device-popup";
 import { recipeTreeOverlayState } from "@/app/shell/recipe-tree/recipe-tree-state";
-import { SimulationControlButton, TimelineButton, TopBar } from "@/app/shell/layout/top-bar";
+import { PlacementMenu, SimulationMenu, TopBar } from "@/app/shell/layout/top-bar";
 import {
   readSelectedSyncProvider,
   requestSyncProvider,
@@ -1128,14 +1128,8 @@ export const WorkbenchApp = observer(function WorkbenchApp({
         />
         {showFloatingTopBarControls ? (
           <div className={cm(styles, "workbench-floating-top-bar-controls")}>
-            <SimulationControlButton
-              appHost={appHost}
-              className={cm(styles, "workbench-floating-top-bar-button")}
-            />
-            <TimelineButton
-              appHost={appHost}
-              className={cm(styles, "workbench-floating-top-bar-button")}
-            />
+            <PlacementMenu appHost={appHost} />
+            <SimulationMenu appHost={appHost} />
             <FullscreenToggleButton
               appHost={appHost}
               className={cm(

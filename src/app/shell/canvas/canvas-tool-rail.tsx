@@ -28,6 +28,7 @@ import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import type { UiButtonHoldState } from "@/app/input/gesture/adapter";
 import {
   fitCanvasViewportToBase,
+  holdDeviceForPlacement,
   LOGISTICS_CANCEL_ROUTE_BUTTON_ID,
   LOGISTICS_ROUTE_ORDER_BUTTON_ID,
   PLACEMENT_RAIL_CANCEL_BUTTON_ID,
@@ -36,14 +37,13 @@ import {
   RAIL_SELECTION_DELETE_BUTTON_ID,
   RAIL_SELECTION_MOVE_BUTTON_ID,
   RAIL_SELECTION_SAVE_BLUEPRINT_BUTTON_ID,
-  RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID,
   RAIL_TOGGLE_DIM_BELTS_BUTTON_ID,
   RAIL_TOGGLE_DIM_PIPES_BUTTON_ID,
   RAIL_TOGGLE_REVERSE_MARQUEE_BUTTON_ID,
   ROTATE_VIEW_BUTTON_ID,
   zoomCanvasViewportByButton,
 } from "@/app/input/gesture/actions";
-import { hasPlaceableEntityDefinitionInCurrentBase } from "@/app/placement-zone-availability";
+import { canPlaceEntityDefinitionInCurrentBase, hasPlaceableEntityDefinitionInCurrentBase } from "@/app/placement-zone-availability";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { LOGISTICS_KIND, type LogisticsKind } from "@/domain/shared/logistics";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
@@ -54,6 +54,8 @@ import {
   PIPE_ICON_SRC,
   type PlacementOperationButtonDefinition,
 } from "@/app/shell/panels/placement-operation-buttons";
+import { createEntityIconAssetUrl } from "@/shared/browser/public-asset-url";
+import { resolvePlacementPointerSource } from "@/app/shell/shared/placement-pointer-source";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
@@ -405,7 +407,39 @@ export const CanvasToolRail = observer(function CanvasToolRail({ appHost }: { ap
       ),
     };
   });
-  const activeToolButtonId = toolButtons.find((button) => button.activeWhen?.(appHost) ?? false)?.uiButtonId ?? null;
+  const pylonIds = ["power_diffuser_1", "power_diffuser_2"];
+  for (const deviceId of pylonIds) {
+    const definition = canvas.registry.queries.findEntityDefinition(deviceId);
+    if (definition === null) continue;
+    const isActive = activeTool === "single-placement" && canvas.state.runtime.singlePlacementDeviceId === deviceId;
+    toolItems.push({
+      kind: "button",
+      key: deviceId,
+      node: (
+        <RailButton
+          active={isActive}
+          disabled={!canvas.isOperationEnabled("confirm-placement") || !canPlaceEntityDefinitionInCurrentBase(canvas, definition)}
+          label={t(definition.nameKey)}
+          onKeyboardActivate={() => holdDeviceForPlacement(canvas, { deviceId }, { source: "mouse" })}
+          onPointerUp={(event) => {
+            event.stopPropagation();
+            if (event.button !== 0) return;
+            holdDeviceForPlacement(canvas, { deviceId }, {
+              source: resolvePlacementPointerSource(appHost, event.pointerType),
+            });
+          }}
+          pressed={isActive}
+          uiButtonId={deviceId}
+        >
+          <img alt="" className={cm(styles, deviceId === "power_diffuser_2"
+            ? "canvas-tool-rail-image is-xiranite" : "canvas-tool-rail-image")}
+            src={createEntityIconAssetUrl(definition.iconPath)} />
+        </RailButton>
+      ),
+    });
+  }
+  const activeToolButtonId = toolButtons.find((button) => button.activeWhen?.(appHost) ?? false)?.uiButtonId
+    ?? (activeTool === "single-placement" ? canvas.state.runtime.singlePlacementDeviceId : null);
 
   const historyItems: RailItem[] = [
     {
@@ -514,9 +548,7 @@ export const CanvasToolRail = observer(function CanvasToolRail({ appHost }: { ap
     });
   };
   const hasPipes = hasPlaceableEntityDefinitionInCurrentBase(canvas, "pipeLogistics");
-  const continuous = activeTool === "blueprint-placement"
-    ? canvas.state.runtime.blueprintPlacementContinuous
-    : canvas.state.runtime.singlePlacementContinuous;
+
   const reverseMarquee = canvas.state.toolInfo.marqueeType === EntityCollectionType.reverseMarquee;
   // 框选出选区后，选区操作跟在框选开关后面。
   const selectionActions = (editor?.state.collections.selection.length ?? 0) === 0 ? [] : ([
@@ -579,13 +611,7 @@ export const CanvasToolRail = observer(function CanvasToolRail({ appHost }: { ap
         label: t(activeTool === "move" ? "action.cancelMove" : "action.cancelPlacement"),
         icon: <LucideX aria-hidden className={iconClassName} />,
       }),
-      ...(activeTool === "move" ? [] : [gestureButton({
-        uiButtonId: RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID,
-        disabled: !continuous && !canvas.isOperationEnabled("continuous-placement"),
-        pressed: continuous,
-        label: t("action.continuousPlacement"),
-        icon: <WorkbenchIcon className={iconClassName} kind="placement" />,
-      })]),
+
     ],
   } : null;
   const contextTriggerId = contextual?.triggerId ?? null;

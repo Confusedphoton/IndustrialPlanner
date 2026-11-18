@@ -759,7 +759,6 @@ function finishBlueprintPlacement(canvas: CanvasInteractionController, editor: E
   } else {
     canvas.actions.setActiveTool("select");
   }
-  canvas.workbench.internalActions.setActivePanel("placement");
 }
 
 function safelyCancelPlacementDraft(editor: EditorContract): void {

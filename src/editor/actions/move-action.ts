@@ -11,6 +11,7 @@ import { cloneEntityConfig } from "../entity-config-clone";
 import { resolveEntityById } from "../entity-resolvers";
 import {
   resolveOutsideBasePlacementEntityIds,
+  resolvePlacementValidations,
   syncPlacementValidationState,
 } from "../placement-validation";
 import type { EditorActionsContext } from "./types";
@@ -113,13 +114,22 @@ export function createEditorMoveActions({
         state,
         workspace,
       });
-      const movablePreviewDrafts = previewDrafts.filter(
-        (draft) => !outsideBaseDraftIds.has(draft.id),
+      const movablePreviewDrafts = previewDrafts.filter((draft) =>
+        ghostEntityIds.has(draft.originalEntityId) && !outsideBaseDraftIds.has(draft.id),
       );
-      if (movablePreviewDrafts.length === 0) {
+      if (movablePreviewDrafts.length === 0) return false;
+
+      const validation = resolvePlacementValidations({
+        document: currentDocument,
+        workspace,
+        drafts: movablePreviewDrafts,
+        ignoredEntityIds: new Set(movablePreviewDrafts.map((draft) => draft.originalEntityId)),
+      });
+      if (movablePreviewDrafts.some((draft) =>
+        validation[draft.id]?.reasons.some((reason) => reason.code === "overlap"),
+      )) {
         return false;
       }
-
 
       const nextEntities = { ...currentDocument.entities };
       const definitionChangedEntityIds = new Set<string>();

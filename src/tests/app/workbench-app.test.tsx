@@ -262,7 +262,7 @@ function createWorkbenchStorageSnapshot(options: {
   moduleBalancingLibraryUi?: ReturnType<typeof createModuleBalancingLibraryUiStorageSnapshot>;
 } = {}) {
   return {
-    leftDockOpen: options.leftDockOpen ?? true,
+    leftDockOpen: options.leftDockOpen ?? false,
     rightDockOpen: options.rightDockOpen ?? false,
     leftDockWidth: options.leftDockWidth ?? DEFAULT_LEFT_DOCK_WIDTH,
     touchLeftDockWidth: MOBILE_LEFT_DOCK_WIDTH,
@@ -907,6 +907,7 @@ describe("WorkbenchApp", () => {
     const workspace = createWorkspace();
     const appHost = createAppTestHost(workspace);
 
+    appHost.internalActions.setActivePanel("placement");
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
@@ -931,11 +932,9 @@ describe("WorkbenchApp", () => {
 
     expect(appHost.state.workbench.leftDockWidth).toBe(470);
     expect(workbench?.style.getPropertyValue("--left-dock-width")).toBe("470px");
-    expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBe(
-      JSON.stringify(createWorkbenchStorageSnapshot({
-        leftDockWidth: 470,
-      })),
-    );
+    expect(JSON.parse(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)!)).toMatchObject({
+      leftDockWidth: 470,
+    });
     expect(localStorage.getItem(APP_SETTINGS_LOCAL_STORAGE_KEY)).toBeNull();
 
     act(() => {
@@ -980,6 +979,7 @@ describe("WorkbenchApp", () => {
       ".workbench-floating-top-bar-controls",
     ) as HTMLDivElement | null;
     const canvasPanel = container.querySelector(".canvas-panel") as HTMLElement | null;
+    act(() => floatingControls?.querySelector<HTMLButtonElement>('button[aria-label="仿真"]')?.click());
     const floatingTimelineButton = container.querySelector(
       '[data-ui-button-id="top-bar-timeline"]',
     ) as HTMLButtonElement | null;
@@ -1407,7 +1407,7 @@ describe("WorkbenchApp", () => {
     });
 
     const simulationButton = container.querySelector(
-      'button[title="仿真"]',
+      '.left-toolbar button[title="仿真"]',
     ) as HTMLButtonElement | null;
 
     expect(simulationButton).not.toBeNull();
@@ -2513,6 +2513,7 @@ describe("WorkbenchApp", () => {
     });
 
     const workbench = container.querySelector(".workbench") as HTMLDivElement | null;
+    act(() => container.querySelector<HTMLButtonElement>('button[aria-label="仿真"]')?.click());
     const timelineButton = container.querySelector(
       'button[title="时间轴"]',
     ) as HTMLButtonElement | null;

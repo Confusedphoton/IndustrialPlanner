@@ -875,3 +875,34 @@
 .production-flow-pan { cursor: grab; }
 .production-flow-pan:active { cursor: grabbing; }
 .production-flow-pan .production-flow-node { cursor: pointer; }
+
+.production-flow-canvas .production-flow-node.is-placeable {
+  cursor: grab;
+}
+
+.production-flow-canvas .production-flow-node.is-pressed {
+  z-index: 2;
+  outline: clamp(2px, calc(1.5px / var(--flow-scale, 1)), 8px) solid var(--accent);
+  outline-offset: 2px;
+  cursor: grabbing;
+}
+
+.production-flow-node-facility {
+  position: absolute;
+  bottom: 4px;
+  left: 29px;
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+  pointer-events: none;
+}
+
+.production-flow-node .production-flow-node-facility img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}

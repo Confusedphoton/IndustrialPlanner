@@ -5,8 +5,6 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createWorldDocument, type WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
-import { pullFromHoldingTray } from "@/app/input/gesture/actions";
-import { holdingTrayState } from "@/app/shell/canvas/holding-tray-state";
 import type { GridPoint } from "@/domain/shared/grid";
 import { createRegistryContract } from "@/registry";
 import { createAppTestHost, createEditorTestHost } from "@/tests/helpers/app-test-workspace";
@@ -80,49 +78,41 @@ describe("painting a row", () => {
   });
 });
 
-describe("holding tray", () => {
-  it("holds a group off the canvas and puts it back with its spacing and recipes, then empties the slot", async () => {
-    const { appHost, recipeId } = await createAppHostWithGrinder({ secondGrinderAt: { x: 26, y: 20 } });
-    const editor = appHost.workspace.editor!;
-    editor.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId: "grinder" });
-    editor.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId: "second" });
+describe("scribble erasing", () => {
+  it("keeps the view in place and erases a whole connected run in one undo step", async () => {
+    const { appHost, editor } = await createAppHostWithGrinder();
+    const source = editor.document.getSnapshot();
+    const belts = Array.from({ length: 8 }, (_, index): WorldEntity => ({
+      id: `belt-${index}`,
+      definitionId: "belt_straight_1x1",
+      position: { x: 23 + index, y: 35 },
+      rotation: 0,
+      config: {},
+      tags: [],
+    }));
+    editor.internalDocument.setSnapshot({
+      ...source,
+      entityOrder: [...source.entityOrder, ...belts.map((belt) => belt.id)],
+      entities: { ...source.entities, ...Object.fromEntries(belts.map((belt) => [belt.id, belt])) },
+    });
 
-    uiTap(appHost, "canvas-floating-toolbar-button-hold");
-    expect(Object.keys(editor.document.getSnapshot().entities)).toEqual([]);
-    expect(holdingTrayState.items).toHaveLength(1);
+    const pointA = cellCenter(appHost, { x: 22, y: 35 });
+    const pointB = cellCenter(appHost, { x: 25, y: 35 });
+    const pointer = (point: typeof pointA, buttons: number) => ({
+      pointerId: 17, pointerType: "pen", clientX: point.x, clientY: point.y,
+      button: 0, buttons, altKey: false, ctrlKey: false, metaKey: false, shiftKey: false,
+    });
+    appHost.gestureAdapter.handlePointerDown(pointer(pointA, 1));
+    [pointB, pointA, pointB, pointA].forEach((point, index) => {
+      appHost.gestureAdapter.handlePointerMove(pointer(point, 1));
+      appHost.gestureAdapter.advanceFrame((index + 1) * 16);
+      expect(cellCenter(appHost, { x: 22, y: 35 })).toEqual(pointA);
+    });
+    appHost.gestureAdapter.handlePointerUp(pointer(pointA, 0));
 
-    expect(pullFromHoldingTray(appHost.mainCanvas, holdingTrayState.items[0]!, "touch")).toBe(true);
-    uiTap(appHost, "canvas-floating-toolbar-button-ok");
-
-    const placed = Object.values(editor.document.getSnapshot().entities);
-    expect(placed).toHaveLength(2);
-    expect(Math.abs(placed[0]!.position.x - placed[1]!.position.x)).toBe(6);
-    expect(placed.every((entity) => Object.values(entity.config.channelRecipes as Record<string, string>).includes(recipeId))).toBe(true);
-    expect(holdingTrayState.items).toHaveLength(0);
-  });
-});
-
-describe("a full holding tray", () => {
-  it("leaves the selection on the canvas instead of dropping a group that is still waiting to be placed", async () => {
-    const { appHost } = await createAppHostWithGrinder({ secondGrinderAt: { x: 26, y: 20 } });
-    const editor = appHost.workspace.editor!;
-    editor.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId: "second" });
-    uiTap(appHost, "canvas-floating-toolbar-button-hold");
-    const first = holdingTrayState.items[0]!;
-    try {
-      for (let index = 1; holdingTrayState.items.length < 12; index += 1) {
-        holdingTrayState.push({ ...first.blueprint, blueprintId: `${first.blueprint.blueprintId}-${index}` });
-      }
-
-      editor.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId: "grinder" });
-      uiTap(appHost, "canvas-floating-toolbar-button-hold");
-
-      expect(Object.keys(editor.document.getSnapshot().entities)).toEqual(["grinder"]);
-      expect(holdingTrayState.items).toHaveLength(12);
-      expect(holdingTrayState.items).toContainEqual(first);
-    } finally {
-      for (const item of [...holdingTrayState.items]) holdingTrayState.discard(item.id);
-    }
+    expect(editor.document.getSnapshot().entityOrder).toEqual(source.entityOrder);
+    expect(editor.actions.undoDocumentHistory()).toBe(true);
+    expect(belts.every((belt) => editor.document.getSnapshot().entities[belt.id] !== undefined)).toBe(true);
   });
 });
 
@@ -142,9 +132,7 @@ describe("multi-finger taps", () => {
   });
 });
 
-async function createAppHostWithGrinder(
-  options: { readonly secondGrinderAt?: GridPoint } = {},
-): Promise<{ appHost: AppHost; recipeId: string }> {
+async function createAppHostWithGrinder(): Promise<{ appHost: AppHost; recipeId: string; editor: ReturnType<typeof createEditorTestHost> }> {
   const workspace: WorkspaceContract = {
     state: createWorkspaceState(), registry: createRegistryContract(),
     app: null, editor: null, render: null, simulation: null, sync: null, audio: null,
@@ -159,9 +147,7 @@ async function createAppHostWithGrinder(
     id: "grinder", definitionId: "grinder_1", position: { x: 20, y: 20 }, rotation: 90,
     config: { channelRecipes: { [channelId]: recipeId } }, tags: [],
   };
-  const entities: WorldEntity[] = options.secondGrinderAt === undefined
-    ? [grinder]
-    : [grinder, { ...structuredClone(grinder), id: "second", position: options.secondGrinderAt }];
+  const entities = [grinder];
   editor.internalDocument.setSnapshot({
     ...createWorldDocument({ baseId: "wuling_protocol_core" }),
     entities: Object.fromEntries(entities.map((entity) => [entity.id, entity])),
@@ -170,7 +156,7 @@ async function createAppHostWithGrinder(
   const appHost = createAppTestHost(workspace);
   appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 1600, height: 1200 });
   appHost.mainCanvas.view.actions.focusOnBounds({ x: 32, y: 32, width: 0, height: 0 }, { durationMs: 0, gridSize: 1 });
-  return { appHost, recipeId };
+  return { appHost, recipeId, editor };
 }
 
 function cellCenter(appHost: AppHost, cell: GridPoint) {
@@ -211,8 +197,4 @@ function penDrag(appHost: AppHost, from: { x: number; y: number }, to: { x: numb
     appHost.gestureAdapter.advanceFrame(step * 16);
   }
   appHost.gestureAdapter.handlePointerUp(pointer(to, 0));
-}
-
-function uiTap(appHost: AppHost, uiButtonId: string): void {
-  appHost.gestureAdapter.handleUiButtonTouchTap({ uiButtonId, altKey: false, ctrlKey: false, metaKey: false, shiftKey: false });
 }

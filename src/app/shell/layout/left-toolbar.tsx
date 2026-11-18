@@ -13,12 +13,6 @@ type LeftToolbarPanel = Exclude<ActivePanel, null>;
 
 const PRIMARY_TOOLBAR_ITEMS = [
   {
-    id: "primary-placement",
-    icon: "placement" as const,
-    labelKey: "workbench.leftRail.placement",
-    panel: "placement" as LeftToolbarPanel,
-  },
-  {
     id: "primary-region",
     icon: "region" as const,
     labelKey: "workbench.leftRail.region",
@@ -80,7 +74,7 @@ const UTILITY_TOOLBAR_ITEMS = [
 ];
 
 /** 常驻在工具栏上的项；其余（历史、基地、帮助、反馈、设置等不常用的）收进「更多」。 */
-const PINNED_PANELS: ReadonlySet<LeftToolbarPanel> = new Set(["placement", "region", "blueprint"]);
+const PINNED_PANELS: ReadonlySet<LeftToolbarPanel> = new Set(["region", "blueprint"]);
 const PINNED_DIALOGS: ReadonlySet<string> = new Set(["toolbox"]);
 
 export const LeftToolbar = observer(function LeftToolbar({

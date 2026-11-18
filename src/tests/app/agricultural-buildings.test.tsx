@@ -168,7 +168,7 @@ describe("农业建筑分类与普通田块摆放", () => {
     }
   });
 
-  it("白名单保留地图外围的完整占地边界，重叠沿用非法标记", () => {
+  it("白名单保留地图外围的完整占地边界，重叠时拒绝放置", () => {
     editor.actions.createSinglePlacementDraft({ definitionId: "soil_grass_1", centerGridPoint: { x: 10, y: 10 } });
     expect(editor.actions.applyPlacementDraft()).toBe(true);
     for (const position of [
@@ -184,10 +184,8 @@ describe("农业建筑分类与普通田块摆放", () => {
     editor.actions.createSinglePlacementDraft({ definitionId: "soil_grass_2", centerGridPoint: { x: 10, y: 10 } });
     const overlapId = editor.state.collections[EntityCollectionType.preview][0]!;
     expect(editor.queries.getEntityPlacementValidation(overlapId).reasons.map((reason) => reason.code)).toContain("overlap");
-    expect(editor.actions.applyPlacementDraft()).toBe(true);
-    const committedOverlap = Object.values(editor.document.getSnapshot().entities)
-      .find((entity) => entity.definitionId === "soil_grass_2")!;
-    expect(editor.state.collections[EntityCollectionType.invalidPlacement].contains(committedOverlap.id)).toBe(true);
+    expect(editor.actions.applyPlacementDraft()).toBe(false);
+    expect(editor.document.getSnapshot().entityOrder).toHaveLength(1);
     editor.actions.createSinglePlacementDraft({ definitionId: "soil_grass_2", centerGridPoint: { x: 40, y: 40 } });
     expect(editor.actions.applyPlacementDraft()).toBe(true);
     editor.actions.createSinglePlacementDraft({ definitionId: "soil_grass_2", centerGridPoint: { x: 138, y: 34 } });

@@ -32,6 +32,7 @@ export interface EditorQuery {
 	findEntityAtClientPixelPoint(
 		clientPixelPoint: ClientPixelPoint,
     viewport: EditorViewState,
+    options?: { readonly includeDrafts?: boolean },
 	): WorldEntity | null;
 	findEntityCollectionGridRect(
 		collectionType: EntityCollectionType,

@@ -2,7 +2,6 @@ import { runInAction } from "mobx";
 import type { PointerEvent as ReactPointerEvent } from "react";
 
 import type { AppHost } from "@/app/host/app-host";
-import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 import { dragPlacementFromPanel, dropPlacementFromPanel } from "@/app/input/gesture/actions";
 import { createEntityIconAssetUrl } from "@/shared/browser/public-asset-url";
 
@@ -60,6 +59,10 @@ export class PanelPlacementDrag {
 
   public constructor(private readonly appHost: AppHost, private readonly target: PanelPlacementTarget) {}
 
+  public preview(x: number, y: number): void {
+    this.showGhost({ x, y });
+  }
+
   public move(x: number, y: number): void {
     const canvas = this.appHost.mainCanvas;
     const overCanvas = isOverMainCanvas(this.appHost, x, y);
@@ -108,16 +111,8 @@ export class PanelPlacementDrag {
     if (config === null || typeof channelRecipes !== "object" || channelRecipes === null || editor === null) {
       return false;
     }
-    // 拖动时手上的预览盖在设备上，所以按格子在正式文档里找同型号设备。
-    const cell = canvas.view.queries.findGridCellForClientPixelPoint({ x, y });
-    const definition = this.appHost.workspace.registry.queries.findEntityDefinition(this.target.deviceId);
-    const entity = cell === null || definition === null ? undefined : Object.values(editor.document.getSnapshot().entities).find((candidate) => {
-      if (candidate.definitionId !== this.target.deviceId) return false;
-      const footprint = getRotatedGridFootprint(definition.footprint, candidate.rotation);
-      return cell.x >= candidate.position.x && cell.x < candidate.position.x + footprint.width
-        && cell.y >= candidate.position.y && cell.y < candidate.position.y + footprint.height;
-    });
-    if (entity === undefined) {
+    const entity = editor.queries.findEntityAtClientPixelPoint({ x, y }, canvas.view.state, { includeDrafts: false });
+    if (entity?.definitionId !== this.target.deviceId || editor.document.getSnapshot().entities[entity.id] === undefined) {
       return false;
     }
     const existing = entity.config.channelRecipes;

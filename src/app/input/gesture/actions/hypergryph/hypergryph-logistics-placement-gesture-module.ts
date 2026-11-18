@@ -44,7 +44,10 @@ export const LOGISTICS_ROUTE_ORDER_BUTTON_ID = "canvas-tool-rail-logistics-route
 export const LOGISTICS_CANCEL_ROUTE_BUTTON_ID = "canvas-tool-rail-logistics-cancel-route";
 
 /** 画布工具条上唯一的铺线工具；传送带还是管道跟着起笔的端口或线走。 */
-export const LINE_DRAW_BUTTON_ID = "placement-action-line-draw";
+export const LINE_DRAW_BUTTON_IDS = {
+  belt: "placement-action-belt-draw",
+  pipe: "placement-action-pipe-draw",
+} as const;
 
 const logisticsLogger = createLogger("logistics-placement");
 const GRID_EDGE_ORDER: readonly GridEdge[] = ["NORTH", "EAST", "SOUTH", "WEST"];
@@ -192,7 +195,7 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
       }
 
       if (event.type === "ui-button-mouse-tap" && event.button === 0) {
-        const kind = resolveKindFromOperationButton(context.canvas, event.uiButtonId);
+        const kind = resolveKindFromOperationButton(event.uiButtonId);
         if (kind !== null) {
           if (
             kind === LOGISTICS_KIND.pipe
@@ -212,7 +215,7 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
       }
 
       if (event.type === "ui-button-touch-tap") {
-        const kind = resolveKindFromOperationButton(context.canvas, event.uiButtonId);
+        const kind = resolveKindFromOperationButton(event.uiButtonId);
         if (kind !== null) {
           if (
             kind === LOGISTICS_KIND.pipe
@@ -308,6 +311,7 @@ export function createHypergryphLogisticsPlacementGestureModule(): GestureMappin
           }
 
           activeMouseLogisticsDragGestureId = null;
+          if (event.reason === "release") moveMouseLogisticsDragEnd(context.canvas, editor, event.position);
           finishMouseLogisticsDrag(context.canvas, editor, event.reason === "release");
           return { status: "handled" };
 
@@ -1437,13 +1441,10 @@ function softResetLogisticsRuntime(canvas: CanvasInteractionController): void {
   runtime.statusMessageKey = null;
 }
 
-/** 铺线工具：未在铺线时进入传送带；已在铺线时再点一下在传送带与管道间切换。 */
-function resolveKindFromOperationButton(canvas: CanvasInteractionController, uiButtonId: string): LogisticsKind | null {
-  if (uiButtonId !== LINE_DRAW_BUTTON_ID) {
-    return null;
-  }
-  const current = canvas.state.activeTool === "logistics-placement" ? canvas.state.runtime.logisticsPlacement.kind : null;
-  return current === LOGISTICS_KIND.belt ? LOGISTICS_KIND.pipe : LOGISTICS_KIND.belt;
+function resolveKindFromOperationButton(uiButtonId: string): LogisticsKind | null {
+  if (uiButtonId === LINE_DRAW_BUTTON_IDS.belt) return LOGISTICS_KIND.belt;
+  if (uiButtonId === LINE_DRAW_BUTTON_IDS.pipe) return LOGISTICS_KIND.pipe;
+  return null;
 }
 
 function isLogisticsStartEndpoint(endpoint: LogisticsDraftEndpoint | null): boolean {

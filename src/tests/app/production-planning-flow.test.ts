@@ -196,44 +196,59 @@ describe("production planning flow graph", () => {
     expect(layout.nodes.every((node) => Number.isFinite(node.y0) && Number.isFinite(node.y1))).toBe(true);
   });
 
-  it("omits the copper miner's water input from item and device flow graphs", () => {
+  it("connects wastewater at the producing facility to the treatment plant", () => {
     const index = buildProductionPlanningIndex(createRegistryContract());
+    const material = "item_copper_nugget";
+    const producer = "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic";
+    const treatment = "r_chrono_wastewater_treatment_void_wastewater_basic";
     const result = computeProductionPlan({
-      targets: [port("item_copper_ore", 20)],
+      targets: [port(material, 30)],
       supplies: [],
-      infiniteItemIds: new Set(),
-      recipeChoices: new Map(),
+      infiniteItemIds: makeInfiniteItemIds(index, DEFAULT_SOURCE_CONFIG),
+      recipeChoices: new Map([[material, producer]]),
       sourceConfig: DEFAULT_SOURCE_CONFIG,
     }, index);
 
-    for (const displayMode of ["item", "device"] as const) {
-      const graph = buildProductionFlowGraph(result, index, t, displayMode);
-      expect(graph.nodes.some((node) => node.itemId === "item_liquid_water")).toBe(false);
-      expect(graph.links.some((link) => link.itemId === "item_liquid_water")).toBe(false);
+    for (const mode of ["item", "device"] as const) {
+      const graph = buildProductionFlowGraph(result, index, t, mode);
+      const furnace = graph.nodes.find((node) => node.recipeId === producer);
+      const sink = graph.nodes.find((node) => node.recipeId === treatment);
+      expect(graph.nodes.filter((node) => node.recipeId === producer)).toHaveLength(1);
+      expect(graph.links).toContainEqual(expect.objectContaining({
+        source: furnace?.id,
+        target: sink?.id,
+        itemId: "item_liquid_sewage",
+        value: 30,
+      }));
     }
   });
 
-  it("keeps recipe outputs as separate byproduct nodes in device mode", () => {
+  it("connects piped gas to a disperser and the resulting atmosphere to the Forge of the Sky", () => {
     const index = buildProductionPlanningIndex(createRegistryContract());
+    const material = "item_xiranite_powder";
+    const forgeRecipe = "xiranite_oven_xiranite_powder_2";
+    const diffuserRecipe = "r_gas_diffuser_inert_gas_environment_basic";
     const result = computeProductionPlan({
-      targets: [port("item_liquid_xiranite_poly", 30)],
-      supplies: [port("item_liquid_xiranite", 30)],
-      infiniteItemIds: makeInfiniteItemIds(index, DEFAULT_SOURCE_CONFIG),
-      recipeChoices: new Map([[
-        "item_liquid_xiranite_poly",
-        "r_chrono_mix_pool_xiranite_waste_liquids_from_liquid_xiranite_and_wastewater_basic",
-      ]]),
+      targets: [port(material, 30)],
+      supplies: [port("item_carbon_mtl", 30), port("item_liquid_water", 30)],
+      infiniteItemIds: new Set(),
+      recipeChoices: new Map([[material, forgeRecipe]]),
       sourceConfig: DEFAULT_SOURCE_CONFIG,
     }, index);
 
-    const graph = buildProductionFlowGraph(result, index, t, "device");
-    const byproduct = graph.nodes.find((node) => node.itemId === "item_liquid_xiranite_lowpoly");
-    const byproductLink = graph.links.find((link) => link.source === byproduct?.id);
-
-    expect(byproduct?.tone).toBe("byproduct");
-    expect(byproduct?.id).toContain(":target:item_liquid_xiranite_lowpoly");
-    expect(byproductLink?.target.startsWith("recipe:")).toBe(true);
-    expect(byproductLink?.value).toBeGreaterThan(0);
+    const graph = buildProductionFlowGraph(result, index, t, "item");
+    const forge = graph.nodes.find((node) => node.recipeId === forgeRecipe);
+    const diffuser = graph.nodes.find((node) => node.recipeId === diffuserRecipe);
+    expect(graph.links).toContainEqual(expect.objectContaining({
+      target: diffuser?.id,
+      itemId: "item_gas_inert",
+      value: 6,
+    }));
+    expect(graph.links).toContainEqual(expect.objectContaining({
+      source: diffuser?.id,
+      target: forge?.id,
+      itemId: "environment:item_gas_inert",
+    }));
   });
 
   // 设备最低消耗不再自建独立节点，改为挂到宿主配方节点上作为入线标注。
@@ -394,8 +409,7 @@ describe("production planning flow graph", () => {
     const layoutFeedback = layout.links.find((link) => link.id === seedCollectorFeedback?.id);
 
     expect(seedCollectorFeedback?.preferredFeedback).toBe(true);
-    expect(seedCollectorFeedback?.targetSide).toBe("right");
-    expect(seedCollectorSeedOutput?.sourceSide).toBe("left");
+    expect(seedCollectorSeedOutput).toBeDefined();
     expect(layoutFeedback?.direction).toBe("backward");
   });
 
@@ -424,7 +438,7 @@ describe("production planning flow graph", () => {
     ))).toBe(true);
   });
 
-  it("keeps carbon block plant seed cycles as side-port feedback links in device mode", () => {
+  it("keeps carbon block plant seed cycles as feedback links in device mode", () => {
     const index = buildProductionPlanningIndex(createRegistryContract());
     const result = computeProductionPlan({
       targets: [port("item_carbon_mtl", 60)],
@@ -466,14 +480,13 @@ describe("production planning flow graph", () => {
     const layoutFeedback = layout.links.find((link) => link.id === seedCollectorFeedback?.id);
 
     expect(seedCollectorFeedback?.preferredFeedback).toBe(true);
-    expect(seedCollectorFeedback?.targetSide).toBe("right");
     expect(planterBodyOutput).toBeDefined();
     expect(externalCycleSupply).toBeUndefined();
-    expect(seedCollectorSeedOutput?.sourceSide).toBe("left");
+    expect(seedCollectorSeedOutput).toBeDefined();
     expect(layoutFeedback?.direction).toBe("backward");
   });
 
-  it("retains liquid planter seed feedback after its definition ID rename", () => {
+  it("connects the liquid planter and seed collector in both directions", () => {
     const index = buildProductionPlanningIndex(createRegistryContract());
     const result = computeProductionPlan({
       targets: [port("item_plant_grass_seed_1", 60)],
@@ -491,8 +504,8 @@ describe("production planning flow graph", () => {
       link.target.includes(planterRecipeId) && link.itemId === "item_plant_grass_seed_1",
     );
 
-    expect(feedback).toMatchObject({ preferredFeedback: true, targetSide: "right" });
-    expect(seedInput).toMatchObject({ sourceSide: "left" });
+    expect(feedback?.target).toContain("r_seedcol");
+    expect(seedInput?.source).toContain("r_seedcol");
   });
 
   it("collapses recipes in item mode to show item-to-item flow", () => {

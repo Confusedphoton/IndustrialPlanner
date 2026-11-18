@@ -33,11 +33,10 @@ import {
 } from "@/app/logistics-role-swap";
 import { runInAction } from "mobx";
 import { recentPlacements } from "@/app/recent-placement-devices";
-import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 
 import type { GestureHandleResult, GestureMappingModule, ShortcutActionRoute } from "../types";
 import { RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID } from "../rail-buttons";
-import { recordEntityLandedBy, resolveRepeatTapEntityId, spinEntity } from "./entity-spin-tap";
+import { recordEntityLandedBy } from "./entity-spin-tap";
 import {
   didPreviewRectChange,
   isPreviewBoundingBoxAtClientPoint,
@@ -442,6 +441,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
             : { status: "ignored" };
 
         case "touch tap":
+          if (dismissPlacementOnFacility(context.canvas, editor, event.position)) return { status: "handled" };
           return handleTouchPlacementTap(context.canvas, editor, event.position, () => {
             recordEntityLandedBy(context.canvas, editor, event.position, () => applyPlacementOperation(context.canvas, editor, {
               keepPlacement: context.canvas.state.runtime.singlePlacementContinuous,
@@ -456,16 +456,9 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           }
 
           if (event.button === 0 && !event.longPress) {
+            if (dismissPlacementOnFacility(context.canvas, editor, event.position)) return { status: "handled" };
             // 不支持悬停的笔第一次落笔前预览还没出现：先在落笔处生成预览。
             if (!ensurePlacementDraftForMouse(context.canvas, editor, event.position)) {
-              return { status: "handled" };
-            }
-            // 连续放置时紧接着再点刚放下的设备：转动它（与随后的预览），而不是在原处再放一台。
-            const justPlacedId = resolveJustPlacedEntityId(context.canvas, editor, event.position);
-            if (justPlacedId !== null) {
-              spinEntity(context.canvas, editor, justPlacedId, event.position);
-              editor.actions.clearCollection(EntityCollectionType.selection);
-              rotatePlacementPreview(context.canvas, editor, { pointerMode: "mouse", currentMousePosition: event.position });
               return { status: "handled" };
             }
             // 笔没有 Shift/Ctrl：用笔放下后设备仍在手上，笔杆键点按（右键）才放下工具。
@@ -974,7 +967,7 @@ function applyPlacementOperation(
     keepPlacement?: boolean;
     currentMousePosition?: GesturePosition | null;
   } = {},
-): void {
+): boolean {
   const continuation = options.keepPlacement && canvas.isOperationEnabled("continuous-placement")
     ? capturePlacementContinuationSnapshot(canvas, editor)
     : null;
@@ -982,14 +975,14 @@ function applyPlacementOperation(
   try {
     const applied = editor.actions.applyPlacementDraft();
     if (!applied) {
-      return;
+      return false;
     }
 
     if (continuation !== null && canvas.deferPlacementContinuation(
       () => (continuation.pointerMode === "mouse" || canvas.state.runtime.singlePlacementContinuous)
         && continuePlacementOperation(canvas, editor, continuation, options.currentMousePosition ?? null),
       () => { clearPlacementUi(canvas); canvas.actions.setActiveTool("select"); },
-    )) return;
+    )) return true;
 
     if (continuation !== null && continuePlacementOperation(
       canvas,
@@ -997,7 +990,7 @@ function applyPlacementOperation(
       continuation,
       options.currentMousePosition ?? null,
     )) {
-      return;
+      return true;
     }
   } catch {
     safelyCancelPlacementDraft(editor);
@@ -1005,6 +998,18 @@ function applyPlacementOperation(
 
   clearPlacementUi(canvas);
   canvas.actions.setActiveTool("select");
+  return true;
+}
+
+function dismissPlacementOnFacility(
+  canvas: CanvasInteractionController,
+  editor: EditorContract,
+  position: GesturePosition,
+): boolean {
+  const entity = editor.queries.findEntityAtClientPixelPoint(position, canvas.view.state, { includeDrafts: false });
+  if (entity === null || canvas.registry.queries.isDedicatedLogisticsDevice(entity.definitionId)) return false;
+  cancelPlacementOperation(canvas, editor);
+  return true;
 }
 
 function cancelPlacementOperation(canvas: CanvasInteractionController, editor: EditorContract): void {
@@ -1143,7 +1148,9 @@ export function dropPlacementFromPanel(
   }
 
   driveMousePlacementPreview({ canvas, editor, position });
-  applyPlacementOperation(canvas, editor, { keepPlacement: keepInHand, currentMousePosition: position });
+  if (!applyPlacementOperation(canvas, editor, { keepPlacement: keepInHand, currentMousePosition: position })) {
+    cancelPlacementOperation(canvas, editor);
+  }
 }
 
 /**
@@ -1242,25 +1249,6 @@ export function holdDeviceForPlacement(
     canvas.actions.alignCanvasFloatingToolbar();
   }
   return true;
-}
-
-/** 连续放置中，这次点按若紧接着放下一台设备的那次点按、且落在它上面，返回该设备。 */
-function resolveJustPlacedEntityId(
-  canvas: CanvasInteractionController,
-  editor: EditorContract,
-  position: GesturePosition,
-): string | null {
-  const entityId = resolveRepeatTapEntityId(canvas, position);
-  const entity = entityId === null ? null : editor.queries.getEntityById(entityId);
-  const definition = entity === null ? null : canvas.registry.queries.findEntityDefinition(entity.definitionId);
-  const gridPoint = canvas.view.queries.findGridCellForClientPixelPoint(position);
-  if (entity === null || definition === null || gridPoint === null) {
-    return null;
-  }
-  const rect = resolveEntityGridRect({ entity, definition });
-  const onEntity = gridPoint.x >= rect.x && gridPoint.x < rect.x + rect.width
-    && gridPoint.y >= rect.y && gridPoint.y < rect.y + rect.height;
-  return onEntity ? entity.id : null;
 }
 
 export function cleanupPlacementDraft(canvas: CanvasInteractionController): void {

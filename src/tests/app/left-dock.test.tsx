@@ -15,6 +15,7 @@ import { CanvasToolRail } from "@/app/shell/canvas/canvas-tool-rail";
 import { LeftDock } from "@/app/shell/layout/left-dock";
 import { DEFAULT_LEFT_DOCK_WIDTH, MAX_LEFT_DOCK_WIDTH } from "@/app/state/state-impl";
 import { MIN_SQUEEZED_LEFT_DOCK_WIDTH_PX } from "@/app/shell/layout/dock-layout-budget";
+import { PlacementMenu } from "@/app/shell/layout/top-bar";
 import { LeftToolbar } from "@/app/shell/layout/left-toolbar";
 import { WorkbenchApp } from "@/app/shell/workbench-app";
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
@@ -235,7 +236,14 @@ describe("Left dock panel switching", () => {
     vi.unstubAllGlobals();
   });
 
-  it("renders four primary tabs with regions hidden by default when debug mode is off and defaults to the placement panel", async () => {
+  function clickPlacementMenu(appHost: ReturnType<typeof createAppTestHost>): void {
+    const title = appHost.actions.translate("topBar.menu");
+    act(() => container.querySelector<HTMLButtonElement>(`button[aria-label="${title}"]`)?.click());
+    const placement = appHost.actions.translate("workbench.panel.placement.title");
+    act(() => container.querySelector<HTMLButtonElement>(`button[title="${placement}"]`)?.click());
+  }
+
+  it("opens the placement catalog from the top navigation menu", async () => {
     const workspace = await createPlacementWorkspace();
     const appHost = createAppTestHost(workspace);
 
@@ -246,26 +254,16 @@ describe("Left dock panel switching", () => {
     act(() => {
       root.render(
         <>
-          <LeftToolbar appHost={appHost} />
+          <PlacementMenu appHost={appHost} />
           <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
         </>,
       );
     });
 
-    const toolbarGroups = container.querySelectorAll(".toolbar-rail-group");
-    const primaryButtons = toolbarGroups[0]?.querySelectorAll(".rail-button");
-    const utilityButtons = toolbarGroups[1]?.querySelectorAll(".rail-button");
+    clickPlacementMenu(appHost);
     const visiblePanel = queryVisibleLeftDockPanel(container);
-
-    // 常用的放置与蓝图常驻；基地等不常用项收进「更多」。
-    expect(primaryButtons).toHaveLength(2);
-    expect(utilityButtons).toHaveLength(7);
-    expect(container.textContent).toContain("放置模式");
-    expect(toolbarGroups[0]?.textContent).not.toContain("区域");
-    expect(visiblePanel).not.toBeNull();
-
     if (!visiblePanel) {
-      throw new Error("Expected the placement panel to be visible by default.");
+      throw new Error("Expected the placement catalog to open.");
     }
 
     expect(visiblePanel?.getAttribute("data-panel-id")).toBe("placement");
@@ -320,7 +318,6 @@ describe("Left dock panel switching", () => {
     expect(visiblePanel.querySelectorAll(".placement-panel-group-shortcut")).toHaveLength(7);
     expect(visiblePanel.querySelector('img[data-key-token="G"]')).not.toBeNull();
     expect(visiblePanel.querySelector('img[data-key-token="U"]')).not.toBeNull();
-    expect(appHost.internalState.runtime.activePanel).toBeNull();
     expect(appHost.mainCanvas.state.activeTool).toBe("select");
   });
 
@@ -754,9 +751,11 @@ describe("Left dock panel switching", () => {
     const workspace = createWorkspace();
     const appHost = createAppTestHost(workspace);
 
+    appHost.internalActions.setActivePanel("placement");
     act(() => {
       root.render(
         <>
+          <PlacementMenu appHost={appHost} />
           <LeftToolbar appHost={appHost} />
           <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
         </>,
@@ -838,9 +837,7 @@ describe("Left dock panel switching", () => {
     expect(simulationTextarea).not.toBeNull();
     expect(simulationTextarea?.value).toBe("null");
 
-    act(() => {
-      clickTab("放置模式");
-    });
+    clickPlacementMenu(appHost);
 
     const placementPanelAfterSwitch = container.querySelector(
       '.left-dock-panel[data-panel-id="placement"]',
@@ -897,10 +894,6 @@ describe("Left dock panel switching", () => {
       root.render(<LeftToolbar appHost={appHost} />);
     });
 
-    act(() => {
-      appHost.internalActions.toggleLeftDock();
-    });
-
     expect(appHost.state.workbench.leftDockOpen).toBe(false);
     expect(appHost.internalState.runtime.activePanel).toBeNull();
 
@@ -943,11 +936,7 @@ describe("Left dock panel switching", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    const placementButton = container.querySelector(
-      'button[title="放置模式"]',
-    ) as HTMLButtonElement | null;
-
-    expect(placementButton).not.toBeNull();
+    clickPlacementMenu(appHost);
     expect(appHost.state.workbench.leftDockOpen).toBe(true);
     const dockBeforeCollapse = container.querySelector(".dock-left") as HTMLElement | null;
     const dockShell = container.querySelector(".dock-shell-left") as HTMLElement | null;
@@ -958,18 +947,14 @@ describe("Left dock panel switching", () => {
       dockBeforeCollapse.scrollTop = 320;
     }
 
-    act(() => {
-      placementButton?.click();
-    });
+    clickPlacementMenu(appHost);
 
     expect(appHost.state.workbench.leftDockOpen).toBe(false);
     expect(dockShell?.hidden).toBe(true);
     expect(container.querySelector(".dock-left")).toBe(dockBeforeCollapse);
     expect(dockBeforeCollapse?.scrollTop).toBe(320);
 
-    act(() => {
-      placementButton?.click();
-    });
+    clickPlacementMenu(appHost);
 
     expect(appHost.state.workbench.leftDockOpen).toBe(true);
     expect(dockShell?.hidden).toBe(false);
@@ -997,6 +982,8 @@ describe("Left dock panel switching", () => {
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
+
+    clickPlacementMenu(appHost);
 
     // jsdom 没有布局，显式装配 View 测量后验证侧栏状态。
     appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 711, height: 500 });

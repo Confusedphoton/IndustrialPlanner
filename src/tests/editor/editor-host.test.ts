@@ -1,6 +1,5 @@
 import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
 import { getTestView } from "@/tests/helpers/app-test-workspace";
-import { loadBlueprintVariantFromFile } from "@/tests/simulation/blueprint-test-helpers";
 import { loadBlueprintFromFile, getBlueprintEntityArray } from "@/tests/simulation/blueprint-test-helpers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { runInAction } from "mobx";
@@ -2209,9 +2208,7 @@ describe("createEditorTestHost", () => {
         tags: [],
       };
 
-      const blueprint = loadBlueprintVariantFromFile("src/tests/fixtures/blueprints/collections-extra/editor/editor-host/index.json", "scene-08", { definitionId: definition.id });
-      editorHost.internalDocument.setSnapshot({ ...editorHost.document.getSnapshot(), baseId: blueprint.baseId });
-      editorHost.internalState.drafts = getBlueprintDraftArray(blueprint);
+      editorHost.internalState.drafts = [initialDraft];
       editorHost.internalState.collections.preview.replace([initialDraft.id]);
 
       for (let step = 0; step < 4; step += 1) {
@@ -2224,7 +2221,7 @@ describe("createEditorTestHost", () => {
         rotation: editorHost.internalState.drafts[0]?.rotation,
       }).toEqual({
         definitionId: definition.id,
-        position: blueprint.entities[initialDraft.id]!.position,
+        position: initialDraft.position,
         rotation: 0,
       });
     }
