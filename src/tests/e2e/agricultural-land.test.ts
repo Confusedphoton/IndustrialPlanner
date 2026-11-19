@@ -26,10 +26,13 @@ for (const profile of SCREEN_PROFILES) {
         const ready = window.__test__?.readiness();
         return ready?.assembled && ready.canvasAttached && ready.viewportValid;
       });
-      const baseButton = page.locator('aside[class*="left-toolbar"]')
-        .getByRole('button', { name: '基地', exact: true });
+      const toggleBasePanel = async () => {
+        await page.getByRole('button', { name: '菜单', exact: true }).click();
+        await page.locator('summary').filter({ hasText: '更多' }).click();
+        await page.getByRole('button', { name: '基地', exact: true }).click();
+      };
       const select = async id => {
-        if (await baseButton.getAttribute('aria-pressed') !== 'true') await baseButton.click();
+        await toggleBasePanel();
         await page.locator('[data-ui-button-id="base-current-select"]').click();
         const dialog = page.getByRole('dialog', { name: '选择基地', exact: true });
         const option = dialog.locator('[data-base-id="' + id + '"]');
@@ -37,7 +40,7 @@ for (const profile of SCREEN_PROFILES) {
         await option.click();
         await dialog.getByRole('button', { name: '确定', exact: true }).click();
         await page.waitForFunction(id => window.__test__?.getAppState().baseId === id, id);
-        if (await baseButton.getAttribute('aria-pressed') === 'true') await baseButton.click();
+        await toggleBasePanel();
         return group;
       };
       const group = await select('wuling_agricultural_land');

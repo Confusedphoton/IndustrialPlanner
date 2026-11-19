@@ -2,7 +2,6 @@
   position: relative;
   display: grid;
   grid-template-columns:
-    var(--left-toolbar-width, 68px)
     var(--left-dock-width, 320px)
     minmax(0, 1fr)
     var(--right-dock-width, 340px)
@@ -13,10 +12,10 @@
     var(--toolbox-bottom-dock-height, 0px)
     var(--bottom-bar-height, 28px);
   grid-template-areas:
-    "toolbar toolbar toolbar toolbar toolbar"
-    "tools left canvas right recipe"
-    "tools left toolbox-bottom right recipe"
-    "bottom bottom bottom bottom bottom";
+    "toolbar toolbar toolbar toolbar"
+    "left canvas right recipe"
+    "left toolbox-bottom right recipe"
+    "bottom bottom bottom bottom";
   height: 100%;
   row-gap: 0;
   column-gap: 0;
@@ -37,11 +36,11 @@
     var(--toolbox-bottom-dock-height, 0px)
     var(--bottom-bar-height, 28px);
   grid-template-areas:
-    "toolbar toolbar toolbar toolbar toolbar"
-    "tools left canvas right right"
-    "tools left canvas recipe recipe"
-    "tools left toolbox-bottom recipe recipe"
-    "bottom bottom bottom bottom bottom";
+    "toolbar toolbar toolbar toolbar"
+    "left canvas right right"
+    "left canvas recipe recipe"
+    "left toolbox-bottom recipe recipe"
+    "bottom bottom bottom bottom";
 }
 
 .workbench.is-right-stacked .recipe-tree-overlay.is-docked {
@@ -71,11 +70,11 @@
     var(--toolbox-bottom-dock-height, 0px)
     var(--bottom-bar-height, 28px);
   grid-template-areas:
-    "toolbar toolbar toolbar toolbar toolbar"
-    "tools left canvas recipe recipe"
-    "tools left canvas right right"
-    "tools left toolbox-bottom right right"
-    "bottom bottom bottom bottom bottom";
+    "toolbar toolbar toolbar toolbar"
+    "left canvas recipe recipe"
+    "left canvas right right"
+    "left toolbox-bottom right right"
+    "bottom bottom bottom bottom";
 }
 
 .workbench.is-stack-inspector-only .recipe-tree-overlay.is-docked {
@@ -159,34 +158,33 @@
 // 放置面板跟随画布工具条停靠在执笔手一侧：工具条拖到右缘时面板移到画布右侧，紧挨属性面板与配方树。
 .workbench.is-palette-right {
   grid-template-columns:
-    var(--left-toolbar-width, 68px)
     minmax(0, 1fr)
     var(--left-dock-width, 320px)
     var(--right-dock-width, 340px)
     var(--recipe-dock-width, 0px);
   grid-template-areas:
-    "toolbar toolbar toolbar toolbar toolbar"
-    "tools canvas left right recipe"
-    "tools toolbox-bottom left right recipe"
-    "bottom bottom bottom bottom bottom";
+    "toolbar toolbar toolbar toolbar"
+    "canvas left right recipe"
+    "toolbox-bottom left right recipe"
+    "bottom bottom bottom bottom";
 }
 
 .workbench.is-palette-right.is-right-stacked {
   grid-template-areas:
-    "toolbar toolbar toolbar toolbar toolbar"
-    "tools canvas left right right"
-    "tools canvas left recipe recipe"
-    "tools toolbox-bottom left recipe recipe"
-    "bottom bottom bottom bottom bottom";
+    "toolbar toolbar toolbar toolbar"
+    "canvas left right right"
+    "canvas left recipe recipe"
+    "toolbox-bottom left recipe recipe"
+    "bottom bottom bottom bottom";
 }
 
 .workbench.is-palette-right.is-stack-inspector-only {
   grid-template-areas:
-    "toolbar toolbar toolbar toolbar toolbar"
-    "tools canvas left recipe recipe"
-    "tools canvas left right right"
-    "tools toolbox-bottom left right right"
-    "bottom bottom bottom bottom bottom";
+    "toolbar toolbar toolbar toolbar"
+    "canvas left recipe recipe"
+    "canvas left right right"
+    "toolbox-bottom left right right"
+    "bottom bottom bottom bottom";
 }
 
 .workbench.is-palette-right .dock-shell-left {

@@ -8,7 +8,6 @@ export const MIN_SQUEEZED_RIGHT_DOCK_WIDTH_PX = 260;
 
 export interface DockLayoutBudgetInput {
   readonly viewportWidth: number;
-  readonly leftToolbarWidth: number;
   /** 0 when the left dock is closed. */
   readonly leftDockWidth: number;
   /** 0 when the inspector dock is closed. */
@@ -51,12 +50,12 @@ export function resolveDockLayoutBudget(input: DockLayoutBudgetInput): DockLayou
       : input.recipeDockWidth > 0 ? input.recipeDockMinWidth : 0;
   const leftDockWidth = input.leftDockWidth === 0 ? 0 : Math.min(input.leftDockWidth, Math.max(
     MIN_SQUEEZED_LEFT_DOCK_WIDTH_PX,
-    input.viewportWidth - input.leftToolbarWidth - minCanvasWidth - rightMinimum,
+    input.viewportWidth - minCanvasWidth - rightMinimum,
   ));
-  const sideBudget = input.viewportWidth - input.leftToolbarWidth - leftDockWidth - minCanvasWidth;
+  const sideBudget = input.viewportWidth - leftDockWidth - minCanvasWidth;
   const resolveLeftDockMaxWidth = (rightColumnsWidth: number) => Math.max(
     leftDockWidth,
-    input.viewportWidth - input.leftToolbarWidth - minCanvasWidth - rightColumnsWidth,
+    input.viewportWidth - minCanvasWidth - rightColumnsWidth,
   );
 
   if (

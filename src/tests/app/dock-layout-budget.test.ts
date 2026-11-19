@@ -13,15 +13,14 @@ import {
 
 const RECIPE_DOCK_MIN_WIDTH = 300;
 
-function canvasWidth(viewportWidth: number, leftToolbarWidth: number, budget: ReturnType<typeof resolveDockLayoutBudget>) {
-  return viewportWidth - leftToolbarWidth - budget.leftDockWidth - budget.rightDockWidth - budget.recipeDockWidth;
+function canvasWidth(viewportWidth: number, budget: ReturnType<typeof resolveDockLayoutBudget>) {
+  return viewportWidth - budget.leftDockWidth - budget.rightDockWidth - budget.recipeDockWidth;
 }
 
 describe("resolveDockLayoutBudget", () => {
   it("lets the palette be dragged wider only into width the canvas can spare, not out of the recipe dock", () => {
     const input = {
       viewportWidth: 1280,
-      leftToolbarWidth: 68,
       rightDockWidth: 0,
       recipeDockWidth: 360,
       recipeDockMinWidth: RECIPE_DOCK_MIN_WIDTH,
@@ -34,22 +33,21 @@ describe("resolveDockLayoutBudget", () => {
   });
 
   it.each([
-    { viewportWidth: 1920, leftToolbarWidth: 68, leftDockWidth: 320 },
-    { viewportWidth: 1440, leftToolbarWidth: 68, leftDockWidth: 320 },
-    { viewportWidth: 1280, leftToolbarWidth: 68, leftDockWidth: 320 },
-    { viewportWidth: 1180, leftToolbarWidth: 51, leftDockWidth: 180 },
-  ])("keeps the canvas at its minimum width with every dock open at $viewportWidth px", ({ viewportWidth, leftToolbarWidth, leftDockWidth }) => {
+    { viewportWidth: 1920, leftDockWidth: 320 },
+    { viewportWidth: 1440, leftDockWidth: 320 },
+    { viewportWidth: 1280, leftDockWidth: 320 },
+    { viewportWidth: 1180, leftDockWidth: 180 },
+  ])("keeps the canvas at its minimum width with every dock open at $viewportWidth px", ({ viewportWidth, leftDockWidth }) => {
     const minCanvas = Math.max(MIN_CANVAS_WIDTH_PX, Math.round(viewportWidth * 0.3));
     const budget = resolveDockLayoutBudget({
       viewportWidth,
-      leftToolbarWidth,
       leftDockWidth,
       rightDockWidth: 380,
       recipeDockWidth: 960,
       recipeDockMinWidth: RECIPE_DOCK_MIN_WIDTH,
     });
 
-    expect(canvasWidth(viewportWidth, leftToolbarWidth, budget)).toBeGreaterThanOrEqual(minCanvas);
+    expect(canvasWidth(viewportWidth, budget)).toBeGreaterThanOrEqual(minCanvas);
     expect(budget.rightDockWidth).toBeGreaterThanOrEqual(MIN_RIGHT_DOCK_WIDTH_PX);
   });
 
@@ -57,17 +55,16 @@ describe("resolveDockLayoutBudget", () => {
     { label: "the recipe dock", rightDockWidth: 0, recipeDockWidth: 440 },
     { label: "the inspector", rightDockWidth: 380, recipeDockWidth: 0 },
     { label: "both right docks", rightDockWidth: 380, recipeDockWidth: 440 },
-  ])("narrows the palette instead of the canvas at 1024 px with $label open", ({ rightDockWidth, recipeDockWidth }) => {
+  ])("narrows the palette instead of the canvas at 960 px with $label open", ({ rightDockWidth, recipeDockWidth }) => {
     const budget = resolveDockLayoutBudget({
-      viewportWidth: 1024,
-      leftToolbarWidth: 68,
+      viewportWidth: 960,
       leftDockWidth: 320,
       rightDockWidth,
       recipeDockWidth,
       recipeDockMinWidth: RECIPE_DOCK_MIN_WIDTH,
     });
 
-    expect(canvasWidth(1024, 68, budget)).toBeGreaterThanOrEqual(MIN_CANVAS_WIDTH_PX);
+    expect(canvasWidth(960, budget)).toBeGreaterThanOrEqual(MIN_CANVAS_WIDTH_PX);
     expect(budget.leftDockWidth).toBeLessThan(320);
     expect(budget.leftDockWidth).toBeGreaterThanOrEqual(MIN_SQUEEZED_LEFT_DOCK_WIDTH_PX);
   });
@@ -75,15 +72,13 @@ describe("resolveDockLayoutBudget", () => {
   it("stacks the inspector and recipe dock only when side by side would squeeze the canvas", () => {
     const wide = resolveDockLayoutBudget({
       viewportWidth: 1920,
-      leftToolbarWidth: 68,
       leftDockWidth: 320,
       rightDockWidth: 380,
       recipeDockWidth: 440,
       recipeDockMinWidth: RECIPE_DOCK_MIN_WIDTH,
     });
     const narrow = resolveDockLayoutBudget({
-      viewportWidth: 1280,
-      leftToolbarWidth: 68,
+      viewportWidth: 1200,
       leftDockWidth: 320,
       rightDockWidth: 380,
       recipeDockWidth: 440,
@@ -99,7 +94,6 @@ describe("resolveDockLayoutBudget", () => {
   it("caps recipe dock dragging so the canvas keeps its minimum", () => {
     const budget = resolveDockLayoutBudget({
       viewportWidth: 1440,
-      leftToolbarWidth: 68,
       leftDockWidth: 320,
       rightDockWidth: 0,
       recipeDockWidth: 960,
@@ -108,7 +102,7 @@ describe("resolveDockLayoutBudget", () => {
 
     expect(budget.recipeDockWidth).toBe(budget.recipeDockMaxWidth);
     expect(budget.leftDockWidth).toBe(320);
-    expect(canvasWidth(1440, 68, budget)).toBe(Math.round(1440 * 0.3));
+    expect(canvasWidth(1440, budget)).toBe(Math.round(1440 * 0.3));
   });
 });
 
@@ -116,7 +110,6 @@ describe("resolveDockLayoutBudget with an edge tool rail", () => {
   it("keeps the minimum canvas width free of the rail it hosts", () => {
     const budget = resolveDockLayoutBudget({
       viewportWidth: 1024,
-      leftToolbarWidth: 68,
       leftDockWidth: 320,
       rightDockWidth: 0,
       recipeDockWidth: 440,
@@ -124,13 +117,12 @@ describe("resolveDockLayoutBudget with an edge tool rail", () => {
       canvasReservedWidth: 66,
     });
 
-    expect(canvasWidth(1024, 68, budget) - 66).toBeGreaterThanOrEqual(MIN_CANVAS_WIDTH_PX);
+    expect(canvasWidth(1024, budget) - 66).toBeGreaterThanOrEqual(MIN_CANVAS_WIDTH_PX);
   });
 
   it("narrows the recipe dock below its usual minimum once the palette is at its floor in a short window", () => {
     const budget = resolveDockLayoutBudget({
-      viewportWidth: 1024,
-      leftToolbarWidth: 51,
+      viewportWidth: 980,
       leftDockWidth: 220,
       rightDockWidth: 0,
       recipeDockWidth: 440,
@@ -138,14 +130,13 @@ describe("resolveDockLayoutBudget with an edge tool rail", () => {
       canvasReservedWidth: 114,
     });
 
-    expect(canvasWidth(1024, 51, budget) - 114).toBeGreaterThanOrEqual(MIN_CANVAS_WIDTH_PX);
+    expect(canvasWidth(980, budget) - 114).toBeGreaterThanOrEqual(MIN_CANVAS_WIDTH_PX);
     expect(budget.recipeDockWidth).toBeLessThan(RECIPE_DOCK_MIN_WIDTH);
   });
 
   it("keeps the rail-free canvas when the inspector joins the docks in a short window", () => {
     const budget = resolveDockLayoutBudget({
       viewportWidth: 1024,
-      leftToolbarWidth: 51,
       leftDockWidth: 220,
       rightDockWidth: 380,
       recipeDockWidth: 440,
@@ -153,7 +144,7 @@ describe("resolveDockLayoutBudget with an edge tool rail", () => {
       canvasReservedWidth: 114,
     });
 
-    expect(canvasWidth(1024, 51, budget) - 114).toBeGreaterThanOrEqual(MIN_CANVAS_WIDTH_PX);
+    expect(canvasWidth(1024, budget) - 114).toBeGreaterThanOrEqual(MIN_CANVAS_WIDTH_PX);
   });
 });
 

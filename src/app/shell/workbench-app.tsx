@@ -48,14 +48,13 @@ import { PwaController } from "@/app/pwa/pwa-controller";
 import { PwaGateway } from "@/app/pwa/pwa-gateway";
 import { createAppTelemetryController } from "@/app/telemetry";
 import LeftDock from "@/app/shell/layout/left-dock";
-import { LeftToolbar } from "@/app/shell/layout/left-toolbar";
 import { V2MigrationController } from "@/app/migration";
 import { WorkbenchSettingsDialogController } from "@/app/shell/state/settings-dialog-state";
 import { RightDock } from "@/app/shell/layout/right-dock";
 import { RecipeTreeOverlay } from "@/app/shell/recipe-tree/recipe-tree-overlay";
 import { DevicePopup } from "@/app/shell/canvas/device-popup";
 import { recipeTreeOverlayState } from "@/app/shell/recipe-tree/recipe-tree-state";
-import { PlacementMenu, SimulationMenu, TopBar } from "@/app/shell/layout/top-bar";
+import { WorkbenchMenu, SimulationMenu, TopBar } from "@/app/shell/layout/top-bar";
 import {
   readSelectedSyncProvider,
   requestSyncProvider,
@@ -98,7 +97,6 @@ import {
   writeBackendApiAddressOverride,
 } from "@/shared/storage/backend-api-address";
 import {
-  isMobileOrTabletScreenProfile,
   isMobilePortraitScreenProfile,
   isTouchLandscapeScreenProfile,
   resetScreenProfileConsoleDiagnosticsForTest,
@@ -664,18 +662,14 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     : toolboxBottomDockGridHeight;
   const selectionCount = appHost.workspace.editor?.state.collections.selection.length ?? 0;
   const isTouchLandscape = isTouchLandscapeScreenProfile(screenProfile);
-  const isTouchLayout = isMobileOrTabletScreenProfile(screenProfile);
-  const isCompactLeftToolbar = isTouchLayout;
   const fullLeftDockWidth = resolveLeftDockWidthForScreenProfile(appHost.state.workbench, screenProfile);
   const showFloatingTopBarControls = isTouchLandscape && topBarCollapsed;
   const showBottomStatusBar = !showFloatingTopBarControls;
   const showMobilePortraitGate = isMobilePortraitScreenProfile(screenProfile);
   const showRightDock = rightDockOpen;
-  const leftToolbarWidth = isCompactLeftToolbar ? 51 : 68;
   const placementPanelActive = (appHost.internalState.runtime.activePanel ?? "placement") === "placement";
   const baseDockLayoutBudgetInput = {
     viewportWidth: screenProfile.viewportWidth,
-    leftToolbarWidth,
     leftDockWidth: leftDockOpen ? fullLeftDockWidth : 0,
     rightDockWidth: showRightDock ? DEFAULT_RIGHT_DOCK_WIDTH : 0,
     recipeDockWidth: recipeTreeOverlayState.dockLayoutWidth === 0 ? 0 : recipeTreeOverlayState.dockWidth,
@@ -747,9 +741,11 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     };
   }, [appHost]);
   const locale = appHost.state.settings.locale;
+  const pageTitle = t("app.title");
   useEffect(() => {
+    document.title = pageTitle;
     document.documentElement.lang = locale === "zh-CN" ? "zh-CN" : "en";
-  }, [locale]);
+  }, [locale, pageTitle]);
   const stackedRightColumn = dockLayoutBudget.stackRightDocks
     ? resolveStackedRightColumn({
       columnHeight: screenProfile.viewportHeight
@@ -1065,10 +1061,9 @@ export const WorkbenchApp = observer(function WorkbenchApp({
   const paletteOnRight = canvasToolRailState.side === "right";
   const workbenchStyle = {
     ...resolveInCanvasThemeCssVariables(effectiveCanvasTheme),
-    "--left-toolbar-width": `${leftToolbarWidth}px`,
     "--left-dock-width": `${dockLayoutBudget.leftDockWidth}px`,
     // 画布左右两侧被停靠栏占用的宽度；放置面板在哪一侧取决于画布工具条的位置。
-    "--canvas-left-edge": `${leftToolbarWidth + (paletteOnRight ? 0 : dockLayoutBudget.leftDockWidth)}px`,
+    "--canvas-left-edge": `${paletteOnRight ? 0 : dockLayoutBudget.leftDockWidth}px`,
     "--canvas-right-edge": `${dockLayoutBudget.rightDockWidth + dockLayoutBudget.recipeDockWidth + (paletteOnRight ? dockLayoutBudget.leftDockWidth : 0)}px`,
     "--right-dock-width": `${dockLayoutBudget.rightDockWidth}px`,
     // 配方树停靠栏占用最右侧一列。
@@ -1103,7 +1098,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           isStandalone={pwaController.standalone}
           onFullscreenActionFailure={pwaController.openFullscreenNotice}
         />
-        <LeftToolbar appHost={appHost} compact={isCompactLeftToolbar} />
         <LeftDock
           appHost={appHost}
           hidden={!leftDockOpen}
@@ -1129,7 +1123,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
         />
         {showFloatingTopBarControls ? (
           <div className={cm(styles, "workbench-floating-top-bar-controls")}>
-            <PlacementMenu appHost={appHost} />
+            <WorkbenchMenu appHost={appHost} />
             <SimulationMenu appHost={appHost} />
             <FullscreenToggleButton
               appHost={appHost}

@@ -1,9 +1,12 @@
+import LucideEllipsis from "~icons/lucide/ellipsis";
 import LucideMenu from "~icons/lucide/menu";
 import { FullscreenToggleButton } from "@/app/shell/layout/fullscreen-toggle-button";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import { RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID } from "@/app/input/gesture/actions";
 import type { AppHost } from "@/app/host/app-host";
+import type { ActivePanel } from "@/app/state/state-impl";
+import { recipeTreeOverlayState } from "@/app/shell/recipe-tree/recipe-tree-state";
 import { observer } from "mobx-react-lite";
 import type {
   MouseEvent as ReactMouseEvent,
@@ -343,53 +346,90 @@ export const SimulationMenu = observer(function SimulationMenu({ appHost }: { ap
   );
 });
 
-export const PlacementMenu = observer(function PlacementMenu({ appHost }: { appHost: AppHost }) {
+export const WorkbenchMenu = observer(function WorkbenchMenu({ appHost }: { appHost: AppHost }) {
   const t = appHost.actions.translate;
   const canvas = appHost.mainCanvas;
   const placing = canvas.state.activeTool === "single-placement" || canvas.state.activeTool === "blueprint-placement";
   const continuous = canvas.state.activeTool === "blueprint-placement"
     ? canvas.state.runtime.blueprintPlacementContinuous
     : canvas.state.runtime.singlePlacementContinuous;
-  const placementOpen = appHost.state.workbench.leftDockOpen
-    && (appHost.internalState.runtime.activePanel ?? "placement") === "placement";
+  const activePanel = appHost.internalState.runtime.activePanel ?? "placement";
+  const dockOpen = appHost.state.workbench.leftDockOpen;
+  const { dialogState } = appHost.internalState.workbench;
+  const { debugMode, showRegionAnnotations } = appHost.state.settings;
+  const recipesVisible = recipeTreeOverlayState.visible;
+  const toolboxVisible = dialogState.toolbox.visible;
+
   return (
     <TopBarMenu label={t("topBar.menu")} icon={<LucideMenu aria-hidden />}>
-      {(close) => (
-        <div className={cm(styles, "top-bar-placement-menu")}>
+      {(close) => {
+        const item = (
+          labelKey: string,
+          icon: Parameters<typeof WorkbenchIcon>[0]["kind"],
+          onClick: () => void,
+          pressed?: boolean,
+        ) => (
           <button
-            aria-pressed={placementOpen}
+            aria-pressed={pressed}
             className={cm(styles, "top-bar-menu-trigger")}
-            onClick={() => {
-              if (placementOpen) appHost.internalActions.toggleLeftDock();
-              else appHost.internalActions.setActivePanel("placement");
-              close();
-            }}
-            title={t("workbench.panel.placement.title")}
+            onClick={() => { onClick(); close(); }}
+            title={t(labelKey)}
             type="button"
           >
-            <span className={cm(styles, "top-bar-toggle-icon")}><WorkbenchIcon kind="placement" /></span>
-            {t("workbench.panel.placement.title")}
+            <span className={cm(styles, "top-bar-toggle-icon")}><WorkbenchIcon kind={icon} /></span>
+            {t(labelKey)}
           </button>
-          {placing ? (
-            <button
-              aria-pressed={continuous}
-              className={cm(styles, "top-bar-menu-trigger")}
-              disabled={!continuous && !canvas.isOperationEnabled("continuous-placement")}
-              onClick={() => appHost.gestureAdapter.handleUiButtonMouseTap({
-                uiButtonId: RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID,
-                button: 0,
-                altKey: false,
-                ctrlKey: false,
-                metaKey: false,
-                shiftKey: false,
-              })}
-              type="button"
-            >
-              {t("action.continuousPlacement")}
-            </button>
-          ) : null}
-        </div>
-      )}
+        );
+        const panel = (id: NonNullable<ActivePanel>, labelKey: string, icon: Parameters<typeof WorkbenchIcon>[0]["kind"]) => {
+          const selected = dockOpen && activePanel === id;
+          return item(labelKey, icon, () => {
+            if (selected) appHost.internalActions.toggleLeftDock();
+            else appHost.internalActions.setActivePanel(id);
+          }, selected);
+        };
+
+        return (
+          <div className={cm(styles, "top-bar-workbench-menu")}>
+            {panel("placement", "workbench.panel.placement.title", "placement")}
+            {panel("blueprint", "workbench.leftRail.blueprint", "blueprint")}
+            {showRegionAnnotations ? panel("region", "workbench.leftRail.region", "region") : null}
+            {item("workbench.utility.recipeTree", "recipe-tree", recipeTreeOverlayState.toggleVisible, recipesVisible)}
+            {item("workbench.utility.toolbox", "toolbox", () => appHost.internalActions.openDialog("toolbox"), toolboxVisible)}
+            {placing ? (
+              <button
+                aria-pressed={continuous}
+                className={cm(styles, "top-bar-menu-trigger")}
+                disabled={!continuous && !canvas.isOperationEnabled("continuous-placement")}
+                onClick={() => appHost.gestureAdapter.handleUiButtonMouseTap({
+                  uiButtonId: RAIL_TOGGLE_CONTINUOUS_PLACEMENT_BUTTON_ID,
+                  button: 0,
+                  altKey: false,
+                  ctrlKey: false,
+                  metaKey: false,
+                  shiftKey: false,
+                })}
+                type="button"
+              >
+                {t("action.continuousPlacement")}
+              </button>
+            ) : null}
+            <details className={cm(styles, "top-bar-menu-more")}>
+              <summary className={cm(styles, "top-bar-menu-trigger")}>
+                <span className={cm(styles, "top-bar-toggle-icon")}><LucideEllipsis aria-hidden /></span>
+                {t("workbench.leftRail.more")}
+              </summary>
+              <div className={cm(styles, "top-bar-menu-more-items")}>
+                {panel("base", "workbench.leftRail.base", "base")}
+                {debugMode ? panel("simulation", "workbench.leftRail.simulation", "simulation") : null}
+                {debugMode ? item("workbench.utility.debugLogs", "debug-log", () => appHost.internalActions.openDialog("debug-log")) : null}
+                {item("workbench.utility.help", "help", () => appHost.internalActions.openDialog("help"))}
+                {item("workbench.utility.feedback", "feedback", () => appHost.internalActions.openDialog("feedback"))}
+                {item("workbench.utility.settings", "settings", () => appHost.internalActions.openDialog("settings"))}
+              </div>
+            </details>
+          </div>
+        );
+      }}
     </TopBarMenu>
   );
 });
@@ -461,7 +501,7 @@ export const TopBar = observer(function TopBar({
         ) : null}
       </div>
       <div className={cm(styles, "toolbar-group top-bar-controls")}>
-        <PlacementMenu appHost={appHost} />
+        <WorkbenchMenu appHost={appHost} />
         <SimulationMenu appHost={appHost} />
         <FullscreenToggleButton
           appHost={appHost}

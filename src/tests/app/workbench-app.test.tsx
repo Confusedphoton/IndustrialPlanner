@@ -1,3 +1,4 @@
+import { clickWorkbenchMenuItem } from "@/tests/helpers/workbench-menu";
 import { getTestView } from "@/tests/helpers/app-test-workspace";
 // @vitest-environment jsdom
 
@@ -624,11 +625,8 @@ describe("WorkbenchApp", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    const workbench = container.querySelector(".workbench") as HTMLDivElement | null;
-
     expect(appHost.state.screenProfile.deviceClass).toBe("desktop");
     expect(appHost.state.screenProfile.screenShape).toBe("landscape");
-    expect(workbench?.style.getPropertyValue("--left-toolbar-width")).toBe("68px");
 
     coarsePointer = true;
     hoverNone = true;
@@ -646,7 +644,6 @@ describe("WorkbenchApp", () => {
 
     expect(appHost.state.screenProfile.deviceClass).toBe("tablet");
     expect(appHost.state.screenProfile.screenShape).toBe("portrait");
-    expect(workbench?.style.getPropertyValue("--left-toolbar-width")).toBe("51px");
   });
 
   it("does not request fullscreen automatically after a phone rotates to landscape", () => {
@@ -1406,15 +1403,8 @@ describe("WorkbenchApp", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    const simulationButton = container.querySelector(
-      '.left-toolbar button[title="仿真"]',
-    ) as HTMLButtonElement | null;
 
-    expect(simulationButton).not.toBeNull();
-
-    act(() => {
-      simulationButton?.click();
-    });
+    clickWorkbenchMenuItem(container, "仿真", true);
 
     const snapshotTextarea = container.querySelector("[data-simulation-runtime-json]") as HTMLTextAreaElement | null;
     const tickDebugDataTextarea = container.querySelector("[data-simulation-tick-debug-data]") as HTMLTextAreaElement | null;
@@ -1529,7 +1519,6 @@ describe("WorkbenchApp", () => {
 
     expect(appHost.state.workbench.leftDockWidth).toBe(512);
     expect(workbench?.style.getPropertyValue("--left-dock-width")).toBe(`${MOBILE_LEFT_DOCK_WIDTH}px`);
-    expect(workbench?.style.getPropertyValue("--left-toolbar-width")).toBe("51px");
     expect(container.querySelector(".dock-resize-handle")).toBeNull();
   });
 
@@ -1571,7 +1560,6 @@ describe("WorkbenchApp", () => {
     expect(appHost.state.screenProfile.hasTouch).toBe(true);
     expect(appHost.state.workbench.leftDockWidth).toBe(512);
     expect(workbench?.style.getPropertyValue("--left-dock-width")).toBe("0px");
-    expect(workbench?.style.getPropertyValue("--left-toolbar-width")).toBe("51px");
     expect(container.querySelector(".dock-resize-handle")).toBeNull();
     expect(container.querySelector('[data-ui-button-id="placement-tool-select"]')).not.toBeNull();
     expect(rotateViewButton?.getAttribute("aria-label")).toBe("旋转视角");
@@ -1587,7 +1575,7 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector('[data-ui-button-id="placement-tool-select"]')).not.toBeNull();
   });
 
-  it("keeps full desktop left toolbar sizing on touch-enabled desktop devices", async () => {
+  it("keeps desktop dock resizing on touch-enabled desktop devices", async () => {
     setViewport({
       width: 1600,
       height: 899,
@@ -1620,7 +1608,6 @@ describe("WorkbenchApp", () => {
     expect(appHost.state.screenProfile.hasTouch).toBe(true);
     expect(appHost.state.workbench.leftDockWidth).toBe(512);
     expect(workbench?.style.getPropertyValue("--left-dock-width")).toBe("512px");
-    expect(workbench?.style.getPropertyValue("--left-toolbar-width")).toBe("68px");
     expect(container.querySelector(".dock-resize-handle")).not.toBeNull();
     expect(container.querySelector('[data-ui-button-id="placement-tool-select"]')).not.toBeNull();
     expect(container.querySelector(".placement-button-list.is-single-column")).toBeNull();
@@ -1909,7 +1896,7 @@ describe("WorkbenchApp", () => {
     ]));
   });
 
-  it("opens the settings dialog from the left toolbar and hydrates saved schema values", () => {
+  it("opens the settings dialog from the workbench menu and hydrates saved schema values", () => {
     localStorage.setItem(
       APP_SETTINGS_LOCAL_STORAGE_KEY,
       JSON.stringify({
@@ -1943,16 +1930,9 @@ describe("WorkbenchApp", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    const settingsButton = container.querySelector(
-      ".toolbar-rail-utility .rail-button:last-child",
-    ) as HTMLButtonElement | null;
-
     expect(container.querySelector(".settings-dialog")).toBeNull();
-    expect(settingsButton).not.toBeNull();
 
-    act(() => {
-      settingsButton?.click();
-    });
+    clickWorkbenchMenuItem(container, "设置", true);
 
     const dialog = container.querySelector(".settings-dialog") as HTMLDivElement | null;
     const languageSelect = container.querySelector(
@@ -2086,7 +2066,7 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(".settings-dialog")).toBeNull();
   });
 
-  it("opens the help dialog from the left toolbar and supports tabs, maximize, and close", () => {
+  it("opens the help dialog from the workbench menu and supports tabs, maximize, and close", () => {
     const workspace = createWorkspace();
     const appHost = createAppTestHost(workspace);
 
@@ -2094,17 +2074,9 @@ describe("WorkbenchApp", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    const helpButton = container.querySelector(
-      'button[title="帮助"]',
-    ) as HTMLButtonElement | null;
-
     expect(container.querySelector(".help-dialog")).toBeNull();
-    expect(helpButton).not.toBeNull();
-    expect(helpButton?.getAttribute("aria-pressed")).toBe("false");
 
-    act(() => {
-      helpButton?.click();
-    });
+    clickWorkbenchMenuItem(container, "帮助", true);
 
     const dialog = container.querySelector(".help-dialog") as HTMLDivElement | null;
     const shortcutsTab = container.querySelector(
@@ -2118,7 +2090,6 @@ describe("WorkbenchApp", () => {
     ) as HTMLButtonElement | null;
 
     expect(dialog).not.toBeNull();
-    expect(helpButton?.getAttribute("aria-pressed")).toBe("true");
     // 默认标签页为"新手入门"
     expect(container.querySelector('.help-dialog [aria-selected="true"]')?.textContent).toBe("新手入门");
 
@@ -2164,11 +2135,8 @@ describe("WorkbenchApp", () => {
     });
 
     expect(container.querySelector(".help-dialog")).toBeNull();
-    expect(helpButton?.getAttribute("aria-pressed")).toBe("false");
 
-    act(() => {
-      helpButton?.click();
-    });
+    clickWorkbenchMenuItem(container, "帮助", true);
 
     expect(container.querySelector(".help-dialog")?.classList.contains("is-maximized")).toBe(true);
   });
@@ -2184,16 +2152,8 @@ describe("WorkbenchApp", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    const debugLogButton = container.querySelector(
-      'button[title="调试日志"]',
-    ) as HTMLButtonElement | null;
-
-    expect(debugLogButton).not.toBeNull();
     expect(container.querySelector(".debug-log-dialog")).toBeNull();
-
-    act(() => {
-      debugLogButton?.click();
-    });
+    clickWorkbenchMenuItem(container, "调试日志", true);
 
     const textarea = container.querySelector(
       ".debug-log-dialog-textarea",
@@ -2210,7 +2170,6 @@ describe("WorkbenchApp", () => {
       });
     });
 
-    expect(container.querySelector('button[title="调试日志"]')).toBeNull();
     expect(container.querySelector(".debug-log-dialog")).toBeNull();
     expect(appHost.internalState.workbench.dialogState["debug-log"]?.visible).toBe(false);
 
@@ -2224,13 +2183,7 @@ describe("WorkbenchApp", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    const helpButton = container.querySelector(
-      'button[title="帮助"]',
-    ) as HTMLButtonElement | null;
-
-    act(() => {
-      helpButton?.click();
-    });
+    clickWorkbenchMenuItem(container, "帮助", true);
 
     const dialog = container.querySelector(".help-dialog") as HTMLDivElement | null;
     const header = container.querySelector(".help-dialog-header") as HTMLElement | null;
@@ -2296,13 +2249,7 @@ describe("WorkbenchApp", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    const helpButton = container.querySelector(
-      'button[title="帮助"]',
-    ) as HTMLButtonElement | null;
-
-    act(() => {
-      helpButton?.click();
-    });
+    clickWorkbenchMenuItem(container, "帮助", true);
 
     const maximizeButton = container.querySelector(
       'button[title="最大化帮助"]',
@@ -2588,13 +2535,7 @@ describe("WorkbenchApp", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    const toolboxButton = container.querySelector(
-      'button[title="工具箱"]',
-    ) as HTMLButtonElement | null;
-
-    act(() => {
-      toolboxButton?.click();
-    });
+    clickWorkbenchMenuItem(container, "工具箱");
 
     const dockButton = container.querySelector(
       '.toolbox-dialog-header button[title="停靠到底部"]',
@@ -2687,9 +2628,7 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(".toolbox-bottom-dock")).toBeNull();
     expect(workbench?.style.getPropertyValue("--toolbox-bottom-dock-height")).toBe("0px");
 
-    act(() => {
-      toolboxButton?.click();
-    });
+    clickWorkbenchMenuItem(container, "工具箱");
 
     expect(container.querySelector(".toolbox-bottom-dock")).not.toBeNull();
     expect(appHost.internalState.workbench.toolbox.bottomDockCollapsed).toBe(false);
@@ -3297,16 +3236,8 @@ describe("WorkbenchApp", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    const settingsButton = container.querySelector(
-      ".toolbar-rail-utility .rail-button:last-child",
-    ) as HTMLButtonElement | null;
 
-    expect(settingsButton).not.toBeNull();
-    expect(settingsButton?.title).toBe("设置");
-
-    act(() => {
-      settingsButton?.click();
-    });
+    clickWorkbenchMenuItem(container, "设置", true);
 
     const languageSelect = container.querySelector(
       'select[name="system-language"]',
@@ -3314,6 +3245,7 @@ describe("WorkbenchApp", () => {
 
     expect(languageSelect).not.toBeNull();
     expect(languageSelect?.value).toBe("zh-CN");
+    expect(document.title).toBe("终末地工业系统仿真器");
     expect(container.querySelector(".settings-dialog-header h2")?.textContent).toBe("设置");
 
     act(() => {
@@ -3327,7 +3259,7 @@ describe("WorkbenchApp", () => {
 
     expect(appHost.state.settings.locale).toBe("en-US");
     expect(languageSelect?.value).toBe("en-US");
-    expect(settingsButton?.title).toBe("Settings");
+    expect(document.title).toBe("Endfield Industrial System Simulator");
     expect(container.querySelector(".settings-dialog-header h2")?.textContent).toBe("Settings");
     expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBe(
       JSON.stringify(createWorkbenchStorageSnapshot({
@@ -3350,13 +3282,7 @@ describe("WorkbenchApp", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    const settingsButton = container.querySelector(
-      ".toolbar-rail-utility .rail-button:last-child",
-    ) as HTMLButtonElement | null;
-
-    act(() => {
-      settingsButton?.click();
-    });
+    clickWorkbenchMenuItem(container, "设置", true);
 
     const themeSelect = container.querySelector(
       'select[name="system-theme"]',
@@ -3409,13 +3335,7 @@ describe("WorkbenchApp", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    const settingsButton = container.querySelector(
-      ".toolbar-rail-utility .rail-button:last-child",
-    ) as HTMLButtonElement | null;
-
-    act(() => {
-      settingsButton?.click();
-    });
+    clickWorkbenchMenuItem(container, "设置", true);
 
     const immediateMoveToggle = container.querySelector(
       'input[name="game-arknights-immediate-move"]',
@@ -3521,13 +3441,7 @@ describe("WorkbenchApp", () => {
       JSON.stringify(DEFAULT_APP_SETTINGS_STORAGE),
     );
 
-    const settingsButton = container.querySelector(
-      ".toolbar-rail-utility .rail-button:last-child",
-    ) as HTMLButtonElement | null;
-
-    act(() => {
-      settingsButton?.click();
-    });
+    clickWorkbenchMenuItem(container, "设置", true);
 
     // debug-mode 移至调试分组首位；关闭时隐藏后续调试项，
     // 需要先开启调试模式才能看到 FPS/手势测试开关。
@@ -3635,13 +3549,7 @@ describe("WorkbenchApp", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    const settingsButton = container.querySelector(
-      ".toolbar-rail-utility .rail-button:last-child",
-    ) as HTMLButtonElement | null;
-
-    act(() => {
-      settingsButton?.click();
-    });
+    clickWorkbenchMenuItem(container, "设置", true);
 
     const alwaysShowGridLinesToggle = container.querySelector(
       'input[name="game-always-show-grid-lines"]',
@@ -3672,13 +3580,7 @@ describe("WorkbenchApp", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    const settingsButton = container.querySelector(
-      ".toolbar-rail-utility .rail-button:last-child",
-    ) as HTMLButtonElement | null;
-
-    act(() => {
-      settingsButton?.click();
-    });
+    clickWorkbenchMenuItem(container, "设置", true);
 
     const alwaysShowPowerRangeToggle = container.querySelector(
       'input[name="game-always-show-power-range"]',
@@ -3718,13 +3620,7 @@ describe("WorkbenchApp", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    const settingsButton = container.querySelector(
-      ".toolbar-rail-utility .rail-button:last-child",
-    ) as HTMLButtonElement | null;
-
-    act(() => {
-      settingsButton?.click();
-    });
+    clickWorkbenchMenuItem(container, "设置", true);
 
     const simplifiedDeviceIconsToggle = container.querySelector(
       'input[name="game-use-blueprint-style-device-images"]',
@@ -3811,13 +3707,7 @@ describe("WorkbenchApp", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    const settingsButton = container.querySelector(
-      ".toolbar-rail-utility .rail-button:last-child",
-    ) as HTMLButtonElement | null;
-
-    act(() => {
-      settingsButton?.click();
-    });
+    clickWorkbenchMenuItem(container, "设置", true);
 
     const simplifiedDeviceIconsToggle = container.querySelector(
       'input[name="game-use-blueprint-style-device-images"]',
@@ -4072,16 +3962,10 @@ describe("WorkbenchApp", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    const settingsButton = container.querySelector(
-      'button[title="设置"]',
-    ) as HTMLButtonElement | null;
-
     expect(appHost.state.screenProfile.deviceClass).toBe("mobile");
     expect(appHost.state.screenProfile.screenShape).toBe("portrait");
 
-    act(() => {
-      settingsButton?.click();
-    });
+    clickWorkbenchMenuItem(container, "设置", true);
 
     const dialog = container.querySelector(".settings-dialog") as HTMLDivElement | null;
     const groupTitles = Array.from(
@@ -4123,18 +4007,9 @@ describe("WorkbenchApp", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    const helpButton = container.querySelector(
-      'button[title="帮助"]',
-    ) as HTMLButtonElement | null;
-    const toolboxButton = container.querySelector(
-      'button[title="工具箱"]',
-    ) as HTMLButtonElement | null;
-
     expect(appHost.state.screenProfile.deviceClass).toBe("mobile");
 
-    act(() => {
-      helpButton?.click();
-    });
+    clickWorkbenchMenuItem(container, "帮助", true);
 
     expect(container.querySelector(".help-dialog")?.classList.contains("is-mobile-compact")).toBe(true);
 
@@ -4144,8 +4019,8 @@ describe("WorkbenchApp", () => {
 
     act(() => {
       helpCloseButton?.click();
-      toolboxButton?.click();
     });
+    clickWorkbenchMenuItem(container, "工具箱");
 
     expect(container.querySelector(".toolbox-dialog")?.classList.contains("is-mobile-compact")).toBe(true);
   });
@@ -4168,15 +4043,9 @@ describe("WorkbenchApp", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    const settingsButton = container.querySelector(
-      'button[title="设置"]',
-    ) as HTMLButtonElement | null;
-
     expect(appHost.state.screenProfile.deviceClass).toBe("tablet");
 
-    act(() => {
-      settingsButton?.click();
-    });
+    clickWorkbenchMenuItem(container, "设置", true);
 
     expect(container.querySelector(".settings-dialog-sidebar")).toBeNull();
   });
@@ -4197,15 +4066,9 @@ describe("WorkbenchApp", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    const settingsButton = container.querySelector(
-      'button[title="设置"]',
-    ) as HTMLButtonElement | null;
-
     expect(appHost.state.screenProfile.deviceClass).toBe("desktop");
 
-    act(() => {
-      settingsButton?.click();
-    });
+    clickWorkbenchMenuItem(container, "设置", true);
 
     expect(container.querySelector(".settings-dialog-sidebar")).not.toBeNull();
   });

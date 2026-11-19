@@ -15,8 +15,8 @@ import { CanvasToolRail } from "@/app/shell/canvas/canvas-tool-rail";
 import { LeftDock } from "@/app/shell/layout/left-dock";
 import { DEFAULT_LEFT_DOCK_WIDTH, MAX_LEFT_DOCK_WIDTH } from "@/app/state/state-impl";
 import { MIN_SQUEEZED_LEFT_DOCK_WIDTH_PX } from "@/app/shell/layout/dock-layout-budget";
-import { PlacementMenu } from "@/app/shell/layout/top-bar";
-import { LeftToolbar } from "@/app/shell/layout/left-toolbar";
+import { WorkbenchMenu } from "@/app/shell/layout/top-bar";
+import { clickWorkbenchMenuItem, openWorkbenchMenu } from "@/tests/helpers/workbench-menu";
 import { WorkbenchApp } from "@/app/shell/workbench-app";
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
@@ -254,7 +254,7 @@ describe("Left dock panel switching", () => {
     act(() => {
       root.render(
         <>
-          <PlacementMenu appHost={appHost} />
+          <WorkbenchMenu appHost={appHost} />
           <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
         </>,
       );
@@ -544,33 +544,19 @@ describe("Left dock panel switching", () => {
     ).toBeNull();
   });
 
-  it("shows the debug log button above toolbox only when debug mode is enabled", () => {
-    const workspace = createWorkspace();
-    const appHost = createAppTestHost(workspace);
+  it("shows debug logs under More only when debug mode is enabled", () => {
+    const appHost = createAppTestHost(createWorkspace());
+    act(() => root.render(<WorkbenchMenu appHost={appHost} />));
+    openWorkbenchMenu(container, true);
+
+    const label = appHost.actions.translate("workbench.utility.debugLogs");
+    const findDebugLogs = () => container.querySelector(`details[open] button[title="${label}"]`);
+    expect(findDebugLogs()).toBeNull();
 
     act(() => {
-      root.render(<LeftToolbar appHost={appHost} />);
+      runInAction(() => { appHost.internalState.settings.debugMode = true; });
     });
-
-    const utilityGroup = container.querySelectorAll(".toolbar-rail-group")[1] as HTMLElement | undefined;
-    const utilityTitlesBefore = Array.from(
-      utilityGroup?.querySelectorAll(".rail-button") ?? [],
-    ).map((button) => button.getAttribute("title"));
-
-    expect(utilityTitlesBefore).toEqual(["配方树", "工具箱", "更多", "基地", "帮助", "问题反馈", "设置"]);
-
-    act(() => {
-      runInAction(() => {
-        appHost.internalState.settings.debugMode = true;
-      });
-    });
-
-    const utilityTitlesAfter = Array.from(
-      utilityGroup?.querySelectorAll(".rail-button") ?? [],
-    ).map((button) => button.getAttribute("title"));
-
-    // 调试日志只在调试模式下出现，与其他不常用项一起在「更多」里。
-    expect(utilityTitlesAfter).toEqual(["配方树", "工具箱", "更多", "基地", "仿真", "调试日志", "帮助", "问题反馈", "设置"]);
+    expect(findDebugLogs()).not.toBeNull();
   });
 
   it("frames the selected placement group and shows number shortcuts only inside it", async () => {
@@ -585,7 +571,7 @@ describe("Left dock panel switching", () => {
     act(() => {
       root.render(
         <>
-          <LeftToolbar appHost={appHost} />
+          <WorkbenchMenu appHost={appHost} />
           <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
         </>,
       );
@@ -637,7 +623,7 @@ describe("Left dock panel switching", () => {
     act(() => {
       root.render(
         <>
-          <LeftToolbar appHost={appHost} />
+          <WorkbenchMenu appHost={appHost} />
           <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
         </>,
       );
@@ -755,8 +741,7 @@ describe("Left dock panel switching", () => {
     act(() => {
       root.render(
         <>
-          <PlacementMenu appHost={appHost} />
-          <LeftToolbar appHost={appHost} />
+          <WorkbenchMenu appHost={appHost} />
           <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
         </>,
       );
@@ -769,30 +754,11 @@ describe("Left dock panel switching", () => {
     expect(placementPanelBeforeSwitch).not.toBeNull();
     expect(placementPanelBeforeSwitch?.hidden).toBe(false);
 
-    const clickTab = (label: string) => {
-      const button = container.querySelector(
-        `button[title="${label}"]`,
-      ) as HTMLButtonElement | null;
-
-      expect(button).not.toBeNull();
-
-      if (!button) {
-        throw new Error(`Left toolbar tab ${label} was not rendered.`);
-      }
-
-      act(() => {
-        button.click();
-      });
-
-      return button;
-    };
-
-    const blueprintButton = clickTab("蓝图模式");
+    clickWorkbenchMenuItem(container, "蓝图模式");
     const blueprintPanel = queryVisibleLeftDockPanel(container);
 
     expect(appHost.internalState.runtime.activePanel).toBe("blueprint");
     expect(placementPanelBeforeSwitch?.hidden).toBe(true);
-    expect(blueprintButton.getAttribute("aria-pressed")).toBe("true");
     expect(blueprintPanel?.getAttribute("data-panel-id")).toBe("blueprint");
     expect(blueprintPanel?.querySelector('[data-ui-button-id="blueprint-action-import-file"]')).not.toBeNull();
     expect(blueprintPanel?.querySelector('[data-ui-button-id="blueprint-tab-user"]')).not.toBeNull();
@@ -807,11 +773,10 @@ describe("Left dock panel switching", () => {
     expect(deletePanel).toBeNull();
     expect(appHost.internalState.runtime.activePanel).toBe("blueprint");
 
-    const baseButton = clickTab("基地");
+    clickWorkbenchMenuItem(container, "基地", true);
     const basePanel = queryVisibleLeftDockPanel(container);
 
     expect(appHost.internalState.runtime.activePanel).toBe("base");
-    expect(baseButton.getAttribute("aria-pressed")).toBe("true");
     expect(basePanel?.getAttribute("data-panel-id")).toBe("base");
     expect(basePanel?.querySelector('[data-ui-button-id="base-current-select"]')).not.toBeNull();
     expect(basePanel?.querySelector(".inspector-option-grid")).toBeNull();
@@ -825,14 +790,13 @@ describe("Left dock panel switching", () => {
       });
     });
 
-    const simulationButton = clickTab("仿真");
+    clickWorkbenchMenuItem(container, "仿真", true);
     const simulationPanel = queryVisibleLeftDockPanel(container);
     const simulationTextarea = simulationPanel?.querySelector(
       "[data-simulation-runtime-json]",
     ) as HTMLTextAreaElement | null;
 
     expect(appHost.internalState.runtime.activePanel).toBe("simulation");
-    expect(simulationButton.getAttribute("aria-pressed")).toBe("true");
     expect(simulationPanel?.getAttribute("data-panel-id")).toBe("simulation");
     expect(simulationTextarea).not.toBeNull();
     expect(simulationTextarea?.value).toBe("null");
@@ -865,15 +829,7 @@ describe("Left dock panel switching", () => {
       root.render(<WorkbenchApp appHost={appHost} />);
     });
 
-    const baseToolbarButton = container.querySelector(
-      'button[title="基地"]',
-    ) as HTMLButtonElement | null;
-
-    expect(baseToolbarButton).not.toBeNull();
-
-    act(() => {
-      baseToolbarButton?.click();
-    });
+    clickWorkbenchMenuItem(container, "基地", true);
 
     const basePanel = queryVisibleLeftDockPanel(container);
     const picker = basePanel?.querySelector('[data-ui-button-id="base-current-select"]') as HTMLElement | null;
@@ -891,33 +847,20 @@ describe("Left dock panel switching", () => {
     const appHost = createAppTestHost(workspace);
 
     act(() => {
-      root.render(<LeftToolbar appHost={appHost} />);
+      root.render(<WorkbenchMenu appHost={appHost} />);
     });
 
     expect(appHost.state.workbench.leftDockOpen).toBe(false);
     expect(appHost.internalState.runtime.activePanel).toBeNull();
 
-    const baseButton = container.querySelector(
-      'button[title="基地"]',
-    ) as HTMLButtonElement | null;
-
-    expect(baseButton).not.toBeNull();
-    expect(baseButton?.classList.contains("is-active")).toBe(false);
-    expect(baseButton?.getAttribute("aria-pressed")).toBe("false");
-
-    act(() => {
-      baseButton?.click();
-    });
-
+    clickWorkbenchMenuItem(container, "基地", true);
     expect(appHost.state.workbench.leftDockOpen).toBe(true);
     expect(appHost.internalState.runtime.activePanel).toBe("base");
-    expect(baseButton?.classList.contains("is-active")).toBe(true);
-    expect(baseButton?.getAttribute("aria-pressed")).toBe("true");
 
     act(() => {
       root.render(
         <>
-          <LeftToolbar appHost={appHost} />
+          <WorkbenchMenu appHost={appHost} />
           <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
         </>,
       );
@@ -1054,7 +997,7 @@ describe("Left dock panel switching", () => {
     act(() => {
       root.render(
         <>
-          <LeftToolbar appHost={appHost} />
+          <WorkbenchMenu appHost={appHost} />
           <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
         </>,
       );
@@ -1085,7 +1028,7 @@ describe("Left dock panel switching", () => {
     act(() => {
       root.render(
         <>
-          <LeftToolbar appHost={appHost} />
+          <WorkbenchMenu appHost={appHost} />
           <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
         </>,
       );
@@ -2524,14 +2467,7 @@ describe("Base panel power bar", () => {
   });
 
   function switchToBasePanel() {
-    const baseButton = container.querySelector(
-      'button[title="基地"]',
-    ) as HTMLButtonElement | null;
-
-    expect(baseButton).not.toBeNull();
-    act(() => {
-      baseButton?.click();
-    });
+    clickWorkbenchMenuItem(container, "基地", true);
     return queryVisibleLeftDockPanel(container);
   }
 
@@ -2589,7 +2525,7 @@ describe("Base panel power bar", () => {
     act(() => {
       root.render(
         <>
-          <LeftToolbar appHost={appHost} />
+          <WorkbenchMenu appHost={appHost} />
           <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
         </>,
       );
@@ -2671,7 +2607,7 @@ describe("Base panel power bar", () => {
     act(() => {
       root.render(
         <>
-          <LeftToolbar appHost={appHost} />
+          <WorkbenchMenu appHost={appHost} />
           <LeftDock appHost={appHost} maxWidth={MAX_LEFT_DOCK_WIDTH} width={DEFAULT_LEFT_DOCK_WIDTH} />
         </>,
       );

@@ -371,115 +371,6 @@
   background: var(--surface-1);
 }
 
-.left-toolbar {
-  grid-area: tools;
-  display: grid;
-  grid-template-rows: 1fr auto;
-  min-height: 0;
-  gap: 8px;
-  padding:
-    10px
-    6px;
-  border-right: 1px solid var(--line);
-  overflow-x: hidden;
-  overflow-y: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  overscroll-behavior: contain;
-}
-
-.left-toolbar::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-}
-
-.toolbar-rail-group {
-  display: grid;
-  align-content: start;
-  gap: 4px;
-}
-
-.toolbar-rail-utility {
-  padding-top: 6px;
-  border-top: 1px solid var(--line);
-}
-
-.rail-button {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  min-height: 64px;
-  padding:
-    8px
-    3px;
-  border: 1px solid var(--transparent);
-  background: var(--transparent);
-  color: var(--text-1);
-  text-align: center;
-  border-radius: 8px;
-}
-
-.rail-button.is-active {
-  border-color: var(--line);
-  background: var(--surface-3);
-  color: var(--text-0);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .rail-button:hover {
-    border-color: var(--line);
-    background: var(--surface-3);
-    color: var(--text-0);
-  }
-}
-
-@media (hover: none) {
-  .rail-button:hover:not(.is-active) {
-    border-color: var(--transparent);
-    background: var(--transparent);
-    color: var(--text-1);
-  }
-}
-
-.rail-button-short {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-}
-
-.rail-button-short svg {
-  width: 100%;
-  height: 100%;
-  fill: currentColor;
-}
-
-.rail-button-label {
-  font-size: 0.6875rem;
-  line-height: 1.15;
-}
-
-.rail-button-utility {
-  min-height: 54px;
-}
-
-.left-toolbar.is-compact {
-  padding: 6px 4px;
-  gap: 6px;
-}
-
-.left-toolbar.is-compact .rail-button {
-  min-height: 44px;
-  padding: 0;
-}
-
-.left-toolbar.is-compact .rail-button-label {
-  display: none;
-}
-
 .toolbar-meta {
   justify-content: flex-end;
   color: var(--text-1);
@@ -833,32 +724,6 @@
   min-height: 0;
 }
 
-// 不常用的工具栏项收进「更多」：弹出列表贴在工具栏右侧，与按钮底部对齐。
-.left-toolbar-more {
-  position: relative;
-  display: grid;
-}
-
-.left-toolbar-more-menu[hidden] {
-  display: none;
-}
-
-.left-toolbar-more-menu {
-  position: fixed;
-  z-index: 30;
-  left: calc(var(--left-toolbar-width, 68px) + 4px);
-  bottom: calc(var(--bottom-bar-height, 28px) + 8px);
-  display: grid;
-  grid-template-columns: repeat(2, 76px);
-  gap: 4px;
-  padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface-1);
-  box-shadow: 0 12px 32px rgb(0 0 0 / 18%);
-}
-
-
 .top-bar-menu {
   position: relative;
 }
@@ -903,7 +768,25 @@
 }
 
 
-.top-bar-placement-menu {
+.top-bar-workbench-menu,
+.top-bar-menu-more-items {
   display: grid;
   gap: 3px;
+}
+
+.top-bar-workbench-menu {
+  min-width: 12rem;
+  max-height: calc(100dvh - 64px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
+.top-bar-menu-more {
+  padding-top: 3px;
+  border-top: 1px solid var(--line);
+}
+
+.top-bar-menu-more-items {
+  padding-left: 12px;
 }
