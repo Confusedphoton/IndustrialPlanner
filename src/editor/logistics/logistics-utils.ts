@@ -419,21 +419,10 @@ export function appendFreehandPathPoints(options: {
     return [{ ...options.pointerGridPoint }];
   }
 
-  const points = options.points.map((point) => ({ ...point }));
+  const points = [...options.points];
   const head = points[points.length - 1];
 
   if (head === undefined || areGridPointsEqual(head, options.pointerGridPoint)) {
-    return points;
-  }
-
-  const previous = points[points.length - 2];
-  if (previous !== undefined && areGridPointsEqual(previous, options.pointerGridPoint)) {
-    points.pop();
-    return points;
-  }
-
-  if (areAdjacentGridPoints(head, options.pointerGridPoint)) {
-    points.push({ ...options.pointerGridPoint });
     return points;
   }
 
@@ -447,7 +436,21 @@ export function appendFreehandPathPoints(options: {
   appendManhattanSegment(points, corner);
   appendManhattanSegment(points, options.pointerGridPoint);
 
-  return dedupeAdjacentPoints(points);
+  const path: GridPoint[] = [];
+  const indexByGridKey = new Map<string, number>();
+  for (const point of points) {
+    const key = gridPointKey(point);
+    const previousIndex = indexByGridKey.get(key);
+    if (previousIndex === undefined) {
+      indexByGridKey.set(key, path.length);
+      path.push(point);
+    } else {
+      for (const removedPoint of path.splice(previousIndex + 1)) {
+        indexByGridKey.delete(gridPointKey(removedPoint));
+      }
+    }
+  }
+  return path;
 }
 
 export function resolveLogisticsPathCells(options: {
@@ -1056,10 +1059,6 @@ function dedupeAdjacentPoints(points: readonly GridPoint[]): GridPoint[] {
   }
 
   return result;
-}
-
-function areAdjacentGridPoints(left: GridPoint, right: GridPoint): boolean {
-  return manhattanDistance(left, right) === 1;
 }
 
 function manhattanDistance(left: GridPoint, right: GridPoint): number {

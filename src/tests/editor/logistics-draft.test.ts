@@ -1810,315 +1810,47 @@ describe("物流绘制模式", () => {
     });
   });
 
-  it("creates virtual converger and connector drafts for freehand self-overlap", () => {
-    const workspace = createWorkspace();
-    const editorHost = createEditorTestHost(workspace);
-
+  it.each([
+    { kind: "belt", movement: "onto", endX: 2 },
+    { kind: "belt", movement: "past", endX: 3 },
+    { kind: "pipe", movement: "onto", endX: 2 },
+    { kind: "pipe", movement: "past", endX: 3 },
+  ] as const)("trims a $kind draft when dragging $movement its own path", ({ kind, endX }) => {
+    const editorHost = createEditorTestHost(createWorkspace());
+    const existingLine = [
+      createTestEntity("crossing", `${kind}_straight_1x1`, 1, 2, 90),
+      createTestEntity("downstream", `${kind}_straight_1x1`, 1, 3, 90),
+    ];
+    editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(existingLine));
+    const start = { x: 0, y: 0 };
+    const discarded = { x: 0, y: 2 };
     editorHost.actions.createLogisticsDraftStart({
-      kind: "belt",
-      source: {
-        type: "empty-cell",
-        gridPoint: { x: 0, y: 0 },
-      },
+      kind,
+      source: { type: "empty-cell", gridPoint: start },
     });
-    for (const pointerGridPoint of [
-      { x: 2, y: 0 },
-      { x: 2, y: 2 },
-      { x: 0, y: 2 },
-      { x: 0, y: 1 },
-      { x: 2, y: 1 },
-    ]) {
-      editorHost.actions.moveLogisticEnd({
-        pointerGridPoint,
-        routeMode: { type: "freehand" },
-      });
+
+    for (const pointerGridPoint of [{ x: 2, y: 0 }, { x: 2, y: 2 }, discarded, { x: 0, y: 1 }]) {
+      editorHost.actions.moveLogisticEnd({ pointerGridPoint, routeMode: { type: "freehand" } });
     }
+    expect(editorHost.state.collections.ghost).toContain("crossing");
 
-    expect(editorHost.queries.resolveLogisticsDraftState()?.invalidReason).toBeNull();
-    expect(findPreviewDraftAt(editorHost, 2, 1)).toMatchObject({
-      definitionId: "log_converger",
-    });
+    const end = { x: endX, y: 1 };
+    const result = editorHost.actions.moveLogisticEnd({ pointerGridPoint: end, routeMode: { type: "freehand" } });
+    const expectedPath = [start, { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 2, y: 1 }];
+    if (endX === 3) expectedPath.push(end);
 
-    editorHost.actions.moveLogisticEnd({
-      pointerGridPoint: { x: 3, y: 1 },
-      routeMode: { type: "freehand" },
-    });
-
-    expect(editorHost.queries.resolveLogisticsDraftState()?.invalidReason).toBeNull();
-    expect(findPreviewDraftAt(editorHost, 2, 1)).toMatchObject({
-      definitionId: "log_connector",
-    });
-  });
-
-  it("creates a connector for freehand self-overlap when auto splitters and convergers are disabled", () => {
-    const workspace = createWorkspace();
-    const editorHost = createEditorTestHost(workspace);
-
-    editorHost.actions.createLogisticsDraftStart({
-      kind: "belt",
-      source: {
-        type: "empty-cell",
-        gridPoint: { x: 0, y: 0 },
-      },
-    });
-    for (const pointerGridPoint of [
-      { x: 2, y: 0 },
-      { x: 2, y: 2 },
-      { x: 0, y: 2 },
-      { x: 0, y: 1 },
-    ]) {
-      editorHost.actions.moveLogisticEnd({
-        pointerGridPoint,
-        autoCreateSplittersAndConvergers: false,
-        routeMode: { type: "freehand" },
-      });
+    expect(result.canApply).toBe(true);
+    expect(editorHost.queries.resolveLogisticsDraftState()?.cells.map((cell) => cell.gridPoint)).toEqual(expectedPath);
+    expect(findPreviewDraftAt(editorHost, discarded.x, discarded.y)).toBeNull();
+    expect(editorHost.state.collections.ghost).toHaveLength(0);
+    expect(editorHost.actions.applyLogisticDraft()).toBe(true);
+    const { entities } = editorHost.document.getSnapshot();
+    for (const entity of existingLine) {
+      expect(entities[entity.id]).toEqual(entity);
     }
-
-    const moveResult = editorHost.actions.moveLogisticEnd({
-      pointerGridPoint: { x: 3, y: 1 },
-      autoCreateSplittersAndConvergers: false,
-      routeMode: { type: "freehand" },
-    });
-
-    expect(moveResult).toMatchObject({
-      canApply: true,
-      invalidReason: null,
-    });
-    expect(findPreviewDraftAt(editorHost, 2, 1)).toMatchObject({
-      definitionId: "log_connector",
-    });
-  });
-
-  it("marks freehand self-overlap convergers invalid when auto splitters and convergers are disabled", () => {
-    const workspace = createWorkspace();
-    const editorHost = createEditorTestHost(workspace);
-
-    editorHost.actions.createLogisticsDraftStart({
-      kind: "belt",
-      source: {
-        type: "empty-cell",
-        gridPoint: { x: 0, y: 0 },
-      },
-    });
-    for (const pointerGridPoint of [
-      { x: 2, y: 0 },
-      { x: 2, y: 2 },
-      { x: 0, y: 2 },
-    ]) {
-      editorHost.actions.moveLogisticEnd({
-        pointerGridPoint,
-        routeMode: { type: "freehand" },
-      });
-    }
-
-    const moveResult = editorHost.actions.moveLogisticEnd({
-      pointerGridPoint: { x: 2, y: 1 },
-      autoCreateSplittersAndConvergers: false,
-      routeMode: { type: "freehand" },
-    });
-
-    expect(moveResult).toMatchObject({
-      canApply: false,
-      invalidReason: "overlap-own-preview",
-    });
-    expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual([]);
-  });
-
-  it("keeps freehand self-overlap converger head when retracing a horizontal draft segment", () => {
-    for (const direction of ["right", "left"] as const) {
-      const workspace = createWorkspace();
-      const editorHost = createEditorTestHost(workspace);
-      const basePoints = [
-        { x: 2, y: 5 },
-        { x: 3, y: 5 },
-        { x: 4, y: 5 },
-        { x: 5, y: 5 },
-        { x: 6, y: 5 },
-        { x: 7, y: 5 },
-        { x: 8, y: 5 },
-        { x: 9, y: 5 },
-        { x: 9, y: 4 },
-        { x: 8, y: 4 },
-        { x: 7, y: 4 },
-        { x: 6, y: 4 },
-        { x: 5, y: 4 },
-        { x: 5, y: 5 },
-      ];
-      const tailPoints = direction === "right"
-        ? [{ x: 6, y: 5 }, { x: 7, y: 5 }, { x: 8, y: 5 }]
-        : [{ x: 4, y: 5 }, { x: 3, y: 5 }, { x: 2, y: 5 }];
-
-      editorHost.actions.createLogisticsDraftStart({
-        kind: "belt",
-        source: {
-          type: "empty-cell",
-          gridPoint: { x: 1, y: 5 },
-        },
-      });
-
-      for (const pointerGridPoint of basePoints) {
-        editorHost.actions.moveLogisticEnd({
-          pointerGridPoint,
-          routeMode: { type: "freehand" },
-        });
-      }
-
-      const beforeDraft = editorHost.queries.resolveLogisticsDraftState();
-      const beforeCells = beforeDraft?.cells.map((cell) => cell.gridPoint) ?? [];
-      const beforeHeadDraftEntityId = beforeDraft?.headDraftEntityId ?? null;
-
-      for (const pointerGridPoint of tailPoints) {
-        editorHost.actions.moveLogisticEnd({
-          pointerGridPoint,
-          routeMode: { type: "freehand" },
-        });
-      }
-
-      expect(editorHost.queries.resolveLogisticsDraftState()).toMatchObject({
-        canApply: true,
-        invalidReason: null,
-        headDraftEntityId: beforeHeadDraftEntityId,
-      });
-      expect(editorHost.queries.resolveLogisticsDraftState()?.cells.map((cell) => cell.gridPoint)).toEqual(
-        beforeCells,
-      );
-      expect(editorHost.queries.resolveLogisticsDraftState()?.cells.at(-1)?.gridPoint).toEqual({ x: 5, y: 5 });
-      expect(findPreviewDraftAt(editorHost, 5, 5)).toMatchObject({
-        definitionId: "log_converger",
-      });
-      expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual(["log_converger"]);
-    }
-  });
-
-  it("keeps the freehand self-overlap converger head when dragging along the overlapped segment", () => {
-    for (const pointerGridPoint of [{ x: 7, y: 5 }, { x: 5, y: 5 }, { x: 8, y: 5 }]) {
-      const workspace = createWorkspace();
-      const editorHost = createEditorTestHost(workspace);
-
-      editorHost.actions.createLogisticsDraftStart({
-        kind: "belt",
-        source: {
-          type: "empty-cell",
-          gridPoint: { x: 5, y: 5 },
-        },
-      });
-
-      for (const stepGridPoint of [
-        { x: 8, y: 5 },
-        { x: 8, y: 4 },
-        { x: 6, y: 4 },
-        { x: 6, y: 5 },
-      ]) {
-        editorHost.actions.moveLogisticEnd({
-          pointerGridPoint: stepGridPoint,
-          routeMode: { type: "freehand" },
-        });
-      }
-
-      const beforeDraft = editorHost.queries.resolveLogisticsDraftState();
-      const beforeCells = beforeDraft?.cells.map((cell) => cell.gridPoint) ?? [];
-      const beforeHeadDraftEntityId = beforeDraft?.headDraftEntityId ?? null;
-
-      expect(beforeDraft).toMatchObject({
-        canApply: true,
-        invalidReason: null,
-        headDraftEntityId: beforeHeadDraftEntityId,
-      });
-      expect(beforeDraft?.cells.at(-1)?.gridPoint).toEqual({ x: 6, y: 5 });
-      expect(findPreviewDraftAt(editorHost, 6, 5)).toMatchObject({
-        definitionId: "log_converger",
-      });
-
-      const moveResult = editorHost.actions.moveLogisticEnd({
-        pointerGridPoint,
-        routeMode: { type: "freehand" },
-      });
-
-      expect(moveResult).toMatchObject({
-        canApply: true,
-        invalidReason: null,
-        headGridPoint: { x: 6, y: 5 },
-        headDraftEntityId: beforeHeadDraftEntityId,
-      });
-      expect(editorHost.queries.resolveLogisticsDraftState()).toMatchObject({
-        canApply: true,
-        invalidReason: null,
-        headDraftEntityId: beforeHeadDraftEntityId,
-      });
-      expect(
-        editorHost.queries.resolveLogisticsDraftState()?.cells.map((cell) => cell.gridPoint),
-      ).toEqual(beforeCells);
-      expect(findPreviewDraftAt(editorHost, 6, 5)).toMatchObject({
-        definitionId: "log_converger",
-      });
-      expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual(["log_converger"]);
-    }
-  });
-
-  it("keeps freehand self-overlap converger head when retracing a vertical draft segment", () => {
-    for (const direction of ["down", "up"] as const) {
-      const workspace = createWorkspace();
-      const editorHost = createEditorTestHost(workspace);
-      const basePoints = [
-        { x: 5, y: 2 },
-        { x: 5, y: 3 },
-        { x: 5, y: 4 },
-        { x: 5, y: 5 },
-        { x: 5, y: 6 },
-        { x: 5, y: 7 },
-        { x: 5, y: 8 },
-        { x: 5, y: 9 },
-        { x: 4, y: 9 },
-        { x: 4, y: 8 },
-        { x: 4, y: 7 },
-        { x: 4, y: 6 },
-        { x: 4, y: 5 },
-        { x: 5, y: 5 },
-      ];
-      const tailPoints = direction === "down"
-        ? [{ x: 5, y: 6 }, { x: 5, y: 7 }, { x: 5, y: 8 }]
-        : [{ x: 5, y: 4 }, { x: 5, y: 3 }, { x: 5, y: 2 }];
-
-      editorHost.actions.createLogisticsDraftStart({
-        kind: "belt",
-        source: {
-          type: "empty-cell",
-          gridPoint: { x: 5, y: 1 },
-        },
-      });
-
-      for (const pointerGridPoint of basePoints) {
-        editorHost.actions.moveLogisticEnd({
-          pointerGridPoint,
-          routeMode: { type: "freehand" },
-        });
-      }
-
-      const beforeDraft = editorHost.queries.resolveLogisticsDraftState();
-      const beforeCells = beforeDraft?.cells.map((cell) => cell.gridPoint) ?? [];
-      const beforeHeadDraftEntityId = beforeDraft?.headDraftEntityId ?? null;
-
-      for (const pointerGridPoint of tailPoints) {
-        editorHost.actions.moveLogisticEnd({
-          pointerGridPoint,
-          routeMode: { type: "freehand" },
-        });
-      }
-
-      expect(editorHost.queries.resolveLogisticsDraftState()).toMatchObject({
-        canApply: true,
-        invalidReason: null,
-        headDraftEntityId: beforeHeadDraftEntityId,
-      });
-      expect(editorHost.queries.resolveLogisticsDraftState()?.cells.map((cell) => cell.gridPoint)).toEqual(
-        beforeCells,
-      );
-      expect(editorHost.queries.resolveLogisticsDraftState()?.cells.at(-1)?.gridPoint).toEqual({ x: 5, y: 5 });
-      expect(findPreviewDraftAt(editorHost, 5, 5)).toMatchObject({
-        definitionId: "log_converger",
-      });
-      expect(listPreviewAutoDeviceDefinitionIds(editorHost)).toEqual(["log_converger"]);
-    }
+    const placedPositions = [...expectedPath, ...existingLine.map((entity) => entity.position)];
+    expect(Object.values(entities).map((entity) => entity.position)).toEqual(expect.arrayContaining(placedPositions));
+    expect(Object.keys(entities)).toHaveLength(placedPositions.length);
   });
 
   it("keeps the pointer-selected nearest device route stable across route-order changes", () => {

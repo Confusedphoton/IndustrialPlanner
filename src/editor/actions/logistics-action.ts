@@ -344,13 +344,6 @@ export function createEditorLogisticsActions(
           });
         }
 
-        if (shouldKeepSelfOverlapConvergerHeadWhenRetracingOwnSegment({
-          draft,
-          pointerGridPoint: options.pointerGridPoint,
-        })) {
-          return createLogisticsActionResultFromDraft(draft);
-        }
-
         const currentPoints = draft.cells.length === 0
           ? [resolveSourceStartGridPoint(source)]
           : draft.cells.map((cell) => cell.gridPoint);
@@ -968,7 +961,6 @@ function rebuildLogisticsDraft(options: {
     kind: options.kind,
     cells,
     replacingEntityIds: autoDraftPlan.replacingEntityIds,
-    autoDraftCellKeys: new Set(autoDraftPlan.cellOverridesByGridKey.keys()),
     target: options.target,
     allowEmptyTarget: options.allowEmptyTarget,
   }) ?? autoDraftPlan.invalidReason;
@@ -1167,7 +1159,6 @@ function resolveInvalidReason(options: {
   kind: LogisticsKind;
   cells: readonly LogisticsPathCell[];
   replacingEntityIds: readonly string[];
-  autoDraftCellKeys: ReadonlySet<string>;
   target: LogisticsDraftEndpoint | null;
   allowEmptyTarget: boolean;
 }): LogisticsDraftInvalidReason | null {
@@ -1179,10 +1170,7 @@ function resolveInvalidReason(options: {
   for (const cell of options.cells) {
     const key = gridPointKey(cell.gridPoint);
     if (seen.has(key)) {
-      if (!options.autoDraftCellKeys.has(key)) {
-        return "overlap-own-preview";
-      }
-      continue;
+      return "overlap-own-preview";
     }
     seen.add(key);
   }
@@ -1573,7 +1561,6 @@ function resolveRouteToDevice(options: {
           kind: options.draft.kind,
           cells,
           replacingEntityIds: autoDraftPlan.replacingEntityIds,
-          autoDraftCellKeys: new Set(autoDraftPlan.cellOverridesByGridKey.keys()),
           target: targetEndpoint,
           allowEmptyTarget: true,
         }) ?? autoDraftPlan.invalidReason;
@@ -2111,55 +2098,6 @@ function resolveAutoDraftPlan(options: {
     }) ?? invalidReason;
   }
 
-  const firstIndexByGridKey = new Map<string, number>();
-  for (let index = 0; index < options.cells.length; index += 1) {
-    const cell = options.cells[index];
-    if (cell === undefined) {
-      continue;
-    }
-
-    const key = gridPointKey(cell.gridPoint);
-    const firstIndex = firstIndexByGridKey.get(key);
-    if (firstIndex === undefined) {
-      firstIndexByGridKey.set(key, index);
-      continue;
-    }
-
-    if (firstIndex === 0) {
-      invalidReason = "overlap-own-preview";
-      continue;
-    }
-
-    const firstCell = options.cells[firstIndex];
-    const isLastCell = index === options.cells.length - 1;
-    if (
-      firstCell === undefined
-      || !canCreateAutoDeviceForSelfOverlap({
-        firstCell,
-        repeatedCell: cell,
-        isLastCell,
-      })
-    ) {
-      invalidReason = "overlap-own-preview";
-      continue;
-    }
-
-    const overrideKind: AutoDeviceKind = isLastCell ? "converger" : "connector";
-    if (
-      overrideKind === "converger"
-      && !options.autoCreateSplittersAndConvergers
-    ) {
-      invalidReason = "overlap-own-preview";
-      continue;
-    }
-
-    const edge = isLastCell ? cell.toEdge : null;
-    cellOverridesByGridKey.set(
-      key,
-      createAutoDeviceOverride(options.context, options.kind, overrideKind, edge),
-    );
-  }
-
   if (invalidReason !== null) {
     return {
       cellOverridesByGridKey: new Map(),
@@ -2286,82 +2224,6 @@ function resolveConnectorCrossingAutoDraftCell(options: {
   );
   options.replacingEntityIds.add(info.entity.id);
   return null;
-}
-
-function canCreateAutoDeviceForSelfOverlap(options: {
-  readonly firstCell: LogisticsPathCell;
-  readonly repeatedCell: LogisticsPathCell;
-  readonly isLastCell: boolean;
-}): boolean {
-  const firstAxis = resolveStraightCellAxis(options.firstCell);
-  if (firstAxis === null) {
-    return false;
-  }
-
-  if (options.isLastCell) {
-    const edges = [
-      options.repeatedCell.fromEdge,
-      options.repeatedCell.toEdge,
-    ].filter((edge): edge is GridEdge => edge !== null);
-
-    return edges.length > 0 && edges.every((edge) => resolveEdgeAxis(edge) !== firstAxis);
-  }
-
-  const repeatedAxis = resolveStraightCellAxis(options.repeatedCell);
-
-  return repeatedAxis !== null && repeatedAxis !== firstAxis;
-}
-
-function shouldKeepSelfOverlapConvergerHeadWhenRetracingOwnSegment(options: {
-  readonly draft: LogisticsDraftReadonlyState;
-  readonly pointerGridPoint: GridPoint;
-}): boolean {
-  if (!options.draft.canApply || options.draft.invalidReason !== null) {
-    return false;
-  }
-
-  const lastIndex = options.draft.cells.length - 1;
-  const headCell = options.draft.cells[lastIndex];
-  if (headCell === undefined) {
-    return false;
-  }
-
-  const repeatedGridKey = gridPointKey(headCell.gridPoint);
-  const firstCell = options.draft.cells.find((cell, index) =>
-    index < lastIndex && gridPointKey(cell.gridPoint) === repeatedGridKey
-  ) ?? null;
-  if (firstCell === null) {
-    return false;
-  }
-
-  const firstAxis = resolveStraightCellAxis(firstCell);
-  return (
-    firstAxis !== null
-    && isGridPointOnAxisFromPoint({
-      axis: firstAxis,
-      origin: headCell.gridPoint,
-      target: options.pointerGridPoint,
-    })
-    && canCreateAutoDeviceForSelfOverlap({
-      firstCell,
-      repeatedCell: headCell,
-      isLastCell: true,
-    })
-  );
-}
-
-function isGridPointOnAxisFromPoint(options: {
-  readonly axis: LogisticsPathAxis;
-  readonly origin: GridPoint;
-  readonly target: GridPoint;
-}): boolean {
-  if (areGridPointsEqual(options.origin, options.target)) {
-    return false;
-  }
-
-  return options.axis === "horizontal"
-    ? options.target.y === options.origin.y
-    : options.target.x === options.origin.x;
 }
 
 function resolveStraightCellAxis(cell: LogisticsPathCell): LogisticsPathAxis | null {

@@ -2827,7 +2827,6 @@ describe("createEditorTestHost", () => {
       source: { type: "empty-cell", gridPoint: { x: 5, y: 10 } },
     });
 
-    // 保持不走回头路，避免触发 overlap-own-preview。
     editorHost.actions.moveLogisticEnd({
       pointerGridPoint: { x: 5, y: 5 },
       routeMode: { type: "freehand" },
