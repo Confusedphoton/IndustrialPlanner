@@ -1,4 +1,5 @@
 import type { CanvasInteractionController } from "@/app/canvas";
+import { trackPlacementEdgeFlick } from "@/app/canvas/placement-edge-flick";
 import type { EditorViewContract } from "@/domain/editor/editor-view-contract";
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
@@ -32,6 +33,7 @@ import {
   swapLogisticsDeviceRole,
 } from "@/app/logistics-role-swap";
 import { runInAction } from "mobx";
+import { rotateGridRotation } from "@/shared/geometry/grid";
 import { recentPlacements } from "@/app/recent-placement-devices";
 
 import type { GestureHandleResult, GestureMappingModule, ShortcutActionRoute } from "../types";
@@ -119,9 +121,39 @@ const PLACEMENT_GROUP_SHORTCUTS = {
 
 export function createHypergryphSinglePlacementGestureModule(): GestureMappingModule<AppHost> {
   let lastMousePosition: GesturePosition | null = null;
+  let stroke: {
+    id: string; canvas: CanvasInteractionController; start: GesturePosition;
+    orbit: boolean; startRotation: GridRotation; quadrant: number | null;
+    flick: ReturnType<typeof trackPlacementEdgeFlick>;
+  } | null = null;
+  const clearStroke = () => {
+    stroke?.canvas.setPlacementOrbitAt(null);
+    stroke?.canvas.edgePan.stop();
+    stroke = null;
+  };
+  const driveStroke = (canvas: CanvasInteractionController, editor: EditorContract, position: GesturePosition) => {
+    if (stroke === null) return;
+    const dx = position.x - stroke.start.x;
+    const dy = position.y - stroke.start.y;
+    if (stroke.orbit) {
+      if (Math.hypot(dx, dy) < 15) return;
+      const quadrant = Math.round(Math.atan2(dy, dx) / (Math.PI / 2));
+      if (stroke.quadrant === quadrant) return;
+      stroke.quadrant = quadrant;
+      const target = rotateGridRotation(stroke.startRotation, ((quadrant * 90 + 360) % 360) as GridRotation);
+      const current = resolveSinglePlacementPreviewRotation(editor);
+      editor.actions.rotateCollectionAroundCenterPoint(EntityCollectionType.preview, target - current);
+      canvas.actions.alignCanvasFloatingToolbar();
+      return;
+    }
+    driveMousePlacementPreview({ canvas, editor, position, magnetize: true });
+    canvas.edgePan.track(position, (next) => driveMousePlacementPreview({ canvas, editor, position: next, magnetize: true }));
+    stroke.flick.track(position, canvas.gestureAdapter.tapTimeMs());
+  };
 
   return {
     id: "hypergryph-single-placement-gesture",
+    cancel: clearStroke,
     shortcutRoutes: [
       ...(Object.entries(PLACEMENT_GROUP_SHORTCUTS) as Array<[PlacementGroup, ShortcutKeyId]>)
         .filter(([group]) => group !== "beltLogistics" && group !== "pipeLogistics")
@@ -245,6 +277,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           return { status: "ignored" };
         }
 
+        clearStroke();
         context.canvas.pendingPlacementEnter = null;
         cleanupPlacementDraft(context.canvas);
         return { status: "handled" };
@@ -378,6 +411,25 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           return { status: "handled" };
 
         case "mouse dragstart":
+        case "touch dragstart": {
+          const canvas = context.canvas;
+          const touch = event.type === "touch dragstart";
+          const oneHanded = touch
+            ? event.activeTouchCount === 1 && isPreviewBoundingBoxAtClientPoint({
+              editor, view: canvas.view, position: event.startPosition, hitSlopPx: TOUCH_PREVIEW_HIT_SLOP_PX,
+            })
+            : event.isPen && event.originButton === 0;
+          if (oneHanded && (touch || ensurePlacementDraftForMouse(canvas, editor, event.startPosition))) {
+            stroke = { id: event.gestureId, canvas, start: event.startPosition, orbit: event.longPress,
+              startRotation: resolveSinglePlacementPreviewRotation(editor), quadrant: null,
+              flick: trackPlacementEdgeFlick(event.startPosition, canvas.gestureAdapter.tapTimeMs()) };
+            if (stroke.orbit) canvas.setPlacementOrbitAt(stroke.start);
+            driveStroke(canvas, editor, event.position);
+            return { status: "claimed" };
+          }
+          if (touch) return primePlacementAnchorFromPreview({
+            canvas, editor, position: event.startPosition, hitSlopPx: TOUCH_PREVIEW_HIT_SLOP_PX,
+          });
           if (!ensurePlacementDraftForMouse(context.canvas, editor, event.position)) {
             return { status: "handled" };
           }
@@ -388,13 +440,7 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
             position: event.position,
           });
 
-        case "touch dragstart":
-          return primePlacementAnchorFromPreview({
-            canvas: context.canvas,
-            editor,
-            position: event.startPosition,
-            hitSlopPx: TOUCH_PREVIEW_HIT_SLOP_PX,
-          });
+        }
 
         case "mouse move":
           if (!ensurePlacementDraftForMouse(context.canvas, editor, event.position)) {
@@ -407,6 +453,14 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
           });
 
         case "mouse dragmove":
+        case "touch dragmove":
+          if (stroke?.id === event.gestureId) {
+            driveStroke(context.canvas, editor, event.position);
+            return { status: "handled" };
+          }
+          if (event.type === "touch dragmove") return drivePlacementPreview({
+            canvas: context.canvas, editor, position: event.position,
+          });
           if (event.originButton !== 0) {
             return { status: "ignored" };
           }
@@ -420,25 +474,30 @@ export function createHypergryphSinglePlacementGestureModule(): GestureMappingMo
             position: event.position,
           });
 
-        case "touch dragmove":
-          return drivePlacementPreview({
-            canvas: context.canvas,
-            editor,
-            position: event.position,
-          });
-
         case "mouse dragend":
-          return (
-            event.originButton === 0
-            && context.canvas.state.runtime.placementAnchor !== null
-          )
-            ? { status: "handled" }
-            : { status: "ignored" };
-
-        case "touch dragend":
-          return context.canvas.state.runtime.placementAnchor !== null
-            ? { status: "handled" }
-            : { status: "ignored" };
+        case "touch dragend": {
+          if (stroke?.id === event.gestureId) {
+            const canvas = context.canvas;
+            if (event.reason === "release") {
+              driveStroke(canvas, editor, event.position);
+              const flick = !stroke.orbit && stroke.flick.releasedAtEdge(
+                event.position, canvas.gestureAdapter.tapTimeMs(), canvas.unobstructedClientRect,
+              );
+              clearStroke();
+              if (flick) cancelPlacementOperation(canvas, editor);
+              else if (isClientPointInsideViewport(canvas.view, event.position)) {
+                recordEntityLandedBy(canvas, editor, event.position, () => applyPlacementOperation(canvas, editor, {
+                  keepPlacement: canvas.state.runtime.singlePlacementContinuous,
+                  currentMousePosition: event.type === "mouse dragend" ? event.position : null,
+                }));
+              }
+            }
+            clearStroke();
+            return { status: "handled" };
+          }
+          return (event.type === "touch dragend" || event.originButton === 0)
+            && context.canvas.state.runtime.placementAnchor !== null ? { status: "handled" } : { status: "ignored" };
+        }
 
         case "touch tap":
           if (dismissPlacementOnFacility(context.canvas, editor, event.position)) return { status: "handled" };
@@ -914,6 +973,7 @@ export function driveMousePlacementPreview(options: {
   canvas: CanvasInteractionController;
   editor: EditorContract;
   position: GesturePosition;
+  magnetize?: boolean;
 }): GestureHandleResult {
   try {
     options.canvas.actions.trackCanvasFloatingToolbarHover(options.position);
@@ -929,10 +989,11 @@ export function driveMousePlacementPreview(options: {
       EntityCollectionType.preview,
       options.position, options.canvas.view.state,
     );
+    const snapped = options.magnetize === true && options.editor.actions.snapPlacementToTransport();
     const movedRect = options.editor.queries.findEntityCollectionGridRect(
       EntityCollectionType.preview,
     );
-    if (movedRect !== null && !areGridRectsEqual(beforeRect, movedRect)) {
+    if (!snapped && movedRect !== null && !areGridRectsEqual(beforeRect, movedRect)) {
       rotatePlacementPreviewToBuildingSnap({
         canvas: options.canvas,
         editor: options.editor,

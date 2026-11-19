@@ -5,6 +5,7 @@ import {
 import type { SlotLinkDefinition, WorldEntity } from "@/domain/document/world-document";
 import type { RegionAnnotation } from "@/domain/document/region-annotation";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import type { EditorContract } from "@/domain/editor/editor-contract";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { getGridBoundsCenterCells } from "@/shared/geometry/grid";
 import { resolveRegionGridBounds } from "@/shared/geometry/region-rects";
@@ -77,11 +78,11 @@ export function createRegionBlueprintDocument(options: {
 }
 
 export function createSelectionBlueprintDocument(options: {
-  workspace: WorkspaceContract;
+  editor: EditorContract | null;
   name: string;
   description?: string;
 }): BlueprintDocument | null {
-  const editor = options.workspace.editor;
+  const { editor } = options;
   if (editor === null) {
     return null;
   }
@@ -247,7 +248,7 @@ export async function saveSelectionBlueprint(options: {
   storageOptions?: SaveBlueprintOptions;
 }): Promise<BlueprintRecord | null> {
   const blueprintDocument = createSelectionBlueprintDocument({
-    workspace: options.workspace,
+    editor: options.workspace.editor,
     name: options.name,
     description: options.description,
   });

@@ -8,6 +8,7 @@ import { createEditorDocumentActions } from "./document-action";
 import { createEditorHistoryActions } from "./history-action";
 import { createEditorHoverActions } from "./hover-action";
 import { createEditorLogisticsActions } from "./logistics-action";
+import { createEditorLayoutGapActions } from "./layout-gap-action";
 import { createEditorMoveActions } from "./move-action";
 import { createEditorPlacementActions } from "./placement-action";
 import { createEditorRegionActions } from "./region-actions";
@@ -28,6 +29,7 @@ export function createEditorActions(
     ...createEditorHoverActions(context),
     ...createEditorLogisticsActions(context),
     ...createEditorMoveActions(context),
+    ...createEditorLayoutGapActions(context),
     ...createEditorPlacementActions(context),
     ...createEditorRegionActions(context),
     ...createEditorSelectionActions(context),

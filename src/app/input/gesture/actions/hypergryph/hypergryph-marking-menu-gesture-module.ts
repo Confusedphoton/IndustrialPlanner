@@ -42,7 +42,7 @@ export function createHypergryphMarkingMenuGestureModule(): GestureMappingModule
 
       switch (event.type) {
         case "mouse-long-press-ready":
-          if (event.button !== 0 || !canOpenAt(canvas, "mouse", event.position, event.pointerEntity)) {
+          if (event.button !== 0 || !canOpenAt(canvas, "mouse", event.position, event.pointerEntity, event.isPen)) {
             return { status: "ignored" };
           }
           return openMarkingMenu(canvas, "mouse", event.position) ? { status: "handled" } : { status: "ignored" };
@@ -175,6 +175,7 @@ function canOpenAt(
   pointer: "mouse" | "touch",
   position: GesturePosition,
   pointerEntity: WorldEntity | null,
+  isPen = false,
 ): boolean {
   const editor = canvas.editor;
   if (editor === null || !canvas.canUseWorkbenchActions || !canvas.isOperationEnabled("confirm-placement")) {
@@ -185,7 +186,7 @@ function canOpenAt(
       return pointerEntity === null
         && (pointer === "mouse" || !canvas.workbench.state.settings.hypergryphImmediateMarquee);
     case "single-placement":
-      return pointer === "mouse" || !isPreviewBoundingBoxAtClientPoint({
+      return (pointer === "mouse" && !isPen) || !isPreviewBoundingBoxAtClientPoint({
         editor,
         view: canvas.view,
         position,

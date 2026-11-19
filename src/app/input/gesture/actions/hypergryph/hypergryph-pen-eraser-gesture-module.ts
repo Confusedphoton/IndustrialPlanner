@@ -81,7 +81,7 @@ function canEraseFromTool(activeTool: CanvasInteractionController["state"]["acti
 }
 
 /** 把指针下的设备加入待删除的选择（划过的设备逐个累积，抬笔时一次删除）。 */
-export function markEntityForErase(
+function markEntityForErase(
   canvas: CanvasInteractionController,
   position: { readonly x: number; readonly y: number },
 ): void {
@@ -121,7 +121,7 @@ export function selectEraseTarget(canvas: CanvasInteractionController, entity: W
 }
 
 /** 删除累积的选择，形成单条撤销记录。 */
-export function deleteErasedSelection(canvas: CanvasInteractionController): GestureHandleResult {
+function deleteErasedSelection(canvas: CanvasInteractionController): GestureHandleResult {
   const editor = canvas.editor;
   if (editor === null) {
     return { status: "ignored" };

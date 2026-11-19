@@ -7,7 +7,7 @@ import { expandSceneBounds, validateSceneSpace } from "@/shared/geometry/scene-s
 import { resolveCompensatedViewportCenter, resolveWorldVectorFromViewportVector } from "@/shared/geometry/viewport-transform";
 import { resolveClientRectForGridCell, resolveGridCellAtClientPixelPoint } from "./queries/viewport-geometry";
 import {
-  resolveContentBoundedViewport,
+  MAX_VIEWPORT_GRID_SIZE, MIN_VIEWPORT_GRID_SIZE, resolveContentBoundedViewport,
   resolveViewportGridCellPixelSize, resolveViewportGridSizeAfterZoom, resolveViewportMinimumGridSize,
 } from "./viewport-settings";
 
@@ -61,6 +61,9 @@ export function createEditorView(options: EditorViewOptions): EditorViewContract
     state.gridCellPixelSize = state.gridSize * resolveViewportGridCellPixelSize(1);
     constrain();
   };
+  const minimumZoom = () => bounds.kind === "space"
+    ? resolveViewportMinimumGridSize({ bounds: bounds.bounds, clientRect: state.clientRect, displayRotation: state.displayRotation })
+    : MIN_VIEWPORT_GRID_SIZE;
   action(constrain)();
 
   return {
@@ -103,9 +106,7 @@ export function createEditorView(options: EditorViewOptions): EditorViewContract
         const next = resolveViewportGridSizeAfterZoom({
           currentGridSize: state.gridSize,
           step,
-          minimumGridSize: bounds.kind === "space"
-            ? resolveViewportMinimumGridSize({ bounds: bounds.bounds, clientRect: state.clientRect, displayRotation: state.displayRotation })
-            : undefined,
+          minimumGridSize: minimumZoom(),
         });
         if (next === null) return;
         motion.set(null);
@@ -155,6 +156,7 @@ export function createEditorView(options: EditorViewOptions): EditorViewContract
       cancelMotion: action(() => { motion.set(null); }),
     },
     queries: {
+      getZoomRange: () => ({ min: Math.min(state.gridSize, minimumZoom()), max: MAX_VIEWPORT_GRID_SIZE }),
       findGridCellForClientPixelPoint: (clientPixelPoint) => disposed ? null : resolveGridCellAtClientPixelPoint({ clientPixelPoint, viewportState: state }),
       findClientRectForGridCell: (gridCell) => disposed ? null : resolveClientRectForGridCell({ gridCell, viewportState: state }),
       hasPendingMotion: () => !disposed && motion.get() !== null,

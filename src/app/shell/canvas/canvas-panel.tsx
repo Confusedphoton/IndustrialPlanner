@@ -3,11 +3,15 @@ import type { SceneViewInput } from "@/domain/document/scene-view-input";
 import type { SceneTimePolicy } from "@/domain/shared/scene-time";
 import type { DragEvent } from "react";
 import type { AppHost } from "@/app/host/app-host";
+import type { WorldDocument } from "@/domain/document/world-document";
 import { closeLineProbe } from "@/app/input/gesture/actions";
 import type { LongPressState } from "@/app/input/gesture/adapter";
 import type { GestureDiagnosticsSnapshot } from "@/app/input/gesture/diagnostics";
 import { useViewportResizeAdapter } from "@/app/shell/canvas/viewport-resize-adapter";
+import { canvasToolRailState } from "@/app/shell/canvas/canvas-tool-rail-state";
+import { useEditorDocumentSnapshot } from "@/app/shell/hooks";
 import { SyncSaveIndicator } from "@/app/shell/layout/sync-save-indicator";
+import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import { isTouchLandscapeScreenProfile } from "@/shared/browser/screen-profile";
 import { observer } from "mobx-react-lite";
 import { useEffect, useId, useRef, useState } from "react";
@@ -171,6 +175,7 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost, canvas = app
   }, [gestureAdapter, canvas]);
 
   const handlePointerDown = (event: PointerEvent<HTMLElement>) => {
+    canvas.dismissRepeatLaneUndo();
     gestureAdapter.handlePointerDown(event);
   };
   const handlePointerMove = (event: PointerEvent<HTMLElement>) => {
@@ -263,6 +268,7 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost, canvas = app
           {renderContainer ? <div className={cm(styles, "renderer-host")} ref={rendererHostRef} /> : null}
           {renderContainer ? null : <div className={cm(styles, "canvas-placeholder")}>{t("status.ready")}</div>}
           <CanvasTouchHoldIndicator state={longPressState} />
+          <RepeatLaneUndo canvas={canvas} label={t("workbench.button.undo")} />
           {sceneError === null ? null : <div role="alert">{sceneError}</div>}
           {canvas.canUseWorkbenchActions && appHost.state.settings.regionalMultiBaseEnabled
             && appHost.mainCanvas.state.activeTool === "dark-pipe-link"
@@ -287,6 +293,57 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost, canvas = app
         </div>
       </div>
     </main>
+  );
+});
+
+const selectDocument = (document: WorldDocument) => document;
+const UNDO_TARGET_SIZE = 44;
+
+const RepeatLaneUndo = observer(function RepeatLaneUndo({ canvas, label }: {
+  canvas: CanvasInteractionController;
+  label: string;
+}) {
+  const offer = canvas.repeatLaneUndo.get();
+  const editor = canvas.editor;
+  const document = useEditorDocumentSnapshot(offer === null ? null : editor, selectDocument);
+  if (offer === null || offer.editor !== editor || offer.document !== document || !canvas.isOperationEnabled("undo")) return null;
+  const cell = canvas.view.queries.findClientRectForGridCell(offer.cell);
+  const visible = canvas.unobstructedClientRect;
+  const viewport = canvas.view.state.clientRect;
+  if (cell === null || visible.width < UNDO_TARGET_SIZE || visible.height < UNDO_TARGET_SIZE) return null;
+  const gap = 8;
+  const centerX = cell.left + cell.width / 2;
+  const centerY = cell.top + cell.height / 2;
+  if (centerX < visible.left || centerX > visible.left + visible.width
+    || centerY < visible.top || centerY > visible.top + visible.height) return null;
+  const side = canvasToolRailState.side === "right" ? -1 : 1;
+  const left = centerX + side * (UNDO_TARGET_SIZE / 2 + gap) - UNDO_TARGET_SIZE / 2;
+  const top = centerY - UNDO_TARGET_SIZE - gap;
+  return (
+    <button
+      aria-label={label}
+      title={label}
+      type="button"
+      className={cm(styles, "canvas-floating-toolbar-button")}
+      style={{
+        position: "absolute",
+        zIndex: 4,
+        width: UNDO_TARGET_SIZE,
+        height: UNDO_TARGET_SIZE,
+        left: Math.max(visible.left, Math.min(left, visible.left + visible.width - UNDO_TARGET_SIZE)) - viewport.left,
+        top: Math.max(visible.top, top) - viewport.top,
+      }}
+      onPointerDown={(event) => event.stopPropagation()}
+      onPointerUp={(event) => {
+        event.stopPropagation();
+        if (event.button === 0) canvas.undoRepeatLane();
+      }}
+      onClick={(event) => {
+        if (event.detail === 0) canvas.undoRepeatLane();
+      }}
+    >
+      <WorkbenchIcon kind="undo" className={cm(styles, "canvas-floating-toolbar-icon")} />
+    </button>
   );
 });
 

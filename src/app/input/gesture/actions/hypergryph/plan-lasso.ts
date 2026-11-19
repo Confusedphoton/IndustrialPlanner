@@ -4,6 +4,7 @@ import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
 import { countPlacedMachines, resolvePlacementTodoEntries } from "@/app/shell/panels/placement-todo-list";
 import { resolveRecipePlacementTarget } from "@/app/shell/recipe-tree/recipe-quick-actions";
+import { recipeTreeOverlayState } from "@/app/shell/recipe-tree/recipe-tree-state";
 import { buildRecipeTreePlanningIndex, computeCombinedRecipeTreePlan } from "@/app/shell/recipe-tree/recipe-tree-plan";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { EditorContract } from "@/domain/editor/editor-contract";
@@ -15,21 +16,26 @@ interface LassoMachine extends PlanMachine {
   readonly config: Readonly<Record<string, unknown>> | null;
 }
 
+export function resolvePinnedPlanPlacementEntries(appHost: AppHost, editor: EditorContract) {
+  if (recipeTreeOverlayState.pins.length === 0) return null;
+  const index = buildRecipeTreePlanningIndex(appHost);
+  const plan = computeCombinedRecipeTreePlan(index);
+  return plan === null ? null : resolvePlacementTodoEntries(plan, countPlacedMachines(editor.document.getSnapshot()), (recipeId) => {
+    const recipe = index.recipeById.get(recipeId);
+    return recipe === undefined ? null : { machineId: recipe.machineId, outputItemId: recipe.outputs[0]?.itemId ?? null };
+  });
+}
+
 /**
  * 钉住的规划里还没放够的设备（按配方的放置目标，带上配方）；没有钉住目标时为 null。
  */
 export function resolvePlanMachinesToPlace(appHost: AppHost): LassoMachine[] | null {
   const editor = appHost.workspace.editor;
-  const index = buildRecipeTreePlanningIndex(appHost);
-  const plan = editor === null ? null : computeCombinedRecipeTreePlan(index);
-  if (editor === null || plan === null) {
+  const entries = editor === null ? null : resolvePinnedPlanPlacementEntries(appHost, editor);
+  if (entries === null) {
     return null;
   }
   const registry = appHost.workspace.registry.queries;
-  const entries = resolvePlacementTodoEntries(plan, countPlacedMachines(editor.document.getSnapshot()), (recipeId) => {
-    const recipe = index.recipeById.get(recipeId);
-    return recipe === undefined ? null : { machineId: recipe.machineId, outputItemId: recipe.outputs[0]?.itemId ?? null };
-  });
   return entries.flatMap((entry): LassoMachine[] => {
     const recipe = registry.findRecipeDefinition(entry.recipeId);
     const target = recipe === null ? null : resolveRecipePlacementTarget(appHost, recipe);

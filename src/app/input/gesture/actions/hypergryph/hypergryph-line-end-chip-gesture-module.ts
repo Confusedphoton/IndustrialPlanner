@@ -234,5 +234,5 @@ function traceLineItemIds(
   const definition = source === null ? null : canvas.registry.queries.findEntityDefinition(source.entity.definitionId);
   return source === null || definition === null
     ? []
-    : [...outputPortItemIds(definition, source.entity, source.portGroupId, canvas.registry)];
+    : [...outputPortItemIds(definition, source.entity, source.portGroupId, canvas.registry, source.portId)];
 }

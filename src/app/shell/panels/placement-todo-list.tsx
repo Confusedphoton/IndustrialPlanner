@@ -64,7 +64,7 @@ export function resolvePlacementTodoEntries(
 }
 
 /** 画布上已放的生产设备计数。 */
-export function countPlacedMachines(document: WorldDocument): PlacedMachineCounts {
+export function countPlacedMachines(document: Pick<WorldDocument, "entities" | "entityOrder">): PlacedMachineCounts {
   const byRecipe: Record<string, number> = {};
   const unsetByMachine: Record<string, number> = {};
   for (const entityId of document.entityOrder) {

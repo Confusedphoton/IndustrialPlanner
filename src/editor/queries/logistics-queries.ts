@@ -38,8 +38,8 @@ export function createEditorLogisticsQueries(
         baseDefinitions: context.workspace.registry.baseDefinitions,
       });
     },
-    findDevicePortAtGridPoint: (gridPoint) => resolveDevicePortAtGridPoint({
-      gridPoint,
+    findDevicePortAtGridPoint: (gridPoint, connection) => resolveDevicePortAtGridPoint({
+      gridPoint, connection,
       document: context.document.getSnapshot(),
       entityDefinitionMap,
       registryQueries: context.workspace.registry.queries,

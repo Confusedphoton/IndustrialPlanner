@@ -95,7 +95,7 @@ function createBlueprintForEntity(
     entityId,
   });
   return createSelectionBlueprintDocument({
-    workspace: editorHost.workspace,
+    editor: editorHost.workspace.editor,
     name: "test-blueprint",
   });
 }
@@ -309,7 +309,7 @@ describe("createSelectionBlueprintDocument", () => {
     editorHost.actions.clearCollection(EntityCollectionType.selection);
 
     const blueprint = createSelectionBlueprintDocument({
-      workspace: editorHost.workspace,
+      editor: editorHost.workspace.editor,
       name: "empty",
     });
     expect(blueprint).toBeNull();
@@ -340,7 +340,7 @@ describe("createSelectionBlueprintDocument", () => {
     (selection as unknown as { replace: (items: string[]) => void }).replace(["device-a", "ghost-id-999"]);
 
     const blueprint = createSelectionBlueprintDocument({
-      workspace: editorHost.workspace,
+      editor: editorHost.workspace.editor,
       name: "ghost-test",
     });
     expect(blueprint).not.toBeNull();

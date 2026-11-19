@@ -10,8 +10,8 @@ import { resolveBaseOuterBounds } from "@/shared/geometry/base-areas";
 
 const VIEWPORT_ZOOM_STEPS_PER_DOUBLING = 6;
 const BASE_WARNING_PADDING_CELLS = 2;
-const MIN_VIEWPORT_GRID_SIZE = 0.5;
-const MAX_VIEWPORT_GRID_SIZE = 8;
+export const MIN_VIEWPORT_GRID_SIZE = 0.5;
+export const MAX_VIEWPORT_GRID_SIZE = 8;
 /** 放宽后的最小缩放下，有限场景范围只占画布的这一比例，给边缘工具条与留白留足余量。 */
 const SPACE_FIT_MINIMUM_FRACTION = 0.5;
 

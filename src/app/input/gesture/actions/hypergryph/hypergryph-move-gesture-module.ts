@@ -350,7 +350,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
         case "mouse dragstart":
           if (
             event.originButton !== 0
-            || !context.canvas.workbench.state.settings.hypergryphImmediateMove
+            || (!event.longPress && !context.canvas.workbench.state.settings.hypergryphImmediateMove)
           ) {
             return { status: "ignored" };
           }
@@ -367,8 +367,28 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             menuInitialMousePosition: event.startPosition,
           });
 
+        case "touch dragstart": {
+          const canvas = context.canvas;
+          if (!event.longPress || event.activeTouchCount !== 1 || canvas.state.activeTool !== "select") return { status: "ignored" };
+          const result = tryEnterMoveModeFromPointerEvent({
+            canvas,
+            editor,
+            pointerEntity: editor.queries.findEntityAtClientPixelPoint(event.startPosition, canvas.view.state),
+            candidatePosition: event.startPosition,
+            menuPosition: event.startPosition,
+            enterPosition: event.startPosition,
+            source: "touch",
+            directInitialMousePosition: null,
+            menuInitialMousePosition: null,
+          });
+          if (result.status === "handled" && canvas.state.runtime.movePointerMode === "touch") {
+            driveMovePreview({ canvas, editor, position: event.position, allowMouseEntryAnchorInit: false });
+          }
+          return result;
+        }
+
         case "mouse-long-press-ready":
-          if (event.button !== 0) {
+          if (event.button !== 0 || (event.isPen && context.canvas.state.activeTool === "select")) {
             return { status: "ignored" };
           }
 
@@ -385,6 +405,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
           });
 
         case "tap-long-press-ready":
+          if (context.canvas.state.activeTool === "select") return { status: "ignored" };
           return tryEnterMoveModeFromPointerEvent({
             canvas: context.canvas,
             editor,

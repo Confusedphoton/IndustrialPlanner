@@ -99,10 +99,13 @@ export interface EditorAction {
 		collectionType: EntityCollectionType,
 		angle: number,
 	): void;
+	snapPlacementToTransport(): boolean;
 	rotateCollectionToSnapOnBuilding(
 		options: RotateCollectionToSnapOnBuildingOptions,
 	): boolean;
 
+  previewLayoutGap(axis: "x" | "y", boundary: number, offset: number): boolean;
+  finishLayoutGap(commit: boolean): boolean;
 	createMoveOperationDraft(): void;
 	applyMoveOerationDraft(): boolean;
 	cancelMoveOperationDraft(): void;

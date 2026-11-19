@@ -1264,3 +1264,136 @@
 .canvas-tool-rail-image.is-xiranite {
   filter: hue-rotate(72deg);
 }
+
+.canvas-tool-rail-body {
+  display: flex;
+  gap: 4px;
+}
+
+.canvas-tool-rail.is-right .canvas-tool-rail-body {
+  flex-direction: row-reverse;
+}
+
+.canvas-edge-scrub {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding-inline: 2px;
+  color: var(--in-canvas-toolbar-button-text);
+
+  label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 15px;
+  }
+
+  input {
+    writing-mode: vertical-lr;
+    direction: rtl;
+    height: clamp(42px, 12dvh, 108px);
+    width: 24px;
+    margin: 0;
+    accent-color: var(--accent);
+    touch-action: none;
+    cursor: ns-resize;
+  }
+
+  input:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+
+.canvas-lasso-ink {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 36;
+  pointer-events: none;
+
+  polygon {
+    fill: color-mix(in srgb, var(--accent) 12%, transparent);
+    stroke: var(--accent);
+    stroke-width: 2;
+    stroke-linejoin: round;
+  }
+}
+
+.canvas-context-ring {
+  position: fixed;
+  inset: 0;
+  z-index: 38;
+  pointer-events: none;
+
+  > * {
+    position: fixed;
+    transform: translate(-50%, -50%);
+  }
+
+  button {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    border: 1px solid var(--in-canvas-toolbar-button-border);
+    border-radius: 50%;
+    background: var(--in-canvas-toolbar-button-bg);
+    color: var(--in-canvas-toolbar-button-text);
+    box-shadow: 0 4px 12px var(--in-canvas-toolbar-shadow);
+    pointer-events: auto;
+    touch-action: manipulation;
+  }
+
+  button:hover, button[aria-pressed="true"] {
+    border-color: var(--accent);
+    background-color: var(--in-canvas-toolbar-active-bg);
+  }
+
+  img {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+  }
+
+  .canvas-context-center {
+    width: 30px;
+    height: 30px;
+  }
+}
+
+.canvas-context-origin {
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  background: var(--surface-1);
+}
+
+.canvas-placement-orbit {
+  position: fixed;
+  z-index: 36;
+  width: 64px;
+  height: 64px;
+  border: 1px dashed var(--accent);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+
+  span {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    transform: translate(-50%, -50%);
+  }
+
+  span:nth-child(1) { top: 0; left: 50%; }
+  span:nth-child(2) { top: 50%; left: 100%; }
+  span:nth-child(3) { top: 100%; left: 50%; }
+  span:nth-child(4) { top: 50%; left: 0; }
+}

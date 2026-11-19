@@ -1072,11 +1072,17 @@ function manhattanDistance(left: GridPoint, right: GridPoint): number {
  */
 export function resolveDevicePortAtGridPoint(options: {
   gridPoint: GridPoint;
+  connection?: {
+    readonly kind: LogisticsKind;
+    readonly direction: LogisticsPortDirection;
+    readonly outsideGridPoint: GridPoint;
+  };
   document: WorldDocument;
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
   registryQueries: RegistryQuery;
 }): { readonly kind: LogisticsKind; readonly endpoint: DevicePortEndpoint } | null {
-  for (const kind of [LOGISTICS_KIND.belt, LOGISTICS_KIND.pipe] as const) {
+  const connection = options.connection;
+  for (const kind of connection === undefined ? [LOGISTICS_KIND.belt, LOGISTICS_KIND.pipe] : [connection.kind]) {
     const entity = findTopEntityAtGridPoint({
       ...options,
       drafts: [],
@@ -1089,7 +1095,7 @@ export function resolveDevicePortAtGridPoint(options: {
     if (definition === undefined) {
       continue;
     }
-    for (const direction of ["output", "input"] as const) {
+    for (const direction of connection === undefined ? ["output", "input"] as const : [connection.direction]) {
       const endpoint = resolveDevicePortEndpoints({
         entity,
         definition,
@@ -1097,7 +1103,8 @@ export function resolveDevicePortAtGridPoint(options: {
         direction,
         pointerGridPoint: options.gridPoint,
       }).find((candidate) => (
-        candidate.insideGridPoint.x === options.gridPoint.x && candidate.insideGridPoint.y === options.gridPoint.y
+        areGridPointsEqual(candidate.insideGridPoint, options.gridPoint)
+        && (connection === undefined || areGridPointsEqual(candidate.outsideGridPoint, connection.outsideGridPoint))
       ));
       if (endpoint !== undefined) {
         return { kind, endpoint };

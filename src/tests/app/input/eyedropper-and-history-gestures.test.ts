@@ -1,3 +1,4 @@
+import { runInAction } from "mobx";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AppHost } from "@/app/host/app-host";
@@ -47,6 +48,26 @@ describe("eyedropper", () => {
     expect(Object.values(preview.config.channelRecipes as Record<string, string>)).toContain(recipeId);
   });
 
+  it.each(["pen", "touch"])("picks up a device on %s hold and lift without moving it", async (pointerType) => {
+    const { appHost, editor } = await createAppHostWithGrinder();
+    const position = cellCenter(appHost, { x: 21, y: 21 });
+    const pointer = {
+      pointerId: 1, pointerType, clientX: position.x, clientY: position.y, button: 0, buttons: 1,
+      altKey: false, ctrlKey: false, metaKey: false, shiftKey: false,
+    };
+    vi.useFakeTimers();
+    try {
+      appHost.gestureAdapter.handlePointerDown(pointer);
+      vi.advanceTimersByTime(600);
+      appHost.gestureAdapter.handlePointerUp({ ...pointer, buttons: 0 });
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(appHost.mainCanvas.state.activeTool).toBe("single-placement");
+    expect(editor.document.getSnapshot().entities.grinder?.position).toEqual({ x: 20, y: 20 });
+    expect(editor.queries.getEntityById(editor.state.collections.preview[0]!)?.rotation).toBe(90);
+  });
+
   it("keeps a barrel tap on empty canvas as the way to put the device down", async () => {
     const { appHost } = await createAppHostWithGrinder();
     penTap(appHost, cellCenter(appHost, { x: 21, y: 21 }), { button: 2, pointerId: 1 });
@@ -57,11 +78,53 @@ describe("eyedropper", () => {
   });
 });
 
+describe("one-handed placement", () => {
+  it("holds the footprint in place while orbiting and commits the facing on lift", async () => {
+    const { appHost, editor } = await createAppHostWithGrinder();
+    penTap(appHost, cellCenter(appHost, { x: 21, y: 21 }), { button: 2, pointerId: 1 });
+    const position = cellCenter(appHost, { x: 32, y: 33 });
+    const pointer = (at: typeof position, buttons: number) => ({
+      pointerId: 11, pointerType: "pen", clientX: at.x, clientY: at.y, button: 0, buttons,
+      altKey: false, ctrlKey: false, metaKey: false, shiftKey: false,
+    });
+    vi.useFakeTimers();
+    try {
+      appHost.gestureAdapter.handlePointerMove(pointer(position, 0));
+      appHost.gestureAdapter.handlePointerDown(pointer(position, 1));
+      vi.advanceTimersByTime(600);
+      const south = { x: position.x, y: position.y + 40 };
+      appHost.gestureAdapter.handlePointerMove(pointer(south, 1));
+      appHost.gestureAdapter.advanceFrame(0);
+      appHost.gestureAdapter.handlePointerUp(pointer(south, 0));
+    } finally {
+      vi.useRealTimers();
+    }
+    const placed = Object.values(editor.document.getSnapshot().entities).find((entity) => entity.id !== "grinder");
+    expect(placed?.rotation).toBe(180);
+    expect(placed?.position.y).toBeLessThan(33);
+    expect(placed?.position.y).toBeGreaterThan(29);
+  });
+
+  it.each([false, true])("returns a held device to the hotbar on an edge flick (continuous placement: %s)", async (continuous) => {
+    const { appHost, editor } = await createAppHostWithGrinder();
+    penTap(appHost, cellCenter(appHost, { x: 21, y: 21 }), { button: 2, pointerId: 1 });
+    runInAction(() => { appHost.mainCanvas.state.runtime.singlePlacementContinuous = continuous; });
+    const { left, width, top } = appHost.mainCanvas.unobstructedClientRect;
+    let now = 0;
+    vi.spyOn(appHost.gestureAdapter, "tapTimeMs").mockImplementation(() => (now += 12));
+    penDrag(appHost, { x: left + width - 200, y: top + 350 }, { x: left + width - 2, y: top + 350 }, 11);
+
+    expect(appHost.mainCanvas.state.activeTool).toBe("select");
+    expect(editor.document.getSnapshot().entityOrder).toEqual(["grinder"]);
+  });
+});
+
 describe("painting a row", () => {
   it("lays copies at footprint pitch along a pen drag and places them as one undo step", async () => {
     const { appHost, recipeId } = await createAppHostWithGrinder();
     const editor = appHost.workspace.editor!;
     penTap(appHost, cellCenter(appHost, { x: 21, y: 21 }), { button: 2, pointerId: 1 });
+    runInAction(() => { appHost.mainCanvas.state.runtime.singlePlacementContinuous = true; });
     const width = editor.queries.findEntityCollectionGridRect(EntityCollectionType.preview)!.width;
 
     const start = cellCenter(appHost, { x: 31, y: 31 });
@@ -75,44 +138,6 @@ describe("painting a row", () => {
     expect(appHost.mainCanvas.state.activeTool).toBe("single-placement");
     expect(editor.actions.undoDocumentHistory()).toBe(true);
     expect(grinders()).toHaveLength(1);
-  });
-});
-
-describe("scribble erasing", () => {
-  it("keeps the view in place and erases a whole connected run in one undo step", async () => {
-    const { appHost, editor } = await createAppHostWithGrinder();
-    const source = editor.document.getSnapshot();
-    const belts = Array.from({ length: 8 }, (_, index): WorldEntity => ({
-      id: `belt-${index}`,
-      definitionId: "belt_straight_1x1",
-      position: { x: 23 + index, y: 35 },
-      rotation: 0,
-      config: {},
-      tags: [],
-    }));
-    editor.internalDocument.setSnapshot({
-      ...source,
-      entityOrder: [...source.entityOrder, ...belts.map((belt) => belt.id)],
-      entities: { ...source.entities, ...Object.fromEntries(belts.map((belt) => [belt.id, belt])) },
-    });
-
-    const pointA = cellCenter(appHost, { x: 22, y: 35 });
-    const pointB = cellCenter(appHost, { x: 25, y: 35 });
-    const pointer = (point: typeof pointA, buttons: number) => ({
-      pointerId: 17, pointerType: "pen", clientX: point.x, clientY: point.y,
-      button: 0, buttons, altKey: false, ctrlKey: false, metaKey: false, shiftKey: false,
-    });
-    appHost.gestureAdapter.handlePointerDown(pointer(pointA, 1));
-    [pointB, pointA, pointB, pointA].forEach((point, index) => {
-      appHost.gestureAdapter.handlePointerMove(pointer(point, 1));
-      appHost.gestureAdapter.advanceFrame((index + 1) * 16);
-      expect(cellCenter(appHost, { x: 22, y: 35 })).toEqual(pointA);
-    });
-    appHost.gestureAdapter.handlePointerUp(pointer(pointA, 0));
-
-    expect(editor.document.getSnapshot().entityOrder).toEqual(source.entityOrder);
-    expect(editor.actions.undoDocumentHistory()).toBe(true);
-    expect(belts.every((belt) => editor.document.getSnapshot().entities[belt.id] !== undefined)).toBe(true);
   });
 });
 

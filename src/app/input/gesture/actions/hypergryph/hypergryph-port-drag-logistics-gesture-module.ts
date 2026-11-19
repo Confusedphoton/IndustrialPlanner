@@ -8,6 +8,7 @@ import type { GridEdge, GridPoint, GridRect } from "@/domain/shared/grid";
 import { resolveGridEdgeDelta, resolveRotatedPortGeometry, rotateGridEdge } from "@/shared/geometry/port";
 import { offsetLanePath } from "@/app/canvas/line-comb";
 import { resolveLineEdge } from "@/app/canvas/line-trace";
+import { resolveWorldVectorFromViewportVector } from "@/shared/geometry/viewport-transform";
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 import type { CreateLogisticsDraftStartOptions, LogisticsDraftEndpoint, LogisticsKind } from "@/domain/shared/logistics";
 
@@ -30,8 +31,8 @@ type PortDragSession = {
       /** 梳线时随划过的端口改为最后一个端口。 */
       source: CreateLogisticsDraftStartOptions["source"];
       readonly allowEmptySource: boolean;
-      /** 续画物流线末端时禁止在起点自动生成分流器（末格应改为转角而非分支）。 */
-      readonly continuesLine?: true;
+      readonly outwardCell?: GridPoint;
+      readonly createsBranch?: boolean;
       readonly comb?: PortComb;
     }
   | {
@@ -117,14 +118,17 @@ export function createHypergryphPortDragLogisticsGestureModule(): GestureMapping
             return { status: "ignored" };
           }
           const startGridPoint = resolveGridPoint(canvas, event.startPosition);
-          const pointerGridPoint = resolveGridPoint(canvas, event.position);
+          const heading = resolveWorldVectorFromViewportVector({
+            viewportVector: { x: event.position.x - event.startPosition.x, y: event.position.y - event.startPosition.y },
+            displayRotation: canvas.view.state.displayRotation,
+          });
           if (startGridPoint === null) {
             return { status: "ignored" };
           }
           const port = editor.queries.findDevicePortAtGridPoint(startGridPoint);
           const next = port !== null
             ? resolvePortSession(canvas, editor, event.gestureId, port.kind, port.endpoint)
-            : resolveLineEndSession(canvas, editor, event.gestureId, startGridPoint, pointerGridPoint);
+            : resolveLineEndSession(canvas, editor, event.gestureId, startGridPoint, heading);
           if (next === null) {
             return { status: "ignored" };
           }
@@ -258,6 +262,7 @@ function resolveOutwardCell(
   startGridPoint: GridPoint,
   session: PortDragSession,
 ): GridPoint | null {
+  if (session.mode === "forward" && session.outwardCell !== undefined) return session.outwardCell;
   const port = editor.queries.findDevicePortAtGridPoint(startGridPoint);
   if (port !== null) {
     const outside = port.endpoint.outsideGridPoint;
@@ -481,7 +486,7 @@ function resolveLineEndSession(
   editor: EditorContract,
   gestureId: string,
   gridPoint: GridPoint,
-  pointerGridPoint: GridPoint | null,
+  heading: GridPoint,
 ): PortDragSession | null {
   const candidates = (["belt", "pipe"] as const).flatMap((kind) => {
     const entity = editor.queries.findTransportLineAtGridPoint(gridPoint, kind);
@@ -505,8 +510,8 @@ function resolveLineEndSession(
 
   // 交叠时按拖动主轴选择：水平拖动选输出端朝东/西的线，竖直拖动选朝南/北的线。
   let candidate = candidates[0]!;
-  if (candidates.length > 1 && pointerGridPoint !== null) {
-    const horizontalDrag = Math.abs(pointerGridPoint.x - gridPoint.x) >= Math.abs(pointerGridPoint.y - gridPoint.y);
+  const horizontalDrag = Math.abs(heading.x) >= Math.abs(heading.y);
+  if (candidates.length > 1) {
     candidate = candidates.find((entry) => (
       (entry.outputEdge === "EAST" || entry.outputEdge === "WEST") === horizontalDrag
     )) ?? candidate;
@@ -518,7 +523,16 @@ function resolveLineEndSession(
   };
   const isOpen = (edge: GridEdge) => isOpenBeyondLine(editor, candidate.entity, candidate.kind, neighborOf(edge));
 
-  if (isOpen(candidate.outputEdge)) {
+  const draggedEdge: GridEdge = horizontalDrag
+    ? (heading.x >= 0 ? "EAST" : "WEST")
+    : (heading.y >= 0 ? "SOUTH" : "NORTH");
+  const outputOpen = isOpen(candidate.outputEdge);
+  const destination = neighborOf(draggedEdge);
+  const branch = !outputOpen && draggedEdge !== candidate.inputEdge && draggedEdge !== candidate.outputEdge
+    && (isOpen(draggedEdge) || editor.queries.findDevicePortAtGridPoint(destination, {
+      kind: candidate.kind, direction: "input", outsideGridPoint: gridPoint,
+    }) !== null);
+  if (draggedEdge !== candidate.inputEdge && (outputOpen || branch)) {
     // 从本线末格起笔（该格可随拖动方向改为转角），延续原有物流线。
     return {
       gestureId,
@@ -527,7 +541,8 @@ function resolveLineEndSession(
       mode: "forward",
       allowEmptySource: true,
       source: { type: "logistics-entity", entityId: candidate.entity.id, gridPoint: { ...gridPoint } },
-      continuesLine: true,
+      outwardCell: destination,
+      createsBranch: branch,
     };
   }
   if (isOpen(candidate.inputEdge)) {
@@ -573,7 +588,7 @@ function updateDraft(
     editor.actions.moveLogisticEnd({
       pointerGridPoint: pointer,
       ...moveOptions,
-      autoCreateSplittersAndConvergers: session.continuesLine === true ? false : moveOptions.autoCreateSplittersAndConvergers,
+      autoCreateSplittersAndConvergers: session.createsBranch || moveOptions.autoCreateSplittersAndConvergers,
       routeMode: { type: "freehand" },
     });
     publishCombLanes(canvas, editor, session);

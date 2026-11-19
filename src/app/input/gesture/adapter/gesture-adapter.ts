@@ -756,6 +756,7 @@ export class GestureAdapter {
       onLongPress: () => {
         this.dispatchGesture({
           type: "mouse-long-press-ready",
+          isPen: session.isPen,
           gestureId: session.gestureId,
           button: session.originButton,
           buttons: session.pressButtons,

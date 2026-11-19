@@ -51,7 +51,11 @@ export interface EditorQuery {
 	/** 该格上指定族的传送带节/管道节；没有时返回 null。 */
 	findTransportLineAtGridPoint(gridPoint: GridPoint, kind: LogisticsKind): WorldEntity | null;
 	/** 位于端口内侧格的设备端口（输入或输出，传送带或管道族）；非端口格返回 null。 */
-	findDevicePortAtGridPoint(gridPoint: GridPoint): {
+	findDevicePortAtGridPoint(gridPoint: GridPoint, connection?: {
+		readonly kind: LogisticsKind;
+		readonly direction: "input" | "output";
+		readonly outsideGridPoint: GridPoint;
+	}): {
 		readonly kind: LogisticsKind;
 		readonly endpoint: Extract<LogisticsDraftEndpoint, { readonly type: "device-port" }>;
 	} | null;

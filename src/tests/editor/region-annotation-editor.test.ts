@@ -191,7 +191,7 @@ describe("region annotation editor integration", () => {
       entityId: contained.id,
     });
     const ordinaryBlueprint = createSelectionBlueprintDocument({
-      workspace,
+      editor: workspace.editor,
       name: "普通蓝图",
     });
     expect(ordinaryBlueprint?.regions).toEqual([]);

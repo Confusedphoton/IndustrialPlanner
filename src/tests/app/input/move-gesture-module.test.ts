@@ -181,9 +181,10 @@ describe("createHypergryphMoveGestureModule", () => {
       marquee.context,
     );
     const selectResult = module.handle(
-      tapLongPressReadyEvent({
-        pointerEntity: entity("unselected-entity", { x: 4, y: 4 }),
-        position: { x: 4, y: 4 },
+      touchDragStartEvent({
+        pointerEntity: null,
+        startPosition: { x: 4, y: 4 },
+        position: { x: 5, y: 4 },
       }),
       select.context,
     );
@@ -407,22 +408,20 @@ describe("createHypergryphMoveGestureModule", () => {
     expect(context.canvas.state.runtime.moveEnterFrom).toBeNull();
   });
 
-  it("restores the original selection when touch move enter fails after retargeting selection", () => {
-    const { context, editor, selection } = createContext({ invalidSelection: "unselected" });
+  it("preserves the selection when the held device is gone by the time a touch drag starts", () => {
+    const { context, selection } = createContext({ invalidSelection: "unselected" });
     const module = createHypergryphMoveGestureModule();
 
-
-
-    const result = module.handle(
-      tapLongPressReadyEvent({
-        pointerEntity: entity("unselected-entity", { x: 4, y: 4 }),
-        position: { x: 4, y: 4 },
+    module.handle(
+      touchDragStartEvent({
+        pointerEntity: entity("selected-entity", { x: 2, y: 2 }),
+        startPosition: { x: 4, y: 4 },
+        position: { x: 2, y: 2 },
       }),
       context,
     );
 
-    expect(result).toEqual({ status: "ignored" });
-    expect(editor.actions.cancelMoveOperationDraft).toHaveBeenCalledTimes(1);
+    expect(context.canvas.state.activeTool).toBe("select");
     expect([...selection]).toEqual(["selected-entity"]);
   });
 

@@ -353,51 +353,26 @@ const missResult = module.handle(touchDragStartEvent({ position: { x: 32, y: 32 
     expect(context.canvas.state.runtime.placementAnchor).toBeNull();
   });
 
-  it("starts touch dragging from the preview bounding box even when no entity is hit", () => {
-    const { context } = createContext({
-      activeTool: "single-placement",
-      placementAnchor: { x: 5, y: 5 },
-      singlePlacementDeviceId: "filling_pd_mc_1",
-      previewDefinitionId: "filling_pd_mc_1",
-      initialPreview: true,
-      previewRect: { x: 5, y: 5, width: 6, height: 4 },
-    });
-    const module = createHypergryphSinglePlacementGestureModule();
-
-
-
-    const result = module.handle(touchDragStartEvent({ position: { x: 8, y: 8 } }), context);
-
-    expect(result).toEqual({ status: "handled" });
-    expect(context.canvas.state.runtime.placementAnchor).toEqual({ x: 8, y: 8 });
-  });
-
-  it("keeps a preview drag when the first movement leaves its bounds", () => {
+  it("places a touch preview on release even after dragging outside its original bounds", () => {
     const { context, editor } = createContext({
       activeTool: "single-placement",
-      placementAnchor: { x: 5, y: 5 },
+      placementAnchor: { x: 12, y: 12 },
       singlePlacementDeviceId: "log_splitter",
       initialPreview: true,
-      previewRect: { x: 5, y: 5, width: 1, height: 1 },
+      previewRect: { x: 12, y: 12, width: 1, height: 1 },
     });
     const module = createHypergryphSinglePlacementGestureModule();
-
-    const result = module.handle(touchDragStartEvent({
-      startPosition: { x: 5, y: 5 },
-      position: { x: 6, y: 5 },
+    module.handle(touchDragStartEvent({
+      startPosition: { x: 12.5, y: 12.5 }, position: { x: 21.5, y: 12.5 }, longPress: false,
     }), context);
+    module.handle(touchDragMoveEvent({ position: { x: 25.5, y: 12.5 } }), context);
+    module.handle({
+      ...touchDragMoveEvent({ position: { x: 25.5, y: 12.5 } }),
+      type: "touch dragend", reason: "release",
+    }, context);
 
-    expect(result).toEqual({ status: "handled" });
-    expect(context.canvas.state.runtime.placementAnchor).toEqual({ x: 5, y: 5 });
-
-    expect(module.handle(touchDragMoveEvent({ position: { x: 7, y: 5 } }), context)).toEqual({
-      status: "handled",
-    });
-    expect(editor.actions.moveCollectionTo).toHaveBeenCalledWith({
-      collectionType: EntityCollectionType.preview,
-      startGridPoint: { x: 5, y: 5 },
-      endGridPoint: { x: 7, y: 5 },
-    });
+    const placed = Object.values(editor.document.getSnapshot().entities).find((entity) => entity.definitionId === "log_splitter");
+    expect(placed?.position).toEqual({ x: 25, y: 12 });
   });
 
   it("rotates from the R key and toolbar button while placing", () => {
@@ -788,6 +763,7 @@ function placementTouchTapEvent(deviceId: string) {
 function touchDragStartEvent(options: {
   position: GridPoint;
   startPosition?: GridPoint;
+  longPress?: boolean;
 }) {
   return {
     type: "touch dragstart" as const,
@@ -796,7 +772,7 @@ function touchDragStartEvent(options: {
     position: options.position,
     startPosition: options.startPosition ?? options.position,
     activeTouchCount: 1,
-    longPress: true,
+    longPress: options.longPress ?? true,
     pointerEntity: null,
     modifiers: emptyModifiers(),
     sourceEvent: null,

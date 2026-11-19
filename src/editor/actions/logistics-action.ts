@@ -1926,10 +1926,10 @@ function resolveAutoDraftPlan(options: {
     const firstStepEdge = secondCell === null
       ? firstCell.toEdge
       : resolveDirectionEdge(firstCell.gridPoint, secondCell.gridPoint);
-    if (sourceInfo !== null && sourceInfo.inputConnected && sourceInfo.outputConnected) {
+    if (sourceInfo !== null && sourceInfo.outputConnected) {
       // 沿已有物流段原出口方向继续绘制属于合法复用，不应判非法或创建分流器。
       // 只有从其他方向拉出新分支时才按自动创建开关生成分流器。
-      if (firstStepEdge !== null && firstStepEdge !== sourceInfo.outputEdge) {
+      if (firstStepEdge !== null && firstStepEdge !== sourceInfo.outputEdge && firstStepEdge !== sourceInfo.inputEdge) {
         if (options.autoCreateSplittersAndConvergers) {
           cellOverridesByGridKey.set(
             gridPointKey(firstCell.gridPoint),

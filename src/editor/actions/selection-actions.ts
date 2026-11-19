@@ -11,6 +11,7 @@ import {
   getRotatedGridFootprint,
   rotateGridRotation,
 } from "@/shared/geometry/grid";
+import { oppositeGridEdge, resolveRotatedPortGeometry } from "@/shared/geometry/port";
 import { isLogisticsDefinitionSuppressed } from "@/shared/logistics-suppression";
 import { resolveWorldPointFromViewportPoint } from "@/shared/geometry/viewport-transform";
 import { transformRegionRectsBetweenBounds } from "@/shared/geometry/region-rects";
@@ -58,6 +59,7 @@ type EditorCollectionActions = Pick<
   | "rotateCollectionAroundCenterPoint"
   | "rotateCollectionAroundPivotCell"
   | "rotateCollectionToSnapOnBuilding"
+  | "snapPlacementToTransport"
   | "setMarqueeRange"
 >;
 
@@ -1008,6 +1010,61 @@ export function createEditorSelectionActions({
       });
   };
 
+  const snapPlacementToTransport = action(() => {
+    const preview = resolveCollection(EntityCollectionType.preview);
+    const entity = preview.length === 1 ? state.drafts.find((draft) => draft.id === preview[0]) : undefined;
+    if (entity === undefined) return false;
+    const registry = workspace.registry.queries;
+    if (registry.isBeltFamily(entity.definitionId) || registry.isPipeFamily(entity.definitionId)) return false;
+    const definition = entityDefinitionMap.get(entity.definitionId);
+    if (definition === undefined) return false;
+    const size = getRotatedGridFootprint(definition.footprint, entity.rotation);
+    const center = { x: entity.position.x + size.width / 2, y: entity.position.y + size.height / 2 };
+    const currentDocument = document.getSnapshot();
+    const candidates: { entity: DraftEntity; distance: number; turns: number }[] = [];
+    const rotations = [0, 90, 270, 180] as const;
+    for (const line of Object.values(currentDocument.entities)) {
+      if (Math.abs(line.position.x - center.x) > Math.max(size.width, size.height) / 2 + 4
+        || Math.abs(line.position.y - center.y) > Math.max(size.width, size.height) / 2 + 4) continue;
+      if (!registry.isBelt(line.definitionId) && !registry.isPipe(line.definitionId)) continue;
+      const lineDefinition = entityDefinitionMap.get(line.definitionId);
+      if (lineDefinition === undefined) continue;
+      for (const group of lineDefinition.portGroups) {
+        const port = group.ports[0];
+        if (port === undefined) continue;
+        const geometry = resolveRotatedPortGeometry({ footprint: lineDefinition.footprint, port, rotation: line.rotation });
+        const target = { x: line.position.x + geometry.delta.x, y: line.position.y + geometry.delta.y };
+        for (const ownGroup of definition.portGroups) {
+          if (ownGroup.direction === group.direction || ownGroup.isPipe !== group.isPipe) continue;
+          for (const ownPort of ownGroup.ports) {
+            for (const [turns, delta] of rotations.entries()) {
+              const rotation = rotateGridRotation(entity.rotation, delta);
+              const own = resolveRotatedPortGeometry({ footprint: definition.footprint, port: ownPort, rotation });
+              if (own.edge !== oppositeGridEdge(geometry.edge)) continue;
+              const position = { x: target.x - own.cell.x, y: target.y - own.cell.y };
+              const footprint = getRotatedGridFootprint(definition.footprint, rotation);
+              const distance = Math.hypot(position.x + footprint.width / 2 - center.x, position.y + footprint.height / 2 - center.y);
+              if (distance <= 1.5) candidates.push({ distance, turns, entity: { ...entity, position, rotation } });
+            }
+          }
+        }
+      }
+    }
+    candidates.sort((left, right) => left.distance - right.distance || left.turns - right.turns);
+    const tried = new Set<string>();
+    for (const candidate of candidates) {
+      const { position, rotation } = candidate.entity;
+      const key = `${position.x}:${position.y}:${rotation}`;
+      if (tried.has(key)) continue;
+      tried.add(key);
+      if (!resolveCandidatePlacementValidation({ entity: candidate.entity, currentDocument })?.canPlace) continue;
+      state.drafts = state.drafts.map((draft) => draft.id === entity.id ? candidate.entity : draft);
+      syncPlacementValidationState({ document: currentDocument, state, workspace });
+      return true;
+    }
+    return false;
+  });
+
   const rotateCollectionToSnapOnBuilding: EditorCollectionActions["rotateCollectionToSnapOnBuilding"] = action((
     options,
   ) => {
@@ -1396,6 +1453,7 @@ export function createEditorSelectionActions({
     rotateCollectionAroundCenterPoint,
     rotateCollectionAroundPivotCell,
     rotateCollectionToSnapOnBuilding,
+    snapPlacementToTransport,
   };
 }
 

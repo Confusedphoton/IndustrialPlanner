@@ -156,6 +156,7 @@ export interface MouseDoubleTapGestureEvent extends GestureEventBase {
 
 export interface MouseLongPressReadyGestureEvent extends GestureEventBase {
   readonly type: "mouse-long-press-ready";
+  readonly isPen?: boolean;
   readonly button: number;
   readonly buttons: number;
   readonly position: GesturePosition;

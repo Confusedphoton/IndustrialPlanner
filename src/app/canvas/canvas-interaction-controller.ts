@@ -1,4 +1,5 @@
-import { runInAction } from "mobx";
+import { action, observable, runInAction } from "mobx";
+import type { WorldDocument } from "@/domain/document/world-document";
 import type { EditorContract } from "@/domain/editor/editor-contract";
 import type { EditorViewContract } from "@/domain/editor/editor-view-contract";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
@@ -35,6 +36,14 @@ export class CanvasInteractionController {
   public readonly state = new CanvasInteractionStateReadWriteImpl();
   public readonly actions = new CanvasActionImpl(this.state, this);
   public readonly overlapEntityMenu = new WorkbenchOverlapEntityMenuController();
+  public readonly lassoPath = observable.box<readonly ClientPixelPoint[] | null>(null, { deep: false });
+  public readonly lassoActionsAt = observable.box<ClientPixelPoint | null>(null, { deep: false });
+  public readonly placementOrbitAt = observable.box<ClientPixelPoint | null>(null, { deep: false });
+  public readonly repeatLaneUndo = observable.box<{
+    readonly cell: GridPoint;
+    readonly editor: EditorContract;
+    readonly document: WorldDocument;
+  } | null>(null, { deep: false });
   public selectedPaletteEntryId: string | null = null;
   public pendingPlacementEnter: {
     deviceId: string; anchor: GridPoint; pointerMode: "mouse" | "touch"; initialMousePosition: ClientPixelPoint | null;
@@ -116,6 +125,20 @@ export class CanvasInteractionController {
   }
 
   public get editor(): EditorContract | null { return this.options.readEditor(); }
+  public setLassoPath = action((path: readonly ClientPixelPoint[] | null) => this.lassoPath.set(path));
+  public setLassoActionsAt = action((point: ClientPixelPoint | null) => this.lassoActionsAt.set(point));
+  public setPlacementOrbitAt = action((point: ClientPixelPoint | null) => this.placementOrbitAt.set(point));
+  public dismissRepeatLaneUndo = action(() => this.repeatLaneUndo.set(null));
+  public offerRepeatLaneUndo = action((cell: GridPoint, editor: EditorContract) => {
+    this.repeatLaneUndo.set({ cell, editor, document: editor.document.getSnapshot() });
+  });
+  public undoRepeatLane = action(() => {
+    const offer = this.repeatLaneUndo.get();
+    this.repeatLaneUndo.set(null);
+    if (offer !== null && offer.editor === this.editor && offer.document === offer.editor.document.getSnapshot()) {
+      offer.editor.actions.undoDocumentHistory();
+    }
+  });
   public acquireInput(): void {
     const editor = this.editor;
     if (editor === null || this.isInputSuspended || editingOwners.get(editor) === this) return;
@@ -254,6 +277,12 @@ export class CanvasInteractionController {
   }
 
   private cancelTransientInteraction(): void {
+    this.dismissRepeatLaneUndo();
+    runInAction(() => {
+      this.lassoPath.set(null);
+      this.lassoActionsAt.set(null);
+      this.placementOrbitAt.set(null);
+    });
     // 仅取消拥有临时草稿的工具；跨窗口的业务选点不是在途指针手势。
     const tool = this.state.activeTool;
     const ownsTransientDraft = tool === "single-placement" || tool === "blueprint-placement"

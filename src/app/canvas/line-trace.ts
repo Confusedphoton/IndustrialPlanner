@@ -12,6 +12,7 @@ const MAX_TRACE_CELLS = 4096;
 export interface LineTraceEnd {
   readonly entity: WorldEntity;
   readonly portGroupId: string;
+  readonly portId: string;
 }
 
 /**
@@ -130,17 +131,10 @@ function resolvePortEnd(
   lineCell: GridPoint,
   direction: "input" | "output",
 ): LineTraceEnd | null {
-  const port = editor.queries.findDevicePortAtGridPoint(portCell);
-  if (
-    port === null
-    || port.kind !== kind
-    || port.endpoint.portDirection !== direction
-    || !samePoint(port.endpoint.outsideGridPoint, lineCell)
-  ) {
-    return null;
-  }
+  const port = editor.queries.findDevicePortAtGridPoint(portCell, { kind, direction, outsideGridPoint: lineCell });
+  if (port === null) return null;
   const entity = editor.queries.getEntityById(port.endpoint.entityId);
-  return entity === null ? null : { entity, portGroupId: port.endpoint.portGroupId };
+  return entity === null ? null : { entity, portGroupId: port.endpoint.portGroupId, portId: port.endpoint.portId };
 }
 
 function offset(point: GridPoint, edge: GridEdge): GridPoint {

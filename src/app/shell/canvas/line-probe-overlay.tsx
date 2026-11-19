@@ -64,7 +64,7 @@ export const LineProbeOverlay = observer(function LineProbeOverlay({ appHost }: 
   const sourceDefinition = trace.source === null ? null : registry.queries.findEntityDefinition(trace.source.entity.definitionId);
   const configuredItemIds = trace.source === null || sourceDefinition === null
     ? []
-    : outputPortItemIds(sourceDefinition, trace.source.entity, trace.source.portGroupId, registry);
+    : outputPortItemIds(sourceDefinition, trace.source.entity, trace.source.portGroupId, registry, trace.source.portId);
   const sourceStatus = configuredItemIds.length > 0 ? null : runtimeStatus(trace.source);
   const runningItemIds = sourceStatus === null || sourceDefinition === null ? [] : runningDeviceItemIds(sourceDefinition, sourceStatus, registry);
   const itemIds = configuredItemIds.length > 0 ? configuredItemIds

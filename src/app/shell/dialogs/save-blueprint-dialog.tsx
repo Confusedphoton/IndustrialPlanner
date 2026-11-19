@@ -186,7 +186,7 @@ export const SaveBlueprintDialog = observer(function SaveBlueprintDialog({
       setName(defaultName);
       setDescription("");
       setSelectionPreviewBlueprint(createSelectionBlueprintDocument({
-        workspace: appHost.workspace,
+        editor: appHost.workspace.editor,
         name: defaultName,
         description: "",
       }));

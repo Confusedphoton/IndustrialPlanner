@@ -1,3 +1,4 @@
+import { CanvasEdgeScrub } from "./canvas-edge-scrub";
 import { observer } from "mobx-react-lite";
 import {
   Fragment,
@@ -689,7 +690,10 @@ export const CanvasToolRail = observer(function CanvasToolRail({ appHost }: { ap
         role="toolbar"
         aria-orientation="vertical"
       >
-        <RailColumns columns={columns} ref={columnsRef} />
+        <div className={cm(styles, "canvas-tool-rail-body")}>
+          <RailColumns columns={columns} ref={columnsRef} />
+          <CanvasEdgeScrub appHost={appHost} />
+        </div>
         {contextual === null ? null : (
           <div
             aria-label={t("toolbar.canvasToolsContext")}

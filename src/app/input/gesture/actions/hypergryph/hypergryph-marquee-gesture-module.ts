@@ -189,6 +189,7 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
             && context.canvas.workbench.state.settings.hypergryphImmediateMarquee
             && event.pointerEntity === null
             && event.originButton !== 1
+            && !event.isPen
           ) {
             enterMarqueeMode({
               canvas: context.canvas,

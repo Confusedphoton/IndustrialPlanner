@@ -42,6 +42,7 @@ import { createHypergryphRotateSelectionGestureModule } from "./hypergryph/hyper
 import { createHypergryphPenEraserGestureModule } from "./hypergryph/hypergryph-pen-eraser-gesture-module";
 import { createHypergryphPenStrokeGestureModule } from "./hypergryph/hypergryph-pen-stroke-gesture-module";
 import { createHypergryphLineProbeGestureModule } from "./hypergryph/hypergryph-line-probe-gesture-module";
+import { createHypergryphRepeatLaneGestureModule } from "./hypergryph/hypergryph-repeat-lane-gesture-module";
 import { createHypergryphPaintRowGestureModule } from "./hypergryph/hypergryph-paint-row-gesture-module";
 import { createHypergryphLineEndChipGestureModule } from "./hypergryph/hypergryph-line-end-chip-gesture-module";
 import { createHypergryphMarkingMenuGestureModule } from "./hypergryph/hypergryph-marking-menu-gesture-module";
@@ -89,6 +90,7 @@ export class AppGestureModuleRegistrar {
     };
     register("select", createHypergryphOverlapEntityMenuGuardModule());
     register("blueprint-placement", createHypergryphBlueprintPlacementGestureModule());
+    register("blueprint-placement", createHypergryphRepeatLaneGestureModule());
     register("logistics-placement", createHypergryphLogisticsPlacementGestureModule());
     register("logistics-placement", createHypergryphPortDragLogisticsGestureModule());
     register("logistics-placement", createHypergryphLineEndChipGestureModule());
@@ -112,7 +114,7 @@ export class AppGestureModuleRegistrar {
     register("delete", createHypergryphDeleteSelectionGestureModule());
     register("rotate-placement", createHypergryphRotateSelectionGestureModule());
     register("delete", createHypergryphPenEraserGestureModule());
-    register("delete", createHypergryphPenStrokeGestureModule());
+    register("marquee-select", createHypergryphPenStrokeGestureModule());
     register("pan-viewport", createHypergryphMouseViewportPanModule());
     register("pan-viewport", createHypergryphKeyboardViewportPanModule());
     register("zoom-viewport", createHypergryphViewportZoomModule());

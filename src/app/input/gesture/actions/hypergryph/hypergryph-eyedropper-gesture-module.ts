@@ -44,8 +44,15 @@ export function createHypergryphEyedropperGestureModule(): GestureMappingModule<
       const tool = canvas.state.activeTool;
 
       switch (event.type) {
+        case "touch tap":
+          if (tool !== "select" || !event.longPress || !canvas.isOperationEnabled("confirm-placement")) return { status: "ignored" };
+          return event.pointerEntity !== null && pickUpEntity(canvas, event.pointerEntity, {
+            source: "touch", position: event.position,
+          }) ? { status: "handled" } : { status: "ignored" };
+
         case "mouse tap": {
-          if (event.button !== 2 || (tool !== "select" && tool !== "single-placement")) {
+          const holdToLift = tool === "select" && event.isPen && event.button === 0 && event.longPress;
+          if ((!holdToLift && event.button !== 2) || (tool !== "select" && tool !== "single-placement")) {
             return { status: "ignored" };
           }
           const entity = findPlacedEntityAt(canvas, editor, event.position);

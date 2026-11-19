@@ -23,6 +23,7 @@ const KNOWN_TEXT_KEYS: Readonly<Record<string, string>> = {
   "断开暗管链接": "historyLabel.unlinkConduit",
   "旋转设备": "historyLabel.rotateDevice",
   "移动设备": "historyLabel.moveDevice",
+  "展开布局": "historyLabel.openLayoutGap",
   "移除仓库物品链接": "historyLabel.removeDepotLink",
   "铺设物流": "historyLabel.layLogistics",
   "清理已重新配置的暗管链接": "historyLabel.cleanConduitLinks",

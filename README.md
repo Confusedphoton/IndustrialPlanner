@@ -39,19 +39,25 @@ Desktop, tablets and landscape phones are supported; portrait phones show a rota
 
 | Action · 操作 | Pen · 笔 | Finger · 手指 | Mouse · 鼠标 |
 | --- | --- | --- | --- |
-| Place · 放置 | Tap; the device stays in hand<br>点按；设备留在手上 | Tap a spot to move the preview, tap the preview to place<br>点按目标处移动预览，再点预览放下 | Click<br>单击 |
-| Put the device down · 放下手上的设备 | Barrel tap on empty canvas<br>侧键点空白处 | Cancel button<br>取消按钮 | Right click / Esc<br>右键 / Esc |
-| Place a row · 铺一排 | Drag with a device in hand<br>手持设备拖动 | Long-press the preview, then drag<br>长按预览后拖动 | Drag with a device in hand<br>手持设备拖动 |
-| Rotate · 旋转 | Double-tap the device or preview<br>双击设备或预览 | Double-tap the device or preview<br>双击设备或预览 | Double-click / rotate key<br>双击 / 旋转快捷键 |
-| Copy a placed device · 复制已放置设备 | Barrel tap it (barrel drag drags out a copy)<br>侧键点设备（侧键拖动拖出副本） | Place Another in the device actions<br>设备操作里的“再放一台” | Right click it<br>右键设备 |
-| Delete · 删除 | Eraser end, or scratch back and forth across devices (start beside them)<br>笔的橡皮擦端，或从设备旁起笔来回涂抹划过设备 | Delete in the device actions<br>设备操作里的删除 | Delete key<br>Delete 键 |
-| Undo / redo · 撤销 / 重做 | Rail buttons<br>工具条按钮 | Two-finger tap / three-finger tap<br>双指点按 / 三指点按 | Shortcuts or rail buttons<br>快捷键或工具条按钮 |
+| Place · 放置 | Tap, or drag and lift to snap near an open belt or pipe port<br>点按，或拖到传送带或管道的空闲端口附近吸附并抬笔放置 | Drag from the preview and lift, or tap to position and tap again to place<br>从预览上拖动后抬手放置，或先点按定位，再点按放置 | Click<br>单击 |
+| Put the device down · 放下手上的设备 | Flick outward at the canvas edge, or barrel tap on empty canvas<br>向画布边缘快速甩笔，或侧键点空白处 | Flick outward at the canvas edge or use Cancel<br>向画布边缘快速滑出，或点按取消 | Right click / Esc<br>右键 / Esc |
+| Place a row · 铺一排 | Drag in continuous placement, or hold Ctrl/Shift while dragging<br>连续放置时拖动，或按住 Ctrl 或 Shift 拖动 | In continuous placement, drag from the preview<br>连续放置时从预览上拖动 | Drag with a device in hand<br>手持设备拖动 |
+| Rotate · 旋转 | Hold the preview, drag around it to set its facing, and lift<br>长按预览后环绕拖动调整朝向，再抬笔放置 | With a preview held, drag near an open line end or hold and orbit to rotate<br>拖动预览靠近开放端吸附，或长按后环绕拖动旋转 | Double-click / rotate key<br>双击 / 旋转快捷键 |
+| Copy a placed device · 复制已放置设备 | Hold and lift, or barrel tap the device<br>长按设备后抬笔，或侧键点按 | Hold and lift<br>长按设备后抬手 | Right click it<br>右键设备 |
+| Delete · 删除 | Eraser end or the lasso action ring<br>笔的橡皮擦端或套索操作环 | Delete in the device actions<br>设备操作里的删除 | Delete key<br>Delete 键 |
+| Undo / redo · 撤销 / 重做 | Drag the history slider on the rail<br>拖动工具条上的历史滑块 | History slider or two-/three-finger tap<br>历史滑块或双指 / 三指点按 | Shortcuts or rail buttons<br>快捷键或工具条按钮 |
+
+- **Lasso.** Tap empty canvas, then immediately drag from near the tap to loop around devices. Lift to open the selection ring. A closed loop on empty canvas still places a pinned plan. Start a drag without the preceding tap to pan.<br>**套索。** 点按空白处后立即从附近起笔，圈住设备后抬笔打开操作环。在空白处画闭合圈仍可放置钉住的规划。直接拖动可平移画布。
+- **Open a gap.** Tap an empty cell between devices, then hold near the tap and push one side away. Lift to commit the move and extend the belts and pipes that cross the gap.<br>**展开布局。** 点按设备间的空白格，再在附近长按并向一侧推开。抬笔后一起提交移动与跨缝传送带、管道的延长。
+- Drag the rail's zoom slider to zoom with one hand. Select a splitter or admission gate and tap a port arrow for a ring of items from its flow.<br>拖动工具条上的缩放滑块即可单手缩放。选中分流器或准入口并点按端口箭头，可从物品环筛选流经的物品。
+- **Repeat a lane.** In Marquee mode, select the machines and belts or pipes that make up one lane. Start a drag on a selected machine and pull toward the next lane. The distance sets the spacing. A pinned plan fills as many complete lanes as its matching recipes still need, or the drag previews one copy when no planned recipe matches. Lift to place the batch and tap the nearby Undo to remove it in one step.<br>**重复产线。** 在框选模式下选中一条产线的设备和传送带或管道，从选中的设备上起笔，向下一条产线的位置拖动。拖动距离决定间距。钉住的规划按匹配配方的缺口预览完整产线；没有匹配的规划配方时预览一条副本。抬笔放下整批，点按附近的撤销按钮即可一步撤销。
 
 - Dragging a preview, a belt or a pipe to the edge of the canvas pans the map. The tool rail counts as an edge.<br>拖动预览或传送带、管道到画布边缘时地图会跟着平移，工具条也算边缘。
 
 ### Connect · 连线
 
 - **Draw from a port.** With a pen, finger or mouse, drag from a device's port or the open end of a belt or pipe to draw a line. Release to commit. The rail's line tool does the same; it starts as belt, a second tap switches to pipe, and starting on a pipe outlet switches by itself.<br>**从端口拉线。** 用笔、手指或鼠标从设备端口或传送带、管道的开放末端拖出即可铺线，抬起提交。工具条上的铺线工具也一样：先铺传送带，再点一下换成管道，从管道出口起笔会自动换过去。
+- **Turn and branch.** Drag an open belt or pipe end sideways to turn it. Drag sideways from a segment with a connected outlet to branch through an automatically inserted splitter.<br>**转弯与分流。** 从传送带或管道的开放末端向侧面拖动即可转弯；从出口已接通的线段向侧面拖动时会自动插入分流器。
 - **Auto-routing.** Draw toward a machine and, once the pen is on it, the line finds its own way into a free input around anything in the way, keeping close to where your stroke went. Existing lines are crossed with bridges. The mouse tools fall back to the same router when a single bend is blocked.<br>**自动寻路。** 朝一台设备画过去，笔一落到它上面，线就自己绕开障碍接进空闲的输入口，并尽量贴着笔画走过的位置；遇到已有的线用桥接器穿过。鼠标工具一次转弯走不通时也改用自动寻路。
 - **Several lines in one stroke.** Start on an output, slide along the machine's edge across its neighbouring free outputs, then pull away: every output you swept gets its own line, running parallel and nesting at turns.<br>**一笔多线。** 从一个输出口起笔，先沿设备边划过相邻的空闲输出口，再拉离设备：划过的每个口各铺一条线，彼此平行，转弯时内外嵌套。
 - **Add a machine at the line end.** When a line drawn from a device ends in open space, a **+** chip appears beyond its end. When one machine is the obvious consumer, one tap places it; otherwise open the chip to list the machines that consume what the line carries and pick one. It snaps onto the end with a matching input port, as one undo step. A line drawn into a machine with no recipe sets the recipe for it.<br>**在线末端接上设备。** 从设备拉出的线末端悬空时，末端外侧出现 **+** 提示。只有一种设备明显该接时点一下就放好；否则展开列出消费线上物品的设备再选。设备以匹配的输入口接在末端，一步即可撤销。把线接进还没设配方的设备，会按线上物品替它设好配方。

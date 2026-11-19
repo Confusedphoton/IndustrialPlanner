@@ -778,7 +778,7 @@ function createTempBlueprintRecord(
   context: GestureActionContext<AppHost>,
 ): BlueprintLibraryRecord | null {
   const blueprintDocument = createSelectionBlueprintDocument({
-    workspace: context.canvas.workbench.workspace,
+    editor: context.canvas.workbench.workspace.editor,
     name: TEMP_BLUEPRINT_NAME,
   });
 

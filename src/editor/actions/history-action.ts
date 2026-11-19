@@ -26,7 +26,7 @@ export function createEditorHistoryActions({
   documentWriter,
   history,
   state,
-  workspace: _workspace,
+  queries,
 }: EditorActionsContext): EditorHistoryActions {
   return {
     undoDocumentHistory: action(() => {
@@ -96,6 +96,10 @@ export function createEditorHistoryActions({
       ) {
         return false;
       }
+
+      const operation = targetSequence < state.history.cursorSequence ? "undo" : "redo";
+      const availability = queries.getOperationAvailability(operation);
+      if (!availability.supported || !availability.enabled) return false;
 
       const restoreRecords = resolveRestoreRecords({
         records: state.history.records,

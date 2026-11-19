@@ -1,4 +1,5 @@
 import type { CanvasInteractionController } from "@/app/canvas";
+import { trackPlacementEdgeFlick } from "@/app/canvas/placement-edge-flick";
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
 import type { WorldEntity } from "@/domain/document/world-document";
@@ -21,6 +22,7 @@ interface PaintRowSession {
   readonly template: WorldEntity;
   readonly footprint: GridRect;
   readonly startCell: GridPoint;
+  readonly flick: ReturnType<typeof trackPlacementEdgeFlick> | null;
   /** 当前预览的一排（数量与末端），未变化时不重建预览。 */
   rowKey: string;
 }
@@ -28,7 +30,7 @@ interface PaintRowSession {
 /**
  * 刷一排：设备在手上时按住拖动，沿拖动的主方向按占地间距排出一排同样的设备（含配方与朝向），
  * 松开一次放下，形成一条撤销记录；与画传送带的手感一致。
- * 笔与鼠标直接拖；手指先长按预览再拖（直接拖预览仍是移动预览）。
+ * 鼠标直接拖；笔与触控在连续放置模式下拖动，长按后的拖动用于旋转。
  */
 export function createHypergryphPaintRowGestureModule(): GestureMappingModule<AppHost> {
   let session: PaintRowSession | null = null;
@@ -49,12 +51,14 @@ export function createHypergryphPaintRowGestureModule(): GestureMappingModule<Ap
 
       switch (event.type) {
         case "mouse dragstart":
-          if (event.originButton !== 0) {
+          if (event.originButton !== 0 || (event.isPen && (event.longPress
+            || (!canvas.state.runtime.singlePlacementContinuous && !event.modifiers.ctrl && !event.modifiers.shift)))) {
             return { status: "ignored" };
           }
           session = startSession(canvas, editor, {
             gestureId: event.gestureId,
             pointer: "mouse",
+            flickEnabled: event.isPen === true,
             start: event.startPosition,
             keepInHand: event.isPen === true || event.modifiers.ctrl || event.modifiers.shift
               || canvas.state.runtime.singlePlacementContinuous,
@@ -62,11 +66,12 @@ export function createHypergryphPaintRowGestureModule(): GestureMappingModule<Ap
           if (session === null) {
             return { status: "ignored" };
           }
+          session.flick?.track(event.position, canvas.gestureAdapter.tapTimeMs());
           updateRow(canvas, editor, session, event.position);
           return { status: "claimed" };
 
         case "touch dragstart":
-          if (!event.longPress || !isPreviewBoundingBoxAtClientPoint({
+          if (!canvas.state.runtime.singlePlacementContinuous || event.longPress || !isPreviewBoundingBoxAtClientPoint({
             editor,
             view: canvas.view,
             position: event.startPosition,
@@ -77,12 +82,14 @@ export function createHypergryphPaintRowGestureModule(): GestureMappingModule<Ap
           session = startSession(canvas, editor, {
             gestureId: event.gestureId,
             pointer: "touch",
+            flickEnabled: true,
             start: event.startPosition,
             keepInHand: canvas.state.runtime.singlePlacementContinuous,
           });
           if (session === null) {
             return { status: "ignored" };
           }
+          session.flick?.track(event.position, canvas.gestureAdapter.tapTimeMs());
           updateRow(canvas, editor, session, event.position);
           return { status: "claimed" };
 
@@ -91,6 +98,7 @@ export function createHypergryphPaintRowGestureModule(): GestureMappingModule<Ap
           if (session === null || session.gestureId !== event.gestureId) {
             return { status: "ignored" };
           }
+          session.flick?.track(event.position, canvas.gestureAdapter.tapTimeMs());
           updateRow(canvas, editor, session, event.position);
           return { status: "handled" };
 
@@ -102,7 +110,13 @@ export function createHypergryphPaintRowGestureModule(): GestureMappingModule<Ap
           const finished = session;
           session = null;
           canvas.edgePan.stop();
-          finishRow(canvas, editor, finished, event.reason === "release" ? event.position : null);
+          const release = event.reason === "release" ? event.position : null;
+          if (release !== null && finished.flick?.releasedAtEdge(release, canvas.gestureAdapter.tapTimeMs(), canvas.unobstructedClientRect)) {
+            editor.actions.cancelPlacementDraft();
+            canvas.actions.setActiveTool("select");
+          } else {
+            finishRow(canvas, editor, finished, release);
+          }
           return { status: "handled" };
         }
 
@@ -116,7 +130,7 @@ export function createHypergryphPaintRowGestureModule(): GestureMappingModule<Ap
 function startSession(
   canvas: CanvasInteractionController,
   editor: EditorContract,
-  options: { gestureId: string; pointer: "mouse" | "touch"; start: GesturePosition; keepInHand: boolean },
+  options: { gestureId: string; pointer: "mouse" | "touch"; start: GesturePosition; keepInHand: boolean; flickEnabled: boolean },
 ): PaintRowSession | null {
   if (canvas.state.activeTool !== "single-placement" || editor.state.collections.preview.length !== 1) {
     return null;
@@ -134,6 +148,7 @@ function startSession(
     template: { ...template, position: { ...template.position }, config: structuredClone(template.config) },
     footprint,
     startCell,
+    flick: options.flickEnabled ? trackPlacementEdgeFlick(options.start, canvas.gestureAdapter.tapTimeMs()) : null,
     rowKey: "",
   };
 }

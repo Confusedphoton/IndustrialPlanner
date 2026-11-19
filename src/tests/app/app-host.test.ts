@@ -1281,7 +1281,7 @@ describe("createAppTestHost", () => {
     ]);
   });
 
-  it("creates a move draft from mouse entity hit or touch selected entity", () => {
+  it("creates a move draft from a mouse hold or touch hold and drag", () => {
     vi.useFakeTimers();
 
     const workspace = createWorkspace();
@@ -1338,21 +1338,17 @@ describe("createAppTestHost", () => {
     appHost.internalActions.setActiveTool("select");
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
 
+    const destination = resolveClientPixelPointForGridCell(editorHost, { x: 8, y: 8 });
     appHost.gestureAdapter.handlePointerDown(touchEvent(34, entityPoint.x, entityPoint.y));
     vi.advanceTimersByTime(500);
-    appHost.gestureAdapter.handlePointerUp(touchEvent(34, entityPoint.x, entityPoint.y));
+    appHost.gestureAdapter.handlePointerMove(touchEvent(34, destination.x, destination.y));
+    appHost.gestureAdapter.handlePointerUp(touchEvent(34, destination.x, destination.y));
 
     expect(appHost.mainCanvas.state.activeTool).toBe("move");
-    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.visible).toBe(true);
-    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.attachedCollection).toBe(
-      EntityCollectionType.preview,
-    );
-    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.buttonIds).toEqual([
-      "canvas-floating-toolbar-button-cancel",
-      "canvas-floating-toolbar-button-switch-mode",
-      "canvas-floating-toolbar-button-rotate",
-      "canvas-floating-toolbar-button-ok",
-    ]);
+    expect(editorHost.state.collections.ghost).toEqual(["dummy-entity-2"]);
+    const preview = editorHost.queries.getEntityById(editorHost.state.collections.preview[0]!);
+    expect(preview?.position).toEqual({ x: 8, y: 8 });
+    expect(editorHost.document.getSnapshot().entities["dummy-entity-2"]?.position).toEqual({ x: 4, y: 4 });
   });
 
   it("aligns an attached canvas floating toolbar with pixel offset from the device top edge", () => {

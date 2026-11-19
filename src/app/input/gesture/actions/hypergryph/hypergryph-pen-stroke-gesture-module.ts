@@ -1,116 +1,165 @@
 import type { CanvasInteractionController } from "@/app/canvas";
-import { isLassoStroke, isScratchOutStroke, SCRATCH_WINDOW_MS, type StrokePoint } from "@/app/canvas/pen-strokes";
+import { isClosedStroke, isPointInsideStroke } from "@/app/canvas/pen-strokes";
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import { resolveEntityGridRect } from "@/shared/geometry/power-range";
+import type { EditorContract } from "@/domain/editor/editor-contract";
+import type { GridPoint } from "@/domain/shared/grid";
+import { resolveWorldVectorFromViewportVector, resolveViewportRectFromWorldGridRect } from "@/shared/geometry/viewport-transform";
 
-import type { GestureHandleResult, GestureMappingModule } from "../types";
-import { deleteErasedSelection, markEntityForErase } from "./hypergryph-pen-eraser-gesture-module";
+import type { GestureMappingModule } from "../types";
 import { pourPlanIntoLasso, resolvePlanMachinesToPlace } from "./plan-lasso";
 
-interface StrokeTracker {
-  readonly gestureId: string;
-  readonly start: GesturePosition;
-  readonly points: StrokePoint[];
-  erasing: boolean;
-  panning: boolean;
-  last: GesturePosition;
-}
-
-/**
- * 笔在画布空白处的整笔手势（这类拖动本是平移视图，这里只旁观笔迹）：
- *
- * 圈出一块空地：钉了配方树规划时，把规划里还缺的设备按阶段摆进圈里（见 plan-lasso）。
- *
- * 涂抹删除：选择工具下用笔尖在画布上来回快速划几下，划过的设备被删除（与橡皮擦端拖动相同，一条撤销记录）。
- *
- * 延迟平移到涂抹识别窗口结束，避免笔迹来回时画布跟着跳动。
- * 从设备或端口起笔仍由移动和铺线手势优先处理。
- */
 export function createHypergryphPenStrokeGestureModule(): GestureMappingModule<AppHost> {
-  let tracker: StrokeTracker | null = null;
+  let tap: { position: GesturePosition; time: number; kind: "mouse" | "touch" } | null = null;
+  let stroke: { id: string; canvas: CanvasInteractionController; points: GesturePosition[] } | null = null;
+
+  let wedgeArmed: string | null = null;
+  let wedge: {
+    id: string; editor: EditorContract;
+    start: GesturePosition; cell: GridPoint; axis: "x" | "y";
+    direction: number; offset: number | null;
+  } | null = null;
+  const cancel = () => {
+    wedgeArmed = null;
+    wedge?.editor.actions.finishLayoutGap(false);
+    wedge = null;
+    tap = null;
+    stroke?.canvas.setLassoPath(null);
+    stroke = null;
+  };
 
   return {
     id: "hypergryph-pen-stroke-gesture",
-    // 只接管从空地开始的笔迹。
-    priority: 190,
-    cancel() {
-      tracker = null;
-    },
-    handle(event, context) {
-      const canvas = context.canvas;
-      const editor = canvas.editor;
-      if (editor === null) {
-        return { status: "ignored" };
+    priority: 225,
+    cancel,
+    handle(event, { canvas }) {
+
+      if (event.type === "on-exit-active-tool") {
+        cancel();
+        canvas.setLassoActionsAt(null);
       }
+      const editor = canvas.editor;
+      if (canvas.state.activeTool !== "select" || editor === null) return { status: "ignored" };
+
+      const updateWedge = (position: GesturePosition) => {
+        if (wedge === null) return;
+        const vector = worldVector(canvas, wedge.start, position);
+        const offset = wedge.direction * Math.min(32, Math.max(0,
+          Math.round(wedge.direction * vector[wedge.axis] / canvas.view.state.gridCellPixelSize)));
+        if (offset === wedge.offset) return;
+        wedge.offset = offset;
+        if (offset === 0) wedge.editor.actions.finishLayoutGap(false);
+        else wedge.editor.actions.previewLayoutGap(wedge.axis, wedge.cell[wedge.axis] + (offset < 0 ? 1 : 0), offset);
+      };
 
       switch (event.type) {
-        case "mouse dragstart":
-          tracker = event.isPen === true && event.originButton === 0 && canvas.state.activeTool === "select"
-            && canvas.canUseWorkbenchActions && canvas.isOperationEnabled("delete")
-            && editor.queries.findEntityAtClientPixelPoint(event.startPosition, canvas.view.state) === null
-            ? {
-                gestureId: event.gestureId,
-                start: event.startPosition,
-                points: [stamp(canvas, event.startPosition), stamp(canvas, event.position)],
-                erasing: false,
-                panning: false,
-                last: event.position,
-              }
-            : null;
-          return { status: tracker === null ? "ignored" : "claimed" };
+        case "mouse-long-press-ready":
+        case "tap-long-press-ready":
+          if (tap !== null && event.pointerEntity === null && canvas.isOperationEnabled("move")
+            && canvas.gestureAdapter.tapTimeMs() - tap.time <= 1100
+            && distance(event.position, tap.position) <= 26
+            && (event.type === "mouse-long-press-ready"
+              ? tap.kind === "mouse" && event.isPen && event.button === 0
+              : tap.kind === "touch" && event.activeTouchCount === 1)) {
+            wedgeArmed = event.gestureId;
+            return { status: "handled" };
+          }
+          return { status: "ignored" };
 
-        case "mouse dragmove": {
-          if (tracker === null || tracker.gestureId !== event.gestureId) {
-            return { status: "ignored" };
+        case "mouse tap":
+        case "touch tap":
+          canvas.setLassoActionsAt(null);
+          wedgeArmed = null;
+          tap = !event.longPress && event.pointerEntity === null
+            && (event.type === "touch tap" || (event.isPen && event.button === 0))
+            ? { position: event.position, time: canvas.gestureAdapter.tapTimeMs(), kind: event.type === "touch tap" ? "touch" : "mouse" }
+            : null;
+          return { status: "ignored" };
+
+        case "mouse dragstart":
+        case "touch dragstart": {
+          canvas.setLassoActionsAt(null);
+          const armed = tap;
+          if (wedgeArmed === event.gestureId) {
+            wedgeArmed = null;
+            tap = null;
+            const cell = canvas.view.queries.findGridCellForClientPixelPoint(event.startPosition);
+            if (cell === null) return { status: "ignored" };
+            const vector = worldVector(canvas, event.startPosition, event.position);
+            const axis = Math.abs(vector.x) >= Math.abs(vector.y) ? "x" : "y";
+            wedge = { id: event.gestureId, editor, start: event.startPosition, cell, axis,
+              direction: Math.sign(vector[axis]), offset: null };
+            updateWedge(event.position);
+            return { status: "claimed" };
           }
-          if (tracker.erasing) {
-            markAlong(canvas, tracker.last, event.position);
-            tracker.last = event.position;
-            return { status: "handled" };
-          }
-          const point = stamp(canvas, event.position);
-          tracker.points.push(point);
-          if (!isScratchOutStroke(tracker.points)) {
-            if (point.timeMs - tracker.points[0]!.timeMs > SCRATCH_WINDOW_MS) {
-              panStroke(canvas, tracker.panning ? tracker.last : tracker.start, event.position);
-              tracker.panning = true;
-            }
-            tracker.last = event.position;
-            return { status: "handled" };
-          }
-          tracker.erasing = true;
-          editor.actions.clearCollection(EntityCollectionType.selection);
-          canvas.actions.hideCanvasFloatingToolbar();
-          tracker.points.forEach((point, index) => {
-            if (index > 0) markAlong(canvas, tracker!.points[index - 1]!, point);
-          });
-          tracker.last = event.position;
-          return { status: "handled" };
+          tap = null;
+          if (armed === null || event.longPress || !canvas.isOperationEnabled("marquee-select")
+            || canvas.gestureAdapter.tapTimeMs() - armed.time > 500
+            || distance(event.startPosition, armed.position) > 26
+            || (event.type === "mouse dragstart"
+              ? armed.kind !== "mouse" || !event.isPen || event.originButton !== 0
+              : armed.kind !== "touch" || event.activeTouchCount !== 1)) return { status: "ignored" };
+          stroke = { id: event.gestureId, canvas, points: [event.startPosition, event.position] };
+          canvas.setLassoPath(stroke.points.slice());
+          return { status: "claimed" };
         }
 
-        case "mouse dragend": {
-          if (tracker === null || tracker.gestureId !== event.gestureId) {
-            return { status: "ignored" };
-          }
-          const finished = tracker;
-          tracker = null;
-          if (!finished.erasing) {
-            finished.points.push(stamp(canvas, event.position));
-            if (event.reason !== "release") return { status: "handled" };
-            if (canvas.isOperationEnabled("confirm-placement") && isLassoStroke(finished.points)) {
-              const result = pourPlanIfPinned(canvas, finished);
-              if (result.status !== "ignored") return result;
-            }
-            panStroke(canvas, finished.panning ? finished.last : finished.start, event.position);
+        case "mouse dragmove":
+        case "touch dragmove":
+          if (wedge?.id === event.gestureId) {
+            if (event.type === "touch dragmove" && event.activeTouchCount !== 1) cancel();
+            else updateWedge(event.position);
             return { status: "handled" };
           }
-          if (event.reason !== "release") {
+          if (stroke?.id !== event.gestureId) return { status: "ignored" };
+          if (event.type === "touch dragmove" && event.activeTouchCount !== 1) {
+            cancel();
+            return { status: "handled" };
+          }
+          if (distance(stroke.points.at(-1)!, event.position) < 2) return { status: "handled" };
+          stroke.points.push(event.position);
+          canvas.setLassoPath(stroke.points.slice());
+          return { status: "handled" };
+
+        case "mouse dragend":
+        case "touch dragend": {
+          if (wedge?.id === event.gestureId) {
+            const commit = event.reason === "release" && wedge.editor === editor && canvas.isOperationEnabled("move");
+            if (commit) updateWedge(event.position);
+            const hasOffset = wedge.offset !== null && wedge.offset !== 0;
+            const applied = wedge.editor.actions.finishLayoutGap(commit);
+            if (commit && hasOffset && !applied) canvas.actions.showCanvasToast("canvasGesture.gapBlocked");
+            cancel();
+            return { status: "handled" };
+          }
+          if (stroke?.id !== event.gestureId) return { status: "ignored" };
+          const points = [...stroke.points, event.position];
+          cancel();
+          if (event.reason !== "release") return { status: "handled" };
+          const selected = editor.queries.listEntities().filter((entity) => {
+            const definition = canvas.registry.queries.findEntityDefinition(entity.definitionId);
+            if (definition === null) return false;
+            const view = canvas.view.state;
+            const rect = resolveViewportRectFromWorldGridRect({
+              gridRect: resolveEntityGridRect({ entity, definition }),
+              viewportBounds: view.clientRect, viewportCenter: view.center,
+              gridCellPixelSize: view.gridCellPixelSize, displayRotation: view.displayRotation,
+            });
+            return rect !== null && isPointInsideStroke({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }, points);
+          });
+          if (selected.length > 0) {
             editor.actions.clearCollection(EntityCollectionType.selection);
-            return { status: "handled" };
+            for (const entity of selected) {
+              editor.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId: entity.id });
+            }
+            canvas.setLassoActionsAt(event.position);
+          } else if (canvas.canUseWorkbenchActions && canvas.isOperationEnabled("confirm-placement")) {
+            const machines = resolvePlanMachinesToPlace(canvas.workbench);
+            if (machines !== null && isClosedStroke(points)) pourPlanIntoLasso(canvas, machines, points);
           }
-          markAlong(canvas, finished.last, event.position);
-          return deleteErasedSelection(canvas);
+          return { status: "handled" };
         }
 
         default:
@@ -120,34 +169,14 @@ export function createHypergryphPenStrokeGestureModule(): GestureMappingModule<A
   };
 }
 
-/** 钉了规划时把圈当作“倒进这里”：先把这一笔平移的视图挪回原处，再按落笔时的视图找出圈住的区域。 */
-function pourPlanIfPinned(canvas: CanvasInteractionController, stroke: StrokeTracker): GestureHandleResult {
-  const machines = resolvePlanMachinesToPlace(canvas.workbench);
-  if (machines === null) {
-    return { status: "ignored" };
-  }
-  if (stroke.panning) panStroke(canvas, stroke.last, stroke.start);
-  pourPlanIntoLasso(canvas, machines, stroke.points);
-  return { status: "handled" };
+
+function distance(a: GesturePosition, b: GesturePosition): number {
+  return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
-function panStroke(canvas: CanvasInteractionController, start: GesturePosition, end: GesturePosition): void {
-  canvas.view.actions.moveViewportByClientPixelVector({ startClientPixel: start, endClientPixel: end });
-  canvas.actions.alignCanvasFloatingToolbar();
-}
-
-function stamp(canvas: CanvasInteractionController, position: GesturePosition): StrokePoint {
-  return { x: position.x, y: position.y, timeMs: canvas.gestureAdapter.tapTimeMs() };
-}
-
-/** 沿两点之间按半格取样标记，快速划过时也不会漏掉中间的设备。 */
-function markAlong(canvas: CanvasInteractionController, from: GesturePosition, to: GesturePosition): void {
-  const step = Math.max(4, canvas.view.state.gridCellPixelSize / 2);
-  const count = Math.max(1, Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) / step));
-  for (let index = 0; index <= count; index += 1) {
-    markEntityForErase(canvas, {
-      x: from.x + (to.x - from.x) * index / count,
-      y: from.y + (to.y - from.y) * index / count,
-    });
-  }
+function worldVector(canvas: CanvasInteractionController, start: GesturePosition, end: GesturePosition) {
+  return resolveWorldVectorFromViewportVector({
+    viewportVector: { x: end.x - start.x, y: end.y - start.y },
+    displayRotation: canvas.view.state.displayRotation,
+  });
 }

@@ -1,3 +1,4 @@
+import { CanvasContextRings } from "./canvas/canvas-context-rings";
 import { completeYituliuCallback } from "@/shared/storage/yituliu-session";
 import { CanvasNotices } from "./canvas/canvas-notices";
 import { action, reaction, runInAction } from "mobx";
@@ -1181,6 +1182,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
         <DevicePopup appHost={appHost} />
         <CanvasToolRail appHost={appHost} />
         <CanvasHotbar appHost={appHost} />
+        <CanvasContextRings appHost={appHost} />
         <MarkingMenuOverlay appHost={appHost} />
         <LineEndChipOverlay appHost={appHost} />
         <LineProbeOverlay appHost={appHost} />

@@ -6,6 +6,7 @@ import { createHypergryphLogisticsPlacementGestureModule } from "@/app/input/ges
 import type { GestureEvent } from "@/app/input/gesture/adapter";
 import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 import type { GridPoint } from "@/domain/shared/grid";
+import { createRegistryContract } from "@/registry";
 import { createCanvasTestSession } from "@/tests/helpers/canvas-test-session";
 import { createWorldDocumentFromBlueprint, loadBlueprintFromFile } from "@/tests/simulation/blueprint-test-helpers";
 
@@ -32,6 +33,42 @@ describe("logistics placement mouse/pen drag", () => {
     expect(editor.queries.resolveLogisticsDraftState()).toBeNull();
     expect(editor.document.getSnapshot().entityOrder.length).toBeGreaterThan(entityCountBefore);
     expect(context.canvas.state.runtime.logisticsPlacement.phase).toBe("idle");
+  });
+
+  it.each(["belt", "pipe"] as const)("turns an open %s end, then branches it only after an outlet is connected", (kind) => {
+    const registry = createRegistryContract().queries;
+    const belt = (id: string, x: number): WorldEntity => ({
+      id, definitionId: registry.resolveLogisticsDefinitionId(kind, "straight")!,
+      position: { x, y: 24 }, rotation: 0, tags: [], config: {},
+    });
+    const test = createCanvasTestSession({
+      activeTool: "select",
+      document: { ...createWorldDocument({ baseId: "draft_box" }), entities: { a: belt("a", 26), b: belt("b", 27) }, entityOrder: ["a", "b"] },
+      viewport: { center: { x: 50, y: 50 }, gridSize: 1 / 16, displayRotation: 0 },
+    });
+    cleanups.push(test.dispose);
+    test.view.actions.setViewportClientRect({ left: 0, top: 0, width: 100, height: 100 });
+    const { context, editor } = test;
+    const module = createHypergryphPortDragLogisticsGestureModule();
+
+    module.handle(dragStart({ x: 27, y: 24 }, { x: 27, y: 25 }), context);
+    module.handle(dragMove({ x: 27, y: 26 }), context);
+    module.handle(dragEnd({ x: 27, y: 26 }, "release"), context);
+    const bend = editor.queries.findTransportLineAtGridPoint({ x: 27, y: 24 }, kind);
+    expect(bend).not.toBeNull();
+    expect(bend?.definitionId).not.toBe(belt("b", 27).definitionId);
+    const lastCell = { x: 27, y: 26 };
+    const end = editor.queries.findTransportLineAtGridPoint(lastCell, kind);
+    expect(end).not.toBeNull();
+
+    module.handle(dragStart({ x: 27, y: 24 }, { x: 28, y: 24 }), context);
+    module.handle(dragMove({ x: 29, y: 24 }), context);
+    module.handle(dragEnd({ x: 29, y: 24 }, "release"), context);
+    const entities = Object.values(editor.document.getSnapshot().entities);
+    expect(entities.find((entity) => entity.position.x === 27 && entity.position.y === 24)?.definitionId)
+      .toSatisfy((id: string | undefined) => id !== undefined && registry.resolveLogisticsRole(id) === "splitter");
+    expect(editor.queries.findTransportLineAtGridPoint(lastCell, kind)?.id).toBe(end?.id);
+    expect(editor.queries.findTransportLineAtGridPoint({ x: 29, y: 24 }, kind)).not.toBeNull();
   });
 
   it("connects a backward drag to the exact output port without capturing nearby cells", () => {

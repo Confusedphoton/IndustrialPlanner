@@ -32,9 +32,10 @@ export function selectedRecipeDeviceItemIds(entity: Pick<WorldEntity, "config"> 
 
 /** 输出端口组设定的出口物品（端口接收规则改为指定物品）；未设定时为 null。 */
 export function configuredOutputPortItemId(definition: EntityDefinition, entity: Pick<WorldEntity, "config">,
-  portGroupId: string): string | null {
+  portGroupId: string, portId?: string): string | null {
   const groupIndex = definition.portGroups.findIndex(group => group.id === portGroupId);
-  const rule = groupIndex < 0 ? undefined : entity.config[`portGroups[${groupIndex}].ports[0].acceptRule`];
+  const portIndex = portId === undefined ? 0 : definition.portGroups[groupIndex]?.ports.findIndex((port) => port.id === portId) ?? -1;
+  const rule = groupIndex < 0 || portIndex < 0 ? undefined : entity.config[`portGroups[${groupIndex}].ports[${portIndex}].acceptRule`];
   const base = typeof rule === "object" && rule !== null ? (rule as { base?: unknown }).base : undefined;
   return typeof base === "object" && base !== null && (base as { kind?: unknown }).kind === "item"
     && typeof (base as { itemId?: unknown }).itemId === "string" ? (base as { itemId: string }).itemId : null;
@@ -45,10 +46,10 @@ export function configuredOutputPortItemId(definition: EntityDefinition, entity:
  * 已选配方的主要产物，并按端口的物品域过滤。
  */
 export function outputPortItemIds(definition: EntityDefinition, entity: Pick<WorldEntity, "config">,
-  portGroupId: string, registry: RegistryContract): readonly string[] {
+  portGroupId: string, registry: RegistryContract, portId?: string): readonly string[] {
   const group = definition.portGroups.find(entry => entry.id === portGroupId);
   if (group === undefined) return [];
-  const configured = configuredOutputPortItemId(definition, entity, portGroupId);
+  const configured = configuredOutputPortItemId(definition, entity, portGroupId, portId);
   if (configured !== null) return registry.queries.findItemDefinition(configured) ? [configured] : [];
   const storageGroupIds = new Set(definition.portStorageBindings.filter(binding => binding.portGroupId === portGroupId)
     .map(binding => binding.storageSlotGroupId));
