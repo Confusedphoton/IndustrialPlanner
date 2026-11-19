@@ -34,10 +34,7 @@ for (const profile of SCREEN_PROFILES) {
       await menu.click();
       await page.locator('summary').filter({hasText:'更多'}).click();
       await page.getByRole('button',{name:'基地',exact:true}).click();
-      await page.locator('[data-ui-button-id="base-current-select"]').click();
-      const dialog = page.getByRole('dialog',{name:'选择基地',exact:true});
-      await dialog.locator('[data-base-id="draft_box"]').click();
-      await dialog.getByRole('button',{name:'确定',exact:true}).click();
+      await page.locator('[data-ui-button-id="base-current-select"] [data-base-id="draft_box"]').click();
       await page.waitForFunction(() => window.__test__.getAppState().baseId === 'draft_box');
       await menu.click();
       await page.getByRole('button',{name:'放置模式',exact:true}).click();
@@ -67,6 +64,8 @@ for (const profile of SCREEN_PROFILES) {
 
       const entity = moved.entities[initialId];
       await pan(entity.position.x+4.5,entity.position.y+4.5);
+      // At minimum zoom on a high-DPR screen the lasso is shorter than the drag threshold.
+      await page.evaluate(() => window.__industrialPlannerAppHost.mainCanvas.view.actions.zoom(15));
       await page.locator('[data-ui-button-id="placement-tool-marquee"]').click();
       const a = await point({x:entity.position.x-2,y:entity.position.y-2});
       const b = await point({x:entity.position.x+11,y:entity.position.y+11});

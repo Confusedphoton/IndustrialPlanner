@@ -33,12 +33,9 @@ for (const profile of SCREEN_PROFILES) {
       };
       const select = async id => {
         await toggleBasePanel();
-        await page.locator('[data-ui-button-id="base-current-select"]').click();
-        const dialog = page.getByRole('dialog', { name: '选择基地', exact: true });
-        const option = dialog.locator('[data-base-id="' + id + '"]');
+        const option = page.locator('[data-ui-button-id="base-current-select"] [data-base-id="' + id + '"]');
         const group = await option.locator('xpath=ancestor::section[1]').getByRole('heading').innerText();
         await option.click();
-        await dialog.getByRole('button', { name: '确定', exact: true }).click();
         await page.waitForFunction(id => window.__test__?.getAppState().baseId === id, id);
         await toggleBasePanel();
         return group;
@@ -92,7 +89,9 @@ for (const profile of SCREEN_PROFILES) {
       };
       const initial = await measure();
       await page.screenshot({ path: ${JSON.stringify(resolve(cli.directory, "agricultural-layout.png"))} });
-      await page.getByRole('button', { name: '旋转视角', exact: true }).click();
+      const rotateView = page.getByRole('button', { name: '旋转视角', exact: true });
+      if (!(await rotateView.isVisible())) await page.getByRole('button', { name: '更多视图工具', exact: true }).click();
+      await rotateView.click();
       await page.waitForFunction(() => window.__industrialPlannerAppHost.mainCanvas.view.state.displayRotation === 90);
       const rotated = await measure();
       await select('wuling_protocol_core');

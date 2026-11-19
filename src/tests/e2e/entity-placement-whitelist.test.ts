@@ -32,9 +32,7 @@ for (const profile of SCREEN_PROFILES) {
       await activate(menuButton);
       await activate(page.locator('summary').filter({hasText:'更多'}));
       await activate(page.getByRole('button',{name:'基地',exact:true}));
-      await activate(page.locator('[data-ui-button-id="base-current-select"]'));
-      await activate(page.locator('[data-base-id="valley4_protocol_core"]'));
-      await activate(page.locator('[data-dialog-key="base-select"] button[class*="save-blueprint-primary-button"]'));
+      await activate(page.locator('[data-ui-button-id="base-current-select"] [data-base-id="valley4_protocol_core"]'));
       await page.waitForFunction(() => window.__test__.getAppState().baseId === 'valley4_protocol_core');
       await activate(menuButton);
       await activate(placementTab);
