@@ -40,7 +40,7 @@ export const PlacementShelf = observer(function PlacementShelf({ appHost }: { ap
               title={label}
               type="button"
             >
-              <img alt="" src={createEntityIconAssetUrl(registry.queries.findEntityDefinition(firstDeviceId)?.iconPath)} />
+              <img alt="" loading="lazy" src={createEntityIconAssetUrl(registry.queries.findEntityDefinition(firstDeviceId)?.iconPath)} />
             </button>
             {open ? section.buttons.map((button) => {
               const deviceId = button.uiButtonId.replace("placement-", "");

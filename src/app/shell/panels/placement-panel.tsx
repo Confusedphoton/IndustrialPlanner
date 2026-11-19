@@ -577,7 +577,7 @@ const PlacementPalette = observer(function PlacementPalette({
               >
                 {iconDefinition === undefined || iconDefinition === null
                   ? <LucideLayoutGrid aria-hidden />
-                  : <img alt="" src={resolveDeviceIconPath(iconDefinition)} />}
+                  : <img alt="" loading="lazy" src={resolveDeviceIconPath(iconDefinition)} />}
               </button>
             );
           })}

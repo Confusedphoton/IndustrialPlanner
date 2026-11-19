@@ -25,10 +25,10 @@ export function PlacementPaletteRow({ label, iconSrc, products = [], count, badg
   className, iconClassName, imageClassName, labelClassName, rootRef, buttonProps, buttonSuffix, children, interactive = true }: PlacementPaletteRowProps) {
   const content = <>
       <span className={iconClassName ?? styles.icon} aria-hidden="true">
-        <img className={imageClassName} alt="" src={iconSrc} />
+        <img className={imageClassName} alt="" loading="lazy" src={iconSrc} />
       </span>
       {products.length ? <span className={styles.products}>{products.slice(0, 2).map((product, index) =>
-        <img key={`${product.src}/${index}`} src={product.src} alt={product.label} title={product.label} />)}
+        <img key={`${product.src}/${index}`} src={product.src} alt={product.label} loading="lazy" title={product.label} />)}
         {products.length > 2 ? <span className={styles.moreProducts} title={products.slice(2).map(product => product.label).join("、")}
           aria-label={products.slice(2).map(product => product.label).join("、")}>+{products.length - 2}</span> : null}
       </span> : null}
