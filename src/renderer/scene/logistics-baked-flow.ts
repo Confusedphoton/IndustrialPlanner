@@ -58,7 +58,7 @@ export class LogisticsBakedFlowScene {
     for (const [id, view] of this.routes) if (options.routes.get(id) !== view.route) {
       this.destroyRoute(view); this.routes.delete(id);
     }
-    if (!options.enabled) return;
+    if (!options.enabled || options.routes.size === 0) return;
     if (!this.session) {
       const session = options.acquire(); this.session = session;
       void session.ready.then((assets) => { if (!this.destroyed) this.assets = assets; }).catch((error: unknown) => {

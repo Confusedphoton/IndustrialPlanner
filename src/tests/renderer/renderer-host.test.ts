@@ -36,7 +36,10 @@ vi.mock("@/renderer/scene/render-scene-orchestrator", () => ({
 }))
 
 import { createRenderHost } from "@/renderer/renderer-host"
+import { createWorldDocument } from "@/domain/document/world-document"
+import { createSimulationHost } from "@/simulation/simulation-host"
 import { createRenderTestScene } from "@/tests/helpers/render-test-scene"
+import { runInAction } from "mobx"
 const cleanups: Array<() => void> = []
 
 describe("createRenderHost", () => {
@@ -93,6 +96,30 @@ describe("createRenderHost", () => {
     expect(frames).toEqual([["second", { nowMs: 19, deltaMs: 0 }], ["first", { nowMs: 5, deltaMs: 0 }]])
     expect(host.queries.getViewStatus(first)?.needsContinuousFrame).toBe(false)
     expect(requestAnimationFrame).not.toHaveBeenCalled()
+  })
+
+  it("keeps drawing blueprint belt cargo between simulation ticks", async () => {
+    const document = createWorldDocument({ baseId: "draft_box" })
+    document.entities.belt = { id: "belt", definitionId: "belt_straight_1x1", position: { x: 0, y: 0 },
+      rotation: 0, tags: [], config: {} }
+    document.entityOrder.push("belt")
+    const scene = createRenderTestScene({ document })
+    cleanups.push(scene.dispose)
+    scene.view.actions.setViewportClientRect({ left: 0, top: 0, width: 640, height: 480 })
+    const simulation = createSimulationHost(scene.workspace)
+    cleanups.push(() => simulation.dispose())
+    runInAction(() => { scene.app.internalState.settings.gameUseBlueprintStyleDeviceImages = true })
+    const host = createRenderHost()
+    cleanups.push(() => host.destroy())
+    const handle = await host.actions.mountView({ input: { ...scene.input, simulation },
+      time: { kind: "advancing", clockId: "test", initialTimeMs: 0 } })
+
+    runInAction(() => { simulation.internalState.runningState = "start" })
+    host.actions.updateViews([{ handle, sample: { clockId: "test", timeMs: 0 } }])
+    expect(host.queries.getViewStatus(handle)).toMatchObject({ dirty: false, needsContinuousFrame: true })
+
+    runInAction(() => { simulation.internalState.runningState = "pause" })
+    expect(host.queries.getViewStatus(handle)?.needsContinuousFrame).toBe(false)
   })
 
   it("一个视图销毁失败仍释放其他视图及它们的资源", async () => {

@@ -135,7 +135,7 @@ export function createRenderHost(): RenderHost {
   };
   const needsContinuousFrame = (entry: ViewEntry): boolean => {
     if (entry.phase !== "ready" || entry.time.kind === "fixed") return false;
-    const { camera, source, presentation } = entry.input;
+    const { camera, source, presentation, simulation } = entry.input;
     if (camera.state.clientRect.width <= 0 || camera.state.clientRect.height <= 0) return false;
     if (camera.queries.hasPendingMotion()) return true;
     if (entry.surface?.needsContinuousFrame()) return true;
@@ -144,7 +144,11 @@ export function createRenderHost(): RenderHost {
     const collections = snapshot.interaction?.collections;
     if ((collections?.selection.length ?? 0) > 0 || (collections?.preview.length ?? 0) > 0) return true;
     const settings = presentation.getSnapshot().settings;
-    if (settings.gameUseBlueprintStyleDeviceImages) return false;
+    if (settings.gameUseBlueprintStyleDeviceImages) {
+      // Blueprint mode still interpolates cargo positions between simulation ticks.
+      return simulation?.state.runningState === "start" && simulation.state.timeline?.isSeeking !== true
+        && source.queries.listEntities().some((entity) => source.registry.queries.isBelt(entity.definitionId));
+    }
     return source.queries.listEntities().some((entity) => {
       const definition = source.registry.queries.findEntityDefinition(entity.definitionId);
       return definition?.spriteAnimation !== undefined && settings.gamePlayDeviceAnimations
