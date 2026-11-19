@@ -43,3 +43,22 @@ export async function expectCanvasHit(page: Page, point: { x: number; y: number 
     return hit instanceof HTMLCanvasElement;
   }, point), { timeout: 5000, message: `画布坐标不可操作或被遮挡：${JSON.stringify(point)}` }).toBe(true);
 }
+
+export async function chooseWorkbenchMenuItem(page: Page, name: string): Promise<void> {
+  await page.getByRole("button", { name: "菜单", exact: true }).click();
+  const item = page.getByRole("button", { name, exact: true });
+  if (!(await item.isVisible())) {
+    await page.locator("summary").filter({ hasText: "更多" }).click();
+  }
+  await item.click();
+}
+
+export async function switchBase(page: Page, baseId: string): Promise<void> {
+  const picker = page.locator('[data-ui-button-id="base-current-select"]');
+  if (!(await picker.isVisible())) {
+    await chooseWorkbenchMenuItem(page, "基地");
+  }
+  const option = picker.locator(`[data-base-id="${baseId}"]`);
+  await option.click();
+  await expect(option).toHaveAttribute("aria-pressed", "true", { timeout: 15_000 });
+}

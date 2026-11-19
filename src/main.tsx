@@ -192,30 +192,38 @@ async function startWorkbench(): Promise<void> {
   retainMainScene(mainPresentation.dispose);
   const mainInput: SceneViewInput = { id: mainView.id, source: mainSource.source, camera: mainView,
     presentation: mainPresentation.snapshot, simulation: simulationHost, overlay: createSnapshotStore<SceneOverlay | null>(null) };
-  const mainRenderView = await mountCanvasSceneView({ renderer: renderHost, input: mainInput,
-    time: { kind: "advancing", clockId: "workbench-visual", initialTimeMs: 0 }, signal: mainSceneAbort.signal });
-  appHost.mainCanvas.renderBinding = mainRenderView;
-  retainMainScene(mainRenderView.dispose);
+  const renderReady = mountCanvasSceneView({
+    renderer: renderHost,
+    input: mainInput,
+    time: { kind: "advancing", clockId: "workbench-visual", initialTimeMs: 0 },
+    signal: mainSceneAbort.signal,
+    loadResourcesProgressively: true,
+  }).then(binding => {
+    retainMainScene(binding.dispose);
+    mainSceneAbort.signal.throwIfAborted();
+    appHost.mainCanvas.renderBinding = binding;
+  });
+  const syncReady = isDataMigrationComplete(migrationVersion).then(async complete => {
+    mainSceneAbort.signal.throwIfAborted();
+    if (!complete) {
+      notifyDataMigrationAbandoned();
+      return;
+    }
+    const syncHost = await createSyncHost(workspace, {
+      assetSources: [
+        ...createModuleBalancingSyncSources(appHost),
+        appHost.regionalSettings.createSyncSource(),
+      ],
+    });
+    retainMainScene(() => syncHost.dispose());
+  });
+  await Promise.all([renderReady, syncReady]);
+  mainSceneAbort.signal.throwIfAborted();
+
   const mainDiagnostics = createCanvasRenderDiagnosticSession({ input: mainInput, simulation: simulationHost });
   retainMainScene(mainDiagnostics.destroy);
   retainMainScene(bindSimulationPlayback(simulationHost, "workbench-playback"));
 
-  if (await isDataMigrationComplete(migrationVersion)) {
-    mainSceneAbort.signal.throwIfAborted();
-    const syncHost = await createSyncHost(workspace, {
-    assetSources: [
-      ...createModuleBalancingSyncSources(appHost),
-      appHost.regionalSettings.createSyncSource(),
-    ],
-    });
-    retainMainScene(() => syncHost.dispose());
-    mainSceneAbort.signal.throwIfAborted();
-  } else {
-    notifyDataMigrationAbandoned();
-  }
-
-
-  mainSceneAbort.signal.throwIfAborted();
   const audioHost = createAudioHost(workspace, {
     readEnabled: () => appHost.internalState.settings.gamePlayDeviceAudio,
     readViewport: () => mainView.state,

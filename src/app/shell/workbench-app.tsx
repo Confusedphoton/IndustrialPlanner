@@ -22,7 +22,6 @@ import { canPlaceEntityDefinitionInCurrentBase } from "@/app/placement-zone-avai
 import { FullscreenToggleButton } from "@/app/shell/layout/fullscreen-toggle-button";
 import { DebugLogDialog } from "@/app/shell/dialogs/debug-log-dialog";
 import { FeedbackDialog } from "@/app/shell/dialogs/feedback-dialog";
-import { BaseSelectDialog } from "@/app/shell/dialogs/base-select-dialog";
 import { BlueprintFolderDialog } from "@/app/shell/dialogs/blueprint-folder-dialog";
 import { BlueprintPreviewDialog } from "@/app/shell/dialogs/blueprint-preview-dialog";
 import { HelpDialog } from "@/app/shell/dialogs/help-dialog";
@@ -1194,7 +1193,6 @@ export const WorkbenchApp = observer(function WorkbenchApp({
         {showTimelineBottomDock ? <TimelineBottomDock appHost={appHost} /> : null}
         {showBottomStatusBar ? <BottomStatusBar appHost={appHost} /> : null}
         {appHost.state.settings.debugMode ? <DebugLogDialog appHost={appHost} /> : null}
-        <BaseSelectDialog appHost={appHost} />
         <BlueprintFolderDialog appHost={appHost} controller={appHost.blueprintFolderDialog} />
         <BlueprintPreviewDialog appHost={appHost} controller={appHost.blueprintPreview} />
         <SaveBlueprintDialog appHost={appHost} />

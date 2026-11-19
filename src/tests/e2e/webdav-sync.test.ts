@@ -1,3 +1,4 @@
+import { switchBase } from "./harness/workbench";
 import { expect, test } from "./harness/fixture";
 
 import {
@@ -10,7 +11,6 @@ import {
   readCurrentWorldDocumentProjection,
   readRemoteAsset,
   resolveVisibleConflict,
-  switchBase,
   waitForAppReady,
   waitForStableSync,
   writeRemoteAsset,
@@ -55,7 +55,7 @@ test("WebDAV 远端更新自动下载：无本地改动时直接使用远端内�
   await page.goto("/");
   await waitForAppReady(page);
   await enableWebDavSync(page, { testConnection: false });
-  await switchBase(page, "stm_hongs_3", "盈天台建设站");
+  await switchBase(page, "stm_hongs_3");
   await waitForStableSync(page);
 
   const lastUploadAt = await page.evaluate(() =>
@@ -135,7 +135,7 @@ for (const resolution of ["use-remote", "use-local"] as const) {
   }) => {
     await page.goto("/");
     await waitForAppReady(page);
-    await switchBase(page, "stm_hongs_3", "盈天台建设站");
+    await switchBase(page, "stm_hongs_3");
     const baseline = await readCurrentWorldDocumentProjection(page);
     const seeded = await writeRemoteAsset({
       browser,

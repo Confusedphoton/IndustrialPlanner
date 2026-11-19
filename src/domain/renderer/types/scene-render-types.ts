@@ -8,6 +8,7 @@ export interface MountSceneViewOptions {
   readonly input: SceneViewInput;
   readonly time: SceneTimePolicy;
   readonly signal?: AbortSignal;
+  readonly loadResourcesProgressively?: boolean;
 }
 
 export interface SceneViewUpdate {

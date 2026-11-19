@@ -122,6 +122,40 @@ describe("createRenderHost", () => {
     expect(host.queries.getViewStatus(handle)?.needsContinuousFrame).toBe(false)
   })
 
+  it("mounts the interactive canvas while scene assets are pending and redraws when they arrive", async () => {
+    const scene = createRenderTestScene()
+    cleanups.push(scene.dispose)
+    const host = createRenderHost()
+    cleanups.push(() => host.destroy())
+    let finishLoading!: () => void
+    const asset = new Promise<void>(resolve => { finishLoading = resolve })
+    let assetReady = false
+    const rendered = vi.fn()
+    createRenderSceneOrchestrator.mockImplementationOnce(({ resources }) => {
+      void resources.track(asset).then(() => { assetReady = true })
+      return { sync: () => rendered(assetReady), destroy: vi.fn() }
+    })
+
+    const handle = await host.actions.mountView({
+      input: scene.input,
+      time: { kind: "advancing", clockId: "test", initialTimeMs: 0 },
+      loadResourcesProgressively: true,
+    })
+    expect(host.queries.getViewCanvas(handle)).toBe(applicationState.canvas)
+    expect(rendered).toHaveBeenLastCalledWith(false)
+
+    const redraw = new Promise<void>(resolve => {
+      const unsubscribe = host.queries.subscribeFrameDemand(() => {
+        unsubscribe()
+        resolve()
+      })
+    })
+    finishLoading()
+    await redraw
+    host.actions.updateViews([{ handle }])
+    expect(rendered).toHaveBeenLastCalledWith(true)
+  })
+
   it("一个视图销毁失败仍释放其他视图及它们的资源", async () => {
     const scene = createRenderTestScene(); cleanups.push(scene.dispose)
     const host = createRenderHost(); cleanups.push(() => host.destroy())

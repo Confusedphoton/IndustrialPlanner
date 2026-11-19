@@ -147,10 +147,9 @@ describe("canvas input ownership", () => {
     });
     first.actions.setActiveTool("dark-pipe-link");
     const original = first.state.toolInfo.darkPipeLink;
-    const resume = first.suspend("base-select");
+    const resume = first.suspend("settings");
     expect(first.state.activeTool).toBe("dark-pipe-link");
     expect(first.state.toolInfo.darkPipeLink).toBe(original);
-    expect(first.isInputSuspended).toBe(true);
     expect(first.isInputSuspended).toBe(true);
     resume();
     expect(first.state.toolInfo.darkPipeLink).toBe(original);

@@ -1,3 +1,4 @@
+import { chooseWorkbenchMenuItem, switchBase } from "./harness/workbench";
 import { startCloudflareTestBackend } from "../helpers/cloudflare-test-backend";
 /**
  * CF Worker 同步 e2e：无本地改动时远端更新自动下载覆盖
@@ -324,12 +325,12 @@ async function runAutoDownloadScenario(options: {
     spaceId,
   });
 
-  await page.getByTitle("设置").waitFor({ state: "visible", timeout: 30_000 });
+  await page.getByRole("button", { name: "菜单", exact: true }).waitFor({ state: "visible", timeout: 30_000 });
   await page.waitForTimeout(2000);
 
   // ─── Phase 2: 开启实验性功能 + CF Worker 同步 ───
   // 此时远端为空：startup 初始同步会上传当前文档并创建远端空间
-  await page.getByTitle("设置").click();
+  await chooseWorkbenchMenuItem(page, "设置");
   await expect(page.getByRole("heading", { name: "设置" }).first()).toBeVisible({ timeout: 10_000 });
 
   const hasSidebar = await page.getByRole("tree").isVisible().catch(() => false);
@@ -427,18 +428,7 @@ async function runAutoDownloadScenario(options: {
   ).toBe(false);
 
   // ─── Phase 3: 切换基地 → 盈天台建设站 ───
-  await page.getByTitle("基地").click();
-  await page.waitForTimeout(800);
-
-  const baseBtn = page.locator('[data-ui-button-id="base-current-select"]');
-  await expect(baseBtn).toBeVisible({ timeout: 10_000 });
-  await baseBtn.click();
-  await page.waitForTimeout(1500);
-
-  await page.getByText("盈天台建设站", { exact: true }).click();
-  await page.getByRole("button", { name: "确定" }).last().click();
-  await page.waitForTimeout(1500);
-  await expect(baseBtn).toContainText("盈天台建设站");
+  await switchBase(page, "stm_hongs_3");
 
   // 获取当前文档 assetId（用于后续通过 API 直接推送远端新版本）
   const remoteAssetId = await page.evaluate(() => {
@@ -475,7 +465,7 @@ async function runAutoDownloadScenario(options: {
   });
 
   // ─── Phase 4: 放置精炼炉（本地修改） ───
-  await page.getByTitle("放置模式").click();
+  await chooseWorkbenchMenuItem(page, "放置模式");
   await page.waitForTimeout(800);
 
   const furnace = page.locator('[data-ui-button-id="placement-furnance_1"]');

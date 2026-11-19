@@ -41,7 +41,7 @@ import {
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { resolveBaseDisplayName, resolveBaseTagLabel } from "@/app/shell/shared/known-text-translation";
-import { groupBaseDefinitionsByTag } from "@/app/shell/dialogs/base-select-dialog";
+import type { BaseDefinition } from "@/domain/registry/types/base-definition";
 import panelStyles from "@/app/shell/panels/panels.module.scss";
 import { RegionalResourcesCard } from "@/app/shell/panels/regional-resources-card";
 
@@ -990,3 +990,31 @@ const BaseInlinePicker = observer(function BaseInlinePicker({
     </div>
   );
 });
+
+function groupBaseDefinitionsByTag(
+  baseDefinitions: readonly BaseDefinition[],
+): Array<{ tag: string; bases: BaseDefinition[] }> {
+  const TAG_ORDER: Record<string, number> = { "四号谷地": 0, "武陵": 1, "草稿箱": 100 };
+  const groups: Array<{ tag: string; bases: BaseDefinition[] }> = [];
+  const groupByTag = new Map<string, BaseDefinition[]>();
+
+  for (const baseDefinition of baseDefinitions) {
+    let group = groupByTag.get(baseDefinition.tag);
+
+    if (group === undefined) {
+      group = [];
+      groupByTag.set(baseDefinition.tag, group);
+      groups.push({ tag: baseDefinition.tag, bases: group });
+    }
+
+    group.push(baseDefinition);
+  }
+
+  groups.sort((a, b) => {
+    const orderA = TAG_ORDER[a.tag] ?? 99;
+    const orderB = TAG_ORDER[b.tag] ?? 99;
+    return orderA - orderB;
+  });
+
+  return groups;
+}

@@ -1,3 +1,4 @@
+import { chooseWorkbenchMenuItem } from "./harness/workbench";
 import {
   expect,
   type APIRequestContext,
@@ -85,7 +86,7 @@ export async function waitForAppReady(page: Page): Promise<void> {
         ?.workspace?.sync,
     )
   );
-  await page.getByTitle("设置").waitFor({ state: "visible", timeout: 30_000 });
+  await page.getByRole("button", { name: "菜单", exact: true }).waitFor({ state: "visible", timeout: 30_000 });
 }
 
 export async function enableWebDavSync(
@@ -95,7 +96,7 @@ export async function enableWebDavSync(
     readonly waitForStable?: boolean;
   } = {},
 ): Promise<void> {
-  await page.getByTitle("设置").click();
+  await chooseWorkbenchMenuItem(page, "设置");
   const settingsDialog = page.getByRole("dialog", { name: "设置" });
   await expect(settingsDialog).toBeVisible({ timeout: 10_000 });
 
@@ -228,33 +229,10 @@ export async function readCurrentWorldDocumentProjection(
   });
 }
 
-export async function switchBase(
-  page: Page,
-  baseId: string,
-  expectedName: string,
-): Promise<void> {
-  const baseButton = page.locator('[data-ui-button-id="base-current-select"]');
-  if (!(await baseButton.isVisible().catch(() => false))) {
-    await page.getByTitle("基地").click();
-    await expect(baseButton).toBeVisible({ timeout: 10_000 });
-  }
-  await baseButton.click();
-  const target = page.locator(`[data-base-id="${baseId}"]`);
-  await expect(target).toBeVisible({ timeout: 10_000 });
-  await target.click();
-  await page.getByRole("button", { name: "确定" }).last().click();
-  await expect(baseButton).toContainText(expectedName);
-  await expect.poll(async () => await page.evaluate(() =>
-    (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
-      ?.workspace?.editor?.document?.getSnapshot()?.baseId ?? null
-  )).toBe(baseId);
-}
-
 export async function placeFurnace(page: Page, offset: number): Promise<void> {
-  const placementButton = page.getByTitle("放置模式");
   const furnace = page.locator('[data-ui-button-id="placement-furnance_1"]');
   if (!(await furnace.isVisible().catch(() => false))) {
-    await placementButton.click();
+    await chooseWorkbenchMenuItem(page, "放置模式");
   }
   await furnace.scrollIntoViewIfNeeded();
   await expect(furnace).toBeVisible({ timeout: 15_000 });

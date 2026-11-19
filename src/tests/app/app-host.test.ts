@@ -174,7 +174,6 @@ function createWorkbenchStorageSnapshot(options: {
   helpDialog?: ReturnType<typeof createDialogStateSnapshot>;
   settingsDialog?: ReturnType<typeof createDialogStateSnapshot>;
   saveBlueprintDialog?: ReturnType<typeof createDialogStateSnapshot>;
-  baseSelectDialog?: ReturnType<typeof createDialogStateSnapshot>;
   feedbackDialog?: ReturnType<typeof createDialogStateSnapshot>;
   toolboxDockPreference?: "floating" | "bottom";
   toolboxBottomDockCollapsed?: boolean;
@@ -201,7 +200,6 @@ function createWorkbenchStorageSnapshot(options: {
       help: options.helpDialog ?? createDialogStateSnapshot({ activeTab: DEFAULT_HELP_DIALOG_TAB_ID }),
       settings: options.settingsDialog ?? createDialogStateSnapshot(),
       "save-blueprint": options.saveBlueprintDialog ?? createDialogStateSnapshot(),
-      "base-select": options.baseSelectDialog ?? createDialogStateSnapshot(),
       "warehouse-stats": createDialogStateSnapshot(),
       feedback: options.feedbackDialog ?? createDialogStateSnapshot(),
     },

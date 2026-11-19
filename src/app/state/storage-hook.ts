@@ -1060,11 +1060,6 @@ function normalizePersistedDialogStateMap(
       persistedDialogStateMap["save-blueprint"],
       fallback["save-blueprint"],
     ),
-    "base-select": normalizePersistedDialogState(
-      "base-select",
-      persistedDialogStateMap["base-select"],
-      fallback["base-select"],
-    ),
     "warehouse-stats": normalizePersistedDialogState(
       "warehouse-stats",
       persistedDialogStateMap["warehouse-stats"],

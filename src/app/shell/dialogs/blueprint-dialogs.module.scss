@@ -691,11 +691,6 @@
     height: min(720px, 100%);
   }
 
-  .base-select-dialog {
-    width: 100%;
-    height: min(620px, 100%);
-  }
-
   .save-blueprint-dialog-body {
     padding: 12px;
   }
@@ -706,14 +701,6 @@
 
   .save-blueprint-preview-canvas {
     min-height: 260px;
-  }
-
-  .base-select-dialog-body {
-    padding: 12px;
-  }
-
-  .base-select-actions {
-    grid-template-columns: minmax(0, 1fr);
   }
 
   .save-blueprint-actions {
@@ -756,17 +743,7 @@
     border-radius: 14px;
   }
 
-  .base-select-dialog {
-    width: 100%;
-    height: 100%;
-    border-radius: 14px;
-  }
-
   .save-blueprint-dialog-body {
-    padding: 10px;
-  }
-
-  .base-select-dialog-body {
     padding: 10px;
   }
 

@@ -9,6 +9,7 @@ export async function mountCanvasSceneView(options: {
   readonly input: SceneViewInput;
   readonly time: SceneTimePolicy;
   readonly signal?: AbortSignal;
+  readonly loadResourcesProgressively?: boolean;
 }) {
   const { renderer } = options;
   const abort = new AbortController();
@@ -16,7 +17,14 @@ export async function mountCanvasSceneView(options: {
   if (options.signal?.aborted) onAbort();
   options.signal?.addEventListener("abort", onAbort, { once: true });
   let handle: RenderViewHandle;
-  try { handle = await renderer.actions.mountView({ input: options.input, time: options.time, signal: abort.signal }); }
+  try {
+    handle = await renderer.actions.mountView({
+      input: options.input,
+      time: options.time,
+      signal: abort.signal,
+      loadResourcesProgressively: options.loadResourcesProgressively,
+    });
+  }
   catch (error) { options.signal?.removeEventListener("abort", onAbort); throw error; }
   let disposed = false;
   const frameListeners = new Set<() => void>();

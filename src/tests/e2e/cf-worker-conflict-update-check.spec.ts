@@ -1,3 +1,4 @@
+import { chooseWorkbenchMenuItem, switchBase } from "./harness/workbench";
 import { startCloudflareTestBackend } from "../helpers/cloudflare-test-backend";
 /**
  * CF Worker 同步 e2e：冲突解决 → 小检查短路 → 增量同步
@@ -332,32 +333,6 @@ async function mutateStoredWorldDocument(
   expect(mutationResult).toEqual({ baseId, name });
 }
 
-async function switchBase(
-  page: Page,
-  baseId: string,
-  expectedName: string,
-): Promise<void> {
-  const baseButton = page.locator('[data-ui-button-id="base-current-select"]');
-  if (!(await baseButton.isVisible().catch(() => false))) {
-    await page.getByTitle("基地").click();
-    await expect(baseButton).toBeVisible({ timeout: 10_000 });
-  }
-
-  await baseButton.click();
-  const target = page.locator(`[data-base-id="${baseId}"]`);
-  await expect(target).toBeVisible({ timeout: 10_000 });
-  await target.click();
-  await page.getByRole("button", { name: "确定" }).last().click();
-  await expect(baseButton).toContainText(expectedName);
-  await expect.poll(async () => await page.evaluate(() =>
-    (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
-      ?.workspace?.editor?.document?.getSnapshot()?.baseId ?? null
-  ), {
-    message: `应切换到基地 ${baseId}`,
-    timeout: 15_000,
-  }).toBe(baseId);
-}
-
 async function configureCloudflareTestSpace(
   page: Page,
   spaceId: string,
@@ -403,7 +378,7 @@ async function configureCloudflareTestSpace(
     apiBaseUrl: BACKEND_API_BASE_URL,
     spaceId,
   });
-  await page.getByTitle("设置").waitFor({ state: "visible", timeout: 30_000 });
+  await page.getByRole("button", { name: "菜单", exact: true }).waitFor({ state: "visible", timeout: 30_000 });
 }
 
 async function waitForStableSync(page: Page): Promise<void> {
@@ -442,7 +417,7 @@ async function waitForStableSync(page: Page): Promise<void> {
 }
 
 async function enableCloudflareSync(page: Page): Promise<void> {
-  await page.getByTitle("设置").click();
+  await chooseWorkbenchMenuItem(page, "设置");
   await expect(page.getByRole("heading", { name: "设置" }).first())
     .toBeVisible({ timeout: 10_000 });
 
@@ -556,16 +531,14 @@ async function runInactiveBaseConflictScenario(options: {
 }): Promise<void> {
   const { page, request, spaceId } = options;
   const currentBaseId = "wuling_protocol_core";
-  const currentBaseName = "协议核心区";
   const inactiveBaseId = "stm_hongs_3";
-  const inactiveBaseName = "盈天台建设站";
 
   // ─── Phase 1: 建立两个基地的共同同步基线，并停留在协议核心区 ───
   await configureCloudflareTestSpace(page, spaceId);
-  await switchBase(page, inactiveBaseId, inactiveBaseName);
+  await switchBase(page, inactiveBaseId);
   const inactiveBaseBaseline = await readCurrentWorldDocumentProjection(page);
   expect(inactiveBaseBaseline.assetId).toBe(inactiveBaseId);
-  await switchBase(page, currentBaseId, currentBaseName);
+  await switchBase(page, currentBaseId);
   await seedRemoteWorldDocument(
     request,
     spaceId,
@@ -616,8 +589,6 @@ async function runInactiveBaseConflictScenario(options: {
     (window as unknown as BrowserTestWindow).__industrialPlannerAppHost
       ?.workspace?.editor?.document?.getSnapshot()?.baseId ?? null
   )).toBe(currentBaseId);
-  await expect(page.locator('[data-ui-button-id="base-current-select"]'))
-    .toContainText(currentBaseName);
   await resolveVisibleConflictUsingRemote(page);
   expect((await readRemotePlan(request, spaceId)).revision)
     .toBe(intervalRemoteRevision);
@@ -678,7 +649,7 @@ async function runInactiveBaseConflictScenario(options: {
   const revisionBeforeNavigation = (
     await readRemotePlan(request, spaceId)
   ).revision;
-  await switchBase(page, inactiveBaseId, inactiveBaseName);
+  await switchBase(page, inactiveBaseId);
   // 本地变化的空闲上传去抖为 5 秒；跨过该窗口后 revision 仍不变，才可证明纯导航未入队。
   await page.waitForTimeout(12_000);
   await waitForStableSync(page);
@@ -798,22 +769,11 @@ async function runConflictScenario(options: {
     return `enabled=${s.settings.enabled} phase=${s.status.phase} provider=${localStorage.getItem("v3-sync-provider")}`;
   });
   console.log(`[TEST] Initial sync status: ${syncStatus}`);
-  await page.getByTitle("设置").waitFor({ state: "visible", timeout: 30_000 });
+  await page.getByRole("button", { name: "菜单", exact: true }).waitFor({ state: "visible", timeout: 30_000 });
   await page.waitForTimeout(2000);
 
   // ─── Phase 2: 切换基地 → 盈天台建设站 ───
-  await page.getByTitle("基地").click();
-  await page.waitForTimeout(800);
-
-  const baseBtn = page.locator('[data-ui-button-id="base-current-select"]');
-  await expect(baseBtn).toBeVisible({ timeout: 10_000 });
-  await baseBtn.click();
-  await page.waitForTimeout(1500);
-
-  await page.getByText("盈天台建设站", { exact: true }).click();
-  await page.getByRole("button", { name: "确定" }).last().click();
-  await page.waitForTimeout(1500);
-  await expect(baseBtn).toContainText("盈天台建设站");
+  await switchBase(page, "stm_hongs_3");
 
   const remoteSeed = await page.evaluate(async () => {
     const host = (window as unknown as BrowserTestWindow).__industrialPlannerAppHost;
@@ -833,7 +793,7 @@ async function runConflictScenario(options: {
   expect(remoteSeed.assetId).toBe("stm_hongs_3");
 
   // ─── Phase 3: 放置精炼炉 ───
-  await page.getByTitle("放置模式").click();
+  await chooseWorkbenchMenuItem(page, "放置模式");
   await page.waitForTimeout(800);
 
   const furnace = page.locator('[data-ui-button-id="placement-furnance_1"]');
@@ -859,7 +819,7 @@ async function runConflictScenario(options: {
   expect(seededRevision).not.toBe("0");
 
   // ─── Phase 4: 开启实验性功能 + CF Worker 同步 ───
-  await page.getByTitle("设置").click();
+  await chooseWorkbenchMenuItem(page, "设置");
   await expect(page.getByRole("heading", { name: "设置" }).first()).toBeVisible({ timeout: 10_000 });
 
   const hasSidebar = await page.getByRole("tree").isVisible().catch(() => false);

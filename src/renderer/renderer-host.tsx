@@ -237,14 +237,19 @@ export function createRenderHost(): RenderHost {
             entry.cleanups.push(() => document.fonts.removeEventListener("loadingdone", wake));
             entry.resources.track(document.fonts.ready);
           }
-          // 每轮同步可能发现新的资源（manifest → atlas → 当前帧），收敛后才交付首屏。
-          do {
-            checkLive(entry);
+          // 等待完整首帧的调用者需处理绘制时发现的后续资源。
+          if (options.loadResourcesProgressively) {
             draw(entry, 0);
-            await entry.resources.waitForIdle();
-            await Promise.resolve();
-          } while (entry.dirty || entry.resources.loading);
+          } else {
+            do {
+              checkLive(entry);
+              draw(entry, 0);
+              await entry.resources.waitForIdle();
+              await Promise.resolve();
+            } while (entry.dirty || entry.resources.loading);
+          }
           checkLive(entry);
+          entry.resources.finishInitialLoad();
           entry.phase = entry.suspensions > 0 ? "suspended" : "ready";
           notify();
           return handle;

@@ -4,6 +4,7 @@ export class RenderResourceScope {
   private readonly observed = new WeakSet<Promise<unknown>>();
   private readonly failures: unknown[] = [];
   private disposed = false;
+  private initialLoad = true;
   private cancelWait: () => void = () => {};
   private readonly cancelled = new Promise<void>((resolve) => { this.cancelWait = resolve; });
 
@@ -15,7 +16,7 @@ export class RenderResourceScope {
     this.pending.add(task);
     void task.then(
       () => this.settled(task),
-      (error: unknown) => { if (!this.disposed) this.failures.push(error); this.settled(task); },
+      (error: unknown) => { if (!this.disposed && this.initialLoad) this.failures.push(error); this.settled(task); },
     );
     return task;
   }
@@ -29,6 +30,11 @@ export class RenderResourceScope {
     if (this.disposed) throw new DOMException("Scene view disposed", "AbortError");
     // Promise.reject(undefined) 也是失败，不能以错误值本身是否存在判定。
     if (this.failures.length > 0) throw this.failures.shift();
+  }
+
+  public finishInitialLoad(): void {
+    this.initialLoad = false;
+    this.failures.length = 0;
   }
 
   public dispose(): void {
