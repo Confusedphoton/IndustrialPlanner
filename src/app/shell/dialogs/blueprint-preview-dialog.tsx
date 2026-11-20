@@ -1,5 +1,5 @@
 import { useReadonlyCanvas } from "@/app/canvas";
-import { createEmbedWorldDocument } from "@/app/embed";
+import { createEmbedWorldDocument } from "@/app/embed/blueprint-source";
 import { selectDocumentBaseId } from "@/shared/snapshot/world-document-selection";
 import {
   useEffect,

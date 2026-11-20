@@ -64,6 +64,14 @@ export default defineConfig({
   define: {
     "import.meta.env.VITE_APP_VERSION_CACHE_KEY": JSON.stringify(APP_VERSION_CACHE_KEY),
   },
+  css: {
+    // Vite's PostCSS Modules pipeline rehashes the whole stylesheet per selector, which stalls the dev server for
+    // seconds on the app-shell barrel. Scoping stays limited to classes and keyframes, as it was under PostCSS.
+    transformer: "lightningcss",
+    lightningcss: {
+      cssModules: { grid: false, container: false, customIdents: false },
+    },
+  },
   build: {
     chunkSizeWarningLimit: 4096,
     rollupOptions: {
@@ -178,6 +186,9 @@ export default defineConfig({
   ],
   server: {
     allowedHosts: [".hsyhhssyy.net"],
+    warmup: {
+      clientFiles: ["./src/main.tsx"],
+    },
     watch: {
       ignored: ["**/.temp/**"],
     },

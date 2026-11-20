@@ -22,8 +22,6 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { reaction } from "mobx";
 import { WorkbenchApp } from "@/app/shell/workbench-app";
-import { BlueprintEmbed, BlueprintEmbedStatus } from "./app/shell/blueprint-embed";
-import { createBlueprintEmbedBridge, applyBlueprintEmbedSettings, createEmbedWorldDocument, loadEmbedBlueprint, parseBlueprintEmbedOptions, resolveEmbedBlueprintBounds } from "./app/embed";
 import { createAppHost, type AppHost } from "@/app/host/app-host";
 import { createModuleBalancingSyncSources } from "@/app/module-balancing-sync-sources";
 import { createSyncHost } from "@/sync";
@@ -255,6 +253,10 @@ async function startWorkbench(): Promise<void> {
 }
 
 async function startBlueprintEmbed(): Promise<void> {
+  const [
+    { BlueprintEmbed, BlueprintEmbedStatus },
+    { createBlueprintEmbedBridge, applyBlueprintEmbedSettings, createEmbedWorldDocument, loadEmbedBlueprint, parseBlueprintEmbedOptions, resolveEmbedBlueprintBounds },
+  ] = await Promise.all([import("./app/shell/blueprint-embed"), import("./app/embed")]);
   const root = ReactDOM.createRoot(document.getElementById("root")!);
   const abort = new AbortController();
   const bridge = createBlueprintEmbedBridge();

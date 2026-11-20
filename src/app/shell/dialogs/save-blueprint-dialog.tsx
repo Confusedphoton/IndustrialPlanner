@@ -1,5 +1,5 @@
 import { useReadonlyCanvas } from "@/app/canvas";
-import { createEmbedWorldDocument } from "@/app/embed";
+import { createEmbedWorldDocument } from "@/app/embed/blueprint-source";
 import { adoptIncomingDataAndReload } from "@/shared/data-migration";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import { observer } from "mobx-react-lite";

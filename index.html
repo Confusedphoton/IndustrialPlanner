@@ -92,7 +92,10 @@
     <script type="module" src="/src/main.tsx"></script>
     <script>
       const hostname = location.hostname
-      const analyticsDisabled = hostname === 'coder-page.hsyhhssyy.net' || hostname.endsWith('.coder-page.hsyhhssyy.net')
+      const localDevHosts = ['localhost', '127.0.0.1', '::1', '[::1]', '0.0.0.0']
+      const analyticsDisabled = localDevHosts.includes(hostname)
+        || hostname === 'coder-page.hsyhhssyy.net'
+        || hostname.endsWith('.coder-page.hsyhhssyy.net')
 
       if (!analyticsDisabled) {
         const script = document.createElement('script')
